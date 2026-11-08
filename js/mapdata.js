@@ -455,5 +455,6 @@
   }
   if (typeof global !== 'undefined') {
     global.GameMapData = MapData;
+    global.MapData = MapData; // Bí danh tương thích Đợt 1 (main/engine/ui đọc window.MapData)
   }
 })(typeof window !== 'undefined' ? window : this);
