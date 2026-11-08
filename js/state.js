@@ -109,12 +109,14 @@
         talked_linhnhi: false,
         current: 'talk_linhnhi',
         thaotinhKills: 0,
-        huntCompleted: false
+        huntCompleted: false,
+        sectStage: 0
       },
       face: options.face || 'Quyết tâm',
       linhThach: options.linhThach || 0,
       revivalPool: 5,
       revivalLastRegen: Date.now(),
+      lastSpringUse: 0,
       bag: {
         slots: new Array(48).fill(null)
       },
@@ -136,8 +138,16 @@
     return {
       musicVol: 0.7,
       sfxVol: 0.8,
+      ambVol: 0.6,
+      voiceVol: 0.9,
+      voiceEnabled: true,
+      muted: false,
       arrowGuidance: true,
-      flourishEffects: true
+      flourishEffects: true,
+      // Hiển thị (Đợt 3, Note 8)
+      uiScale: 1,
+      joySize: 'vua',
+      quality: 'cao'
     };
   }
 
@@ -184,6 +194,14 @@
       // Đảm bảo cấu trúc đầy đủ
       if (!data.paths) {
         data.paths = { kim: { tuVi: 0 }, moc: { tuVi: 0 }, thuy: { tuVi: 0 }, hoa: { tuVi: 0 }, tho: { tuVi: 0 } };
+      }
+      if (!data.quests) {
+        data.quests = { talked_linhnhi: false, current: 'talk_linhnhi', thaotinhKills: 0, huntCompleted: false, sectStage: 0 };
+      } else if (data.quests.sectStage === undefined) {
+        data.quests.sectStage = 0;
+      }
+      if (data.lastSpringUse === undefined) {
+        data.lastSpringUse = 0;
       }
       var stats = deriveStats(data.paths);
       data.hpMax = stats.hpMax;

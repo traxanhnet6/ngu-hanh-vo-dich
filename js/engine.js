@@ -18,6 +18,7 @@
   var currentMapId = 'mieu_hoang';
   var isRunning = false;
   var lastFrameTime = 0;
+  var lastCombatState = false;
   var onReadyCallback = null;
 
   var camera = {
@@ -46,6 +47,23 @@
 
   var playerMoving = false;
   var walkAnimTime = 0;
+  // Đợt 3 (Note 6): pha đi bộ KHÓA THEO QUÃNG ĐƯỜNG (chuẩn Vô Sắc), không theo thời gian.
+  // Chu kỳ bước đi hết 51.2px mặt đất ở tỉ lệ sheet (WALK3-REPORT: cycle ground distance 51px,
+  // cadence 5.4 bước/s ở tốc độ 138px/s). Áp cho cả sheet 24 khung lẫn bản 8 khung.
+  var WALK_CYCLE_DIST = 51.2;
+  var walkDist = 0;
+  var lastPX = null;
+  var lastPY = null;
+  // Đợt 3 (Note 8): chất lượng đồ họa do người chơi chọn — 'thap' tắt các hiệu ứng
+  // tốn GPU nhất (vũng sáng gradient sau quái, quầng sáng điểm hái, mọi shadowBlur)
+  // để máy yếu chạy mượt; 'trung'/'cao' giữ nguyên.
+  var currentQuality = 'cao';
+  function setQuality(q) {
+    currentQuality = (q === 'thap' || q === 'trung' || q === 'cao') ? q : 'cao';
+  }
+  function qualityShadow(v) {
+    return currentQuality === 'thap' ? 0 : v;
+  }
   var playerSnareTimer = 0;
   var playerSlowTimer = 0;
   var playerSlowRatio = 0;
@@ -78,10 +96,16 @@
     dir: 0, // 1: fade to black, -1: fade to game
     callback: null
   };
+  // Yêu cầu chuyển map đến trong lúc đang fade: XẾP HÀNG chờ fade xong rồi chạy,
+  // không được nuốt mất (trước đây switchMap bỏ qua lặng lẽ khi alpha > 0 — người
+  // chơi bấm cửa/cổng ngay sau khi chuyển cảnh, nhất là máy yếu fade lâu, sẽ thấy
+  // "bấm mà không vào được"; bản kiểm thử B6 vấp đúng lỗi này khi tải máy cao).
+  var pendingMapSwitch = null;
 
   // Tài nguyên đồ họa
   var assets = {};
   var assetsLoaded = false;
+  var harvestReadyTimes = {};
 
   function preloadAssets(callback) {
     if (typeof Image === 'undefined') {
@@ -89,24 +113,39 @@
       return;
     }
 
-    var assetList = [
-      { key: 'map_bg', src: 'assets/art/map-mieu-hoang-bg.png' },
-      { key: 'map_rung_doc_bg', src: 'assets/art/map-rung-doc-bg.png' },
-      { key: 'temple', src: 'assets/art/obj-temple.png' },
-      { key: 'pine', src: 'assets/art/obj-tree-pine.png' },
-      { key: 'broadleaf_tree', src: 'assets/art/obj-tree-broadleaf.png' },
-      { key: 'fallen_log', src: 'assets/art/obj-fallen-log.png' },
-      { key: 'linhnhi', src: 'assets/art/npc-linhnhi.png' },
-      { key: 'hanhan_idle', src: 'assets/chars/hanhan-idle.png' },
-      { key: 'hanhan_walk', src: 'assets/chars/hanhan-walk.png' },
-      { key: 'hanhan_face', src: 'assets/chars/hanhan-face.png' },
-      { key: 'thaotinh_sheet', src: 'assets/chars/thaotinh-sheet.png' },
-      { key: 'nhenxanh_sheet', src: 'assets/chars/nhenxanh-sheet.png' },
-      { key: 'cothuye_sheet', src: 'assets/chars/cothuye-sheet.png' },
-      { key: 'icons_sheet', src: 'assets/art/icons-sheet.png' }
+    var urls = [
+      'assets/chars/hanhan-idle.png',
+      'assets/chars/hanhan-walk.png',
+      'assets/chars/hanhan-face.png',
+      'assets/chars/thaotinh-sheet.png',
+      'assets/chars/nhenxanh-sheet.png',
+      'assets/chars/cothuye-sheet.png',
+      'assets/chars/thaotinhtinhanh-sheet.png',
+      'assets/art/icons-sheet.png'
     ];
 
-    var remaining = assetList.length;
+    var holder = (typeof window !== 'undefined' && window.GameMapData) ? window.GameMapData : (mapData && mapData.maps ? mapData : null);
+    var allMaps = (holder && holder.maps) ? holder.maps : {};
+    for (var mId in allMaps) {
+      var m = allMaps[mId];
+      if (m.bgImage && urls.indexOf(m.bgImage) === -1) urls.push(m.bgImage);
+      if (m.standees) {
+        for (var s = 0; s < m.standees.length; s++) {
+          if (m.standees[s].asset && urls.indexOf(m.standees[s].asset) === -1) {
+            urls.push(m.standees[s].asset);
+          }
+        }
+      }
+      if (m.npcs) {
+        for (var n = 0; n < m.npcs.length; n++) {
+          if (m.npcs[n].asset && urls.indexOf(m.npcs[n].asset) === -1) {
+            urls.push(m.npcs[n].asset);
+          }
+        }
+      }
+    }
+
+    var remaining = urls.length;
     function checkDone() {
       remaining--;
       if (remaining <= 0) {
@@ -115,33 +154,49 @@
       }
     }
 
-    for (var i = 0; i < assetList.length; i++) {
-      (function (item) {
+    for (var i = 0; i < urls.length; i++) {
+      (function (url) {
         var img = new Image();
         img.onload = checkDone;
         img.onerror = function () {
-          console.error('Không thể nạp tài nguyên:', item.src);
+          console.error('Không thể nạp tài nguyên:', url);
           checkDone();
         };
-        img.src = item.src;
-        assets[item.key] = img;
-      })(assetList[i]);
+        img.src = url;
+        assets[url] = img;
+        // Bí danh tương thích ngược
+        if (url === 'assets/art/map-mieu-hoang-bg.png') assets['map_bg'] = img;
+        if (url === 'assets/art/map-rung-doc-bg.png') assets['map_rung_doc_bg'] = img;
+        if (url === 'assets/art/obj-temple.png') assets['temple'] = img;
+        if (url === 'assets/art/obj-tree-pine.png') assets['pine'] = img;
+        if (url === 'assets/art/obj-tree-broadleaf.png') assets['broadleaf_tree'] = img;
+        if (url === 'assets/art/obj-fallen-log.png') assets['fallen_log'] = img;
+        if (url === 'assets/art/npc-linhnhi.png') assets['linhnhi'] = img;
+        if (url === 'assets/chars/hanhan-idle.png') assets['hanhan_idle'] = img;
+        if (url === 'assets/chars/hanhan-walk.png') assets['hanhan_walk'] = img;
+        if (url === 'assets/chars/hanhan-face.png') assets['hanhan_face'] = img;
+        if (url === 'assets/chars/thaotinh-sheet.png') assets['thaotinh_sheet'] = img;
+        if (url === 'assets/chars/nhenxanh-sheet.png') assets['nhenxanh_sheet'] = img;
+        if (url === 'assets/chars/cothuye-sheet.png') assets['cothuye_sheet'] = img;
+        if (url === 'assets/chars/thaotinhtinhanh-sheet.png') assets['thaotinhtinhanh_sheet'] = img;
+        if (url === 'assets/art/icons-sheet.png') assets['icons_sheet'] = img;
+      })(urls[i]);
     }
   }
 
   function initEngine(canvasEl, playerObj, mapObj, onReady) {
     canvas = canvasEl;
-    ctx = canvas.getContext('2d');
+    ctx = canvas && canvas.getContext ? canvas.getContext('2d') : null;
     player = playerObj;
-    mapData = mapObj || (typeof window !== 'undefined' ? window.MapData : null);
-    stateAPI = typeof window !== 'undefined' ? window.GameState : null;
+    mapData = mapObj || (typeof window !== 'undefined' ? window.MapData : (typeof require !== 'undefined' ? require('./mapdata.js') : null));
+    stateAPI = typeof window !== 'undefined' ? window.GameState : (typeof require !== 'undefined' ? require('./state.js') : null);
     audioAPI = typeof window !== 'undefined' ? window.GameAudio : null;
-    pathfinder = typeof window !== 'undefined' ? window.Pathfinder : null;
+    pathfinder = typeof window !== 'undefined' ? window.Pathfinder : (typeof require !== 'undefined' ? require('./pathfind.js') : null);
     combatAPI = typeof window !== 'undefined' ? window.GameCombat : null;
     monstersAPI = typeof window !== 'undefined' ? window.GameMonsters : null;
     onReadyCallback = onReady;
 
-    resizeCanvas();
+    if (canvas) resizeCanvas();
     if (typeof window !== 'undefined') {
       window.addEventListener('resize', resizeCanvas);
       setupInputs();
@@ -167,9 +222,18 @@
   }
 
   function initFieldMonsters() {
-    if (!monstersAPI || !monstersAPI.RUNG_DOC_PACKS) return;
+    spawnFieldMonstersForMap(mapData);
+  }
+
+  function spawnFieldMonstersForMap(map) {
     fieldMonsters = [];
-    var packs = monstersAPI.RUNG_DOC_PACKS;
+    if (!monstersAPI || !map) return;
+    var packs = map.monsterPacks;
+    if (!packs && map.id === 'rung-doc') {
+      packs = monstersAPI.RUNG_DOC_PACKS;
+    }
+    if (!packs || packs.length === 0) return;
+
     for (var p = 0; p < packs.length; p++) {
       var pack = packs[p];
       for (var c = 0; c < pack.count; c++) {
@@ -181,6 +245,7 @@
           spawnGraceTimer: 0
         });
         m.packId = pack.id;
+        m.mapId = map.id;
         fieldMonsters.push(m);
       }
     }
@@ -260,76 +325,318 @@
     });
   }
 
+  function isNpcActive(npc) {
+    if (!npc) return false;
+    if (!npc.questGate) return true;
+    var s = (player && player.quests && player.quests.sectStage !== undefined) ? player.quests.sectStage : 0;
+    if (npc.questGate === 'before_departure') return s < 1;
+    if (npc.questGate === 'after_departure') return s >= 1;
+    return true;
+  }
+
   function handleWorldClick(worldX, worldY) {
     if (!player || !mapData) return;
     if (autoPath.active) autoPath.active = false; // Chạm để tự đi -> dừng tự tìm đường
 
-    // 1. Kiểm tra click vào quái vật (khi ở Rừng Độc)
-    if (mapData.id === 'rung-doc') {
+    // 1. Kiểm tra click vào quái vật
+    if (fieldMonsters.length > 0) {
       var clickedMonster = findMonsterAt(worldX, worldY);
       if (clickedMonster) {
         targetMonster = clickedMonster;
-        var dist = Math.hypot(player.x - targetMonster.x, player.y - targetMonster.y);
-        if (dist > 50) {
+        var distM = Math.hypot(player.x - targetMonster.x, player.y - targetMonster.y);
+        if (distM > 50) {
           triggerPathTo(targetMonster.x, targetMonster.y, null);
         }
         return;
       }
     }
 
-    // Click mặt đất -> xóa mục tiêu quái, di chuyển thông thường
     targetMonster = null;
 
-    // 2. Click vào Linh Nhi (Bản đồ Miếu Hoang)
-    if (mapData.id === 'mieu_hoang' && mapData.linhnhi) {
-      var ln = mapData.linhnhi;
-      var lnBounds = {
-        x: ln.x - 10,
-        y: ln.y - 10,
-        w: ln.w + 20,
-        h: ln.h + 20
-      };
-      if (worldX >= lnBounds.x && worldX <= lnBounds.x + lnBounds.w &&
-          worldY >= lnBounds.y && worldY <= lnBounds.y + lnBounds.h) {
-        var distToLn = Math.hypot(player.x - ln.feetX, player.y - ln.feetY);
-        if (distToLn <= INTERACTION_RANGE) {
-          triggerDialogueLinhNhi();
-        } else {
-          triggerPathTo(ln.standTile.x, ln.standTile.y, {
-            type: 'npc',
-            onArrive: triggerDialogueLinhNhi
-          });
+    // 2. Click vào NPC
+    if (mapData.npcs && mapData.npcs.length > 0) {
+      for (var n = 0; n < mapData.npcs.length; n++) {
+        var npc = mapData.npcs[n];
+        if (!isNpcActive(npc)) continue;
+        var bounds = {
+          x: npc.x - 10,
+          y: npc.y - 10,
+          w: npc.w + 20,
+          h: npc.h + 20
+        };
+        if (worldX >= bounds.x && worldX <= bounds.x + bounds.w &&
+            worldY >= bounds.y && worldY <= bounds.y + bounds.h) {
+          var distToNpc = Math.hypot(player.x - npc.feetX, player.y - npc.feetY);
+          if (distToNpc <= INTERACTION_RANGE) {
+            triggerDialogue(npc);
+          } else {
+            (function (targetNpc) {
+              triggerPathTo(targetNpc.standTile.x, targetNpc.standTile.y, {
+                type: 'npc',
+                onArrive: function () { triggerDialogue(targetNpc); }
+              });
+            })(npc);
+          }
+          return;
         }
-        return;
       }
     }
 
-    // 3. Click vào Cửa Miếu Hoang
-    if (mapData.id === 'mieu_hoang' && mapData.temple) {
-      var tm = mapData.temple;
-      var tmBounds = {
-        x: tm.x,
-        y: tm.y,
-        w: tm.w,
-        h: tm.h + 30
-      };
-      if (worldX >= tmBounds.x && worldX <= tmBounds.x + tmBounds.w &&
-          worldY >= tmBounds.y && worldY <= tmBounds.y + tmBounds.h) {
-        var distToDoor = Math.hypot(player.x - tm.doorAnchor.x, player.y - tm.doorAnchor.y);
-        if (distToDoor <= INTERACTION_RANGE) {
-          triggerLockedDoorToast();
-        } else {
-          triggerPathTo(tm.doorAnchor.x, tm.doorAnchor.y, {
-            type: 'door',
-            onArrive: triggerLockedDoorToast
-          });
+    // 3. Click vào Harvest Node
+    if (mapData.harvestNodes && mapData.harvestNodes.length > 0) {
+      for (var h = 0; h < mapData.harvestNodes.length; h++) {
+        var hn = mapData.harvestNodes[h];
+        var hr = hn.radius || 48;
+        if (Math.hypot(worldX - hn.x, worldY - hn.y) <= hr) {
+          var distToHn = Math.hypot(player.x - hn.x, player.y - hn.y);
+          if (distToHn <= hr) {
+            executeHarvestNode(hn);
+          } else {
+            (function (targetHn) {
+              triggerPathTo(targetHn.x, targetHn.y, {
+                type: 'harvest',
+                onArrive: function () { executeHarvestNode(targetHn); }
+              });
+            })(hn);
+          }
+          return;
         }
-        return;
       }
     }
 
-    // 4. Click di chuyển thông thường
+    // 4. Click vào Interactable
+    if (mapData.interactables && mapData.interactables.length > 0) {
+      for (var i = 0; i < mapData.interactables.length; i++) {
+        var it = mapData.interactables[i];
+        var ir = it.radius || 48;
+        if (Math.hypot(worldX - it.x, worldY - it.y) <= ir) {
+          var distToIt = Math.hypot(player.x - it.x, player.y - it.y);
+          if (distToIt <= ir) {
+            executeInteractableAction(it);
+          } else {
+            (function (targetIt) {
+              triggerPathTo(targetIt.x, targetIt.y, {
+                type: 'interactable',
+                onArrive: function () { executeInteractableAction(targetIt); }
+              });
+            })(it);
+          }
+          return;
+        }
+      }
+    }
+
+    // 5. Click di chuyển thông thường
     triggerPathTo(worldX, worldY, null);
+  }
+
+  function triggerDialogue(npc) {
+    if (!npc) return;
+    if (typeof window !== 'undefined' && window.GameUI) {
+      var stepInfo = getQuestTargetInfo();
+      var isTarget = stepInfo && stepInfo.kind === 'npc' && stepInfo.npcId === npc.id;
+      var lines = (isTarget && npc.dialogueQuest && npc.dialogueQuest.length > 0) ? npc.dialogueQuest : (npc.dialogueDefault || npc.dialogue || []);
+      var resolvedNpc = Object.assign({}, npc, { dialogue: lines });
+      window.GameUI.openDialogue(resolvedNpc);
+    }
+  }
+
+  function triggerDialogueLinhNhi() {
+    triggerDialogue(mapData.linhnhi);
+  }
+
+  function triggerLockedDoorToast() {
+    if (audioAPI) audioAPI.playDoorKnock();
+    if (typeof window !== 'undefined' && window.GameUI) {
+      window.GameUI.showToast((mapData.temple && mapData.temple.lockedToast) ? mapData.temple.lockedToast : 'Miếu đang khóa — đợt sau mở');
+    }
+  }
+
+  function handleNpcTalked(npcId) {
+    if (!player || !player.quests) return;
+    var q = player.quests;
+    if (npcId === 'npc_linhnhi') {
+      if (!q.talked_linhnhi) {
+        q.talked_linhnhi = true;
+        q.current = 'hunt';
+        q.thaotinhKills = 0;
+        q.huntCompleted = false;
+        if (stateAPI) stateAPI.savePlayer(player);
+        if (audioAPI) audioAPI.playChime();
+        if (typeof window !== 'undefined' && window.GameUI) {
+          window.GameUI.refreshHUD();
+          window.GameUI.showToast('Nhiệm vụ mới: Săn Thảo Tinh ở Rừng Độc (0/5)');
+        }
+      } else if (q.huntCompleted && (q.sectStage || 0) === 0) {
+        q.sectStage = 1;
+        if (stateAPI) stateAPI.savePlayer(player);
+        if (audioAPI) audioAPI.playChime();
+        if (typeof window !== 'undefined' && window.GameUI) {
+          window.GameUI.refreshHUD();
+          window.GameUI.showToast('Nhiệm vụ mới: Báo danh ở Lối Vào tông môn');
+        }
+      }
+    } else if (npcId === 'npc_tiepdan') {
+      if ((q.sectStage || 0) === 1) {
+        q.sectStage = 2;
+        if (stateAPI) stateAPI.savePlayer(player);
+        if (audioAPI) audioAPI.playChime();
+        if (typeof window !== 'undefined' && window.GameUI) {
+          window.GameUI.refreshHUD();
+          window.GameUI.showToast('Nhiệm vụ mới: Diện kiến Chưởng Môn ở Đại Điện');
+        }
+      }
+    } else if (npcId === 'npc_chuongmon') {
+      if ((q.sectStage || 0) === 2) {
+        q.sectStage = 3;
+        player.linhThach = (player.linhThach || 0) + 20;
+        if (audioAPI) audioAPI.playChime();
+        spawnFloatingText('+20 Linh Thạch', player.x, player.y - 35, '#ffe9a8');
+        if (stateAPI) stateAPI.savePlayer(player);
+        if (typeof window !== 'undefined' && window.GameUI) {
+          window.GameUI.refreshHUD();
+          window.GameUI.showToast('Nhiệm vụ mới: Nhận lệnh từ Chấp Sự');
+        }
+      }
+    } else if (npcId === 'npc_chapsu') {
+      if ((q.sectStage || 0) === 3) {
+        q.sectStage = 4;
+        player.linhThach = (player.linhThach || 0) + 30;
+        if (audioAPI) audioAPI.playChime();
+        spawnFloatingText('+30 Linh Thạch', player.x, player.y - 35, '#ffe9a8');
+        if (stateAPI) stateAPI.savePlayer(player);
+        if (typeof window !== 'undefined' && window.GameUI) {
+          window.GameUI.refreshHUD();
+          window.GameUI.showToast('Nhập môn hoàn thành! Đài Truyền Tống phía đông nam đã mở.');
+        }
+      }
+    }
+  }
+
+  function executeInteractableAction(it) {
+    if (!it || !it.action) return;
+    switch (it.action) {
+      case 'temple_door':
+        triggerLockedDoorToast();
+        break;
+      case 'door_enter':
+        if (it.targetMap) {
+          switchMap(it.targetMap, it.targetSpawn || { x: 600, y: 690 });
+        }
+        break;
+      case 'teleport':
+        if (typeof window !== 'undefined' && window.GameUI && window.GameUI.openTeleportModal) {
+          window.GameUI.openTeleportModal();
+        }
+        break;
+      case 'restore_spring':
+        var now = Date.now();
+        var last = player.lastSpringUse || 0;
+        var cdMs = (it.cooldownSec || 60) * 1000;
+        if (now - last < cdMs) {
+          var remSec = Math.ceil((cdMs - (now - last)) / 1000);
+          if (typeof window !== 'undefined' && window.GameUI) {
+            window.GameUI.showToast('Linh tuyền đang tích tụ linh khí (' + remSec + 's)');
+          }
+          return;
+        }
+        player.lastSpringUse = now;
+        player.hp = player.hpMax;
+        player.linhLuc = player.linhLucMax;
+        spawnFloatingText('Khí huyết & Linh lực đầy!', player.x, player.y - 35, '#7ce898');
+        if (audioAPI) audioAPI.playChime();
+        if (typeof window !== 'undefined' && window.GameUI) {
+          window.GameUI.refreshHUD();
+          window.GameUI.showToast('Đã hồi phục toàn bộ Khí Huyết và Linh Lực');
+        }
+        break;
+      case 'meditate':
+        player.linhLuc = player.linhLucMax;
+        spawnFloatingText('Linh lực đầy!', player.x, player.y - 35, '#6ee7b7');
+        if (audioAPI) audioAPI.playChime();
+        if (typeof window !== 'undefined' && window.GameUI) {
+          window.GameUI.refreshHUD();
+          window.GameUI.showToast('Đả tọa tĩnh tâm: Linh Lực đã hồi phục');
+        }
+        break;
+      case 'rest_inn':
+        player.hp = player.hpMax;
+        player.linhLuc = player.linhLucMax;
+        spawnFloatingText('Hồi phục hoàn toàn!', player.x, player.y - 35, '#7ce898');
+        if (audioAPI) audioAPI.playChime();
+        if (typeof window !== 'undefined' && window.GameUI) {
+          window.GameUI.refreshHUD();
+          window.GameUI.showToast('Nghỉ ngơi tại nhà trọ: Khí Huyết và Linh Lực đã tràn đầy');
+        }
+        break;
+      case 'notice_board':
+        if (typeof window !== 'undefined' && window.GameUI) {
+          window.GameUI.showToast('Bảng Tông Môn: Sự kiện bí cảnh sẽ mở ở đợt sau.');
+        }
+        break;
+      case 'practice_dummy':
+        var stats = stateAPI ? stateAPI.deriveStats(player.paths) : { attack: 10 };
+        var dmg = Math.round(stats.attack * (0.9 + Math.random() * 0.2));
+        player.dir = getDirFromVelocity(it.x - player.x, it.y - player.y);
+        if (audioAPI) audioAPI.playSlash();
+        visualEffects.push({
+          type: 'slash_crescent',
+          x: player.x,
+          y: player.y - 25,
+          targetX: it.x,
+          targetY: it.y - 15,
+          timer: 0.22,
+          duration: 0.22
+        });
+        spawnFloatingText(dmg + '', it.x, it.y - 35, '#ffffff');
+        break;
+      case 'locked_portal':
+        if (audioAPI) audioAPI.playDoorKnock();
+        if (typeof window !== 'undefined' && window.GameUI) {
+          window.GameUI.showToast('Bí cảnh mở theo sự kiện — đợt sau');
+        }
+        break;
+      case 'locked_arena':
+        if (typeof window !== 'undefined' && window.GameUI) {
+          window.GameUI.showToast('Luận võ mở ở đợt sau');
+        }
+        break;
+      default:
+        break;
+    }
+  }
+
+  function executeHarvestNode(node) {
+    if (!node || !player) return;
+    var nowSec = performance.now() / 1000;
+    var readyAt = harvestReadyTimes[node.id] || 0;
+    if (nowSec < readyAt) {
+      var remSec = Math.ceil(readyAt - nowSec);
+      if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.showToast('Linh dược đang lớn (' + remSec + 's)');
+      }
+      return;
+    }
+    harvestReadyTimes[node.id] = nowSec + (node.respawnSec || 90);
+
+    if (node.itemId === 'linh-thach') {
+      var min = node.countMin || 3;
+      var max = node.countMax || 5;
+      var count = min + Math.floor(Math.random() * (max - min + 1));
+      player.linhThach = (player.linhThach || 0) + count;
+      spawnFloatingText('+' + count + ' Linh Thạch', player.x, player.y - 35, '#ffe9a8');
+    } else {
+      var countItem = node.count || 1;
+      if (stateAPI) stateAPI.addItemToBag(player, node.itemId, countItem);
+      var def = (monstersAPI && monstersAPI.ITEM_DEFS) ? monstersAPI.ITEM_DEFS[node.itemId] : null;
+      var name = def ? def.name : (node.name || node.itemId);
+      spawnFloatingText('+' + countItem + ' ' + name, player.x, player.y - 35, '#7ce898');
+    }
+
+    if (audioAPI) audioAPI.playPickup();
+    if (typeof window !== 'undefined' && window.GameUI) {
+      window.GameUI.refreshHUD();
+    }
   }
 
   // ============================================================
@@ -391,23 +698,51 @@
   }
 
   // ============================================================
-  // NÚT HÀNH ĐỘNG THEO NGỮ CẢNH (Đợt 2, lệnh Bui)
-  // Ưu tiên: vật tương tác nhiệm vụ > nói chuyện NPC > nhặt đồ > đánh
+  // NÚT HÀNH ĐỘNG THEO NGỮ CẢNH (Đợt 2 & Đợt 3)
+  // Ưu tiên: thu hái (48px) > vật tương tác (radius) > nói chuyện NPC (48px) > nhặt đồ (72px) > đánh
   // ============================================================
   function computeActionContext() {
     if (!player || !mapData) return { mode: 'attack', label: 'Đánh' };
-    if (mapData.id === 'mieu_hoang' && mapData.temple && mapData.temple.doorAnchor) {
-      var dd = Math.hypot(player.x - mapData.temple.doorAnchor.x, player.y - mapData.temple.doorAnchor.y);
-      if (dd <= INTERACTION_RANGE) return { mode: 'interact', label: 'Cửa Miếu' };
+
+    // 1. Ready harvest node (radius <= 48px)
+    if (mapData.harvestNodes) {
+      var nowSec = performance.now() / 1000;
+      for (var h = 0; h < mapData.harvestNodes.length; h++) {
+        var hn = mapData.harvestNodes[h];
+        var isReady = nowSec >= (harvestReadyTimes[hn.id] || 0);
+        if (isReady && Math.hypot(player.x - hn.x, player.y - hn.y) <= (hn.radius || 48)) {
+          return { mode: 'harvest', label: 'Hái', harvestNode: hn };
+        }
+      }
     }
-    if (mapData.id === 'mieu_hoang' && mapData.linhnhi) {
-      var nd = Math.hypot(player.x - mapData.linhnhi.feetX, player.y - mapData.linhnhi.feetY);
-      if (nd <= INTERACTION_RANGE) return { mode: 'talk', label: 'Nói Chuyện' };
+
+    // 2. Interactables in radius
+    if (mapData.interactables) {
+      for (var i = 0; i < mapData.interactables.length; i++) {
+        var it = mapData.interactables[i];
+        if (Math.hypot(player.x - it.x, player.y - it.y) <= (it.radius || 48)) {
+          return { mode: 'interact', label: it.label || 'Tương Tác', interactable: it };
+        }
+      }
     }
-    for (var i = 0; i < groundDrops.length; i++) {
-      var gd = Math.hypot(player.x - groundDrops[i].x, player.y - groundDrops[i].y);
-      if (gd <= ACTION_PICKUP_RADIUS) return { mode: 'pickup', label: 'Nhặt Đồ' };
+
+    // 3. Active NPCs in 48px
+    if (mapData.npcs) {
+      for (var n = 0; n < mapData.npcs.length; n++) {
+        var npc = mapData.npcs[n];
+        if (isNpcActive(npc) && Math.hypot(player.x - npc.feetX, player.y - npc.feetY) <= INTERACTION_RANGE) {
+          return { mode: 'talk', label: 'Nói Chuyện', npc: npc };
+        }
+      }
     }
+
+    // 4. Ground drops in 72px
+    for (var d = 0; d < groundDrops.length; d++) {
+      if (Math.hypot(player.x - groundDrops[d].x, player.y - groundDrops[d].y) <= ACTION_PICKUP_RADIUS) {
+        return { mode: 'pickup', label: 'Nhặt Đồ' };
+      }
+    }
+
     return { mode: 'attack', label: 'Đánh' };
   }
 
@@ -419,9 +754,11 @@
     }
     if (autoPath.active) autoPath.active = false; // Bấm nút hành động = người chơi tự điều khiển
     var ctx = computeActionContext();
-    if (ctx.mode === 'talk') { triggerDialogueLinhNhi(); return; }
-    if (ctx.mode === 'interact') { triggerLockedDoorToast(); return; }
+    if (ctx.mode === 'harvest' && ctx.harvestNode) { executeHarvestNode(ctx.harvestNode); return; }
+    if (ctx.mode === 'interact' && ctx.interactable) { executeInteractableAction(ctx.interactable); return; }
+    if (ctx.mode === 'talk' && ctx.npc) { triggerDialogue(ctx.npc); return; }
     if (ctx.mode === 'pickup') { collectDropsInRadius(); return; }
+
     // Đánh: mục tiêu đã chọn còn trong tầm, hoặc quái gần nhất trong tầm 60; không có thì vung kiếm theo hướng mặt
     var m = null;
     if (targetMonster && targetMonster.state !== 'dead' && targetMonster.hp > 0 &&
@@ -459,48 +796,110 @@
   }
 
   // ============================================================
-  // NÚT TỰ TÌM ĐƯỜNG THEO NHIỆM VỤ (Đợt 2, lệnh Bui)
-  // Đích đến dùng cùng nguồn dữ kiện với mũi tên dẫn đường nên hai bên luôn khớp nhau.
-  // Tới nơi: dừng CẠNH NPC, KHÔNG tự mở thoại.
+  // NÚT TỰ TÌM ĐƯỜNG THEO NHIỆM VỤ & ĐỊNH TUYẾN ĐA CHẶNG (BFS)
+  // Single Source of Truth cho Mũi tên dẫn đường, Tự tìm đường & Panel nhiệm vụ
   // ============================================================
   function getQuestTargetInfo() {
     if (!player || !player.quests) return null;
-    if (!player.quests.talked_linhnhi) return { mapId: 'mieu_hoang', kind: 'npc' };
-    if (!player.quests.huntCompleted) return { mapId: 'rung-doc', kind: 'hunt' };
-    return null;
+    var q = player.quests;
+    if (!q.talked_linhnhi) {
+      return { stepId: 'talk_linhnhi', stage: 0, mapId: 'mieu_hoang', kind: 'npc', npcId: 'npc_linhnhi' };
+    }
+    if (!q.huntCompleted) {
+      return { stepId: 'hunt', stage: 0, mapId: 'rung-doc', kind: 'hunt' };
+    }
+    var sectStage = (q.sectStage !== undefined) ? q.sectStage : 0;
+    if (sectStage === 0) {
+      return { stepId: 'farewell_linhnhi', stage: 0, mapId: 'mieu_hoang', kind: 'npc', npcId: 'npc_linhnhi' };
+    }
+    if (sectStage === 1) {
+      return { stepId: 'report_gate', stage: 1, mapId: 'tong-mon', kind: 'npc', npcId: 'npc_tiepdan' };
+    }
+    if (sectStage === 2) {
+      return { stepId: 'meet_master', stage: 2, mapId: 'dai-dien', kind: 'npc', npcId: 'npc_chuongmon' };
+    }
+    if (sectStage === 3) {
+      return { stepId: 'orders', stage: 3, mapId: 'tong-mon', kind: 'npc', npcId: 'npc_chapsu' };
+    }
+    return { stepId: 'done', stage: 4, mapId: null, kind: 'point' };
   }
 
   function resolveQuestDestination(info) {
+    if (!info) return null;
     if (info.kind === 'npc') {
-      var ln = mapData.linhnhi;
-      if (!ln) {
-        var holder = (typeof window !== 'undefined' && window.GameMapData) ? window.GameMapData : null;
-        var tm = holder && holder.getMap ? holder.getMap('mieu_hoang') : null;
-        ln = tm ? tm.linhnhi : null;
-      }
-      if (!ln || !ln.standTile) return null;
-      return { x: ln.standTile.x, y: ln.standTile.y, radius: 26 };
-    }
-    if (info.kind === 'hunt') {
-      var near = getNearestLivingThaoTinh();
-      if (near) return { x: near.x, y: near.y, radius: 64 };
-      if (monstersAPI && monstersAPI.RUNG_DOC_PACKS) {
-        for (var i = 0; i < monstersAPI.RUNG_DOC_PACKS.length; i++) {
-          var pk = monstersAPI.RUNG_DOC_PACKS[i];
-          if (pk.speciesId === 'thao_tinh' && pk.anchor) return { x: pk.anchor.x, y: pk.anchor.y, radius: 44 };
+      var holder = (typeof window !== 'undefined' && window.GameMapData) ? window.GameMapData : (mapData && mapData.maps ? mapData : (typeof require !== 'undefined' ? require('./mapdata.js') : null));
+      var targetMap = holder ? (holder.getMap ? holder.getMap(info.mapId) : holder.maps[info.mapId]) : mapData;
+      if (!targetMap || !targetMap.npcs) return null;
+      for (var i = 0; i < targetMap.npcs.length; i++) {
+        var n = targetMap.npcs[i];
+        if (n.id === info.npcId) {
+          var st = n.standTile || { x: n.feetX, y: n.feetY };
+          return { x: st.x, y: st.y, radius: 26, npc: n, mapId: info.mapId };
         }
       }
       return null;
     }
+    if (info.kind === 'hunt') {
+      var near = getNearestLivingThaoTinh();
+      if (near) return { x: near.x, y: near.y, radius: 64, mapId: 'rung-doc' };
+      if (monstersAPI && monstersAPI.RUNG_DOC_PACKS) {
+        for (var p = 0; p < monstersAPI.RUNG_DOC_PACKS.length; p++) {
+          var pk = monstersAPI.RUNG_DOC_PACKS[p];
+          if (pk.speciesId === 'thao_tinh' && pk.anchor) {
+            return { x: pk.anchor.x, y: pk.anchor.y, radius: 44, mapId: 'rung-doc' };
+          }
+        }
+      }
+      return { x: 420, y: 750, radius: 64, mapId: 'rung-doc' };
+    }
     return null;
   }
 
-  function findExitPointTo(destMapId) {
-    if (!mapData || !mapData.exits) return null;
-    for (var i = 0; i < mapData.exits.length; i++) {
-      var ex = mapData.exits[i];
-      if (ex.targetMap === destMapId && ex.rect) {
-        return { x: ex.rect.x + 10, y: ex.rect.y + ex.rect.h / 2 };
+  function findRoute(fromMapId, toMapId) {
+    if (!fromMapId || !toMapId) return null;
+    if (fromMapId === toMapId) return [fromMapId];
+    var holder = (typeof window !== 'undefined' && window.GameMapData) ? window.GameMapData : (mapData && mapData.maps ? mapData : (typeof require !== 'undefined' ? require('./mapdata.js') : null));
+    if (!holder || !holder.maps) return null;
+
+    var queue = [[fromMapId]];
+    var visited = {};
+    visited[fromMapId] = true;
+
+    while (queue.length > 0) {
+      var pathArr = queue.shift();
+      var node = pathArr[pathArr.length - 1];
+      var m = holder.getMap ? holder.getMap(node) : holder.maps[node];
+      if (!m || !m.exits) continue;
+
+      for (var i = 0; i < m.exits.length; i++) {
+        var nextHop = m.exits[i].targetMap;
+        if (!nextHop) continue;
+        if (nextHop === toMapId) {
+          return pathArr.concat([nextHop]);
+        }
+        if (!visited[nextHop]) {
+          visited[nextHop] = true;
+          queue.push(pathArr.concat([nextHop]));
+        }
+      }
+    }
+    return null;
+  }
+
+  function findNextHopExit(fromMapId, toMapId) {
+    var route = findRoute(fromMapId, toMapId);
+    if (!route || route.length < 2) return null;
+    var nextHopMapId = route[1];
+    var holder = (typeof window !== 'undefined' && window.GameMapData) ? window.GameMapData : (mapData && mapData.maps ? mapData : (typeof require !== 'undefined' ? require('./mapdata.js') : null));
+    var currentM = (holder && holder.getMap) ? holder.getMap(fromMapId) : mapData;
+    if (!currentM || !currentM.exits) return null;
+
+    for (var i = 0; i < currentM.exits.length; i++) {
+      var ex = currentM.exits[i];
+      if (ex.targetMap === nextHopMapId) {
+        var x = ex.target ? ex.target.x : (ex.rect ? ex.rect.x + ex.rect.w / 2 : 0);
+        var y = ex.target ? ex.target.y : (ex.rect ? ex.rect.y + ex.rect.h / 2 : 0);
+        return { exit: ex, target: { x: x, y: y }, targetMap: nextHopMapId };
       }
     }
     return null;
@@ -508,7 +907,7 @@
 
   function startAutoQuestPath() {
     var info = getQuestTargetInfo();
-    if (!info) {
+    if (!info || info.stepId === 'done') {
       if (typeof window !== 'undefined' && window.GameUI) {
         window.GameUI.showToast('Chưa có mục tiêu nhiệm vụ.');
       }
@@ -544,15 +943,16 @@
     if (!autoPath.active || !player || !mapData) return;
     if (mapFade.alpha > 0) return; // Đang chuyển cảnh: chờ sang hẳn bản đồ mới
     var info = getQuestTargetInfo();
-    if (!info) { cancelAutoPath(false); return; }
+    if (!info || info.stepId === 'done') { cancelAutoPath(false); return; }
     var now = performance.now();
-    // Ưu tiên kiểm tra tới nơi trước: chạm bãi quái là hoàn thành chuyến đi dù quái bắt đầu đánh
+
     if (info.mapId === currentMapId) {
       var dest = resolveQuestDestination(info);
       if (!dest) { failAutoPath('Mục tiêu chưa xuất hiện, hãy thử lại sau.'); return; }
       var d = Math.hypot(player.x - dest.x, player.y - dest.y);
-      if (d <= dest.radius) { cancelAutoPath(false); return; } // Đã tới nơi
+      if (d <= dest.radius) { cancelAutoPath(false); return; } // Đã tới nơi: dừng cạnh mục tiêu, không tự mở thoại
     }
+
     if (lastCombatTime > autoPath.combatStamp) {
       cancelAutoPath(true);
       if (typeof window !== 'undefined' && window.GameUI) {
@@ -560,6 +960,7 @@
       }
       return;
     }
+
     if (info.mapId === currentMapId) {
       if (currentPath.length === 0 && now - autoPath.lastLegAt > 500) {
         autoPath.lastLegAt = now;
@@ -568,10 +969,10 @@
       }
     } else {
       if (currentPath.length === 0 && now - autoPath.lastLegAt > 500) {
-        var pt = findExitPointTo(info.mapId);
-        if (!pt) { failAutoPath('Không thấy cổng sang bản đồ đích.'); return; }
+        var exitHop = findNextHopExit(currentMapId, info.mapId);
+        if (!exitHop) { failAutoPath('Không tìm được đường sang ' + info.mapId); return; }
         autoPath.lastLegAt = now;
-        triggerPathTo(pt.x, pt.y, null);
+        triggerPathTo(exitHop.target.x, exitHop.target.y, null);
         if (currentPath.length === 0) failAutoPath('Không tìm được đường ra cổng.');
       }
     }
@@ -642,7 +1043,11 @@
    * Chuyển đổi giữa 2 bản đồ với hiệu ứng mờ dần (Fade)
    */
   function switchMap(targetMapId, targetSpawn) {
-    if (mapFade.alpha > 0) return;
+    if (mapFade.alpha > 0 || mapFade.dir !== 0) {
+      // Đang fade chuyển cảnh: xếp hàng (yêu cầu cuối thắng), chạy ngay khi fade xong
+      pendingMapSwitch = { id: targetMapId, spawn: targetSpawn };
+      return;
+    }
     mapFade.dir = 1;
     mapFade.callback = function () {
       // Nếu rời Rừng Độc về Miếu Hoang -> hiển thị tổng kết buổi farm (Brief §6 & Hồ sơ 41 §8)
@@ -666,10 +1071,16 @@
       }
 
       currentMapId = targetMapId;
+      // Đợt 3 (Note 3B): chuyển theme nhạc + môi trường theo map, crossfade trong GameMusic
+      if (typeof window !== 'undefined' && window.GameMusic) {
+        window.GameMusic.setMap(targetMapId);
+      }
       var mapHolder = (typeof window !== 'undefined' && window.GameMapData) ? window.GameMapData : (mapData && mapData.maps ? mapData : null);
       if (mapHolder && mapHolder.getMap) {
         mapData = mapHolder.getMap(targetMapId);
       }
+
+      spawnFieldMonstersForMap(mapData);
 
       player.x = targetSpawn.x;
       player.y = targetSpawn.y;
@@ -678,6 +1089,7 @@
       groundDrops = [];
       visualEffects = [];
       projectiles = [];
+      currentZoneId = null;
 
       updateCamera();
       if (typeof window !== 'undefined' && window.GameUI) {
@@ -686,12 +1098,23 @@
     };
   }
 
+  function teleportTo(mapId, x, y) {
+    if (typeof window !== 'undefined' && window.GameUI && window.GameUI.closeTeleportModal) {
+      window.GameUI.closeTeleportModal();
+    }
+    var mapHolder = (typeof window !== 'undefined' && window.GameMapData) ? window.GameMapData : (mapData && mapData.maps ? mapData : null);
+    var targetMap = (mapHolder && mapHolder.getMap) ? mapHolder.getMap(mapId) : mapData;
+    var spawn = (x !== undefined && y !== undefined) ? { x: x, y: y } : (targetMap ? targetMap.spawn : { x: 560, y: 620 });
+    switchMap(mapId, spawn);
+  }
+
   /**
    * Tung kỹ năng từ bàn phím hoặc nút giao diện
    */
   function castSkill(skillId) {
     if (!player || player.hp <= 0) return;
-    if (mapData.id !== 'rung-doc') {
+    var hasPacks = mapData && mapData.monsterPacks && mapData.monsterPacks.length > 0;
+    if (!hasPacks && mapData.id !== 'rung-doc') {
       if (typeof window !== 'undefined' && window.GameUI) {
         window.GameUI.showToast('Kỹ năng chỉ dùng trong khu vực săn bắn');
       }
@@ -811,13 +1234,38 @@
     isRunning = true;
     lastFrameTime = performance.now();
     requestAnimationFrame(gameLoop);
+    // Note 8: nạp cờ chất lượng độc lập với hệ âm thanh
+    if (stateAPI) {
+      var qSettings = stateAPI.loadSettings();
+      if (qSettings) setQuality(qSettings.quality || 'cao');
+    }
     if (audioAPI) {
       var settings = stateAPI ? stateAPI.loadSettings() : null;
       if (settings) {
         audioAPI.setMusicVolume(settings.musicVol);
         audioAPI.setSfxVolume(settings.sfxVol);
+        setQuality(settings.quality || 'cao'); // Note 8: nạp cờ chất lượng đã lưu
       }
-      audioAPI.startMusic();
+      // Đợt 3 (Note 3B): nhạc theo map + âm thanh môi trường do GameMusic đảm nhiệm
+      // (thay vòng nhạc đơn của audio.js: có theme riêng từng map + lớp chiến đấu).
+      if (typeof window !== 'undefined' && window.GameMusic) {
+        window.GameMusic.unlock();
+        if (settings) {
+          window.GameMusic.setMusicVolume(settings.musicVol);
+          window.GameMusic.setAmbienceVolume(settings.ambVol != null ? settings.ambVol : 0.6);
+          window.GameMusic.setMuted(!!settings.muted);
+        }
+        window.GameMusic.setMap(currentMapId);
+      }
+      // Đợt 3 (Note 3A): nạp bản kê lồng tiếng
+      if (typeof window !== 'undefined' && window.GameVoice) {
+        window.GameVoice.load();
+        if (settings) {
+          window.GameVoice.setVolume(settings.voiceVol != null ? settings.voiceVol : 0.9);
+          window.GameVoice.setEnabled(settings.voiceEnabled !== false);
+          window.GameVoice.setMuted(!!settings.muted);
+        }
+      }
     }
   }
 
@@ -833,6 +1281,22 @@
     lastFrameTime = currentTime;
 
     update(dt);
+
+    // Đợt 3 (Note 3B): lớp nhạc chiến đấu bật/tắt theo trạng thái giao tranh
+    if (typeof window !== 'undefined' && window.GameMusic) {
+      var combatNow = !!targetMonster;
+      if (!combatNow) {
+        for (var ci = 0; ci < fieldMonsters.length; ci++) {
+          var cs = fieldMonsters[ci].state;
+          if (cs === 'aggro' || cs === 'attack') { combatNow = true; break; }
+        }
+      }
+      if (combatNow !== lastCombatState) {
+        lastCombatState = combatNow;
+        window.GameMusic.setCombat(combatNow);
+      }
+    }
+
     render();
 
     requestAnimationFrame(gameLoop);
@@ -856,6 +1320,12 @@
       } else if (mapFade.dir === -1 && mapFade.alpha <= 0) {
         mapFade.alpha = 0;
         mapFade.dir = 0;
+        // Fade xong: chạy yêu cầu chuyển map đã xếp hàng trong lúc fade (nếu có)
+        if (pendingMapSwitch) {
+          var pendingSwitch = pendingMapSwitch;
+          pendingMapSwitch = null;
+          switchMap(pendingSwitch.id, pendingSwitch.spawn);
+        }
       }
     }
 
@@ -963,6 +1433,13 @@
 
     playerMoving = moved;
     if (moved) walkAnimTime += dt;
+    // Đợt 3 (Note 6): cộng quãng đường THẬT đã đi vào bộ tích lũy pha (teleport không tính)
+    if (lastPX === null) { lastPX = player.x; lastPY = player.y; }
+    if (moved) {
+      walkDist += Math.hypot(player.x - lastPX, player.y - lastPY);
+    }
+    lastPX = player.x;
+    lastPY = player.y;
 
     if (moved) {
       stepSoundAccumulator += dt;
@@ -1026,10 +1503,13 @@
       }
     }
 
-    // Cập nhật quái vật trên bản đồ Rừng Độc
-    if (mapData.id === 'rung-doc') {
+    // Cập nhật quái vật trên bất kỳ bản đồ nào có quái
+    if (fieldMonsters.length > 0) {
       updateFieldMonsters(dt);
     }
+
+    // Cập nhật vùng (Zones)
+    updateZone();
 
     // Cập nhật nhặt chiến lợi phẩm (Ground Drops)
     updateGroundDrops(dt);
@@ -1149,6 +1629,28 @@
         m.activeTelegraph = null;
       }
     }
+
+    // Đợt 3: tách quái chồng nhau — mỗi con giữ khoảng cách tối thiểu 30px
+    // (trước đây cả bầy dồn đúng một điểm quanh người chơi, không đọc được từng con)
+    for (var si = 0; si < fieldMonsters.length; si++) {
+      var sa = fieldMonsters[si];
+      if (sa.state === 'dead' || sa.hp <= 0) continue;
+      for (var sj = si + 1; sj < fieldMonsters.length; sj++) {
+        var sb = fieldMonsters[sj];
+        if (sb.state === 'dead' || sb.hp <= 0) continue;
+        var sdx = sb.x - sa.x, sdy = sb.y - sa.y;
+        var sd = Math.hypot(sdx, sdy);
+        var minD = (sa.isElite || sb.isElite) ? 90 : 32;
+        if (sd > 0.01 && sd < minD) {
+          var push = (minD - sd) / 2;
+          var ux = sdx / sd, uy = sdy / sd;
+          sa.x -= ux * push; sa.y -= uy * push;
+          sb.x += ux * push; sb.y += uy * push;
+        } else if (sd <= 0.01) {
+          sb.x += 16; sb.y += 8;
+        }
+      }
+    }
   }
 
   function spawnEliteAdds(elite) {
@@ -1216,8 +1718,8 @@
 
     spawnFloatingText('+' + gainedTuVi + ' Tu vi Mộc', m.x, m.y - 25, '#55d882');
 
-    // 3. Tiến độ nhiệm vụ (Săn 5 Thảo Tinh)
-    if (player.quests && player.quests.talked_linhnhi && !player.quests.huntCompleted) {
+    // 3. Tiến độ nhiệm vụ (Săn 5 Thảo Tinh ở Rừng Độc)
+    if (player.quests && player.quests.talked_linhnhi && !player.quests.huntCompleted && m.mapId === 'rung-doc') {
       if (m.speciesId === 'thao_tinh') {
         player.quests.thaotinhKills = (player.quests.thaotinhKills || 0) + 1;
         if (player.quests.thaotinhKills >= 5) {
@@ -1413,6 +1915,47 @@
     });
   }
 
+  var currentZoneId = null;
+  function updateZone() {
+    if (!player || !mapData || !mapData.zones || mapData.zones.length === 0) {
+      currentZoneId = null;
+      return;
+    }
+    var foundZone = null;
+    for (var i = 0; i < mapData.zones.length; i++) {
+      var z = mapData.zones[i];
+      if (z.rect &&
+          player.x >= z.rect.x && player.x <= z.rect.x + z.rect.w &&
+          player.y >= z.rect.y && player.y <= z.rect.y + z.rect.h) {
+        foundZone = z;
+        break;
+      }
+    }
+    if (foundZone) {
+      if (foundZone.id !== currentZoneId) {
+        currentZoneId = foundZone.id;
+        if (typeof window !== 'undefined' && window.GameUI && window.GameUI.showZoneTitle) {
+          window.GameUI.showZoneTitle(foundZone.name, foundZone.desc);
+        }
+      }
+    } else {
+      currentZoneId = null;
+    }
+  }
+
+  function getCurrentZone() {
+    if (!player || !mapData || !mapData.zones) return null;
+    for (var i = 0; i < mapData.zones.length; i++) {
+      var z = mapData.zones[i];
+      if (z.rect &&
+          player.x >= z.rect.x && player.x <= z.rect.x + z.rect.w &&
+          player.y >= z.rect.y && player.y <= z.rect.y + z.rect.h) {
+        return z;
+      }
+    }
+    return null;
+  }
+
   function updateCamera() {
     if (!player || !mapData) return;
 
@@ -1443,9 +1986,9 @@
     ctx.translate(-camera.x, -camera.y);
 
     // 1. Vẽ ảnh nền bản đồ hiện tại (Brief §2: 1920x1280)
-    var bgKey = (mapData.id === 'rung-doc') ? 'map_rung_doc_bg' : 'map_bg';
-    if (assets[bgKey] && assets[bgKey].complete) {
-      ctx.drawImage(assets[bgKey], 0, 0, mapData.width, mapData.height);
+    var bgImg = assets[mapData.bgImage] || (mapData.id === 'rung-doc' ? assets.map_rung_doc_bg : assets.map_bg);
+    if (bgImg && bgImg.complete) {
+      ctx.drawImage(bgImg, 0, 0, mapData.width, mapData.height);
     }
 
     // 2. Gợn sóng nhấp chuột
@@ -1489,101 +2032,123 @@
       drawGroundDrop(drop);
     }
 
+    // 4b. Vẽ các điểm thu hái (Harvest Nodes)
+    if (mapData.harvestNodes) {
+      var nowSecH = performance.now() / 1000;
+      for (var h = 0; h < mapData.harvestNodes.length; h++) {
+        var node = mapData.harvestNodes[h];
+        var isReady = nowSecH >= (harvestReadyTimes[node.id] || 0);
+        if (isReady) {
+          var bobH = Math.sin(nowSecH * 3 + h) * 3;
+          // Note 8: 'thap' bỏ quầng sáng gradient của điểm hái (icon vẫn nhấp nhô như cũ)
+          if (currentQuality !== 'thap') {
+            ctx.save();
+            var gradH = ctx.createRadialGradient(node.x, node.y - 12 + bobH, 2, node.x, node.y - 12 + bobH, 18);
+            gradH.addColorStop(0, 'rgba(124, 232, 152, 0.45)');
+            gradH.addColorStop(1, 'rgba(124, 232, 152, 0)');
+            ctx.fillStyle = gradH;
+            ctx.beginPath();
+            ctx.arc(node.x, node.y - 12 + bobH, 18, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
+
+          var iconImg = assets['assets/art/icons-sheet.png'] || assets.icons_sheet;
+          if (iconImg && iconImg.complete) {
+            var defH = (monstersAPI && monstersAPI.ITEM_DEFS) ? monstersAPI.ITEM_DEFS[node.itemId] : null;
+            var colH = defH ? (defH.iconCol || 0) : 0;
+            var rowH = defH ? (defH.iconRow || 0) : 0;
+            ctx.drawImage(iconImg, colH * 32, rowH * 32, 32, 32, node.x - 12, node.y - 24 + bobH, 24, 24);
+          }
+        } else {
+          ctx.save();
+          ctx.fillStyle = 'rgba(80, 140, 80, 0.35)';
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, 4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+    }
+
     // 5. Thu thập toàn bộ thực thể hiển thị và sắp xếp chiều sâu Painter's Algorithm
     var entities = [];
 
-    // Standees theo bản đồ
-    if (mapData.id === 'mieu_hoang') {
-      if (mapData.temple) {
-        entities.push({
-          type: 'temple',
-          baseY: mapData.temple.baseY,
-          draw: function () {
-            if (assets.temple && assets.temple.complete) {
-              ctx.drawImage(assets.temple, mapData.temple.x, mapData.temple.y, mapData.temple.w, mapData.temple.h);
-            }
-          }
-        });
-      }
-
-      if (mapData.trees) {
-        for (var t = 0; t < mapData.trees.length; t++) {
-          (function (tree) {
-            entities.push({
-              type: 'tree',
-              baseY: tree.baseY,
-              draw: function () {
+    // Standees
+    if (mapData.standees) {
+      for (var s = 0; s < mapData.standees.length; s++) {
+        (function (std) {
+          entities.push({
+            type: 'standee',
+            baseY: std.baseY,
+            draw: function () {
+              var sImg = assets[std.asset] || (std.id === 'fallen_log_1' ? assets.fallen_log : (std.id === 'broadleaf_1' || std.id === 'broadleaf_2' || std.id === 'broadleaf_3' ? assets.broadleaf_tree : assets[std.id]));
+              if (std.trunk) {
                 ctx.save();
                 ctx.fillStyle = 'rgba(10, 15, 10, 0.35)';
                 ctx.beginPath();
-                ctx.ellipse(tree.trunk.x, tree.trunk.y + 4, tree.trunk.r * 2.2, tree.trunk.r * 1.1, 0, 0, Math.PI * 2);
+                ctx.ellipse(std.trunk.x, std.trunk.y + 4, std.trunk.r * 2.0, std.trunk.r * 1.0, 0, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.restore();
-                if (assets.pine && assets.pine.complete) {
-                  ctx.drawImage(assets.pine, tree.x, tree.y, tree.w, tree.h);
-                }
               }
-            });
-          })(mapData.trees[t]);
-        }
-      }
-
-      if (mapData.linhnhi) {
-        entities.push({
-          type: 'linhnhi',
-          baseY: mapData.linhnhi.baseY,
-          draw: function () {
-            var ln = mapData.linhnhi;
-            ctx.save();
-            ctx.fillStyle = 'rgba(10, 15, 10, 0.4)';
-            ctx.beginPath();
-            ctx.ellipse(ln.feetX, ln.feetY, 20, 8, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
-
-            if (assets.linhnhi && assets.linhnhi.complete) {
-              ctx.drawImage(assets.linhnhi, ln.x, ln.y, ln.w, ln.h);
-            }
-
-            if (player.quests && !player.quests.talked_linhnhi) {
-              var bob = Math.sin(performance.now() / 250) * 4;
-              drawQuestExclamation(ln.feetX, ln.y - 18 + bob);
-            }
-          }
-        });
-      }
-    } else if (mapData.id === 'rung-doc') {
-      // Standees Rừng Độc (Cây lá rộng + thân gỗ mục)
-      if (mapData.standees) {
-        for (var s = 0; s < mapData.standees.length; s++) {
-          (function (std) {
-            entities.push({
-              type: 'standee',
-              baseY: std.baseY,
-              draw: function () {
-                var assetKey = (std.id === 'fallen_log_1') ? 'fallen_log' : 'broadleaf_tree';
-                if (assets[assetKey] && assets[assetKey].complete) {
-                  ctx.drawImage(assets[assetKey], std.x, std.y, std.w, std.h);
-                }
+              if (sImg && sImg.complete) {
+                ctx.drawImage(sImg, std.x, std.y, std.w, std.h);
               }
-            });
-          })(mapData.standees[s]);
-        }
-      }
-
-      // Quái vật trên bản đồ Rừng Độc
-      for (var mIdx = 0; mIdx < fieldMonsters.length; mIdx++) {
-        (function (monster) {
-          if (monster.state === 'dead') return;
-          entities.push({
-            type: 'monster',
-            baseY: monster.y,
-            draw: function () {
-              drawMonster(monster);
             }
           });
-        })(fieldMonsters[mIdx]);
+        })(mapData.standees[s]);
       }
+    }
+
+    // NPCs
+    if (mapData.npcs) {
+      for (var n = 0; n < mapData.npcs.length; n++) {
+        (function (npc) {
+          if (!isNpcActive(npc)) return;
+          entities.push({
+            type: 'npc',
+            baseY: npc.baseY || npc.feetY,
+            draw: function () {
+              ctx.save();
+              ctx.fillStyle = 'rgba(10, 15, 10, 0.4)';
+              ctx.beginPath();
+              ctx.ellipse(npc.feetX, npc.feetY, (npc.w / 2) * 0.75, 8, 0, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.restore();
+
+              var nImg = assets[npc.asset] || (npc.id === 'npc_linhnhi' ? assets.linhnhi : null);
+              if (nImg && nImg.complete) {
+                ctx.drawImage(nImg, npc.x, npc.y, npc.w, npc.h);
+              }
+
+              var qTarget = getQuestTargetInfo();
+              if (qTarget && qTarget.kind === 'npc' && qTarget.npcId === npc.id) {
+                var bobN = Math.sin(performance.now() / 250) * 4;
+                drawQuestExclamation(npc.feetX, npc.y - 18 + bobN);
+              }
+
+              var dPlayer = Math.hypot(player.x - npc.feetX, player.y - npc.feetY);
+              if (dPlayer <= INTERACTION_RANGE) {
+                drawHintChip(npc.feetX, npc.y - 6, 'Nói chuyện');
+              }
+            }
+          });
+        })(mapData.npcs[n]);
+      }
+    }
+
+    // Quái vật
+    for (var mIdx = 0; mIdx < fieldMonsters.length; mIdx++) {
+      (function (monster) {
+        if (monster.state === 'dead') return;
+        entities.push({
+          type: 'monster',
+          baseY: monster.y,
+          draw: function () {
+            drawMonster(monster);
+          }
+        });
+      })(fieldMonsters[mIdx]);
     }
 
     // Người chơi Hà Nhân
@@ -1600,7 +2165,9 @@
 
         var walkSheet = assets.hanhan_walk;
         if (playerMoving && walkSheet && walkSheet.complete && walkSheet.naturalWidth >= 768) {
-          var wFrame = Math.floor(walkAnimTime * 9) % 8;
+          // Đợt 3 (Note 6): khung hình suy từ quãng đường đã đi — chân khớp mặt đất, không trượt theo thời gian
+          var sheetCols = Math.max(1, Math.round(walkSheet.naturalWidth / 96));
+          var wFrame = Math.floor(walkDist / WALK_CYCLE_DIST * sheetCols) % sheetCols;
           var wFrameY = (player.dir || 0) * 120;
           ctx.drawImage(
             walkSheet,
@@ -1637,21 +2204,24 @@
     // 7. Vẽ chữ sát thương nổi (Floating Numbers)
     renderFloatingTexts();
 
+    // 7b. Biển chỉ tên tại các điểm chuyển map (Đợt 3, Note 4)
+    drawGateSigns();
+
     // 8. Mũi tên dẫn đường nhiệm vụ (Guidance Arrow)
     var settings = stateAPI ? stateAPI.loadSettings() : null;
     var showArrow = !settings || settings.arrowGuidance !== false;
-    if (showArrow && player.quests) {
-      if (!player.quests.talked_linhnhi && mapData.id === 'mieu_hoang' && mapData.linhnhi) {
-        drawGuidanceArrow(player.x, player.y, mapData.linhnhi.feetX, mapData.linhnhi.feetY);
-      } else if (player.quests.talked_linhnhi && !player.quests.huntCompleted) {
-        if (mapData.id === 'mieu_hoang') {
-          // Chỉ về phía lối thoát đông
-          drawGuidanceArrow(player.x, player.y, 1890, 475);
-        } else if (mapData.id === 'rung-doc') {
-          // Chỉ về bầy Thảo Tinh sống gần nhất
-          var targetPack = getNearestLivingThaoTinh();
-          if (targetPack) {
-            drawGuidanceArrow(player.x, player.y, targetPack.x, targetPack.y);
+    if (showArrow && player && player.quests) {
+      var qInfo = getQuestTargetInfo();
+      if (qInfo && qInfo.stepId !== 'done') {
+        if (qInfo.mapId === currentMapId) {
+          var destA = resolveQuestDestination(qInfo);
+          if (destA) {
+            drawGuidanceArrow(player.x, player.y, destA.x, destA.y);
+          }
+        } else {
+          var exitHop = findNextHopExit(currentMapId, qInfo.mapId);
+          if (exitHop && exitHop.target) {
+            drawGuidanceArrow(player.x, player.y, exitHop.target.x, exitHop.target.y);
           }
         }
       }
@@ -1671,6 +2241,9 @@
     }
 
     ctx.restore();
+
+    // 11. Bảng tên cổng cỡ lớn theo không gian màn hình (Đợt 3, Note 4)
+    drawSignPlate();
   }
 
   function getNearestLivingThaoTinh() {
@@ -1693,32 +2266,54 @@
     var spec = monstersAPI.SPECIES[m.speciesId];
     if (!spec) return;
 
+    // Đợt 3 (Note: độ rõ của quái ở cỡ điện thoại): vũng sáng ấm sau lưng quái
+    // giúp quái xanh tách khỏi nền lá xanh — nhận ra là SINH VẬT ngay, không cần thanh máu.
+    // Note 8: chất lượng 'thap' bỏ gradient này (tốn GPU nhất) — quái vẫn có bóng + viền.
+    if (currentQuality !== 'thap') {
+      ctx.save();
+      var poolR = m.isElite ? 120 : 62;
+      var poolGrad = ctx.createRadialGradient(m.x, m.y - 20, 4, m.x, m.y - 20, poolR);
+      poolGrad.addColorStop(0, m.isElite ? 'rgba(255, 225, 150, 0.34)' : 'rgba(255, 240, 190, 0.26)');
+      poolGrad.addColorStop(1, 'rgba(255, 240, 190, 0)');
+      ctx.fillStyle = poolGrad;
+      ctx.beginPath();
+      ctx.arc(m.x, m.y - 20, poolR, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
     // Vòng phát sáng ngũ hành cho quái tinh anh (Brief §4 & Hồ sơ 36/49)
     if (m.isElite) {
       ctx.save();
       ctx.strokeStyle = '#55d882';
       ctx.lineWidth = 1.8;
       ctx.shadowColor = '#55d882';
-      ctx.shadowBlur = 10;
+      ctx.shadowBlur = qualityShadow(10);
       ctx.beginPath();
       ctx.ellipse(m.x, m.y, 75, 26, 0, 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
     }
 
-    // Bóng râm dưới chân
+    // Bóng tiếp xúc dưới chân (Đợt 3: to và đậm hơn để đọc rõ ở cỡ điện thoại)
     ctx.save();
-    ctx.fillStyle = 'rgba(10, 15, 10, 0.4)';
+    ctx.fillStyle = 'rgba(8, 12, 8, 0.52)';
     ctx.beginPath();
-    var shadowW = m.isElite ? 65 : 22;
-    var shadowH = m.isElite ? 20 : 8;
+    var shadowW = m.isElite ? 70 : 31;
+    var shadowH = m.isElite ? 22 : 11;
     ctx.ellipse(m.x, m.y, shadowW, shadowH, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
     // Sprite quái vật từ sheet đã keyout
+    // LƯU Ý (bài học Đợt 3): khóa nạp trước là thaotinh_sheet/nhenxanh_sheet/cothuye_sheet,
+    // KHÔNG khớp speciesId + '_sheet' — từng làm sprite quái không bao giờ được vẽ.
     var sheetKey = m.speciesId + '_sheet';
     var sheet = assets[sheetKey];
+    if (!sheet) {
+      var aliasKey = { thao_tinh: 'thaotinh_sheet', nhen_xanh: 'nhenxanh_sheet', co_thu_yeu: 'cothuye_sheet' }[m.speciesId];
+      if (aliasKey) sheet = assets[aliasKey];
+    }
     if (sheet && sheet.complete) {
       var cellW = spec.cellW;
       var cellH = spec.cellH;
@@ -1732,6 +2327,11 @@
       else if (row === 3) col = Math.floor(m.animTime * 4.0) % 2; // Hit 2 frames
       else if (row === 4) col = Math.min(2, Math.floor(m.deathTimer * 3.0)); // Death 3 frames
 
+      // Đợt 3: biên độ nhún thở/idle phải đọc được ở cỡ điện thoại
+      var bobY = 0;
+      if (row === 0) bobY = Math.sin(m.animTime * 2.4 + (m.x % 7)) * (m.isElite ? 3.5 : 2.4);
+      else if (row === 1) bobY = -Math.abs(Math.sin(m.animTime * 6.0)) * 2;
+
       ctx.save();
       // Lật X nếu di chuyển sang trái
       if (m.facingLeft) {
@@ -1740,16 +2340,31 @@
         ctx.drawImage(
           sheet,
           col * cellW, row * cellH, cellW, cellH,
-          -spec.feetOffsetX, -spec.feetOffsetY, cellW, cellH
+          -spec.feetOffsetX, -spec.feetOffsetY - bobY, cellW, cellH
         );
       } else {
         ctx.drawImage(
           sheet,
           col * cellW, row * cellH, cellW, cellH,
-          m.x - spec.feetOffsetX, m.y - spec.feetOffsetY, cellW, cellH
+          m.x - spec.feetOffsetX, m.y - spec.feetOffsetY - bobY, cellW, cellH
         );
       }
       ctx.restore();
+
+      // Đợt 3: tinh anh có bào tử sáng bay quanh — dấu hiệu "sinh vật" không lẫn với cây nền
+      if (m.isElite && row !== 4) {
+        ctx.save();
+        for (var sp = 0; sp < 3; sp++) {
+          var ang = m.animTime * 0.9 + sp * (Math.PI * 2 / 3);
+          var spx = m.x + Math.cos(ang) * 58;
+          var spy = m.y - 95 + Math.sin(ang * 1.7) * 16;
+          ctx.fillStyle = 'rgba(150, 255, 170, 0.75)';
+          ctx.beginPath();
+          ctx.arc(spx, spy, 3.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
     }
 
     // Thanh máu trên đầu quái (Elite: thanh dài hơn + bảng tên)
@@ -1769,7 +2384,7 @@
       ctx.fillStyle = '#ffe9a8';
       ctx.textAlign = 'center';
       ctx.shadowColor = '#000000';
-      ctx.shadowBlur = 4;
+      ctx.shadowBlur = qualityShadow(4);
       ctx.fillText(m.name, m.x, topY - 5);
       ctx.restore();
     }
@@ -1791,7 +2406,7 @@
     ctx.save();
     // Vầng sáng mềm dưới vật phẩm
     ctx.shadowColor = isCurrency ? 'rgba(90, 220, 240, 0.9)' : 'rgba(85, 216, 130, 0.8)';
-    ctx.shadowBlur = 10;
+    ctx.shadowBlur = qualityShadow(10);
     ctx.fillStyle = isCurrency ? 'rgba(90, 220, 240, 0.25)' : 'rgba(85, 216, 130, 0.2)';
     ctx.beginPath();
     ctx.ellipse(drop.x, drop.y + 4, 14, 6, 0, 0, Math.PI * 2);
@@ -1849,7 +2464,7 @@
       ctx.save();
       ctx.fillStyle = '#55d882';
       ctx.shadowColor = '#8cd96a';
-      ctx.shadowBlur = 8;
+      ctx.shadowBlur = qualityShadow(8);
       ctx.beginPath();
       ctx.arc(proj.x, proj.y, 6.5, 0, Math.PI * 2);
       ctx.fill();
@@ -1878,7 +2493,7 @@
       }
 
       ctx.shadowColor = '#000000';
-      ctx.shadowBlur = 4;
+      ctx.shadowBlur = qualityShadow(4);
       ctx.textAlign = 'center';
       ctx.fillText(ft.text, ft.x, ft.y);
     }
@@ -1888,7 +2503,7 @@
   function drawQuestExclamation(x, y) {
     ctx.save();
     ctx.shadowColor = 'rgba(243, 217, 78, 0.85)';
-    ctx.shadowBlur = 12;
+    ctx.shadowBlur = qualityShadow(12);
     ctx.fillStyle = '#8a2b22';
     ctx.strokeStyle = '#f3d94e';
     ctx.lineWidth = 2.0;
@@ -1918,7 +2533,7 @@
     ctx.translate(arrowX, arrowY);
     ctx.rotate(angle);
     ctx.shadowColor = 'rgba(218, 175, 55, 0.8)';
-    ctx.shadowBlur = 8;
+    ctx.shadowBlur = qualityShadow(8);
     ctx.fillStyle = '#f3d94e';
     ctx.strokeStyle = '#5d4a1e';
     ctx.lineWidth = 1.2;
@@ -1931,6 +2546,169 @@
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawHintChip(x, y, text) {
+    ctx.save();
+    ctx.font = '11px "Noto Serif", serif';
+    var textMetrics = ctx.measureText(text);
+    var boxW = textMetrics.width + 12;
+    var boxH = 18;
+
+    ctx.fillStyle = 'rgba(20, 26, 20, 0.85)';
+    ctx.strokeStyle = '#c9a227';
+    ctx.lineWidth = 1;
+
+    ctx.beginPath();
+    ctx.roundRect(x - boxW / 2, y - boxH / 2, boxW, boxH, 4);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#fff4d0';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, x, y);
+    ctx.restore();
+  }
+
+  /**
+   * Đợt 3 (Note 4): biển chỉ tên tại MỌI điểm chuyển map.
+   * Biển gỗ trong thế giới (cột + bảng + tên map đích) vẽ thường trực;
+   * khi nhân vật tới gần (<= 320px) hiện thêm bảng tên cỡ lớn theo không gian
+   * màn hình để đọc rõ ở bề ngang điện thoại 390px.
+   */
+  function collectGateSigns() {
+    var signs = [];
+    if (!mapData) return signs;
+    var holder = (typeof window !== 'undefined' && window.GameMapData) ? window.GameMapData : null;
+    function destName(id) {
+      var m = holder && holder.getMap ? holder.getMap(id) : null;
+      return m ? m.name : id;
+    }
+    if (mapData.exits) {
+      for (var i = 0; i < mapData.exits.length; i++) {
+        var ex = mapData.exits[i];
+        if (ex.targetMap && ex.rect) {
+          // Cửa Đại Điện đã có biển tên riêng ngay cửa (plaque) — không cắm thêm biển cổng trùng
+          if (ex.targetMap === 'dai-dien') continue;
+          var sx = ex.rect.x + ex.rect.w / 2;
+          var sy = ex.rect.y + ex.rect.h / 2;
+          // Cổng sát mép bản đồ: cắm biển lùi vào trong để không bị cắt khỏi khung hình
+          if (ex.rect.y <= 2) sy = ex.rect.y + ex.rect.h + 36;
+          else if (ex.rect.y + ex.rect.h >= mapData.height - 2) sy = ex.rect.y - 36;
+          if (ex.rect.x <= 2) sx = ex.rect.x + ex.rect.w + 36;
+          else if (ex.rect.x + ex.rect.w >= mapData.width - 2) sx = ex.rect.x - 36;
+          signs.push({ x: sx, y: sy, label: destName(ex.targetMap), kind: 'gate' });
+        }
+      }
+    }
+    if (mapData.interactables) {
+      for (var j = 0; j < mapData.interactables.length; j++) {
+        var it = mapData.interactables[j];
+        if (it.action === 'door_enter') {
+          signs.push({ x: it.x + 118, y: it.y - 40, label: 'Đại Điện', kind: 'plaque' });
+        } else if (it.action === 'door_exit') {
+          signs.push({ x: it.x, y: it.y - 46, label: 'Ra Sơn Môn', kind: 'plaque' });
+        } else if (it.action === 'open_teleport') {
+          signs.push({ x: it.x, y: it.y - 96, label: 'Đài Truyền Tống', kind: 'plaque' });
+        }
+      }
+    }
+    // Đài Truyền Tống: bia đá ghi từng điểm đến quanh đài (thấy trước khi dùng)
+    if (mapData.id === 'dai-truyen-tong') {
+      signs.push({ x: 268, y: 300, label: 'Miếu Hoang', kind: 'stele' });
+      signs.push({ x: 692, y: 300, label: 'Rừng Độc Thanh Tụy', kind: 'stele' });
+      signs.push({ x: 480, y: 486, label: 'Sơn Môn', kind: 'stele' });
+    }
+    return signs;
+  }
+
+  function drawOneSign(s) {
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    if (s.kind === 'gate') {
+      // Cột gỗ + bảng gỗ treo
+      ctx.fillStyle = 'rgba(10, 12, 8, 0.35)';
+      ctx.beginPath();
+      ctx.ellipse(s.x, s.y + 26, 20, 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#6d4c2f';
+      ctx.fillRect(s.x - 3, s.y - 16, 6, 42);
+      ctx.font = 'bold 15px "Noto Serif", serif';
+      var gw = ctx.measureText(s.label).width + 26;
+      ctx.fillStyle = '#7d5a36';
+      ctx.strokeStyle = '#4a3220';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(s.x - gw / 2, s.y - 44, gw, 30, 5);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#ffe9b0';
+      ctx.fillText(s.label, s.x, s.y - 29);
+    } else if (s.kind === 'plaque') {
+      ctx.font = 'bold 15px "Noto Serif", serif';
+      var pw = ctx.measureText(s.label).width + 26;
+      ctx.fillStyle = 'rgba(74, 32, 24, 0.92)';
+      ctx.strokeStyle = '#c9a227';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.roundRect(s.x - pw / 2, s.y - 15, pw, 30, 5);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#ffd977';
+      ctx.fillText(s.label, s.x, s.y);
+    } else { // stele — bia đá nhỏ
+      ctx.font = 'bold 13px "Noto Serif", serif';
+      var sw = ctx.measureText(s.label).width + 20;
+      ctx.fillStyle = 'rgba(96, 104, 100, 0.95)';
+      ctx.strokeStyle = '#3f4a44';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.roundRect(s.x - sw / 2, s.y - 14, sw, 28, 4);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#eaf5ec';
+      ctx.fillText(s.label, s.x, s.y);
+    }
+    ctx.restore();
+  }
+
+  function drawGateSigns() {
+    var signs = collectGateSigns();
+    for (var i = 0; i < signs.length; i++) drawOneSign(signs[i]);
+  }
+
+  /** Bảng tên cỡ lớn (không gian màn hình) cho cổng gần nhất — đọc rõ ở 390px. */
+  function drawSignPlate() {
+    if (!player) return;
+    var signs = collectGateSigns();
+    var best = null, bestD = 330;
+    for (var i = 0; i < signs.length; i++) {
+      var d = Math.hypot(player.x - signs[i].x, player.y - signs[i].y);
+      if (d < bestD) { bestD = d; best = signs[i]; }
+    }
+    if (!best) return;
+    var sx = (best.x - camera.x) * camera.scale;
+    var sy = (best.y - camera.y) * camera.scale - 58;
+    ctx.save();
+    ctx.font = 'bold 17px "Noto Serif", serif';
+    var tw = ctx.measureText(best.label).width;
+    var bw = tw + 34, bh = 38;
+    var bx = Math.max(8, Math.min(canvas.width - bw - 8, sx - bw / 2));
+    var by = Math.max(8, sy - bh);
+    ctx.fillStyle = 'rgba(46, 32, 18, 0.94)';
+    ctx.strokeStyle = '#c9a227';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(bx, by, bw, bh, 8);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#ffe9b0';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(best.label, bx + bw / 2, by + bh / 2 + 1);
     ctx.restore();
   }
 
@@ -1971,10 +2749,30 @@
     triggerPathTo: triggerPathTo,
     getDirFromVelocity: getDirFromVelocity,
     getCamera: function () { return camera; },
+    setQuality: setQuality,
+    getQuality: function () { return currentQuality; },
     castSkill: castSkill,
     handleRevive: handleRevive,
     switchMap: switchMap,
+    teleportTo: teleportTo,
+    handleNpcTalked: handleNpcTalked,
+    getCurrentMap: function () { return mapData; },
+    getCurrentMapId: function () { return currentMapId; },
+    getCurrentZone: getCurrentZone,
+    getQuestTargetInfo: getQuestTargetInfo,
+    resolveQuestDestination: resolveQuestDestination,
+    findRoute: findRoute,
     getFieldMonsters: function () { return fieldMonsters; },
+    // Kiểm chứng sprite quái nạp đúng khóa (bắt lỗi lệch khóa nạp/tra cứu như Đợt 3)
+    getMonsterSheetStatus: function () {
+      var alias = { thao_tinh: 'thaotinh_sheet', nhen_xanh: 'nhenxanh_sheet', co_thu_yeu: 'cothuye_sheet' };
+      var out = {};
+      for (var sid in alias) {
+        var img = assets[sid + '_sheet'] || assets[alias[sid]];
+        out[sid] = !!(img && img.complete && img.naturalWidth > 0);
+      }
+      return out;
+    },
     getGroundDrops: function () { return groundDrops; },
     performContextAction: performContextAction,
     getActionContext: function () { return computeActionContext(); },
@@ -1982,7 +2780,7 @@
     toggleAutoQuestPath: toggleAutoQuestPath,
     cancelAutoPath: function () { cancelAutoPath(true); },
     isAutoPathActive: function () { return autoPath.active; },
-    hasQuestTarget: function () { return getQuestTargetInfo() !== null; }
+    hasQuestTarget: function () { return getQuestTargetInfo() !== null && getQuestTargetInfo().stepId !== 'done'; }
   };
 
   if (typeof module !== 'undefined' && module.exports) {

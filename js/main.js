@@ -28,11 +28,31 @@
 
     renderStartScreen(charList, activeCharName);
 
+    // Đợt 3 (Note 8): áp cài đặt hiển thị đã lưu ngay khi mở trang (cỡ HUD, cỡ nút
+    // chạm, chất lượng đồ họa) + đăng ký service worker tối thiểu cho PWA
+    // (pass-through, không cache — xem sw.js).
+    if (uiAPI && uiAPI.applyDisplaySettings) {
+      uiAPI.applyDisplaySettings(stateAPI.loadSettings());
+    }
+    if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator &&
+        typeof window !== 'undefined' && window.location && /^https?:$/.test(window.location.protocol)) {
+      // Đăng ký SAU sự kiện load để không tranh băng thông với tài sản game lúc mở trang
+      var registerSW = function () {
+        try {
+          var swReg = navigator.serviceWorker.register('sw.js');
+          if (swReg && swReg.catch) swReg.catch(function () {});
+        } catch (e) { /* Môi trường không hỗ trợ — bỏ qua */ }
+      };
+      if (document.readyState === 'complete') registerSW();
+      else window.addEventListener('load', registerSW);
+    }
+
     // Xử lý tạo nhân vật mới
     var btnStartNew = document.getElementById('btn-start-game');
     if (btnStartNew) {
       btnStartNew.addEventListener('click', function () {
         if (audioAPI) audioAPI.init();
+        if (window.GameMusic) window.GameMusic.unlock();
         var nameInput = document.getElementById('input-char-name');
         var charName = (nameInput && nameInput.value.trim()) || 'Hà Nhân';
 
@@ -72,6 +92,7 @@
           btnContinue.textContent = 'Tiếp Tục — ' + (activeName || list[0]);
           btnContinue.onclick = function () {
             if (audioAPI) audioAPI.init();
+        if (window.GameMusic) window.GameMusic.unlock();
             var targetName = activeName || list[0];
             var player = stateAPI.loadPlayer(targetName);
             if (!player) {

@@ -225,6 +225,47 @@
         advanceDialogue();
       }
     });
+
+    // 9. Minimap click -> Danh Mục Khu Vực (Zone Modal)
+    var minimapWrap = document.getElementById('minimap-wrap');
+    if (minimapWrap) {
+      minimapWrap.addEventListener('click', openZoneModal);
+    }
+    var closeZoneModalBtn = document.getElementById('close-zone-modal');
+    var btnCloseZoneModal = document.getElementById('btn-close-zone-modal');
+    if (closeZoneModalBtn) closeZoneModalBtn.addEventListener('click', closeZoneModal);
+    if (btnCloseZoneModal) btnCloseZoneModal.addEventListener('click', closeZoneModal);
+
+    // 10. Đài Truyền Tống (Teleport Modal)
+    var closeTeleportBtn = document.getElementById('close-teleport-modal');
+    var btnCloseTeleport = document.getElementById('btn-close-teleport-modal');
+    if (closeTeleportBtn) closeTeleportBtn.addEventListener('click', closeTeleportModal);
+    if (btnCloseTeleport) btnCloseTeleport.addEventListener('click', closeTeleportModal);
+
+    var tpMieu = document.getElementById('teleport-btn-mieu');
+    var tpRungDoc = document.getElementById('teleport-btn-rungdoc');
+    var tpTongMon = document.getElementById('teleport-btn-tongmon');
+    if (tpMieu) {
+      tpMieu.addEventListener('click', function () {
+        if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.teleportTo) {
+          window.GameEngine.teleportTo('mieu_hoang', 560, 620);
+        }
+      });
+    }
+    if (tpRungDoc) {
+      tpRungDoc.addEventListener('click', function () {
+        if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.teleportTo) {
+          window.GameEngine.teleportTo('rung-doc', 90, 560);
+        }
+      });
+    }
+    if (tpTongMon) {
+      tpTongMon.addEventListener('click', function () {
+        if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.teleportTo) {
+          window.GameEngine.teleportTo('tong-mon', 960, 1150);
+        }
+      });
+    }
   }
 
   function openBagModal() {
@@ -553,23 +594,28 @@
     var titleEl = document.getElementById('quest-title');
     var descEl = document.getElementById('quest-desc');
     var distEl = document.getElementById('quest-dist');
+    var q = player.quests || {};
+    var sectStage = (q.sectStage !== undefined) ? q.sectStage : 0;
 
-    if (!player.quests || !player.quests.talked_linhnhi) {
+    var mapNames = {
+      mieu_hoang: 'Miếu Hoang',
+      'rung-doc': 'Rừng Độc Thanh Tụy',
+      'tong-mon': 'Tông Môn',
+      'dai-dien': 'Đại Điện',
+      'son-coc': 'Sơn Cốc',
+      'dai-truyen-tong': 'Đài Truyền Tống'
+    };
+
+    var targetInfo = (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.getQuestTargetInfo) ? window.GameEngine.getQuestTargetInfo() : null;
+
+    if (!q.talked_linhnhi) {
       if (titleEl) titleEl.textContent = 'Nói chuyện với Linh Nhi';
       if (descEl) {
         descEl.textContent = 'Linh Nhi đang đợi ở trước miếu hoang.';
         descEl.classList.remove('greyed');
       }
-      if (distEl) {
-        if (mapData.linhnhi) {
-          var dist = Math.round(Math.hypot(player.x - mapData.linhnhi.feetX, player.y - mapData.linhnhi.feetY) / 24);
-          distEl.textContent = 'Khoảng cách: ~' + dist + ' bước';
-        } else {
-          distEl.textContent = 'Linh Nhi đang ở Miếu Hoang';
-        }
-      }
-    } else if (!player.quests.huntCompleted) {
-      var kills = player.quests.thaotinhKills || 0;
+    } else if (!q.huntCompleted) {
+      var kills = q.thaotinhKills || 0;
       if (titleEl) titleEl.textContent = 'Săn Thảo Tinh ở Rừng Độc (' + kills + '/5)';
       if (descEl) {
         if (mapData.id === 'mieu_hoang') {
@@ -579,16 +625,58 @@
         }
         descEl.classList.remove('greyed');
       }
-      if (distEl) {
-        distEl.textContent = (mapData.id === 'mieu_hoang') ? 'Theo lối thoát Đông' : 'Bãi quái vành ngoài';
+    } else if (sectStage === 0) {
+      if (titleEl) titleEl.textContent = 'Từ biệt Linh Nhi';
+      if (descEl) {
+        descEl.textContent = 'Linh Nhi muốn theo ca ca lên tông môn. Nói chuyện với cô bé trước khi lên đường.';
+        descEl.classList.remove('greyed');
+      }
+    } else if (sectStage === 1) {
+      if (titleEl) titleEl.textContent = 'Báo danh ở Lối Vào';
+      if (descEl) {
+        descEl.textContent = 'Đi đường xuống núi ở phía nam Miếu Hoang để tới sơn môn, gặp Tiếp Dẫn Đệ Tử.';
+        descEl.classList.remove('greyed');
+      }
+    } else if (sectStage === 2) {
+      if (titleEl) titleEl.textContent = 'Diện kiến Chưởng Môn';
+      if (descEl) {
+        descEl.textContent = 'Vào Đại Điện ở giữa trục chính của sơn môn, chưởng môn đang đợi.';
+        descEl.classList.remove('greyed');
+      }
+    } else if (sectStage === 3) {
+      if (titleEl) titleEl.textContent = 'Nhận lệnh từ Chấp Sự';
+      if (descEl) {
+        descEl.textContent = 'Chấp Sự ở Quảng Trường sẽ cấp phòng ở và sổ tay đệ tử.';
+        descEl.classList.remove('greyed');
       }
     } else {
-      if (titleEl) titleEl.textContent = 'Tự Do Săn Bắn & Khám Phá Rừng Độc';
+      if (titleEl) titleEl.textContent = 'Khám phá Tông Môn';
       if (descEl) {
-        descEl.textContent = 'Đã hoàn thành thử thách sơ nhập. Tiếp tục săn quái và tìm kiếm kỳ ngộ.';
+        descEl.textContent = 'Đã nhập môn. Tự do tham quan 14 khu của sơn môn, luyện công ở Rừng Trúc và Khu Huấn Luyện.';
         descEl.classList.add('greyed');
       }
-      if (distEl) distEl.textContent = 'Tự do rèn luyện';
+    }
+
+    if (distEl) {
+      if (sectStage >= 4) {
+        distEl.textContent = 'Tự do rèn luyện';
+      } else if (targetInfo) {
+        if (targetInfo.mapId === mapData.id) {
+          var dest = (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.resolveQuestDestination) ? window.GameEngine.resolveQuestDestination(targetInfo) : null;
+          if (dest) {
+            var stepDist = Math.round(Math.hypot(player.x - dest.x, player.y - dest.y) / 24);
+            distEl.textContent = 'Khoảng cách: ~' + stepDist + ' bước';
+          } else if (targetInfo.kind === 'hunt') {
+            distEl.textContent = 'Bãi quái vành ngoài';
+          } else {
+            distEl.textContent = 'Trong khu vực';
+          }
+        } else {
+          distEl.textContent = 'Đích ở ' + (mapNames[targetInfo.mapId] || targetInfo.mapId);
+        }
+      } else {
+        distEl.textContent = 'Tự do rèn luyện';
+      }
     }
   }
 
@@ -760,6 +848,10 @@
     if (textEl && dialogueState.lines[dialogueState.step]) {
       textEl.textContent = dialogueState.lines[dialogueState.step];
     }
+    // Lồng tiếng (Đợt 3, Note 3A): phát audio của đúng câu đang hiển thị
+    if (typeof window !== 'undefined' && window.GameVoice && dialogueState.lines[dialogueState.step]) {
+      window.GameVoice.playFor(dialogueState.npc ? dialogueState.npc.name : '', dialogueState.lines[dialogueState.step]);
+    }
   }
 
   function advanceDialogue() {
@@ -775,20 +867,27 @@
   }
 
   function closeDialogue() {
+    if (typeof window !== 'undefined' && window.GameVoice) window.GameVoice.stop();
     dialogueState.active = false;
     var dialogueBox = document.getElementById('dialogue-box');
     if (dialogueBox) dialogueBox.classList.add('hidden');
 
-    if (dialogueState.npc && dialogueState.npc.id === 'npc_linhnhi') {
-      if (!player.quests.talked_linhnhi) {
-        player.quests.talked_linhnhi = true;
-        player.quests.current = 'hunt_thaotinh';
-        player.quests.thaotinhKills = 0;
-        player.quests.huntCompleted = false;
-        if (stateAPI) stateAPI.savePlayer(player);
-        if (audioAPI) audioAPI.playChime();
-        showToast('Nhiệm vụ mới: Săn Thảo Tinh ở Rừng Độc');
-        refreshHUD();
+    if (dialogueState.npc) {
+      if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.handleNpcTalked) {
+        window.GameEngine.handleNpcTalked(dialogueState.npc.id);
+      } else {
+        if (dialogueState.npc.id === 'npc_linhnhi') {
+          if (!player.quests.talked_linhnhi) {
+            player.quests.talked_linhnhi = true;
+            player.quests.current = 'hunt';
+            player.quests.thaotinhKills = 0;
+            player.quests.huntCompleted = false;
+            if (stateAPI) stateAPI.savePlayer(player);
+            if (audioAPI) audioAPI.playChime();
+            showToast('Nhiệm vụ mới: Săn Thảo Tinh ở Rừng Độc');
+            refreshHUD();
+          }
+        }
       }
     }
   }
@@ -805,6 +904,89 @@
     toastTimer = setTimeout(function () {
       toast.classList.add('hidden');
     }, 2800);
+  }
+
+  var zoneTitleTimer = null;
+  function showZoneTitle(name, desc) {
+    var chip = document.getElementById('zone-title');
+    var nameEl = document.getElementById('zone-title-name');
+    var descEl = document.getElementById('zone-title-desc');
+    if (!chip || !nameEl) return;
+
+    nameEl.textContent = name || '';
+    if (descEl) descEl.textContent = desc || '';
+
+    chip.classList.remove('hidden');
+    if (zoneTitleTimer) clearTimeout(zoneTitleTimer);
+    zoneTitleTimer = setTimeout(function () {
+      chip.classList.add('hidden');
+    }, 3500);
+  }
+
+  function openZoneModal() {
+    if (audioAPI) audioAPI.playClick();
+    var modal = document.getElementById('zone-modal');
+    var titleEl = document.getElementById('zone-modal-title');
+    var listEl = document.getElementById('zone-modal-list');
+    if (!modal) return;
+
+    if (titleEl) {
+      titleEl.textContent = (mapData && mapData.name) ? mapData.name.toUpperCase() : 'DANH MỤC KHU VỰC';
+    }
+
+    if (listEl) {
+      listEl.innerHTML = '';
+      var zones = (mapData && mapData.zones) ? mapData.zones : [];
+      if (zones.length === 0) {
+        listEl.innerHTML = '<div class="zone-item"><div class="zone-item-desc">Khu vực tự nhiên, không phân khu riêng biệt.</div></div>';
+      } else {
+        var currentZ = (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.getCurrentZone) ? window.GameEngine.getCurrentZone() : null;
+        for (var i = 0; i < zones.length; i++) {
+          var z = zones[i];
+          var isCur = currentZ ? (currentZ.id === z.id) : (player && z.rect && player.x >= z.rect.x && player.x <= z.rect.x + z.rect.w && player.y >= z.rect.y && player.y <= z.rect.y + z.rect.h);
+          var itemDiv = document.createElement('div');
+          itemDiv.className = 'zone-item' + (isCur ? ' active-zone' : '');
+          var headerDiv = document.createElement('div');
+          headerDiv.className = 'zone-item-header';
+          var nameSpan = document.createElement('span');
+          nameSpan.className = 'zone-item-name';
+          nameSpan.textContent = z.name;
+          headerDiv.appendChild(nameSpan);
+          if (isCur) {
+            var tagSpan = document.createElement('span');
+            tagSpan.className = 'current-tag';
+            tagSpan.textContent = 'Hiện tại';
+            headerDiv.appendChild(tagSpan);
+          }
+          itemDiv.appendChild(headerDiv);
+          var descDiv = document.createElement('div');
+          descDiv.className = 'zone-item-desc';
+          descDiv.textContent = z.desc || '';
+          itemDiv.appendChild(descDiv);
+          listEl.appendChild(itemDiv);
+        }
+      }
+    }
+
+    modal.classList.remove('hidden');
+  }
+
+  function closeZoneModal() {
+    if (audioAPI) audioAPI.playClick();
+    var modal = document.getElementById('zone-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  function openTeleportModal() {
+    if (audioAPI) audioAPI.playClick();
+    var modal = document.getElementById('teleport-modal');
+    if (modal) modal.classList.remove('hidden');
+  }
+
+  function closeTeleportModal() {
+    if (audioAPI) audioAPI.playClick();
+    var modal = document.getElementById('teleport-modal');
+    if (modal) modal.classList.add('hidden');
   }
 
   // Đồng bộ nút hành động theo ngữ cảnh (engine gọi khi ngữ cảnh đổi)
@@ -826,7 +1008,9 @@
   function syncAutoPathButton() {
     var btn = document.getElementById('btn-auto-path');
     if (!btn || !player) return;
-    var hasTarget = !!(player.quests && (!player.quests.talked_linhnhi || !player.quests.huntCompleted));
+    var q = player.quests || {};
+    var sectStage = (q.sectStage !== undefined) ? q.sectStage : 0;
+    var hasTarget = !q.talked_linhnhi || !q.huntCompleted || sectStage < 4;
     var active = !!(typeof window !== 'undefined' && window.GameEngine && window.GameEngine.isAutoPathActive && window.GameEngine.isAutoPathActive());
     var stateKey = (hasTarget ? '1' : '0') + (active ? '1' : '0');
     if (stateKey === lastAutoBtnState) return;
@@ -840,9 +1024,175 @@
     btn.classList.toggle('auto-walking', active);
   }
 
+  /**
+   * Đẩy bộ cài đặt âm thanh xuống cả ba hệ: GameAudio (SFX + nhạc cũ),
+   * GameMusic (nhạc theo map + môi trường, Đợt 3) và GameVoice (lồng tiếng, Đợt 3).
+   */
+  function applyAudioSettings(s) {
+    if (!s) return;
+    var muted = !!s.muted;
+    if (audioAPI) {
+      audioAPI.setMusicVolume(muted ? 0 : s.musicVol);
+      audioAPI.setSfxVolume(muted ? 0 : s.sfxVol);
+    }
+    if (typeof window !== 'undefined' && window.GameMusic) {
+      window.GameMusic.setMusicVolume(s.musicVol);
+      window.GameMusic.setAmbienceVolume(s.ambVol != null ? s.ambVol : 0.6);
+      window.GameMusic.setMuted(muted);
+    }
+    if (typeof window !== 'undefined' && window.GameVoice) {
+      window.GameVoice.setVolume(s.voiceVol != null ? s.voiceVol : 0.9);
+      window.GameVoice.setEnabled(s.voiceEnabled !== false);
+      window.GameVoice.setMuted(muted);
+    }
+  }
+
+  // ---------- HIỂN THỊ (Đợt 3, Note 8) ----------
+  var JOY_SCALES = { nho: 0.85, vua: 1, lon: 1.2 };
+
+  function clampUiScale(v) {
+    var n = Number(v);
+    if (!isFinite(n)) return 1;
+    return Math.min(1.2, Math.max(0.85, n));
+  }
+
+  /**
+   * Đẩy cài đặt hiển thị xuống thật: biến CSS --ui-scale (cỡ HUD) và
+   * --ctl-scale (cỡ cụm nút chạm) trên :root + cờ chất lượng cho engine.
+   */
+  function applyDisplaySettings(s) {
+    if (!s || typeof document === 'undefined') return;
+    var root = document.documentElement;
+    if (root && root.style) {
+      root.style.setProperty('--ui-scale', String(clampUiScale(s.uiScale)));
+      root.style.setProperty('--ctl-scale', String(JOY_SCALES[s.joySize] || 1));
+    }
+    if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.setQuality) {
+      window.GameEngine.setQuality(s.quality || 'cao');
+    }
+    updateFullscreenButton();
+  }
+
+  function updateFullscreenButton() {
+    var btn = typeof document !== 'undefined' ? document.getElementById('btn-fullscreen-toggle') : null;
+    if (!btn) return;
+    btn.textContent = document.fullscreenElement ? 'Thoát toàn màn hình' : 'Bật toàn màn hình';
+  }
+
+  function toggleFullscreen() {
+    try {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else if (document.documentElement && document.documentElement.requestFullscreen) {
+        var p = document.documentElement.requestFullscreen();
+        if (p && p.catch) p.catch(function () {});
+      }
+    } catch (e) { /* Trình duyệt chặn (thiếu cử chỉ người dùng) — bỏ qua lặng lẽ */ }
+  }
+
+  function wireDisplayControls() {
+    var st = stateAPI || (typeof window !== 'undefined' ? window.GameState : null);
+    if (!st) return;
+    stateAPI = st;
+
+    var slider = document.getElementById('setting-ui-scale');
+    if (slider && !slider.dataset.wired) {
+      slider.dataset.wired = '1';
+      slider.addEventListener('input', function () {
+        var merged = st.saveSettings({ uiScale: clampUiScale(Number(slider.value) / 100) });
+        var valEl = document.getElementById('setting-ui-scale-val');
+        if (valEl) valEl.textContent = slider.value + '%';
+        applyDisplaySettings(merged);
+      });
+    }
+
+    var bindSelect = function (id, key) {
+      var el = document.getElementById(id);
+      if (!el || el.dataset.wired) return;
+      el.dataset.wired = '1';
+      el.addEventListener('change', function () {
+        var patch = {};
+        patch[key] = el.value;
+        applyDisplaySettings(st.saveSettings(patch));
+      });
+    };
+    bindSelect('setting-joy-size', 'joySize');
+    bindSelect('setting-quality', 'quality');
+
+    var fsBtn = document.getElementById('btn-fullscreen-toggle');
+    if (fsBtn && !fsBtn.dataset.wired) {
+      fsBtn.dataset.wired = '1';
+      fsBtn.addEventListener('click', toggleFullscreen);
+    }
+    if (!document.dataset || !document.dataset.fsWired) {
+      if (document.dataset) document.dataset.fsWired = '1';
+      document.addEventListener('fullscreenchange', updateFullscreenButton);
+    }
+  }
+
+  function refreshDisplayControls() {
+    var st = stateAPI || (typeof window !== 'undefined' ? window.GameState : null);
+    if (!st) return;
+    var s = st.loadSettings();
+    var slider = document.getElementById('setting-ui-scale');
+    if (slider) slider.value = Math.round(clampUiScale(s.uiScale) * 100);
+    var valEl = document.getElementById('setting-ui-scale-val');
+    if (valEl) valEl.textContent = Math.round(clampUiScale(s.uiScale) * 100) + '%';
+    var joy = document.getElementById('setting-joy-size');
+    if (joy) joy.value = JOY_SCALES[s.joySize] ? s.joySize : 'vua';
+    var qual = document.getElementById('setting-quality');
+    if (qual) qual.value = (s.quality === 'thap' || s.quality === 'trung' || s.quality === 'cao') ? s.quality : 'cao';
+    updateFullscreenButton();
+  }
+
+  function refreshSettingsControls() {
+    var st = stateAPI || (typeof window !== 'undefined' ? window.GameState : null);
+    if (!st) return;
+    var s = st.loadSettings();
+    var set = function (id, v) { var el = document.getElementById(id); if (el) el.value = Math.round(v * 100); };
+    var setChk = function (id, on) { var el = document.getElementById(id); if (el) el.checked = !!on; };
+    set('setting-music-vol', s.musicVol);
+    set('setting-sfx-vol', s.sfxVol);
+    set('setting-amb-vol', s.ambVol != null ? s.ambVol : 0.6);
+    set('setting-voice-vol', s.voiceVol != null ? s.voiceVol : 0.9);
+    setChk('setting-voice-toggle', s.voiceEnabled !== false);
+    setChk('setting-mute-toggle', !!s.muted);
+    setChk('setting-arrow-toggle', s.arrowGuidance !== false);
+    setChk('setting-flourish-toggle', s.flourishEffects !== false);
+    refreshDisplayControls();
+  }
+
+  function wireSettingsControls() {
+    var st = stateAPI || (typeof window !== 'undefined' ? window.GameState : null);
+    if (!st) return;
+    stateAPI = st;
+    var bind = function (id, key, isToggle) {
+      var el = document.getElementById(id);
+      if (!el || el.dataset.wired) return;
+      el.dataset.wired = '1';
+      el.addEventListener('input', function () {
+        var patch = {};
+        patch[key] = isToggle ? el.checked : (Number(el.value) / 100);
+        var merged = st.saveSettings(patch);
+        applyAudioSettings(merged);
+      });
+    };
+    bind('setting-music-vol', 'musicVol', false);
+    bind('setting-sfx-vol', 'sfxVol', false);
+    bind('setting-amb-vol', 'ambVol', false);
+    bind('setting-voice-vol', 'voiceVol', false);
+    bind('setting-voice-toggle', 'voiceEnabled', true);
+    bind('setting-mute-toggle', 'muted', true);
+    bind('setting-arrow-toggle', 'arrowGuidance', true);
+    bind('setting-flourish-toggle', 'flourishEffects', true);
+    wireDisplayControls();
+  }
+
   function openSettingsModal() {
     var modal = document.getElementById('settings-modal');
     if (!modal) return;
+    wireSettingsControls();
+    refreshSettingsControls();
     modal.classList.remove('hidden');
     // Ở màn hình bắt đầu, initUI chưa chạy nên nút đóng chưa có sự kiện: gắn tại đây (một lần duy nhất)
     var closeBtn = document.getElementById('close-settings');
@@ -859,12 +1209,19 @@
     update: update,
     refreshHUD: refreshHUD,
     openDialogue: openDialogue,
+    closeDialogue: closeDialogue,
     showToast: showToast,
+    showZoneTitle: showZoneTitle,
+    openZoneModal: openZoneModal,
+    closeZoneModal: closeZoneModal,
+    openTeleportModal: openTeleportModal,
+    closeTeleportModal: closeTeleportModal,
     triggerSkillShake: triggerSkillShake,
     showDeathModal: showDeathModal,
     hideDeathModal: hideDeathModal,
     showSessionSummary: showSessionSummary,
     openSettingsModal: openSettingsModal,
+    applyDisplaySettings: applyDisplaySettings,
     setActionMode: setActionMode
   };
 

@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Ngũ Hành Vô Địch — Đợt 1 (Miếu Hoang)</title>
   <link rel="stylesheet" href="css/style.css">
+  <!-- PWA (Đợt 3, Note 8): cài lên màn hình chính điện thoại / ứng dụng trên PC -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#141a16">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Ngũ Hành">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
 </head>
 <body>
 
@@ -92,9 +100,15 @@
       </div>
 
       <!-- Bản đồ nhỏ Minimap góc trên bên phải (~150px) -->
-      <div id="minimap-wrap" class="panel hud-panel">
+      <div id="minimap-wrap" class="panel hud-panel" style="cursor: pointer;" title="Xem danh sách khu vực">
         <canvas id="minimap-canvas" width="150" height="100"></canvas>
         <div id="minimap-label" class="minimap-label">Miếu Hoang</div>
+      </div>
+
+      <!-- Chip Tên Khu Vực khi bước vào zone mới (Brief §7) -->
+      <div id="zone-title" class="zone-title-chip hidden" aria-live="polite">
+        <div id="zone-title-name" class="zone-title-name"></div>
+        <div id="zone-title-desc" class="zone-title-desc"></div>
       </div>
 
       <!-- Chip Chuỗi Săn (Brief §6) -->
@@ -264,6 +278,32 @@
           <input id="setting-sfx-vol" type="range" min="0" max="100" value="80">
         </div>
 
+        <div class="setting-item">
+          <label for="setting-amb-vol">Âm lượng Âm Thanh Môi Trường</label>
+          <input id="setting-amb-vol" type="range" min="0" max="100" value="60">
+        </div>
+
+        <div class="setting-item">
+          <label for="setting-voice-vol">Âm lượng Giọng Nói</label>
+          <input id="setting-voice-vol" type="range" min="0" max="100" value="90">
+        </div>
+
+        <div class="setting-item toggle-item">
+          <span>Lồng tiếng thoại</span>
+          <label class="switch">
+            <input id="setting-voice-toggle" type="checkbox" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-item toggle-item">
+          <span>Tắt toàn bộ âm thanh</span>
+          <label class="switch">
+            <input id="setting-mute-toggle" type="checkbox">
+            <span class="slider"></span>
+          </label>
+        </div>
+
         <div class="setting-item toggle-item">
           <span>Mũi tên chỉ đường nhiệm vụ</span>
           <label class="switch">
@@ -278,6 +318,36 @@
             <input id="setting-flourish-toggle" type="checkbox" checked>
             <span class="slider"></span>
           </label>
+        </div>
+
+        <div class="settings-section-title">HIỂN THỊ</div>
+
+        <div class="setting-item">
+          <label for="setting-ui-scale">Kích thước giao diện (HUD): <b id="setting-ui-scale-val">100%</b></label>
+          <input id="setting-ui-scale" type="range" min="85" max="120" value="100">
+        </div>
+
+        <div class="setting-item">
+          <label for="setting-joy-size">Kích thước nút chạm (nút hành động &amp; kỹ năng)</label>
+          <select id="setting-joy-size" class="setting-select">
+            <option value="nho">Nhỏ</option>
+            <option value="vua" selected>Vừa</option>
+            <option value="lon">Lớn</option>
+          </select>
+        </div>
+
+        <div class="setting-item">
+          <label for="setting-quality">Chất lượng đồ họa</label>
+          <select id="setting-quality" class="setting-select">
+            <option value="thap">Thấp (mượt trên máy yếu)</option>
+            <option value="trung">Trung</option>
+            <option value="cao" selected>Cao</option>
+          </select>
+        </div>
+
+        <div class="setting-item">
+          <label>Toàn màn hình</label>
+          <button id="btn-fullscreen-toggle" class="btn wood" type="button">Bật toàn màn hình</button>
         </div>
 
         <div class="danger-zone">
@@ -356,11 +426,50 @@
     </div>
   </div>
 
+  <!-- Modal Danh Mục Khu Vực (Brief §7) -->
+  <div id="zone-modal" class="modal-overlay hidden">
+    <div class="panel modal-box zone-box">
+      <div class="modal-header">
+        <h2 id="zone-modal-title" class="modal-title">DANH MỤC KHU VỰC</h2>
+        <button id="close-zone-modal" class="btn-close" type="button" aria-label="Đóng">×</button>
+      </div>
+      <div class="zone-body">
+        <div id="zone-modal-list" class="zone-list"></div>
+        <div class="modal-actions" style="margin-top: 16px;">
+          <button id="btn-close-zone-modal" class="btn wood" type="button">Đóng</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Đài Truyền Tống (Brief §7) -->
+  <div id="teleport-modal" class="modal-overlay hidden">
+    <div class="panel modal-box teleport-box">
+      <div class="modal-header">
+        <h2 class="modal-title">ĐÀI TRUYỀN TỐNG</h2>
+        <button id="close-teleport-modal" class="btn-close" type="button" aria-label="Đóng">×</button>
+      </div>
+      <div class="teleport-body">
+        <div class="teleport-prompt">Chọn điểm đến trong thiên hạ:</div>
+        <div class="teleport-destinations">
+          <button id="teleport-btn-mieu" class="btn wood teleport-btn" type="button">Miếu Hoang</button>
+          <button id="teleport-btn-rungdoc" class="btn wood teleport-btn" type="button">Rừng Độc Thanh Tụy</button>
+          <button id="teleport-btn-tongmon" class="btn wood teleport-btn" type="button">Sơn Môn — Lối Vào</button>
+        </div>
+        <div class="modal-actions" style="margin-top: 16px;">
+          <button id="btn-close-teleport-modal" class="btn wood" type="button">Hủy</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Script tags theo thứ tự độc lập -> phụ thuộc -->
   <script src="js/state.js"></script>
   <script src="js/combat.js"></script>
   <script src="js/monsters.js"></script>
   <script src="js/audio.js"></script>
+  <script src="js/music.js"></script>
+  <script src="js/voice.js"></script>
   <script src="js/mapdata.js"></script>
   <script src="js/pathfind.js"></script>
   <script src="js/engine.js"></script>
