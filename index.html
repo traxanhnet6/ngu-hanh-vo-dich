@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Ngũ Hành Vô Địch — Đợt 1 (Miếu Hoang)</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Màn hình Khởi Đầu & Tạo Nhân Vật -->
+  <section id="screen-start" class="screen">
+    <div class="panel auth-box">
+      <h1 class="game-title">NGŨ HÀNH VÔ ĐỊCH</h1>
+      <p class="game-sub">Ngũ Hành Tạp Linh Căn, Ta Vẫn Vô Địch Giới Tu Tiên — Đứng dậy từ miếu hoang</p>
+
+      <!-- Khối tiếp tục với nhân vật đã có -->
+      <div id="continue-box" class="hidden">
+        <button id="btn-continue-game" class="btn btn-main wide">Tiếp Tục</button>
+        <div class="char-list-label">Danh sách nhân vật:</div>
+        <div id="saved-char-list" class="saved-list"></div>
+        <button id="btn-show-new-form" class="btn wood wide" style="margin-top:12px;">Tạo Nhân Vật Mới</button>
+      </div>
+
+      <!-- Khối tạo nhân vật mới -->
+      <div id="create-box">
+        <label class="form-label">
+          Tên nhân vật
+          <input id="input-char-name" type="text" value="Hà Nhân" maxlength="16">
+        </label>
+        <div class="face-template-note">
+          <span class="note-title">Khuôn mặt:</span> Quyết tâm (mặc định theo phim — các khuôn mẫu khác mở ở đợt sau)
+        </div>
+        <button id="btn-start-game" class="btn btn-main wide">Bắt Đầu</button>
+        <button id="btn-back-continue" class="btn wood wide hidden" style="margin-top:10px;">Quay lại chọn nhân vật</button>
+      </div>
+
+      <div class="start-footer">
+        <button id="btn-start-settings" class="btn wood small" type="button">Cài Đặt</button>
+        <p class="note">Dữ liệu nhân vật và cài đặt được lưu trực tiếp trên trình duyệt.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Màn hình Game chính -->
+  <section id="screen-game" class="screen hidden">
+    <div id="stage">
+      <canvas id="game-canvas"></canvas>
+
+      <!-- Khung nhân vật góc trên bên trái + Vòng Tương Sinh -->
+      <div id="char-frame" class="panel hud-panel">
+        <div class="hud-top-row">
+          <div id="hud-portrait" class="char-portrait"></div>
+          <div class="char-summary">
+            <div id="hud-player-name" class="hud-name">Hà Nhân</div>
+            <div id="hud-player-realm" class="hud-realm">Phàm Nhân</div>
+          </div>
+          <!-- Vòng Tương Sinh SVG dạng tròn (~84px) -->
+          <div id="tuong-sinh-ring" class="ring-container" title="Bấm để xem chi tiết ngũ hành"></div>
+        </div>
+
+        <div class="bar-rows">
+          <div class="bar-row">
+            <span class="bar-label">Khí huyết</span>
+            <div class="bar-track">
+              <div id="hud-hp-bar" class="bar-fill hp-bar"></div>
+            </div>
+            <b id="hud-hp-val" class="bar-val">100 / 100</b>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">Linh lực</span>
+            <div class="bar-track">
+              <div id="hud-linhluc-bar" class="bar-fill linhluc-bar"></div>
+            </div>
+            <b id="hud-linhluc-val" class="bar-val">20 / 20</b>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bảng theo dõi nhiệm vụ bên trái -->
+      <div id="quest-panel" class="panel hud-panel">
+        <div id="quest-panel-header" class="quest-header">
+          <span class="quest-tag">Nhiệm Vụ</span>
+          <button id="btn-toggle-quest" class="btn-toggle" type="button" aria-label="Thu nhỏ">–</button>
+        </div>
+        <div class="quest-body">
+          <div id="quest-title" class="quest-title">Nói chuyện với Linh Nhi</div>
+          <div id="quest-desc" class="quest-desc">Linh Nhi đang đợi ở trước miếu hoang.</div>
+          <div id="quest-dist" class="quest-dist">Khoảng cách: ~0 bước</div>
+        </div>
+      </div>
+
+      <!-- Bản đồ nhỏ Minimap góc trên bên phải (~150px) -->
+      <div id="minimap-wrap" class="panel hud-panel">
+        <canvas id="minimap-canvas" width="150" height="100"></canvas>
+        <div id="minimap-label" class="minimap-label">Miếu Hoang</div>
+      </div>
+
+      <!-- Chip Chuỗi Săn (Brief §6) -->
+      <div id="hud-hunt-chain" class="hunt-chain-chip hidden">
+        <span class="chain-title">Chuỗi Săn:</span>
+        <b id="chain-count" class="chain-num">0</b>
+        <span id="chain-bonus" class="chain-bonus">(+0% rơi đồ)</span>
+      </div>
+
+      <!-- Thanh kỹ năng chiến đấu (Brief §5) -->
+      <div id="skill-bar" class="skill-bar">
+        <button id="skill-slot-1" class="skill-slot" type="button" title="[1] Phi Diệp Trảm (Mộc) - Tốn 4 Linh lực">
+          <span class="skill-hotkey">1</span>
+          <div class="skill-icon skill-phi-diep"></div>
+          <div class="skill-cd-overlay"></div>
+          <span class="skill-cd-text"></span>
+          <span class="skill-name-tag">Phi Diệp</span>
+        </button>
+        <button id="skill-slot-2" class="skill-slot" type="button" title="[2] Dây Leo Trói (Mộc) - Tốn 6 Linh lực">
+          <span class="skill-hotkey">2</span>
+          <div class="skill-icon skill-day-leo"></div>
+          <div class="skill-cd-overlay"></div>
+          <span class="skill-cd-text"></span>
+          <span class="skill-name-tag">Dây Leo</span>
+        </button>
+      </div>
+
+      <!-- Cụm nút công cụ góc dưới bên phải -->
+      <div class="hud-bottom-right-btns">
+        <button id="btn-bag" class="btn wood hud-btn" type="button" aria-label="Túi Đồ (B)">
+          <span>Túi [B]</span>
+        </button>
+        <button id="btn-settings" class="btn wood hud-btn" type="button" aria-label="Cài đặt">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3.2"></circle>
+            <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5 5l2.1 2.1M16.9 16.9L19 19M19 5l-2.1 2.1M7.1 16.9L5 19"></path>
+          </svg>
+          <span>Cài Đặt</span>
+        </button>
+      </div>
+
+      <!-- Hộp thoại NPC dưới đáy màn hình -->
+      <div id="dialogue-box" class="panel hidden">
+        <div id="dialogue-portrait" class="dialogue-portrait"></div>
+        <div class="dialogue-content">
+          <div id="dialogue-npc-name" class="dialogue-name">Linh Nhi</div>
+          <div id="dialogue-text" class="dialogue-text">...</div>
+          <div class="dialogue-hint">Bấm hoặc nhấn Space để tiếp tục...</div>
+        </div>
+      </div>
+
+      <!-- Thông báo nổi Toast -->
+      <div id="game-toast" class="toast hidden"></div>
+    </div>
+  </section>
+
+  <!-- Bảng Thông Tin Nhân Vật & Ngũ Hành (Popup) -->
+  <div id="char-panel" class="modal-overlay hidden">
+    <div class="panel modal-box char-modal">
+      <div class="modal-header">
+        <h2 class="modal-title">BẢNG NHÂN VẬT & NGŨ HÀNH</h2>
+        <button id="close-char-panel" class="btn-close" type="button">×</button>
+      </div>
+
+      <div class="char-details-grid">
+        <div class="char-detail-col">
+          <div class="detail-row"><span>Nhân vật:</span> <b id="char-panel-name">Hà Nhân</b></div>
+          <div class="detail-row"><span>Cảnh giới:</span> <b id="char-panel-realm">Phàm Nhân</b></div>
+          <div class="detail-row"><span>Chỉ số Hài Hòa:</span> <b id="char-panel-harmony" class="gold-text">0</b></div>
+          <div class="detail-row"><span>Tu vi farm hôm nay:</span> <b id="char-panel-farm-tuvi" class="green-text">0 / 65</b></div>
+          <div class="detail-row"><span>Linh Thạch farm:</span> <b id="char-panel-farm-lt" class="gold-text">0 / 300</b></div>
+          <div class="detail-row"><span>Lượt hồi sinh:</span> <b id="char-panel-revival-pool" class="gold-text">5 / 5</b></div>
+          
+          <h3 class="section-title">Năm Trụ Ngũ Hành (Hồ sơ 49)</h3>
+          <div class="pillar-item">
+            <span class="pillar-tag tho">Thổ</span>
+            <div class="pillar-desc">
+              <div class="pillar-role">Khí huyết & Phòng thủ</div>
+              <div class="pillar-val">Tu vi: <b id="tuvi-tho">0</b></div>
+            </div>
+          </div>
+          <div class="pillar-item">
+            <span class="pillar-tag kim">Kim</span>
+            <div class="pillar-desc">
+              <div class="pillar-role">Công kích & Xuyên giáp</div>
+              <div class="pillar-val">Tu vi: <b id="tuvi-kim">0</b></div>
+            </div>
+          </div>
+          <div class="pillar-item">
+            <span class="pillar-tag hoa">Hỏa</span>
+            <div class="pillar-desc">
+              <div class="pillar-role">Bạo kích & Sát thương bùng nổ</div>
+              <div class="pillar-val">Tu vi: <b id="tuvi-hoa">0</b></div>
+            </div>
+          </div>
+          <div class="pillar-item">
+            <span class="pillar-tag thuy">Thủy</span>
+            <div class="pillar-desc">
+              <div class="pillar-role">Linh lực tối đa & Khống chế</div>
+              <div class="pillar-val">Tu vi: <b id="tuvi-thuy">0</b></div>
+            </div>
+          </div>
+          <div class="pillar-item">
+            <span class="pillar-tag moc">Mộc</span>
+            <div class="pillar-desc">
+              <div class="pillar-role">Hồi phục khí huyết & Linh lực</div>
+              <div class="pillar-val">Tu vi: <b id="tuvi-moc">0</b></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="char-detail-col">
+          <h3 class="section-title">Chỉ Số Dẫn Xuất</h3>
+          <div class="stat-card">
+            <div class="stat-row"><span>Khí huyết tối đa (HP):</span> <b id="stat-hpmax">100</b></div>
+            <div class="stat-row"><span>Linh lực tối đa:</span> <b id="stat-llmax">20</b></div>
+            <div class="stat-row"><span>Công kích:</span> <b id="stat-atk">10</b></div>
+            <div class="stat-row"><span>Phòng ngự:</span> <b id="stat-def">5</b></div>
+            <div class="stat-row"><span>Tỉ lệ bạo kích:</span> <b id="stat-crit">5.0%</b></div>
+            <div class="stat-row"><span>Tốc độ hồi phục:</span> <b id="stat-regen">1.0 /s</b></div>
+          </div>
+
+          <p class="pillar-note">
+            * Theo quy luật Vòng Tương Sinh, lực tổng quát của Ngũ Hành Tạp Linh Căn bị kéo theo đường tu yếu nhất. Hãy tu luyện cân bằng cả năm đường để kích hoạt sức mạnh tối thượng.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Cài Đặt (Settings) -->
+  <div id="settings-modal" class="modal-overlay hidden">
+    <div class="panel modal-box settings-box">
+      <div class="modal-header">
+        <h2 class="modal-title">CÀI ĐẶT TRÒ CHƠI</h2>
+        <button id="close-settings" class="btn-close" type="button">×</button>
+      </div>
+
+      <div class="settings-body">
+        <div class="setting-item">
+          <label for="setting-music-vol">Âm lượng Nhạc Nền</label>
+          <input id="setting-music-vol" type="range" min="0" max="100" value="70">
+        </div>
+
+        <div class="setting-item">
+          <label for="setting-sfx-vol">Âm lượng Hiệu Ứng (SFX)</label>
+          <input id="setting-sfx-vol" type="range" min="0" max="100" value="80">
+        </div>
+
+        <div class="setting-item toggle-item">
+          <span>Mũi tên chỉ đường nhiệm vụ</span>
+          <label class="switch">
+            <input id="setting-arrow-toggle" type="checkbox" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-item toggle-item">
+          <span>Hiệu ứng hoa mỹ (Flourishes)</span>
+          <label class="switch">
+            <input id="setting-flourish-toggle" type="checkbox" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="danger-zone">
+          <div class="danger-title">Vùng nguy hiểm</div>
+          <button id="btn-delete-char" class="btn btn-danger" type="button">Xóa Nhân Vật Hiện Tại</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Xác Nhận Xóa Nhân Vật -->
+  <div id="confirm-delete-modal" class="modal-overlay hidden">
+    <div class="panel modal-box confirm-box">
+      <h3 class="confirm-title">XÁC NHẬN XÓA</h3>
+      <p class="confirm-text">Bạn có chắc chắn muốn xóa nhân vật này không? Toàn bộ dữ liệu tiến trình sẽ bị mất vĩnh viễn và không thể khôi phục.</p>
+      <div class="modal-actions">
+        <button id="btn-cancel-delete" class="btn wood" type="button">Hủy bỏ</button>
+        <button id="btn-confirm-delete" class="btn btn-danger" type="button">Xác nhận xóa</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Túi Trữ Vật (Brief §6: 8x6 = 48 ô) -->
+  <div id="bag-modal" class="modal-overlay hidden">
+    <div class="panel modal-box bag-box">
+      <div class="modal-header">
+        <h2 class="modal-title">TÚI TRỮ VẬT</h2>
+        <div class="bag-header-currency">
+          <span>Linh Thạch: <b id="bag-linh-thach-val" class="gold-text">0</b></span>
+        </div>
+        <button id="close-bag-modal" class="btn-close" type="button">×</button>
+      </div>
+      <div class="bag-body">
+        <div id="bag-grid" class="bag-grid"></div>
+        <div id="bag-item-info" class="bag-item-info">
+          <div id="bag-info-name" class="info-name">Chọn vật phẩm để xem chi tiết</div>
+          <div id="bag-info-desc" class="info-desc"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel Bạn Đã Gục (Brief §7) -->
+  <div id="death-modal" class="modal-overlay hidden">
+    <div class="panel modal-box death-box">
+      <h2 class="death-title">BẠN ĐÃ GỤC TẠI RỪNG ĐỘC</h2>
+      <p class="death-subtitle">Ngũ hành nghịch chuyển, khí huyết suy kiệt...</p>
+      <div class="death-pool-info">Lượt hồi sinh tại chỗ: <b id="death-pool-count" class="gold-text">5/5</b></div>
+      <div class="death-actions">
+        <button id="btn-revive-spot" class="btn wood death-btn" type="button">Hồi Sinh Tại Chỗ (–1 lượt)</button>
+        <button id="btn-revive-home" class="btn wood death-btn" type="button">Về Miếu Hoang (Miễn phí)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Tổng Kết Buổi Farm (Brief §6 & Hồ sơ 41 §8) -->
+  <div id="session-summary-modal" class="modal-overlay hidden">
+    <div class="panel modal-box summary-box">
+      <div class="modal-header">
+        <h2 class="modal-title">TỔNG KẾT BUỔI SĂN RỪNG ĐỘC</h2>
+        <button id="close-summary-modal" class="btn-close" type="button">×</button>
+      </div>
+      <div class="summary-body">
+        <div class="summary-row"><span>Thời gian săn:</span> <b id="summary-time">0 phút</b></div>
+        <div class="summary-row"><span>Số quái đã hạ:</span> <b id="summary-kills">0</b></div>
+        <div class="summary-row"><span>Tu vi Mộc thu được:</span> <b id="summary-tuvi" class="green-text">+0</b></div>
+        <div class="summary-row"><span>Linh Thạch nhận được:</span> <b id="summary-linhthach" class="gold-text">+0</b></div>
+        <div class="summary-loot-section">
+          <div class="loot-title">Chiến lợi phẩm đáng chú ý:</div>
+          <div id="summary-loot-list" class="loot-list"></div>
+        </div>
+        <div class="modal-actions" style="margin-top: 16px;">
+          <button id="btn-close-summary" class="btn wood" type="button">Thu Nhận & Đóng</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Script tags theo thứ tự độc lập -> phụ thuộc -->
+  <script src="js/state.js"></script>
+  <script src="js/combat.js"></script>
+  <script src="js/monsters.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/mapdata.js"></script>
+  <script src="js/pathfind.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

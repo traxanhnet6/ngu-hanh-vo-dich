@@ -1,0 +1,1169 @@
+/* ============================================================
+   NGŨ HÀNH VÔ ĐỊCH — Giao diện Tiên Hiệp (Xianxia UI)
+   Kế thừa kiến trúc chuẩn từ reference game:
+   - Tông sẫm bán trong suốt, điểm viền vàng đồng cổ
+   - Panels gọn gàng, chạm cảm ứng di động >= 40px
+   - Hoàn toàn KHÔNG dùng emoji
+   ============================================================ */
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: #141a16;
+  color: #e8e2d0;
+  font-family: "Noto Serif", "Times New Roman", serif;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  overflow: hidden;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ================= Các loại Nút Bấm ================= */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  border: 1px solid #77683c;
+  background: #2c2c22;
+  color: #e8dfc0;
+  padding: 10px 16px;
+  min-height: 40px;
+  border-radius: 6px;
+  font-size: 14.5px;
+  font-family: inherit;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.btn:hover {
+  background: #3d3a2a;
+  border-color: #a8893a;
+}
+
+.btn-main {
+  background: linear-gradient(180deg, #8a6d2f, #6d5522);
+  color: #fff7dd;
+  font-weight: bold;
+  border-color: #c9a227;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.btn-main:hover {
+  background: linear-gradient(180deg, #a07d35, #7d6026);
+  border-color: #e8c858;
+}
+
+.btn.wide {
+  width: 100%;
+}
+
+.btn.small {
+  padding: 5px 12px;
+  min-height: 32px;
+  font-size: 12.5px;
+}
+
+.btn.wood {
+  background: linear-gradient(180deg, rgba(82, 60, 36, 0.92), rgba(52, 36, 20, 0.92));
+  border: 1px solid #c9a227;
+  color: #f7ead0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+}
+
+.btn.wood:hover {
+  background: linear-gradient(180deg, rgba(104, 76, 44, 0.95), rgba(66, 44, 24, 0.95));
+}
+
+.btn-danger {
+  background: linear-gradient(180deg, #9a2b22, #751a14);
+  border: 1px solid #e85848;
+  color: #fff0ed;
+}
+
+.btn-danger:hover {
+  background: linear-gradient(180deg, #b8352b, #8a2019);
+}
+
+.btn-close {
+  background: none;
+  border: none;
+  color: #c9b88d;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0 6px;
+  line-height: 1;
+}
+
+.btn-close:hover {
+  color: #ffffff;
+}
+
+/* ================= Panel chuẩn ================= */
+.panel {
+  background: rgba(24, 30, 24, 0.88);
+  border: 1px solid #77683c;
+  border-radius: 8px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.55), inset 0 0 30px rgba(0, 0, 0, 0.35);
+  color: #f0e8d2;
+}
+
+/* ================= Màn hình Khởi Đầu ================= */
+.screen {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+}
+
+#screen-start {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at 50% 35%, #24382a 0%, #101612 75%);
+  padding: 16px;
+}
+
+.auth-box {
+  width: 440px;
+  max-width: 92vw;
+  padding: 30px 28px;
+  border-color: #a8893a;
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.7), inset 0 0 50px rgba(201, 162, 39, 0.06);
+}
+
+.game-title {
+  margin: 0 0 8px;
+  text-align: center;
+  font-size: 32px;
+  letter-spacing: 3px;
+  color: #e9d9a8;
+  text-shadow: 0 2px 0 #5d4a1e, 0 0 20px rgba(201, 162, 39, 0.4);
+}
+
+.game-sub {
+  text-align: center;
+  color: #b9ac8d;
+  font-size: 13.5px;
+  line-height: 1.55;
+  margin: 0 0 22px;
+}
+
+.form-label {
+  display: block;
+  font-size: 13.5px;
+  color: #cbbfa0;
+  margin-bottom: 14px;
+}
+
+.form-label input {
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid #5d5136;
+  background: #10140f;
+  color: #f0e8d2;
+  font-size: 15.5px;
+  font-family: inherit;
+}
+
+.face-template-note {
+  font-size: 12.5px;
+  color: #8d8271;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 8px 10px;
+  border-radius: 5px;
+  border-left: 3px solid #77683c;
+  margin-bottom: 18px;
+  line-height: 1.45;
+}
+
+.face-template-note .note-title {
+  color: #c9b88d;
+  font-weight: bold;
+}
+
+.char-list-label {
+  font-size: 12.5px;
+  color: #b9ac8d;
+  margin: 14px 0 6px;
+}
+
+.saved-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 100px;
+  overflow-y: auto;
+}
+
+.char-select-btn.active {
+  border-color: #ffd978;
+  background: linear-gradient(180deg, rgba(120, 88, 50, 0.95), rgba(80, 54, 30, 0.95));
+  color: #ffffff;
+}
+
+.start-footer {
+  margin-top: 22px;
+  border-top: 1px solid #443c26;
+  padding-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.note {
+  margin: 0;
+  font-size: 11px;
+  color: #7d7260;
+  line-height: 1.4;
+}
+
+/* ================= Sân Khấu Chơi (Stage & HUD) ================= */
+#screen-game {
+  padding: 0;
+  touch-action: none;
+}
+
+#stage {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#game-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.hud-panel {
+  position: absolute;
+  z-index: 10;
+  pointer-events: auto;
+}
+
+/* Khung nhân vật góc trên bên trái */
+#char-frame {
+  top: 10px;
+  left: 10px;
+  padding: 8px 10px;
+  min-width: 250px;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+#char-frame:hover {
+  border-color: #a8893a;
+}
+
+.hud-top-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.char-portrait {
+  width: 44px;
+  height: 48px;
+  flex: none;
+  border: 1px solid #77683c;
+  border-radius: 5px;
+  background-color: #1a221a;
+  background-image: url('../assets/chars/hanhan-face.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  image-rendering: crisp-edges;
+}
+
+.char-summary {
+  flex: 1;
+  min-width: 0;
+}
+
+.hud-name {
+  font-size: 15px;
+  font-weight: bold;
+  color: #ffe9a8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hud-realm {
+  font-size: 11.5px;
+  color: #a8c8e8;
+  margin-top: 2px;
+}
+
+.ring-container {
+  width: 84px;
+  height: 84px;
+  flex: none;
+  margin: -10px -4px -10px 0;
+}
+
+.ring-svg {
+  display: block;
+}
+
+.bar-rows {
+  margin-top: 6px;
+  border-top: 1px solid rgba(119, 104, 60, 0.3);
+  padding-top: 6px;
+}
+
+.bar-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+
+.bar-row:last-child {
+  margin-bottom: 0;
+}
+
+.bar-label {
+  width: 52px;
+  color: #d8c9a3;
+  font-size: 10.5px;
+}
+
+.bar-track {
+  flex: 1;
+  height: 8px;
+  background: #141008;
+  border: 1px solid #5d4a26;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  width: 0%;
+  transition: width 0.2s ease-out;
+}
+
+.bar-fill.hp-bar {
+  background: linear-gradient(90deg, #9a2b22, #e06048);
+}
+
+.bar-fill.linhluc-bar {
+  background: linear-gradient(90deg, #386ba0, #5ca8e8);
+}
+
+.bar-val {
+  min-width: 65px;
+  text-align: right;
+  font-weight: normal;
+  color: #f0e8d2;
+  font-size: 10.5px;
+}
+
+/* Bảng nhiệm vụ bên trái */
+#quest-panel {
+  top: 135px;
+  left: 10px;
+  width: 220px;
+  padding: 8px 10px;
+  font-size: 12px;
+  transition: max-height 0.25s;
+}
+
+.quest-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(119, 104, 60, 0.35);
+  padding-bottom: 4px;
+  margin-bottom: 6px;
+}
+
+.quest-tag {
+  color: #e9d9a8;
+  font-weight: bold;
+  font-size: 11.5px;
+  letter-spacing: 1px;
+}
+
+.btn-toggle {
+  background: none;
+  border: none;
+  color: #c9b88d;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.quest-title {
+  color: #ffd978;
+  font-weight: bold;
+  margin-bottom: 3px;
+  font-size: 12.5px;
+}
+
+.quest-desc {
+  color: #d0c8b2;
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+
+.quest-desc.greyed {
+  color: #7d7565;
+}
+
+.quest-dist {
+  color: #92b4d8;
+  font-size: 11px;
+}
+
+#quest-panel.collapsed .quest-body {
+  display: none;
+}
+
+/* Minimap góc trên bên phải */
+#minimap-wrap {
+  top: 10px;
+  right: 10px;
+  padding: 4px;
+  text-align: center;
+}
+
+#minimap-canvas {
+  display: block;
+  border: 1px solid #77683c;
+  border-radius: 4px;
+}
+
+.minimap-label {
+  font-size: 11px;
+  color: #ffd978;
+  margin-top: 3px;
+}
+
+/* Nút Cài đặt góc dưới bên phải */
+.hud-btn {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  z-index: 10;
+  padding: 6px 12px;
+  font-size: 12.5px;
+}
+
+/* Hộp thoại NPC */
+#dialogue-box {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  max-width: 92vw;
+  z-index: 20;
+  display: flex;
+  gap: 14px;
+  padding: 12px 16px;
+  cursor: pointer;
+  border-color: #a8893a;
+  background: rgba(20, 26, 20, 0.94);
+}
+
+.dialogue-portrait {
+  width: 68px;
+  height: 80px;
+  flex: none;
+  border: 1px solid #77683c;
+  border-radius: 6px;
+  background-color: #1a221a;
+  background-image: url('../assets/art/npc-linhnhi.png');
+  background-size: 140px 311px;
+  background-position: -36px -12px;
+  background-repeat: no-repeat;
+}
+
+.dialogue-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.dialogue-name {
+  font-size: 14.5px;
+  font-weight: bold;
+  color: #ffd978;
+  margin-bottom: 4px;
+}
+
+.dialogue-text {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #f7ead0;
+  flex: 1;
+}
+
+.dialogue-hint {
+  font-size: 11px;
+  color: #8d8271;
+  text-align: right;
+  margin-top: 4px;
+}
+
+/* Toast Thông Báo */
+.toast {
+  position: absolute;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 25;
+  background: rgba(24, 30, 24, 0.95);
+  border: 1px solid #c9a227;
+  border-radius: 20px;
+  padding: 8px 22px;
+  color: #fff7dd;
+  font-size: 13.5px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.toast.visible {
+  opacity: 1;
+}
+
+/* ================= Modals ================= */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 30;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.modal-box {
+  width: 520px;
+  max-width: 94vw;
+  padding: 18px 20px;
+  border-color: #a8893a;
+  background: rgba(22, 28, 22, 0.96);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #4d4022;
+  padding-bottom: 8px;
+  margin-bottom: 14px;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 18px;
+  color: #ffd978;
+  letter-spacing: 1px;
+}
+
+/* Bảng nhân vật */
+.char-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.detail-row {
+  font-size: 13px;
+  margin-bottom: 5px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.gold-text {
+  color: #ffd978;
+  font-weight: bold;
+}
+
+.section-title {
+  font-size: 13.5px;
+  color: #e9d9a8;
+  margin: 12px 0 8px;
+  border-bottom: 1px dashed rgba(119, 104, 60, 0.4);
+  padding-bottom: 3px;
+}
+
+.pillar-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 4px 6px;
+  border-radius: 4px;
+}
+
+.pillar-tag {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: bold;
+  color: #ffffff;
+}
+
+.pillar-tag.tho { background: #b07e38; }
+.pillar-tag.kim { background: #b59840; }
+.pillar-tag.hoa { background: #b84030; }
+.pillar-tag.thuy { background: #3d7fb8; }
+.pillar-tag.moc { background: #449948; }
+
+.pillar-desc {
+  flex: 1;
+  font-size: 11px;
+}
+
+.pillar-role {
+  color: #d8c9a3;
+}
+
+.pillar-val {
+  color: #ffd978;
+}
+
+.stat-card {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid #443c26;
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+  margin-bottom: 5px;
+}
+
+.stat-row:last-child {
+  margin-bottom: 0;
+}
+
+.pillar-note {
+  font-size: 11px;
+  color: #9d927d;
+  line-height: 1.45;
+  margin-top: 10px;
+}
+
+/* Modal Cài Đặt */
+.settings-box {
+  width: 400px;
+}
+
+.settings-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.setting-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.setting-item.toggle-item {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.setting-item input[type="range"] {
+  accent-color: #c9a227;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 42px;
+  height: 22px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #2c2c22;
+  border: 1px solid #77683c;
+  transition: 0.2s;
+  border-radius: 22px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background-color: #e8dfc0;
+  transition: 0.2s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: #8a6d2f;
+  border-color: #c9a227;
+}
+
+input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+.danger-zone {
+  margin-top: 10px;
+  border-top: 1px solid #5a2a24;
+  padding-top: 10px;
+}
+
+.danger-title {
+  font-size: 12px;
+  color: #e88a7a;
+  margin-bottom: 8px;
+}
+
+/* Confirm modal */
+.confirm-box {
+  width: 360px;
+  text-align: center;
+}
+
+.confirm-title {
+  margin: 0 0 10px;
+  color: #e85848;
+  font-size: 16px;
+}
+
+.confirm-text {
+  font-size: 13px;
+  color: #d8c9a3;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+/* ================= Đáp ứng màn hình nhỏ (Mobile) ================= */
+@media (max-width: 640px) {
+  #char-frame {
+    min-width: 200px;
+    padding: 6px;
+  }
+  .char-portrait {
+    width: 38px;
+    height: 42px;
+  }
+  .ring-container {
+    width: 70px;
+    height: 70px;
+    margin: -10px -6px -10px 0;
+  }
+  .ring-svg {
+    width: 70px;
+    height: 70px;
+  }
+  #quest-panel {
+    top: 125px;
+    width: 175px;
+    font-size: 11px;
+  }
+  #minimap-wrap {
+    top: 6px;
+    right: 6px;
+  }
+  #minimap-canvas {
+    width: 110px;
+    height: 73px;
+  }
+  .char-details-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ================= ĐỢT 2: CHIẾN ĐẤU, TÚI ĐỒ, CHUỖI SĂN & HỒI SINH ================= */
+
+/* Cụm nút góc dưới bên phải */
+.hud-bottom-right-btns {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  display: flex;
+  gap: 8px;
+  z-index: 30;
+}
+
+/* Thanh kỹ năng chiến đấu (Brief §5) */
+.skill-bar {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 16px;
+  z-index: 40;
+  pointer-events: auto;
+}
+
+.skill-slot {
+  width: 58px;
+  height: 58px;
+  position: relative;
+  border-radius: 8px;
+  border: 2px solid #2e7d48; /* Khung xanh hệ Mộc */
+  background: rgba(12, 24, 15, 0.85);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6), inset 0 0 8px rgba(60, 163, 93, 0.3);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: transform 0.1s, border-color 0.2s, box-shadow 0.2s;
+  overflow: hidden;
+}
+
+.skill-slot:hover {
+  transform: translateY(-2px);
+  border-color: #55d882;
+  box-shadow: 0 6px 16px rgba(40, 120, 60, 0.5), inset 0 0 10px rgba(85, 216, 130, 0.5);
+}
+
+.skill-slot:active {
+  transform: translateY(1px);
+}
+
+.skill-hotkey {
+  position: absolute;
+  top: 3px;
+  left: 4px;
+  font-size: 11px;
+  font-weight: bold;
+  color: #ffe9a8;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 1px 4px;
+  border-radius: 3px;
+  z-index: 5;
+}
+
+.skill-icon {
+  width: 36px;
+  height: 36px;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  margin-top: 2px;
+}
+
+.skill-phi-diep {
+  background-image: radial-gradient(circle, #55d882 25%, #18522b 75%);
+  border-radius: 50%;
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+}
+
+.skill-day-leo {
+  background-image: radial-gradient(circle, #8cd96a 30%, #2f6b1b 80%);
+  border-radius: 4px;
+  border: 1px dashed #ffe9a8;
+}
+
+.skill-name-tag {
+  font-size: 10px;
+  color: #d8eedb;
+  margin-top: -2px;
+  z-index: 5;
+}
+
+.skill-cd-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(10, 15, 10, 0.75);
+  transform-origin: bottom;
+  transform: scaleY(0);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.skill-cd-text {
+  position: absolute;
+  font-size: 16px;
+  font-weight: bold;
+  color: #ffffff;
+  text-shadow: 0 2px 4px #000000;
+  z-index: 6;
+  pointer-events: none;
+}
+
+.skill-slot.low-mana {
+  filter: grayscale(0.85);
+  border-color: #555555;
+  opacity: 0.65;
+}
+
+@keyframes skillShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+.skill-slot.shake {
+  animation: skillShake 0.25s ease-in-out;
+}
+
+/* Chip Chuỗi Săn (Brief §6) */
+.hunt-chain-chip {
+  position: absolute;
+  top: 76px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 25, 18, 0.88);
+  border: 1px solid #3ca35d;
+  border-radius: 20px;
+  padding: 4px 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #e5f6e8;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  z-index: 25;
+}
+
+.chain-num {
+  font-size: 16px;
+  color: #ffe9a8;
+}
+
+.chain-bonus {
+  font-size: 11px;
+  color: #7ce898;
+}
+
+/* Modal Túi Trữ Vật (Brief §6: 8x6 = 48 ô) */
+.bag-box {
+  width: 440px;
+  max-width: 95vw;
+  background: #171d18;
+  border: 1px solid #6b5c33;
+}
+
+.bag-header-currency {
+  font-size: 13px;
+  color: #dcd7c5;
+}
+
+.bag-body {
+  padding: 12px;
+}
+
+.bag-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 6px;
+  background: rgba(10, 15, 12, 0.6);
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #2e3b2e;
+}
+
+.bag-slot {
+  width: 42px;
+  height: 42px;
+  background: rgba(25, 35, 27, 0.85);
+  border: 1px solid #3c4a3d;
+  border-radius: 4px;
+  position: relative;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s;
+}
+
+.bag-slot:hover {
+  border-color: #ffe9a8;
+}
+
+.bag-slot.selected {
+  border-color: #55d882;
+  box-shadow: 0 0 6px rgba(85, 216, 130, 0.6);
+}
+
+.bag-slot-icon {
+  width: 32px;
+  height: 32px;
+  background-image: url('../assets/art/icons-sheet.png');
+  background-size: 128px 64px; /* 4x2 ô 32px */
+  background-repeat: no-repeat;
+}
+
+.bag-slot-count {
+  position: absolute;
+  bottom: 1px;
+  right: 3px;
+  font-size: 10px;
+  font-weight: bold;
+  color: #ffffff;
+  text-shadow: 0 1px 2px #000000;
+}
+
+.bag-item-info {
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: rgba(18, 26, 20, 0.7);
+  border-radius: 5px;
+  min-height: 48px;
+}
+
+.info-name {
+  font-size: 13px;
+  font-weight: bold;
+  color: #ffe9a8;
+}
+
+.info-desc {
+  font-size: 11px;
+  color: #b5c7b8;
+  margin-top: 3px;
+}
+
+/* Modal Bạn Đã Gục (Brief §7) */
+.death-box {
+  width: 400px;
+  max-width: 90vw;
+  background: rgba(30, 12, 12, 0.96);
+  border: 2px solid #8f2b2b;
+  text-align: center;
+  padding: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), 0 0 20px rgba(180, 40, 40, 0.4);
+}
+
+.death-title {
+  font-size: 20px;
+  color: #ff6b6b;
+  margin: 0 0 8px 0;
+  letter-spacing: 1px;
+}
+
+.death-subtitle {
+  font-size: 13px;
+  color: #d1a8a8;
+  margin: 0 0 16px 0;
+  font-style: italic;
+}
+
+.death-pool-info {
+  font-size: 14px;
+  color: #ffe9a8;
+  margin-bottom: 20px;
+  padding: 6px;
+  background: rgba(50, 18, 18, 0.6);
+  border-radius: 4px;
+}
+
+.death-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.death-btn {
+  padding: 10px;
+  font-size: 14px;
+}
+
+/* Modal Tổng Kết Buổi Farm (Brief §6) */
+.summary-box {
+  width: 380px;
+  max-width: 90vw;
+  background: #172019;
+  border: 1px solid #45784f;
+}
+
+.summary-body {
+  padding: 14px;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  font-size: 13px;
+  color: #d4e0d6;
+}
+
+.summary-loot-section {
+  margin-top: 12px;
+}
+
+.loot-title {
+  font-size: 12px;
+  color: #ffe9a8;
+  margin-bottom: 6px;
+}
+
+.loot-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 36px;
+}
+
+.loot-chip {
+  background: rgba(30, 45, 34, 0.7);
+  border: 1px solid #3c6144;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: #c9e2cd;
+}
+

@@ -1,0 +1,465 @@
+/**
+ * state.js — Quản lý trạng thái người chơi, tính toán ngũ hành & lưu trữ dữ liệu
+ * Tương thích cả trình duyệt và môi trường Node.js (smoke test).
+ */
+(function (global) {
+  'use strict';
+
+  var STORAGE_PREFIX = 'nguhanh_';
+
+  // Bộ nhớ đệm dự phòng khi chạy trong Node.js không có localStorage
+  var memoryStorage = {};
+
+  function getStorage(customStorage) {
+    if (customStorage) return customStorage;
+    if (typeof global !== 'undefined' && global.localStorage) return global.localStorage;
+    if (typeof window !== 'undefined' && window.localStorage) return window.localStorage;
+    return {
+      getItem: function (k) { return memoryStorage.hasOwnProperty(k) ? memoryStorage[k] : null; },
+      setItem: function (k, v) { memoryStorage[k] = String(v); },
+      removeItem: function (k) { delete memoryStorage[k]; },
+      clear: function () { memoryStorage = {}; }
+    };
+  }
+
+  /**
+   * Tính chỉ số Hài Hòa (Harmony): theo hồ sơ 02 & brief,
+   * lực tổng và độ tương sinh bị kéo theo đường tu yếu nhất (min tu vi).
+   * @param {Object} paths Đối tượng 5 đường ngũ hành
+   * @returns {number} Giá trị tu vi nhỏ nhất trong 5 đường
+   */
+  function harmonyOf(paths) {
+    if (!paths) return 0;
+    var k = (paths.kim && typeof paths.kim.tuVi === 'number') ? paths.kim.tuVi : 0;
+    var m = (paths.moc && typeof paths.moc.tuVi === 'number') ? paths.moc.tuVi : 0;
+    var t = (paths.thuy && typeof paths.thuy.tuVi === 'number') ? paths.thuy.tuVi : 0;
+    var h = (paths.hoa && typeof paths.hoa.tuVi === 'number') ? paths.hoa.tuVi : 0;
+    var th = (paths.tho && typeof paths.tho.tuVi === 'number') ? paths.tho.tuVi : 0;
+    return Math.min(k, m, t, h, th);
+  }
+
+  /**
+   * Dẫn xuất chỉ số nhân vật từ 5 trụ ngũ hành (theo hồ sơ 49):
+   * - Thổ: Khí huyết & phòng thủ (tăng hpMax vượt trội)
+   * - Kim: Công kích & xuyên giáp
+   * - Hỏa: Bạo kích & sát thương bùng nổ
+   * - Thủy: Linh lực tối đa & khống chế (tăng linhLucMax)
+   * - Mộc: Hồi phục khí huyết & linh lực
+   * 
+   * Tại mốc khởi đầu (0 tu vi ngũ hành), giá trị cơ bản chuẩn:
+   * hpMax = 100, linhLucMax = 20.
+   * 
+   * @param {Object} paths 5 đường tu
+   * @returns {Object} Các chỉ số phái sinh
+   */
+  function deriveStats(paths) {
+    var k = (paths && paths.kim && paths.kim.tuVi) || 0;
+    var m = (paths && paths.moc && paths.moc.tuVi) || 0;
+    var t = (paths && paths.thuy && paths.thuy.tuVi) || 0;
+    var h = (paths && paths.hoa && paths.hoa.tuVi) || 0;
+    var th = (paths && paths.tho && paths.tho.tuVi) || 0;
+
+    // hpMax bắt đầu từ 100, tăng mạnh nhất từ Thổ (+2.0/tuVi), Kim chỉ tăng nhẹ (+0.2/tuVi)
+    var hpMax = Math.round(100 + (th * 2.0) + (k * 0.2) + (m * 0.5) + (h * 0.1) + (t * 0.1));
+    // linhLucMax bắt đầu từ 20, tăng chủ yếu từ Thủy (+1.5/tuVi)
+    var linhLucMax = Math.round(20 + (t * 1.5) + (m * 0.2));
+
+    var attack = Math.round(10 + (k * 1.5));
+    var defense = Math.round(5 + (th * 1.2));
+    var critRate = +(5.0 + (h * 0.2)).toFixed(1);
+    var regenRate = +(1.0 + (m * 0.15)).toFixed(1);
+
+    return {
+      hpMax: hpMax,
+      linhLucMax: linhLucMax,
+      attack: attack,
+      defense: defense,
+      critRate: critRate,
+      regenRate: regenRate
+    };
+  }
+
+  /**
+   * Tạo cấu trúc dữ liệu người chơi mới
+   */
+  function createPlayer(name, options) {
+    options = options || {};
+    var charName = (name && name.trim()) || 'Hà Nhân';
+    var starterPaths = {
+      kim: { tuVi: 0 },
+      moc: { tuVi: 0 },
+      thuy: { tuVi: 0 },
+      hoa: { tuVi: 0 },
+      tho: { tuVi: 0 }
+    };
+    var stats = deriveStats(starterPaths);
+
+    return {
+      name: charName,
+      x: options.x !== undefined ? options.x : 560,
+      y: options.y !== undefined ? options.y : 620,
+      dir: options.dir !== undefined ? options.dir : 0, // 0: nam (front)
+      hp: stats.hpMax,
+      hpMax: stats.hpMax,
+      linhLuc: stats.linhLucMax,
+      linhLucMax: stats.linhLucMax,
+      paths: starterPaths,
+      realm: 'Phàm Nhân',
+      quests: {
+        talked_linhnhi: false,
+        current: 'talk_linhnhi',
+        thaotinhKills: 0,
+        huntCompleted: false
+      },
+      face: options.face || 'Quyết tâm',
+      linhThach: options.linhThach || 0,
+      revivalPool: 5,
+      revivalLastRegen: Date.now(),
+      bag: {
+        slots: new Array(48).fill(null)
+      },
+      daily: {},
+      huntChain: {
+        count: 0,
+        timer: 0
+      },
+      farmSession: null,
+      createdAt: Date.now(),
+      lastSaved: Date.now()
+    };
+  }
+
+  /**
+   * Cài đặt mặc định
+   */
+  function defaultSettings() {
+    return {
+      musicVol: 0.7,
+      sfxVol: 0.8,
+      arrowGuidance: true,
+      flourishEffects: true
+    };
+  }
+
+  /**
+   * Lưu dữ liệu nhân vật vào localStorage
+   */
+  function savePlayer(player, customStorage) {
+    if (!player || !player.name) return false;
+    var storage = getStorage(customStorage);
+    player.lastSaved = Date.now();
+
+    // Đồng bộ lại chỉ số phái sinh
+    var stats = deriveStats(player.paths);
+    player.hpMax = stats.hpMax;
+    player.linhLucMax = stats.linhLucMax;
+    if (player.hp > player.hpMax) player.hp = player.hpMax;
+    if (player.linhLuc > player.linhLucMax) player.linhLuc = player.linhLucMax;
+
+    var serialized = JSON.stringify(player);
+    var key = STORAGE_PREFIX + 'char_' + player.name;
+    storage.setItem(key, serialized);
+
+    // Cập nhật danh sách nhân vật
+    var list = listCharacters(storage);
+    if (list.indexOf(player.name) === -1) {
+      list.push(player.name);
+      storage.setItem(STORAGE_PREFIX + 'chars', JSON.stringify(list));
+    }
+    storage.setItem(STORAGE_PREFIX + 'active_char', player.name);
+    return true;
+  }
+
+  /**
+   * Tải dữ liệu nhân vật
+   */
+  function loadPlayer(name, customStorage) {
+    if (!name) return null;
+    var storage = getStorage(customStorage);
+    var key = STORAGE_PREFIX + 'char_' + name;
+    var raw = storage.getItem(key);
+    if (!raw) return null;
+    try {
+      var data = JSON.parse(raw);
+      // Đảm bảo cấu trúc đầy đủ
+      if (!data.paths) {
+        data.paths = { kim: { tuVi: 0 }, moc: { tuVi: 0 }, thuy: { tuVi: 0 }, hoa: { tuVi: 0 }, tho: { tuVi: 0 } };
+      }
+      var stats = deriveStats(data.paths);
+      data.hpMax = stats.hpMax;
+      data.linhLucMax = stats.linhLucMax;
+      return data;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /**
+   * Lấy danh sách tên nhân vật đã lưu
+   */
+  function listCharacters(customStorage) {
+    var storage = getStorage(customStorage);
+    var raw = storage.getItem(STORAGE_PREFIX + 'chars');
+    if (!raw) return [];
+    try {
+      var list = JSON.parse(raw);
+      return Array.isArray(list) ? list : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /**
+   * Xóa một nhân vật
+   */
+  function deleteCharacter(name, customStorage) {
+    if (!name) return false;
+    var storage = getStorage(customStorage);
+    storage.removeItem(STORAGE_PREFIX + 'char_' + name);
+    var list = listCharacters(storage);
+    var idx = list.indexOf(name);
+    if (idx !== -1) {
+      list.splice(idx, 1);
+      storage.setItem(STORAGE_PREFIX + 'chars', JSON.stringify(list));
+    }
+    var active = storage.getItem(STORAGE_PREFIX + 'active_char');
+    if (active === name) {
+      storage.removeItem(STORAGE_PREFIX + 'active_char');
+    }
+    return true;
+  }
+
+  /**
+   * Tải cài đặt
+   */
+  function loadSettings(customStorage) {
+    var storage = getStorage(customStorage);
+    var raw = storage.getItem(STORAGE_PREFIX + 'settings');
+    if (!raw) return defaultSettings();
+    try {
+      var parsed = JSON.parse(raw);
+      return Object.assign(defaultSettings(), parsed);
+    } catch (e) {
+      return defaultSettings();
+    }
+  }
+
+  /**
+   * Lưu cài đặt
+   */
+  function saveSettings(settings, customStorage) {
+    var storage = getStorage(customStorage);
+    var current = loadSettings(storage);
+    var merged = Object.assign(current, settings || {});
+    storage.setItem(STORAGE_PREFIX + 'settings', JSON.stringify(merged));
+    return merged;
+  }
+
+  /**
+   * Tính giới hạn trần mềm Tu Vi farm quái theo ngày (Hồ sơ 02 & Brief §6 & Check 10)
+   * Trần 65/ngày: trong bể nhận đủ 100%, vượt bể nhận x0.25
+   */
+  var TU_VI_DAILY_POOL = 65;
+
+  function calcTuViGain(currentFarmTuViToday, rawGain) {
+    var pool = TU_VI_DAILY_POOL;
+    var current = currentFarmTuViToday || 0;
+    var raw = rawGain || 0;
+    if (current < pool) {
+      var rem = pool - current;
+      if (raw <= rem) {
+        return raw;
+      } else {
+        return rem + (raw - rem) * 0.25;
+      }
+    } else {
+      return raw * 0.25;
+    }
+  }
+
+  /**
+   * Hệ số giảm dần (taper factor) của Linh Thạch farm theo ngày (Hồ sơ 50 & Brief §6 & Check 10)
+   * Luyện Khí: chạm 300 -> x0.25, vượt 600 -> x0.1
+   */
+  function getLinhThachTaperFactor(totalFarmLinhThachToday) {
+    var total = totalFarmLinhThachToday || 0;
+    if (total >= 600) return 0.1;
+    if (total >= 300) return 0.25;
+    return 1.0;
+  }
+
+  /**
+   * Tính Linh Thạch thực nhận sau khi áp dụng trần giảm dần
+   */
+  function calcLinhThachGain(currentFarmLinhThachToday, rawAmount) {
+    var factor = getLinhThachTaperFactor(currentFarmLinhThachToday);
+    var gained = rawAmount * factor;
+    // Làm tròn hoặc tối thiểu 1 nếu rawAmount >= 1 và factor > 0
+    return Math.max(1, Math.round(gained));
+  }
+
+  /**
+   * Thưởng Chuỗi Săn (Hunt Chain) (Brief §6 & Check 13)
+   * bonus = min(50, floor(chain/10) * 5)%
+   */
+  function calcChainBonus(chainCount) {
+    var count = chainCount || 0;
+    return Math.min(50, Math.floor(count / 10) * 5);
+  }
+
+  function incrementHuntChain(player) {
+    if (!player.huntChain) player.huntChain = { count: 0, timer: 0 };
+    player.huntChain.count++;
+    player.huntChain.timer = 20.0; // 20s duy trì chuỗi
+    return player.huntChain.count;
+  }
+
+  function breakHuntChain(player) {
+    if (player.huntChain) {
+      player.huntChain.count = 0;
+      player.huntChain.timer = 0;
+    }
+  }
+
+  /**
+   * Quản lý bể hồi sinh (Brief §7 & Check 14)
+   * 5 lượt, hồi +1 mỗi 2 giờ thực.
+   */
+  var MAX_REVIVAL = 5;
+  var REVIVAL_INTERVAL_MS = 2 * 60 * 60 * 1000; // 2 giờ thực (7,200,000ms)
+
+  function checkRevivalPoolRegen(player, nowMs) {
+    if (player.revivalPool === undefined) player.revivalPool = MAX_REVIVAL;
+    var now = nowMs !== undefined ? nowMs : Date.now();
+    if (!player.revivalLastRegen) player.revivalLastRegen = now;
+
+    if (player.revivalPool < MAX_REVIVAL) {
+      var elapsed = now - player.revivalLastRegen;
+      if (elapsed >= REVIVAL_INTERVAL_MS) {
+        var added = Math.floor(elapsed / REVIVAL_INTERVAL_MS);
+        player.revivalPool = Math.min(MAX_REVIVAL, player.revivalPool + added);
+        player.revivalLastRegen += added * REVIVAL_INTERVAL_MS;
+        if (player.revivalPool >= MAX_REVIVAL) {
+          player.revivalLastRegen = now;
+        }
+      }
+    } else {
+      player.revivalLastRegen = now;
+    }
+    return player.revivalPool;
+  }
+
+  function consumeRevivalCharge(player) {
+    if (player.revivalPool === undefined) player.revivalPool = MAX_REVIVAL;
+    if (player.revivalPool > 0) {
+      if (player.revivalPool === MAX_REVIVAL) {
+        player.revivalLastRegen = Date.now();
+      }
+      player.revivalPool--;
+      return true;
+    }
+    return false;
+  }
+
+  function revivePlayer(player, type) {
+    if (type === 'spot') {
+      if (!consumeRevivalCharge(player)) return false;
+      player.hp = Math.round(player.hpMax * 0.5);
+      player.linhLuc = Math.round(player.linhLucMax * 0.5);
+      breakHuntChain(player);
+      return true;
+    } else {
+      // Về Miếu Hoang: miễn phí, không tốn lượt trong bể hồi sinh
+      player.hp = player.hpMax;
+      player.linhLuc = player.linhLucMax;
+      breakHuntChain(player);
+      return true;
+    }
+  }
+
+  /**
+   * Quản lý túi trữ vật (Brief §6: 8x6 = 48 ô)
+   */
+  var BAG_TOTAL_SLOTS = 48;
+
+  function addItemToBag(player, itemId, count, itemDefs) {
+    var cnt = (count !== undefined && count !== null) ? count : 1;
+    if (itemId === 'linh-thach') {
+      player.linhThach = (player.linhThach || 0) + cnt;
+      return { success: true, slot: -1, count: player.linhThach };
+    }
+
+    if (!player.bag) player.bag = { slots: new Array(BAG_TOTAL_SLOTS).fill(null) };
+    while (player.bag.slots.length < BAG_TOTAL_SLOTS) {
+      player.bag.slots.push(null);
+    }
+
+    var defs = itemDefs;
+    if (!defs && typeof global !== 'undefined' && global.GameMonsters) {
+      defs = global.GameMonsters.ITEM_DEFS;
+    }
+    var def = defs ? defs[itemId] : null;
+    var isStackable = def ? !!def.stackable : true;
+
+    // Nếu xếp chồng được, tìm ô đã có cùng itemId
+    if (isStackable) {
+      for (var i = 0; i < player.bag.slots.length; i++) {
+        var s = player.bag.slots[i];
+        if (s && s.itemId === itemId) {
+          s.count += cnt;
+          return { success: true, slot: i, count: s.count };
+        }
+      }
+    }
+
+    // Tìm ô trống đầu tiên
+    for (var j = 0; j < player.bag.slots.length; j++) {
+      if (player.bag.slots[j] === null) {
+        player.bag.slots[j] = {
+          itemId: itemId,
+          count: cnt
+        };
+        return { success: true, slot: j, count: cnt };
+      }
+    }
+
+    return { success: false, reason: 'full' };
+  }
+
+  var StateAPI = {
+    STORAGE_PREFIX: STORAGE_PREFIX,
+    harmonyOf: harmonyOf,
+    deriveStats: deriveStats,
+    createPlayer: createPlayer,
+    defaultSettings: defaultSettings,
+    savePlayer: savePlayer,
+    loadPlayer: loadPlayer,
+    listCharacters: listCharacters,
+    deleteCharacter: deleteCharacter,
+    loadSettings: loadSettings,
+    saveSettings: saveSettings,
+
+    // Các hàm Đợt 2
+    TU_VI_DAILY_POOL: TU_VI_DAILY_POOL,
+    calcTuViGain: calcTuViGain,
+    getLinhThachTaperFactor: getLinhThachTaperFactor,
+    calcLinhThachGain: calcLinhThachGain,
+    calcChainBonus: calcChainBonus,
+    incrementHuntChain: incrementHuntChain,
+    breakHuntChain: breakHuntChain,
+    MAX_REVIVAL: MAX_REVIVAL,
+    REVIVAL_INTERVAL_MS: REVIVAL_INTERVAL_MS,
+    checkRevivalPoolRegen: checkRevivalPoolRegen,
+    consumeRevivalCharge: consumeRevivalCharge,
+    revivePlayer: revivePlayer,
+    BAG_TOTAL_SLOTS: BAG_TOTAL_SLOTS,
+    addItemToBag: addItemToBag
+  };
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = StateAPI;
+  }
+  if (typeof global !== 'undefined') {
+    global.GameState = StateAPI;
+  }
+})(typeof window !== 'undefined' ? window : this);
