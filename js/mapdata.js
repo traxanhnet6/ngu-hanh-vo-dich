@@ -39,15 +39,21 @@
     }
   }
 
+  function pointInEllipse(x, y, e) {
+    var dx = (x - e.cx) / e.rx;
+    var dy = (y - e.cy) / e.ry;
+    return dx * dx + dy * dy <= 1;
+  }
+
   // ============================================================
   // MAP 1: MIẾU HOANG (1920 x 1280)
   // ============================================================
 
   var TEMPLE = {
     id: 'temple_main',
-    asset: 'assets/art/obj-temple.png',
+    asset: 'assets/art/standee-temple.png',
     originalW: 760,
-    originalH: 587,
+    originalH: 613,
     w: 430,
     h: 332,
     x: 265, // 480 - 430 / 2
@@ -67,86 +73,42 @@
   };
 
   var TREES_MIEU = [
-    {
-      id: 'pine_1',
-      asset: 'assets/art/obj-tree-pine.png',
-      originalW: 299,
-      originalH: 520,
-      w: 140,
-      h: 243,
-      x: 140,
-      y: 140,
-      baseY: 380,
-      trunk: { x: 210, y: 375, r: 14 }
-    },
-    {
-      id: 'pine_2',
-      asset: 'assets/art/obj-tree-pine.png',
-      originalW: 299,
-      originalH: 520,
-      w: 150,
-      h: 260,
-      x: 1160,
-      y: 30,
-      baseY: 285,
-      trunk: { x: 1235, y: 280, r: 14 }
-    },
-    {
-      id: 'pine_3',
-      asset: 'assets/art/obj-tree-pine.png',
-      originalW: 299,
-      originalH: 520,
-      w: 140,
-      h: 243,
-      x: 180,
-      y: 720,
-      baseY: 960,
-      trunk: { x: 250, y: 955, r: 14 }
-    }
+    { id: 'pine_1', asset: 'assets/art/standee-pine.png', originalW: 299, originalH: 543, w: 140, h: 243, x: 140, y: 140, baseY: 383, ellipse: { cx: 196.8, cy: 362.5, rx: 32.8, ry: 9.8 } },
+    { id: 'pine_2', asset: 'assets/art/standee-pine.png', originalW: 299, originalH: 543, w: 150, h: 260, x: 1160, y: 30, baseY: 290, ellipse: { cx: 1220.9, cy: 268.0, rx: 35.1, ry: 10.5 } },
+    { id: 'pine_3', asset: 'assets/art/standee-pine.png', originalW: 299, originalH: 543, w: 140, h: 243, x: 180, y: 720, baseY: 963, ellipse: { cx: 236.8, cy: 942.5, rx: 32.8, ry: 9.8 } }
+  ];
+
+  var STANDEES_MIEU_EXTRA = [
+    { id: 'bamboo_m1', asset: 'assets/art/standee-bamboo-cluster.png', originalW: 258, originalH: 480, w: 170, h: 315, x: 1640, y: 240, baseY: 555, ellipse: { cx: 1725.3, cy: 529.7, rx: 25.7, ry: 7.6 } },
+    { id: 'bamboo_m2', asset: 'assets/art/standee-bamboo-cluster.png', originalW: 258, originalH: 480, w: 180, h: 335, x: 1660, y: 600, baseY: 935, ellipse: { cx: 1750.4, cy: 908.1, rx: 27.2, ry: 8.0 } },
+    { id: 'rock_m1', asset: 'assets/art/standee-rock-cluster.png', originalW: 417, originalH: 313, w: 150, h: 113, x: 949, y: 287, baseY: 400, ellipse: { cx: 1016.8, cy: 376.4, rx: 61.5, ry: 18.5 } },
+    { id: 'rock_m2', asset: 'assets/art/standee-rock-cluster.png', originalW: 417, originalH: 313, w: 130, h: 98, x: 947, y: 522, baseY: 620, ellipse: { cx: 1005.8, cy: 599.6, rx: 53.3, ry: 16.1 } },
+    { id: 'bush_m1', asset: 'assets/art/standee-bush.png', originalW: 309, originalH: 313, w: 120, h: 121, x: 718, y: 83, baseY: 204, ellipse: { cx: 779.6, cy: 184.6, rx: 45.4, ry: 13.6 } },
+    { id: 'bush_m2', asset: 'assets/art/standee-bush.png', originalW: 309, originalH: 313, w: 130, h: 132, x: 933, y: 383, baseY: 515, ellipse: { cx: 999.7, cy: 493.9, rx: 49.2, ry: 14.8 } },
+    { id: 'bush_m3', asset: 'assets/art/standee-bush.png', originalW: 309, originalH: 313, w: 140, h: 142, x: 1072, y: 442, baseY: 584, ellipse: { cx: 1143.8, cy: 561.3, rx: 53.0, ry: 15.9 } },
+    { id: 'ruined_m1', asset: 'assets/art/standee-ruined-blocks.png', originalW: 409, originalH: 313, w: 240, h: 191, x: 70, y: 619, baseY: 810, ellipse: { cx: 182.3, cy: 748.4, rx: 107.4, ry: 32.3 } },
+    { id: 'ruined_m2', asset: 'assets/art/standee-ruined-blocks.png', originalW: 409, originalH: 313, w: 200, h: 159, x: 300, y: 624, baseY: 783, ellipse: { cx: 393.6, cy: 731.7, rx: 89.5, ry: 26.9 } }
   ];
 
   var SCENERY_OBSTACLES_MIEU = [
-    { x: 90, y: 220, r: 18 },
-    { x: 110, y: 550, r: 18 },
-    { x: 1800, y: 250, r: 20 },
-    { x: 1860, y: 780, r: 20 },
-    { x: 130, y: 1120, r: 22 },
     { rect: { x: 0, y: 0, w: 1920, h: 50 } },
     { rect: { x: 0, y: 0, w: 50, h: 1280 } },
     { rect: { x: 1900, y: 0, w: 20, h: 425 } },
     { rect: { x: 1900, y: 525, w: 20, h: 755 } },
     { rect: { x: 0, y: 1260, w: 775, h: 20 } },
-    { rect: { x: 885, y: 1260, w: 1035, h: 20 } },
-    // Đợt 3 (Note 2 — kiểm toán va chạm vật vẽ sẵn): mọi vật rắn VẼ TRONG NỀN
-    // đều phải chặn đường đúng chân đế nhìn thấy. Danh mục đối chiếu ở docs/dot3-report.md.
-    { x: 778, y: 190, r: 14 },
-    { x: 1024, y: 350, r: 12 },
-    { x: 605, y: 185, r: 22 },
-    { x: 450, y: 178, r: 13 },
-    { x: 58, y: 395, r: 14 },
-    { rect: { x: 855, y: 320, w: 410, h: 60 } },
-    { rect: { x: 1595, y: 185, w: 305, h: 215 } },
-    { rect: { x: 1615, y: 575, w: 285, h: 330 } },
-    { x: 1142, y: 560, r: 24 },
-    { x: 1012, y: 620, r: 16 },
-    { x: 998, y: 495, r: 20 },
-    { x: 150, y: 745, r: 38 },
-    { x: 355, y: 780, r: 48 },
-    { x: 242, y: 722, r: 16 },
-    { x: 1798, y: 1160, r: 15 },
-    { x: 148, y: 990, r: 16 }
+    { rect: { x: 885, y: 1260, w: 1035, h: 20 } }
   ];
 
   var LINH_NHI = {
     id: 'npc_linhnhi',
     name: 'Linh Nhi',
     asset: 'assets/art/npc-linhnhi.png',
-    originalW: 252,
-    originalH: 560,
-    h: 118,
-    w: 53,
-    x: 674,
-    y: 442,
+    originalW: 96,
+    originalH: 120,
+    h: 120,
+    w: 96,
+    x: 652,
+    y: 446,
     feetX: 700,
     feetY: 560,
     baseY: 560,
@@ -234,16 +196,17 @@
       if (!inExit) return false;
     }
 
-    var tRect = TEMPLE.baseRect;
-    if (x >= tRect.x && x <= tRect.x + tRect.w && y >= tRect.y && y <= tRect.y + tRect.h) {
-      return false;
-    }
-
-    for (var i = 0; i < TREES_MIEU.length; i++) {
-      var tr = TREES_MIEU[i].trunk;
-      var dx = x - tr.x;
-      var dy = y - tr.y;
-      if (dx * dx + dy * dy <= tr.r * tr.r) return false;
+    var solidsMieu = [TEMPLE].concat(TREES_MIEU, STANDEES_MIEU_EXTRA);
+    for (var si2 = 0; si2 < solidsMieu.length; si2++) {
+      var so = solidsMieu[si2];
+      if (so.baseRect) {
+        if (x >= so.baseRect.x && x <= so.baseRect.x + so.baseRect.w && y >= so.baseRect.y && y <= so.baseRect.y + so.baseRect.h) return false;
+      } else if (so.ellipse) {
+        if (pointInEllipse(x, y, so.ellipse)) return false;
+      } else if (so.trunk) {
+        var sdx = x - so.trunk.x, sdy = y - so.trunk.y;
+        if (sdx * sdx + sdy * sdy <= so.trunk.r * so.trunk.r) return false;
+      }
     }
 
     var dxLn = x - LINH_NHI.feetX;
@@ -298,11 +261,8 @@
     linhnhi: LINH_NHI,
     trees: TREES_MIEU,
     standees: [
-      Object.assign({}, TEMPLE, { id: 'temple_main' }),
-      TREES_MIEU[0],
-      TREES_MIEU[1],
-      TREES_MIEU[2]
-    ],
+      Object.assign({}, TEMPLE, { id: 'temple_main' })
+    ].concat(TREES_MIEU, STANDEES_MIEU_EXTRA),
     npcs: [LINH_NHI],
     interactables: INTERACTABLES_MIEU,
     harvestNodes: [],
@@ -336,55 +296,17 @@
   ];
 
   var STAND_OBJECTS_RUNG_DOC = [
-    {
-      id: 'broadleaf_1',
-      asset: 'assets/art/obj-tree-broadleaf.png',
-      originalW: 454,
-      originalH: 540,
-      w: 260,
-      h: 310,
-      x: 620,
-      y: 120,
-      baseY: 410,
-      trunk: { x: 750, y: 410, r: 18 }
-    },
-    {
-      id: 'broadleaf_2',
-      asset: 'assets/art/obj-tree-broadleaf.png',
-      originalW: 454,
-      originalH: 540,
-      w: 250,
-      h: 300,
-      x: 1240,
-      y: 580,
-      baseY: 860,
-      trunk: { x: 1365, y: 860, r: 18 }
-    },
-    {
-      id: 'broadleaf_3',
-      asset: 'assets/art/obj-tree-broadleaf.png',
-      originalW: 454,
-      originalH: 540,
-      w: 240,
-      h: 290,
-      x: 340,
-      y: 780,
-      baseY: 1050,
-      trunk: { x: 460, y: 1050, r: 18 }
-    },
-    {
-      id: 'fallen_log_1',
-      asset: 'assets/art/obj-fallen-log.png',
-      originalW: 400,
-      originalH: 245,
-      w: 200,
-      h: 122,
-      x: 920,
-      y: 640,
-      baseY: 730,
-      // Đợt 3: thân gỗ là CẦU — va chạm chỉ ở đầu gốc phía tây, mặt cầu đi qua được
-      trunk: { x: 948, y: 668, r: 14 }
-    }
+    { id: 'giant_tree_1', asset: 'assets/art/standee-giant-tree.png', originalW: 666, originalH: 815, w: 520, h: 636, x: 1210, y: 4, baseY: 640, ellipse: { cx: 1463.2, cy: 551.1, rx: 203.1, ry: 60.8 } },
+    { id: 'broadleaf_1', asset: 'assets/art/standee-broadleaf.png', originalW: 453, originalH: 564, w: 260, h: 310, x: 620, y: 120, baseY: 430, ellipse: { cx: 748.2, cy: 385.0, rx: 102.7, ry: 30.7 } },
+    { id: 'broadleaf_2', asset: 'assets/art/standee-broadleaf.png', originalW: 453, originalH: 564, w: 250, h: 300, x: 1240, y: 580, baseY: 880, ellipse: { cx: 1363.2, cy: 836.7, rx: 98.8, ry: 29.5 } },
+    { id: 'broadleaf_3', asset: 'assets/art/standee-broadleaf.png', originalW: 453, originalH: 564, w: 240, h: 290, x: 340, y: 780, baseY: 1070, ellipse: { cx: 458.3, cy: 1028.3, rx: 94.8, ry: 28.3 } },
+    { id: 'twisted_tree_1', asset: 'assets/art/standee-twisted-tree.png', originalW: 387, originalH: 585, w: 270, h: 408, x: 610, y: 520, baseY: 928, ellipse: { cx: 740.7, cy: 873.6, rx: 120.7, ry: 36.3 } },
+    { id: 'fallen_log_1', asset: 'assets/art/standee-fallen-log.png', originalW: 400, originalH: 256, w: 200, h: 122, x: 920, y: 640, baseY: 762, trunk: { x: 948, y: 668, r: 14 } },
+    { id: 'rock_rd1', asset: 'assets/art/standee-rock-cluster.png', originalW: 417, originalH: 313, w: 140, h: 105, x: 435, y: 455, baseY: 560, ellipse: { cx: 498.3, cy: 538.0, rx: 57.4, ry: 17.3 } },
+    { id: 'rock_rd2', asset: 'assets/art/standee-rock-cluster.png', originalW: 417, originalH: 313, w: 150, h: 113, x: 1493, y: 1072, baseY: 1185, ellipse: { cx: 1560.8, cy: 1161.4, rx: 61.5, ry: 18.5 } },
+    { id: 'bush_rd1', asset: 'assets/art/standee-bush.png', originalW: 309, originalH: 313, w: 140, h: 142, x: 548, y: 693, baseY: 835, ellipse: { cx: 619.8, cy: 812.3, rx: 53.0, ry: 15.9 } },
+    { id: 'bush_rd2', asset: 'assets/art/standee-bush.png', originalW: 309, originalH: 313, w: 130, h: 132, x: 1817, y: 658, baseY: 790, ellipse: { cx: 1883.7, cy: 768.9, rx: 49.2, ry: 14.8 } },
+    { id: 'bush_rd3', asset: 'assets/art/standee-bush.png', originalW: 309, originalH: 313, w: 120, h: 121, x: 285, y: 234, baseY: 355, ellipse: { cx: 346.6, cy: 335.6, rx: 45.4, ry: 13.6 } }
   ];
 
   var SCENERY_OBSTACLES_RUNG_DOC = [
@@ -392,38 +314,18 @@
     { rect: { x: 0, y: 1255, w: 1920, h: 25 } },
     { rect: { x: 0, y: 0, w: 25, h: 475 } },
     { rect: { x: 0, y: 645, w: 25, h: 635 } },
-    { rect: { x: 1900, y: 0, w: 20, h: 1280 } },
-    { x: 300, y: 200, r: 22 },
-    { x: 780, y: 1100, r: 22 },
-    { x: 1680, y: 220, r: 24 },
-    // Đợt 3 (Note 2 — kiểm toán va chạm vật vẽ sẵn trong nền Rừng Độc)
-    { rect: { x: 0, y: 45, w: 1920, h: 205 } },
-    { x: 963, y: 352, r: 20 },
-    { x: 815, y: 262, r: 16 },
-    { x: 1080, y: 322, r: 24 },
-    { x: 1218, y: 408, r: 20 },
-    { rect: { x: 1420, y: 250, w: 280, h: 140 } },
-    { x: 505, y: 522, r: 28 },
-    { x: 345, y: 325, r: 18 },
-    { x: 60, y: 290, r: 18 },
-    { x: 745, y: 928, r: 26 },
-    { x: 618, y: 805, r: 30 },
-    { x: 82, y: 1085, r: 26 },
-    { x: 1568, y: 1148, r: 22 },
-    { x: 1555, y: 1232, r: 18 },
-    { x: 1882, y: 762, r: 14 },
-    { x: 140, y: 565, r: 34 }
+    { rect: { x: 1900, y: 0, w: 20, h: 1280 } }
   ];
 
   // Đợt 3 (Note 2): SUỐI LÀ CHƯỚNG NGẠI THẬT — lòng suối vẽ trong nền chặn đường,
   // chỉ qua được tại cầu gỗ (khúc gỗ bắc ngang ~ (1060,705)) và bãi cạn phía nam.
   var STREAM_SEGMENTS_RUNG_DOC = [
-    [1005, 440], [1015, 540], [1030, 620], [1060, 705], [1095, 800],
-    [1135, 900], [1180, 1000], [1235, 1100], [1290, 1200], [1335, 1280]
+    [1005, 440], [960, 540], [885, 620], [940, 705], [1005, 800],
+    [1065, 900], [1185, 1000], [1250, 1100], [1295, 1200], [1380, 1280]
   ];
   var STREAM_HALF_WIDTH = 38;
   var STREAM_CROSSINGS_RUNG_DOC = [
-    { x: 1060, y: 705, r: 95 },
+    { x: 940, y: 705, r: 95 },
     { rect: { x: 1245, y: 1050, w: 120, h: 110 } }
   ];
 
@@ -457,8 +359,9 @@
     { x: 550, y: 360 },
     { x: 920, y: 920 },
     { x: 1080, y: 460 },
-    { x: 1380, y: 820 },
-    { x: 1540, y: 420 }
+    { x: 1460, y: 905 },
+    { x: 1440, y: 720 },
+    { x: 1640, y: 745 }
   ];
 
   var RUNG_DOC_PACKS = [
@@ -466,8 +369,9 @@
     { id: 'pack_thaotinh_2', speciesId: 'thao_tinh', anchor: { x: 550, y: 360 }, count: 4, spread: 60 },
     { id: 'pack_thaotinh_3', speciesId: 'thao_tinh', anchor: { x: 920, y: 920 }, count: 5, spread: 60 },
     { id: 'pack_nhenxanh_1', speciesId: 'nhen_xanh', anchor: { x: 1080, y: 460 }, count: 3, spread: 50 },
-    { id: 'pack_nhenxanh_2', speciesId: 'nhen_xanh', anchor: { x: 1380, y: 820 }, count: 3, spread: 50 },
-    { id: 'pack_elite_cothuye', speciesId: 'co_thu_yeu', anchor: { x: 1540, y: 420 }, count: 1, spread: 0, isElite: true }
+    { id: 'pack_nhenxanh_2', speciesId: 'nhen_xanh', anchor: { x: 1460, y: 905 }, count: 3, spread: 50 },
+    { id: 'pack_elite_cothuye', speciesId: 'co_thu_yeu', anchor: { x: 1440, y: 720 }, count: 1, spread: 0, isElite: true },
+    { id: 'pack_boss_moc_linh', speciesId: 'boss_moc_linh_co_vuong', anchor: { x: 1640, y: 745 }, count: 1, spread: 0, isBoss: true }
   ];
 
   var ZONES_RUNG_DOC = [
@@ -496,10 +400,14 @@
     if (isInStreamRungDoc(x, y)) return false;
 
     for (var i = 0; i < STAND_OBJECTS_RUNG_DOC.length; i++) {
-      var tr = STAND_OBJECTS_RUNG_DOC[i].trunk;
-      var dx = x - tr.x;
-      var dy = y - tr.y;
-      if (dx * dx + dy * dy <= tr.r * tr.r) return false;
+      var obj = STAND_OBJECTS_RUNG_DOC[i];
+      if (obj.ellipse) {
+        if (pointInEllipse(x, y, obj.ellipse)) return false;
+      } else if (obj.trunk) {
+        var dx = x - obj.trunk.x;
+        var dy = y - obj.trunk.y;
+        if (dx * dx + dy * dy <= obj.trunk.r * obj.trunk.r) return false;
+      }
     }
 
     for (var j = 0; j < SCENERY_OBSTACLES_RUNG_DOC.length; j++) {
@@ -683,88 +591,92 @@
   var STAND_OBJECTS_TONG_MON = [
     {
       id: 'standee_dai_dien',
-      asset: 'assets/art/obj-dai-dien.png',
-      originalW: 624,
-      originalH: 488,
+      asset: 'assets/art/standee-dai-dien.png',
+      originalW: 603,
+      originalH: 509,
       w: 660,
       h: 380,
       x: 630,
       y: 40,
-      baseY: 415,
+      baseY: 420,
       baseRect: { x: 675, y: 320, w: 590, h: 95 }
     },
     {
       id: 'standee_thap',
-      asset: 'assets/art/obj-thap.png',
+      asset: 'assets/art/standee-thap.png',
       originalW: 280,
-      originalH: 658,
+      originalH: 687,
       w: 280,
       h: 430,
       x: 1600,
       y: 430,
-      baseY: 850,
+      baseY: 860,
       baseRect: { x: 1635, y: 795, w: 210, h: 55 }
     },
     {
       id: 'standee_portal',
-      asset: 'assets/art/obj-portal.png',
-      originalW: 256,
-      originalH: 256,
+      asset: 'assets/art/standee-portal.png',
+      originalW: 133,
+      originalH: 257,
       w: 170,
       h: 180,
       x: 1560,
       y: 70,
-      baseY: 245,
+      baseY: 250,
       trunk: { x: 1645, y: 215, r: 25 }
     },
     {
       id: 'bamboo_1',
-      asset: 'assets/art/obj-bamboo.png',
-      originalW: 300,
-      originalH: 400,
+      asset: 'assets/art/standee-bamboo-cluster.png',
+      originalW: 258,
+      originalH: 480,
       w: 120,
       h: 160,
       x: 90,
       y: 60,
-      baseY: 210,
-      trunk: { x: 150, y: 205, r: 12 }
+      baseY: 220,
+      ellipse: { cx: 150.2, cy: 205.7, rx: 18.1, ry: 5.3 }
     },
     {
       id: 'bamboo_2',
-      asset: 'assets/art/obj-bamboo.png',
-      originalW: 300,
-      originalH: 400,
+      asset: 'assets/art/standee-bamboo-cluster.png',
+      originalW: 258,
+      originalH: 480,
       w: 130,
       h: 173,
       x: 300,
       y: 40,
-      baseY: 200,
-      trunk: { x: 365, y: 195, r: 12 }
+      baseY: 213,
+      ellipse: { cx: 365.3, cy: 197.5, rx: 19.6, ry: 5.8 }
     },
     {
       id: 'bamboo_3',
-      asset: 'assets/art/obj-bamboo.png',
-      originalW: 300,
-      originalH: 400,
+      asset: 'assets/art/standee-bamboo-cluster.png',
+      originalW: 258,
+      originalH: 480,
       w: 110,
       h: 147,
       x: 430,
       y: 90,
-      baseY: 230,
-      trunk: { x: 485, y: 225, r: 12 }
+      baseY: 237,
+      ellipse: { cx: 485.2, cy: 223.8, rx: 16.6, ry: 4.9 }
     },
     {
       id: 'bamboo_4',
-      asset: 'assets/art/obj-bamboo.png',
-      originalW: 300,
-      originalH: 400,
+      asset: 'assets/art/standee-bamboo-cluster.png',
+      originalW: 258,
+      originalH: 480,
       w: 125,
       h: 167,
       x: 170,
       y: 150,
-      baseY: 310,
-      trunk: { x: 232, y: 305, r: 12 }
-    }
+      baseY: 317,
+      ellipse: { cx: 232.8, cy: 302.0, rx: 18.9, ry: 5.6 }
+    },
+    { id: 'bamboo_tm60', asset: 'assets/art/standee-bamboo-cluster.png', originalW: 258, originalH: 480, w: 150, h: 200, x: 60, y: 700, baseY: 900, ellipse: { cx: 135.3, cy: 882.1, rx: 22.6, ry: 6.7 } },
+    { id: 'bamboo_tm240', asset: 'assets/art/standee-bamboo-cluster.png', originalW: 258, originalH: 480, w: 130, h: 173, x: 240, y: 620, baseY: 793, ellipse: { cx: 305.3, cy: 777.5, rx: 19.6, ry: 5.8 } },
+    { id: 'bush_tm1', asset: 'assets/art/standee-bush.png', originalW: 309, originalH: 313, w: 130, h: 132, x: 700, y: 1080, baseY: 1212, ellipse: { cx: 766.7, cy: 1190.9, rx: 49.2, ry: 14.8 } },
+    { id: 'rock_tm1', asset: 'assets/art/standee-rock-cluster.png', originalW: 417, originalH: 313, w: 130, h: 98, x: 1230, y: 130, baseY: 228, ellipse: { cx: 1288.8, cy: 207.6, rx: 53.3, ry: 16.1 } }
   ];
 
   var NPCS_TONG_MON = [
@@ -772,12 +684,12 @@
       id: 'npc_tiepdan',
       name: 'Tiếp Dẫn Đệ Tử',
       asset: 'assets/art/npc-tiepdan.png',
-      originalW: 267,
-      originalH: 560,
-      w: 57,
+      originalW: 96,
+      originalH: 120,
+      w: 96,
       h: 120,
-      x: 856,
-      y: 945,
+      x: 837,
+      y: 951,
       feetX: 885,
       feetY: 1065,
       baseY: 1065,
@@ -796,12 +708,12 @@
       id: 'npc_chapsu',
       name: 'Chấp Sự Đường',
       asset: 'assets/art/npc-chapsu.png',
-      originalW: 334,
-      originalH: 560,
-      w: 72,
+      originalW: 96,
+      originalH: 120,
+      w: 96,
       h: 120,
-      x: 1009,
-      y: 625,
+      x: 997,
+      y: 631,
       feetX: 1045,
       feetY: 745,
       baseY: 745,
@@ -820,12 +732,12 @@
       id: 'npc_truonglao',
       name: 'Truyền Công Trưởng Lão',
       asset: 'assets/art/npc-truonglao.png',
-      originalW: 337,
-      originalH: 560,
-      w: 72,
+      originalW: 96,
+      originalH: 120,
+      w: 96,
       h: 120,
-      x: 1094,
-      y: 100,
+      x: 1082,
+      y: 106,
       feetX: 1130,
       feetY: 220,
       baseY: 220,
@@ -840,12 +752,12 @@
       id: 'npc_duocsu',
       name: 'Dược Sư',
       asset: 'assets/art/npc-duocsu.png',
-      originalW: 315,
-      originalH: 560,
-      w: 68,
+      originalW: 96,
+      originalH: 120,
+      w: 96,
       h: 120,
-      x: 711,
-      y: 490,
+      x: 697,
+      y: 496,
       feetX: 745,
       feetY: 610,
       baseY: 610,
@@ -860,12 +772,12 @@
       id: 'npc_thuongnhan',
       name: 'Thương Nhân',
       asset: 'assets/art/npc-thuongnhan.png',
-      originalW: 381,
-      originalH: 560,
-      w: 82,
+      originalW: 96,
+      originalH: 120,
+      w: 96,
       h: 120,
-      x: 199,
-      y: 970,
+      x: 192,
+      y: 976,
       feetX: 240,
       feetY: 1090,
       baseY: 1090,
@@ -880,12 +792,12 @@
       id: 'npc_linhnhi_sect',
       name: 'Linh Nhi',
       asset: 'assets/art/npc-linhnhi.png',
-      originalW: 252,
-      originalH: 560,
-      w: 53,
-      h: 118,
-      x: 453,
-      y: 942,
+      originalW: 96,
+      originalH: 120,
+      w: 96,
+      h: 120,
+      x: 432,
+      y: 946,
       feetX: 480,
       feetY: 1060,
       baseY: 1060,
@@ -1007,8 +919,6 @@
     { rect: { x: 1895, y: 0, w: 25, h: 1280 } },
     // Hồ Linh Tuyền theo tranh nền mới (nước 1250-1570 x 330-620, đá bờ tới 1245-1575 x 325-625); bờ tây nam tại (1315,665) để đệ tử tới ngâm tay hồi phục
     { rect: { x: 1245, y: 325, w: 330, h: 300 } },
-    // Rặng trúc vẽ ở cạnh tây (trừ lối mòn quanh x=360-460 và các gốc standee đã có vòng thân riêng)
-    { rect: { x: 0, y: 60, w: 185, h: 760 } },
     // Mái nhà vẽ nhô ở mép nam và mép tây nam của Khu Dân Cư (sân đá trước nhà vẫn đi được)
     { rect: { x: 60, y: 1185, w: 760, h: 70 } },
     { rect: { x: 0, y: 950, w: 60, h: 330 } }
@@ -1040,6 +950,8 @@
             y >= st.baseRect.y && y <= st.baseRect.y + st.baseRect.h) {
           return false;
         }
+      } else if (st.ellipse) {
+        if (pointInEllipse(x, y, st.ellipse)) return false;
       } else if (st.trunk) {
         var tdx = x - st.trunk.x;
         var tdy = y - st.trunk.y;
@@ -1158,12 +1070,12 @@
       id: 'npc_chuongmon',
       name: 'Chưởng Môn',
       asset: 'assets/art/npc-chuongmon.png',
-      originalW: 349,
-      originalH: 560,
-      w: 75,
+      originalW: 96,
+      originalH: 120,
+      w: 96,
       h: 120,
-      x: 562,
-      y: 193,
+      x: 552,
+      y: 199,
       feetX: 600,
       feetY: 313,
       baseY: 313,
@@ -1325,12 +1237,12 @@
       id: 'npc_ansi',
       name: 'Ẩn Sĩ Tiêu Dao',
       asset: 'assets/art/npc-ansi.png',
-      originalW: 334,
-      originalH: 560,
-      w: 72,
+      originalW: 96,
+      originalH: 120,
+      w: 96,
       h: 120,
-      x: 794,
-      y: 180,
+      x: 782,
+      y: 186,
       feetX: 830,
       feetY: 300,
       baseY: 300,

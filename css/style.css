@@ -498,8 +498,10 @@ html, body {
   border-radius: 6px;
   background-color: #1a221a;
   background-image: url('../assets/art/npc-linhnhi.png');
-  background-size: 140px 311px;
-  background-position: -36px -12px;
+  /* Đợt 4C: sprite NPC mới khổ 96x120 (preset paper-doll) — khung lại chân dung:
+     phóng 2,2 lần, canh đầu (tâm đầu ô tại 48,39) vào giữa-trên hộp thoại */
+  background-size: 211px 264px;
+  background-position: -72px -46px;
   background-repeat: no-repeat;
 }
 

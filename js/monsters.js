@@ -81,6 +81,96 @@
       iconCol: 3,
       iconRow: 1,
       desc: 'Gậy làm từ cành cổ thụ linh mộc, ẩn chứa linh lực tự nhiên (+5 công kích, +10 linh lực).'
+    },
+    'nguyen-tinh-moc': {
+      id: 'nguyen-tinh-moc',
+      name: 'Nguyên Tinh Mộc',
+      type: 'material',
+      stackable: true,
+      iconCol: 0,
+      iconRow: 3,
+      desc: 'Tinh hoa mộc khí kết tinh trong tim Mộc Linh Cổ Vương, vật mốc để luyện đan đột phá đại cảnh giới.'
+    },
+    'nguyen-tinh-thuy': {
+      id: 'nguyen-tinh-thuy',
+      name: 'Nguyên Tinh Thủy',
+      type: 'material',
+      stackable: true,
+      iconCol: 1,
+      iconRow: 3,
+      desc: 'Tinh hoa thủy khí kết tinh của Hàn Kính Giao Vương, vật mốc để luyện đan đột phá đại cảnh giới.'
+    },
+    'nguyen-tinh-hoa': {
+      id: 'nguyen-tinh-hoa',
+      name: 'Nguyên Tinh Hỏa',
+      type: 'material',
+      stackable: true,
+      iconCol: 2,
+      iconRow: 3,
+      desc: 'Tinh hoa hỏa khí kết tinh của Xích Diệm Viêm Quân, vật mốc để luyện đan đột phá đại cảnh giới.'
+    },
+    'nguyen-tinh-tho': {
+      id: 'nguyen-tinh-tho',
+      name: 'Nguyên Tinh Thổ',
+      type: 'material',
+      stackable: true,
+      iconCol: 3,
+      iconRow: 3,
+      desc: 'Tinh hoa thổ khí kết tinh của Hoàng Sa Cổ Vương, vật mốc để luyện đan đột phá đại cảnh giới.'
+    },
+    'nguyen-tinh-kim': {
+      id: 'nguyen-tinh-kim',
+      name: 'Nguyên Tinh Kim',
+      type: 'material',
+      stackable: true,
+      iconCol: 4,
+      iconRow: 3,
+      desc: 'Tinh hoa kim khí kết tinh của Tàn Kiếm Vô Danh, vật mốc để luyện đan đột phá đại cảnh giới.'
+    },
+    'mui-kiem-vo-danh': {
+      id: 'mui-kiem-vo-danh',
+      name: 'Mũi Kiếm Vô Danh',
+      type: 'material',
+      stackable: true,
+      iconCol: 5,
+      iconRow: 3,
+      desc: 'Mũi kiếm gãy của thanh cự kiếm vô chủ ở Kiếm Trủng, sắc lạnh như còn vương kiếm ý ngàn năm.'
+    },
+    'linh-chi-ngan-nam': {
+      id: 'linh-chi-ngan-nam',
+      name: 'Linh Chi Ngàn Năm',
+      type: 'material',
+      stackable: true,
+      iconCol: 0,
+      iconRow: 4,
+      desc: 'Linh chi vàng hiếm có ngàn năm mới gặp, dược liệu trấn sơn của Rừng Độc Thanh Tụy.'
+    },
+    'bang-tuy-ngan-nam': {
+      id: 'bang-tuy-ngan-nam',
+      name: 'Băng Tủy Ngàn Năm',
+      type: 'material',
+      stackable: true,
+      iconCol: 1,
+      iconRow: 4,
+      desc: 'Băng tủy trong veo kết tinh ngàn năm dưới hồ băng, chạm vào lạnh thấu xương.'
+    },
+    'loi-viem-quan': {
+      id: 'loi-viem-quan',
+      name: 'Lõi Viêm Quân',
+      type: 'material',
+      stackable: true,
+      iconCol: 2,
+      iconRow: 4,
+      desc: 'Lõi lò luyện nguội dần trong ngực Xích Diệm Viêm Quân, vẫn âm ỉ cháy không tắt.'
+    },
+    'dia-tam-thach': {
+      id: 'dia-tam-thach',
+      name: 'Địa Tâm Thạch',
+      type: 'material',
+      stackable: true,
+      iconCol: 3,
+      iconRow: 4,
+      desc: 'Khối đá vân vàng lấy từ địa tâm hoang mạc, nặng trĩu linh khí hệ Thổ.'
     }
   };
 
@@ -177,6 +267,200 @@
         damage: 12,
         snareDuration: 1.5
       }
+    },
+    boss_moc_linh_co_vuong: {
+      id: 'boss_moc_linh_co_vuong',
+      name: 'Mộc Linh Cổ Vương',
+      element: 'moc',
+      hp: 1200,
+      damage: 15,
+      armor: 8,
+      speed: 46,
+      aggroRange: 240,
+      attackRange: 92,
+      attackCd: 1.8,
+      tuViAmount: 60,
+      isElite: true,
+      isBoss: true,
+      respawnTime: 14400, // Chu kỳ boss trấn vùng 4 giờ (Hồ sơ 02)
+      sheetAsset: 'assets/chars/boss-moc-sheet.png',
+      skillAsset: 'assets/chars/boss-moc-skill-sheet.png',
+      cellW: 280,
+      cellH: 300,
+      feetOffsetX: 140,
+      feetOffsetY: 258,
+      drawScale: 1.0,
+      dropTable: [
+        { id: 'nguyen-tinh-moc', chance: 1.0, min: 1, max: 1, isMaterial: true },
+        { id: 'tim-go-co-thu', chance: 1.0, min: 2, max: 2, isMaterial: true },
+        { id: 'linh-chi-ngan-nam', chance: 0.15, min: 1, max: 1, isMaterial: true },
+        { id: 'linh-thach', chance: 1.0, min: 40, max: 80, isCurrency: true }
+      ],
+      // Chiêu trấn vùng: Rễ Trói Diện Rộng quanh người chơi
+      bossSkill: {
+        interval: 10.0,
+        telegraphRadius: 115,
+        telegraphDuration: 1.3,
+        damage: 16,
+        snareDuration: 1.5,
+        center: 'player',
+        firstDelay: 5.0
+      }
+    },
+    boss_han_kinh_giao_vuong: {
+      id: 'boss_han_kinh_giao_vuong',
+      name: 'Hàn Kính Giao Vương',
+      element: 'thuy',
+      hp: 2400,
+      damage: 20,
+      armor: 10,
+      speed: 50,
+      aggroRange: 240,
+      attackRange: 92,
+      attackCd: 1.7,
+      tuViAmount: 90,
+      isElite: true,
+      isBoss: true,
+      respawnTime: 14400,
+      sheetAsset: 'assets/chars/boss-hanky-sheet.png',
+      skillAsset: 'assets/chars/boss-hanky-skill-sheet.png',
+      cellW: 280,
+      cellH: 300,
+      feetOffsetX: 140,
+      feetOffsetY: 258,
+      drawScale: 1.0,
+      dropTable: [
+        { id: 'nguyen-tinh-thuy', chance: 1.0, min: 1, max: 1, isMaterial: true },
+        { id: 'bang-tuy-ngan-nam', chance: 0.15, min: 1, max: 1, isMaterial: true },
+        { id: 'linh-thach', chance: 1.0, min: 60, max: 110, isCurrency: true }
+      ],
+      // Chiêu trấn vùng: Bão Tuyết quanh thân khi máu xuống thấp (Hồ sơ 01)
+      bossSkill: {
+        interval: 9.0,
+        telegraphRadius: 150,
+        telegraphDuration: 1.4,
+        damage: 22,
+        slowRatio: 0.45,
+        slowDuration: 2.5,
+        center: 'self',
+        lowHpOnly: true,
+        lowHpThreshold: 0.4,
+        firstDelay: 4.0
+      }
+    },
+    boss_xich_diem_viem_quan: {
+      id: 'boss_xich_diem_viem_quan',
+      name: 'Xích Diệm Viêm Quân',
+      element: 'hoa',
+      hp: 4200,
+      damage: 26,
+      armor: 13,
+      speed: 48,
+      aggroRange: 240,
+      attackRange: 92,
+      attackCd: 1.7,
+      tuViAmount: 130,
+      isElite: true,
+      isBoss: true,
+      respawnTime: 14400,
+      sheetAsset: 'assets/chars/boss-viemquan-sheet.png',
+      skillAsset: 'assets/chars/boss-viemquan-skill-sheet.png',
+      cellW: 280,
+      cellH: 300,
+      feetOffsetX: 140,
+      feetOffsetY: 258,
+      drawScale: 1.0,
+      dropTable: [
+        { id: 'nguyen-tinh-hoa', chance: 1.0, min: 1, max: 1, isMaterial: true },
+        { id: 'loi-viem-quan', chance: 0.15, min: 1, max: 1, isMaterial: true },
+        { id: 'linh-thach', chance: 1.0, min: 90, max: 160, isCurrency: true }
+      ],
+      // Chiêu trấn vùng: Cột Dung Nham dựng tại vị trí người chơi
+      bossSkill: {
+        interval: 8.0,
+        telegraphRadius: 85,
+        telegraphDuration: 1.1,
+        damage: 30,
+        center: 'player',
+        firstDelay: 5.0
+      }
+    },
+    boss_hoang_sa_co_vuong: {
+      id: 'boss_hoang_sa_co_vuong',
+      name: 'Hoàng Sa Cổ Vương',
+      element: 'tho',
+      hp: 9000,
+      damage: 38,
+      armor: 18,
+      speed: 44,
+      aggroRange: 240,
+      attackRange: 92,
+      attackCd: 1.9,
+      tuViAmount: 220,
+      isElite: true,
+      isBoss: true,
+      respawnTime: 14400,
+      sheetAsset: 'assets/chars/boss-hoangsa-sheet.png',
+      skillAsset: 'assets/chars/boss-hoangsa-skill-sheet.png',
+      cellW: 280,
+      cellH: 300,
+      feetOffsetX: 140,
+      feetOffsetY: 258,
+      drawScale: 1.0,
+      dropTable: [
+        { id: 'nguyen-tinh-tho', chance: 1.0, min: 1, max: 1, isMaterial: true },
+        { id: 'dia-tam-thach', chance: 0.15, min: 1, max: 1, isMaterial: true },
+        { id: 'linh-thach', chance: 1.0, min: 150, max: 260, isCurrency: true }
+      ],
+      // Chiêu trấn vùng: Hố Cát Sụp tại vị trí người chơi, trói chân ngắn
+      bossSkill: {
+        interval: 11.0,
+        telegraphRadius: 125,
+        telegraphDuration: 1.3,
+        damage: 34,
+        snareDuration: 1.0,
+        center: 'player',
+        firstDelay: 6.0
+      }
+    },
+    boss_tan_kiem_vo_danh: {
+      id: 'boss_tan_kiem_vo_danh',
+      name: 'Tàn Kiếm Vô Danh',
+      element: 'kim',
+      hp: 14000,
+      damage: 48,
+      armor: 22,
+      speed: 56,
+      aggroRange: 250,
+      attackRange: 100,
+      attackCd: 1.6,
+      tuViAmount: 300,
+      isElite: true,
+      isBoss: true,
+      respawnTime: 14400,
+      sheetAsset: 'assets/chars/boss-tankiem-sheet.png',
+      skillAsset: 'assets/chars/boss-tankiem-skill-sheet.png',
+      cellW: 280,
+      cellH: 300,
+      feetOffsetX: 140,
+      feetOffsetY: 244,
+      drawScale: 1.0,
+      dropTable: [
+        { id: 'nguyen-tinh-kim', chance: 1.0, min: 1, max: 1, isMaterial: true },
+        { id: 'mui-kiem-vo-danh', chance: 0.15, min: 1, max: 1, isMaterial: true },
+        { id: 'linh-thach', chance: 1.0, min: 220, max: 380, isCurrency: true }
+      ],
+      // Chiêu trấn vùng: Kiếm Vũ quanh thân ở pha cuối (Hồ sơ 01)
+      bossSkill: {
+        interval: 9.0,
+        telegraphRadius: 175,
+        telegraphDuration: 1.5,
+        damage: 42,
+        center: 'self',
+        lowHpOnly: true,
+        lowHpThreshold: 0.5,
+        firstDelay: 4.0
+      }
     }
   };
 
@@ -245,6 +529,9 @@
       attackRange: spec.attackRange,
       attackCd: spec.attackCd,
       tuViMoc: spec.tuViMoc,
+      tuViElement: spec.element,
+      tuViAmount: (spec.tuViAmount !== undefined) ? spec.tuViAmount : (spec.tuViMoc || 0),
+      isBoss: !!spec.isBoss,
       slowOnHit: spec.slowOnHit || null,
 
       // Vị trí và lãnh thổ
@@ -269,7 +556,8 @@
 
       // Đặc tính tinh anh
       summonedAdds: false,
-      reTroiTimer: spec.reTroi ? 4.0 : 0, // bắt đầu đếm chiêu rễ trói
+      reTroiTimer: spec.bossSkill ? (spec.bossSkill.firstDelay || 5.0) : (spec.reTroi ? 4.0 : 0), // đếm chiêu đặc biệt (rễ trói / chiêu boss)
+      skillAnimTimer: 0, // > 0 khi đang diễn hoạt ảnh chiêu boss (engine dùng)
       activeTelegraph: null, // { x, y, radius, timer, duration, damage, snare }
 
       // Hoạt ảnh
@@ -315,19 +603,37 @@
     var distHome = Math.hypot(m.x - m.homeX, m.y - m.homeY);
     var distPlayer = playerPos ? Math.hypot(m.x - playerPos.x, m.y - playerPos.y) : 99999;
 
-    // Kỹ năng Tinh Anh: Rễ Trói
-    if (m.isElite && spec.reTroi && m.state !== 'return') {
+    // Kỹ năng đặc biệt của tinh anh/boss: Rễ Trói (co_thu_yeu) hoặc chiêu trấn vùng (bossSkill).
+    // Cấu hình hợp nhất: reTroi cũ được bọc thành skillCfg có center 'player' để giữ nguyên hành vi.
+    var skillCfg = spec.bossSkill || (spec.reTroi ? {
+      interval: spec.reTroi.interval,
+      telegraphRadius: spec.reTroi.telegraphRadius,
+      telegraphDuration: spec.reTroi.telegraphDuration,
+      damage: spec.reTroi.damage,
+      snareDuration: spec.reTroi.snareDuration,
+      center: 'player'
+    } : null);
+    if (m.isElite && skillCfg && m.state !== 'return') {
       m.reTroiTimer -= dt;
-      if (m.reTroiTimer <= 0 && playerPos && distPlayer < 500) {
-        m.reTroiTimer = spec.reTroi.interval;
-        m.activeTelegraph = {
-          x: playerPos.x,
-          y: playerPos.y,
-          radius: spec.reTroi.telegraphRadius,
-          timer: spec.reTroi.telegraphDuration,
-          damage: spec.reTroi.damage,
-          snareDuration: spec.reTroi.snareDuration
-        };
+      if (m.reTroiTimer <= 0 && playerPos && distPlayer < 520) {
+        if (skillCfg.lowHpOnly && m.hp > m.maxHp * (skillCfg.lowHpThreshold || 0.4)) {
+          // Chưa tới pha dùng chiêu — hẹn kiểm lại sau 1 giây
+          m.reTroiTimer = 1.0;
+        } else {
+          m.reTroiTimer = skillCfg.interval;
+          m.activeTelegraph = {
+            x: skillCfg.center === 'self' ? m.x : playerPos.x,
+            y: skillCfg.center === 'self' ? m.y : playerPos.y,
+            radius: skillCfg.telegraphRadius,
+            timer: skillCfg.telegraphDuration,
+            damage: skillCfg.damage,
+            snareDuration: skillCfg.snareDuration || 0,
+            slowRatio: skillCfg.slowRatio || 0,
+            slowDuration: skillCfg.slowDuration || 0,
+            element: spec.element,
+            isBossSkill: !!spec.bossSkill
+          };
+        }
       }
     }
 
@@ -510,7 +816,7 @@
     {
       id: 'pack_nhen_2',
       speciesId: 'nhen_xanh',
-      anchor: { x: 1380, y: 820 },
+      anchor: { x: 1460, y: 905 },
       count: 3,
       spread: 55
     },
@@ -518,7 +824,15 @@
     {
       id: 'pack_cothuye',
       speciesId: 'co_thu_yeu',
-      anchor: { x: 1540, y: 420 },
+      anchor: { x: 1440, y: 720 },
+      count: 1,
+      spread: 0
+    },
+    // Boss trấn vùng Rừng Độc — Mộc Linh Cổ Vương (dưới chân đại thụ cổ)
+    {
+      id: 'pack_boss_moc_linh',
+      speciesId: 'boss_moc_linh_co_vuong',
+      anchor: { x: 1640, y: 745 },
       count: 1,
       spread: 0
     }

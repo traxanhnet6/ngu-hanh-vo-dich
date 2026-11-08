@@ -120,7 +120,6 @@
       'assets/chars/thaotinh-sheet.png',
       'assets/chars/nhenxanh-sheet.png',
       'assets/chars/cothuye-sheet.png',
-      'assets/chars/thaotinhtinhanh-sheet.png',
       'assets/art/icons-sheet.png'
     ];
 
@@ -145,6 +144,24 @@
       }
     }
 
+    // Đợt 4A: nạp sheet quái theo SPECIES — khóa assets là speciesId + '_sheet'
+    // (và speciesId + '_skill_sheet' cho sheet chiêu của boss).
+    var speciesSheetKeys = {};
+    var monstersHolder = (typeof window !== 'undefined' && window.GameMonsters) ? window.GameMonsters : null;
+    if (monstersHolder && monstersHolder.SPECIES) {
+      for (var spId in monstersHolder.SPECIES) {
+        var spDef = monstersHolder.SPECIES[spId];
+        if (spDef.sheetAsset) {
+          if (urls.indexOf(spDef.sheetAsset) === -1) urls.push(spDef.sheetAsset);
+          (speciesSheetKeys[spDef.sheetAsset] = speciesSheetKeys[spDef.sheetAsset] || []).push(spId + '_sheet');
+        }
+        if (spDef.skillAsset) {
+          if (urls.indexOf(spDef.skillAsset) === -1) urls.push(spDef.skillAsset);
+          (speciesSheetKeys[spDef.skillAsset] = speciesSheetKeys[spDef.skillAsset] || []).push(spId + '_skill_sheet');
+        }
+      }
+    }
+
     var remaining = urls.length;
     function checkDone() {
       remaining--;
@@ -164,6 +181,11 @@
         };
         img.src = url;
         assets[url] = img;
+        if (speciesSheetKeys[url]) {
+          for (var sk2 = 0; sk2 < speciesSheetKeys[url].length; sk2++) {
+            assets[speciesSheetKeys[url][sk2]] = img;
+          }
+        }
         // Bí danh tương thích ngược
         if (url === 'assets/art/map-mieu-hoang-bg.png') assets['map_bg'] = img;
         if (url === 'assets/art/map-rung-doc-bg.png') assets['map_rung_doc_bg'] = img;
@@ -178,7 +200,6 @@
         if (url === 'assets/chars/thaotinh-sheet.png') assets['thaotinh_sheet'] = img;
         if (url === 'assets/chars/nhenxanh-sheet.png') assets['nhenxanh_sheet'] = img;
         if (url === 'assets/chars/cothuye-sheet.png') assets['cothuye_sheet'] = img;
-        if (url === 'assets/chars/thaotinhtinhanh-sheet.png') assets['thaotinhtinhanh_sheet'] = img;
         if (url === 'assets/art/icons-sheet.png') assets['icons_sheet'] = img;
       })(urls[i]);
     }
@@ -1608,6 +1629,9 @@
       }
 
       // Cập nhật máy trạng thái quái vật
+      if (m.skillAnimTimer > 0) {
+        m.skillAnimTimer = Math.max(0, m.skillAnimTimer - dt);
+      }
       monstersAPI.updateMonster(m, playerPos, dt, {
         onMonsterAttack: function (attacker) {
           handleMonsterAttackPlayer(attacker);
@@ -1616,16 +1640,25 @@
 
       // Nếu quái tung kỹ năng Rễ Trói (Telegraph r=90, 1.2s nổ, 12 dmg + snare 1.5s)
       if (m.activeTelegraph) {
+        var tg = m.activeTelegraph;
+        var elemColors = { moc: '#8be26b', thuy: '#7fd4ff', hoa: '#ff9a5c', tho: '#e8c56b', kim: '#e8ecf2' };
         visualEffects.push({
           type: 'telegraph_re_troi',
-          x: m.activeTelegraph.x,
-          y: m.activeTelegraph.y,
-          radius: m.activeTelegraph.radius,
-          timer: m.activeTelegraph.timer,
-          duration: m.activeTelegraph.timer,
-          damage: m.activeTelegraph.damage,
-          snareDuration: m.activeTelegraph.snareDuration
+          x: tg.x,
+          y: tg.y,
+          radius: tg.radius,
+          timer: tg.timer,
+          duration: tg.timer,
+          damage: tg.damage,
+          snareDuration: tg.snareDuration,
+          slowRatio: tg.slowRatio || 0,
+          slowDuration: tg.slowDuration || 0,
+          color: tg.isBossSkill ? (elemColors[tg.element] || '#c9a0ff') : null
         });
+        // Boss diễn hoạt ảnh tung chiêu song song với telegraph
+        if (tg.isBossSkill) {
+          m.skillAnimTimer = 0.85;
+        }
         m.activeTelegraph = null;
       }
     }
@@ -1706,9 +1739,12 @@
     if (!player.daily[dateKey]) player.daily[dateKey] = { farmTuVi: 0, farmLinhThach: 0 };
     var todayData = player.daily[dateKey];
 
-    var rawTuVi = m.tuViMoc || 2;
+    // Đợt 4A: tu vi cộng vào đường theo hệ của quái (trước đây khóa cứng đường Mộc)
+    var tuViElem = m.tuViElement || 'moc';
+    var rawTuVi = (m.tuViAmount !== undefined && m.tuViAmount !== null) ? m.tuViAmount : (m.tuViMoc || 2);
     var gainedTuVi = stateAPI ? stateAPI.calcTuViGain(todayData.farmTuVi, rawTuVi) : rawTuVi;
-    player.paths.moc.tuVi += gainedTuVi;
+    if (!player.paths[tuViElem]) player.paths[tuViElem] = { tuVi: 0 };
+    player.paths[tuViElem].tuVi += gainedTuVi;
     todayData.farmTuVi += gainedTuVi;
 
     if (player.farmSession) {
@@ -1716,7 +1752,9 @@
       player.farmSession.tuViMoc += gainedTuVi;
     }
 
-    spawnFloatingText('+' + gainedTuVi + ' Tu vi Mộc', m.x, m.y - 25, '#55d882');
+    var tuViNames = { moc: 'Mộc', thuy: 'Thủy', hoa: 'Hỏa', tho: 'Thổ', kim: 'Kim' };
+    var tuViColors = { moc: '#55d882', thuy: '#7fd4ff', hoa: '#ff9a5c', tho: '#e8c56b', kim: '#e8ecf2' };
+    spawnFloatingText('+' + gainedTuVi + ' Tu vi ' + (tuViNames[tuViElem] || 'Mộc'), m.x, m.y - 25, tuViColors[tuViElem] || '#55d882');
 
     // 3. Tiến độ nhiệm vụ (Săn 5 Thảo Tinh ở Rừng Độc)
     if (player.quests && player.quests.talked_linhnhi && !player.quests.huntCompleted && m.mapId === 'rung-doc') {
@@ -1869,6 +1907,10 @@
         if (distToPlayer <= vfx.radius) {
           player.hp = Math.max(0, player.hp - vfx.damage);
           playerSnareTimer = vfx.snareDuration;
+          if (vfx.slowRatio && vfx.slowDuration) {
+            playerSlowTimer = Math.max(playerSlowTimer, vfx.slowDuration);
+            playerSlowRatio = vfx.slowRatio;
+          }
           spawnDamageNumber(player.x, player.y - 45, vfx.damage, 'player_damage', false);
           if (audioAPI) audioAPI.playHit();
           if (player.hp <= 0) handlePlayerDeath();
@@ -2008,13 +2050,26 @@
       if (vfx.type === 'telegraph_re_troi') {
         ctx.save();
         var progress = 1.0 - (vfx.timer / vfx.duration);
-        ctx.strokeStyle = 'rgba(180, 70, 220, 0.85)';
+        ctx.strokeStyle = vfx.color ? vfx.color : 'rgba(180, 70, 220, 0.85)';
         ctx.lineWidth = 2.5;
-        ctx.fillStyle = 'rgba(140, 40, 180, ' + (0.15 + progress * 0.25) + ')';
-        ctx.beginPath();
-        ctx.arc(vfx.x, vfx.y, vfx.radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
+        if (vfx.color) {
+          ctx.save();
+          ctx.globalAlpha = 0.15 + progress * 0.25;
+          ctx.fillStyle = vfx.color;
+          ctx.beginPath();
+          ctx.arc(vfx.x, vfx.y, vfx.radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+          ctx.beginPath();
+          ctx.arc(vfx.x, vfx.y, vfx.radius, 0, Math.PI * 2);
+          ctx.stroke();
+        } else {
+          ctx.fillStyle = 'rgba(140, 40, 180, ' + (0.15 + progress * 0.25) + ')';
+          ctx.beginPath();
+          ctx.arc(vfx.x, vfx.y, vfx.radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        }
 
         // Vòng co lại báo thời điểm nổ
         ctx.strokeStyle = '#ffffff';
@@ -2290,7 +2345,9 @@
       ctx.shadowColor = '#55d882';
       ctx.shadowBlur = qualityShadow(10);
       ctx.beginPath();
-      ctx.ellipse(m.x, m.y, 75, 26, 0, 0, Math.PI * 2);
+      var ringW = Math.max(75, Math.round(spec.cellW * (spec.drawScale || 1) * 0.38));
+      var ringH = Math.max(26, Math.round(spec.cellW * (spec.drawScale || 1) * 0.12));
+      ctx.ellipse(m.x, m.y, ringW, ringH, 0, 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
     }
@@ -2299,8 +2356,9 @@
     ctx.save();
     ctx.fillStyle = 'rgba(8, 12, 8, 0.52)';
     ctx.beginPath();
-    var shadowW = m.isElite ? 70 : 31;
-    var shadowH = m.isElite ? 22 : 11;
+    // Đợt 4A: bóng tinh anh/boss tỉ lệ theo bề rộng sprite (boss ô 280 không còn bóng 70px)
+    var shadowW = m.isElite ? Math.max(70, Math.round(spec.cellW * (spec.drawScale || 1) * 0.36)) : 31;
+    var shadowH = m.isElite ? Math.max(22, Math.round(spec.cellW * (spec.drawScale || 1) * 0.11)) : 11;
     ctx.ellipse(m.x, m.y, shadowW, shadowH, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
@@ -2327,10 +2385,21 @@
       else if (row === 3) col = Math.floor(m.animTime * 4.0) % 2; // Hit 2 frames
       else if (row === 4) col = Math.min(2, Math.floor(m.deathTimer * 3.0)); // Death 3 frames
 
+      // Đợt 4A: đang diễn chiêu boss -> phát skill-sheet (1 hàng x 4 cột), không nhún thở
+      var skillSheetImg = (m.skillAnimTimer > 0) ? assets[m.speciesId + '_skill_sheet'] : null;
+      var inSkillAnim = !!(skillSheetImg && skillSheetImg.complete);
+      if (inSkillAnim) {
+        sheet = skillSheetImg;
+        row = 0;
+        col = Math.min(3, Math.floor((0.85 - Math.max(0, m.skillAnimTimer)) / 0.85 * 4));
+      }
+
       // Đợt 3: biên độ nhún thở/idle phải đọc được ở cỡ điện thoại
       var bobY = 0;
-      if (row === 0) bobY = Math.sin(m.animTime * 2.4 + (m.x % 7)) * (m.isElite ? 3.5 : 2.4);
-      else if (row === 1) bobY = -Math.abs(Math.sin(m.animTime * 6.0)) * 2;
+      if (!inSkillAnim) {
+        if (row === 0) bobY = Math.sin(m.animTime * 2.4 + (m.x % 7)) * (m.isElite ? 3.5 : 2.4);
+        else if (row === 1) bobY = -Math.abs(Math.sin(m.animTime * 6.0)) * 2;
+      }
 
       ctx.save();
       // Lật X nếu di chuyển sang trái
@@ -2372,7 +2441,7 @@
   }
 
   function drawMonsterHpBar(m, spec) {
-    var barW = m.isElite ? 100 : 42;
+    var barW = m.isBoss ? 150 : (m.isElite ? 100 : 42);
     var barH = m.isElite ? 7 : 4;
     var topY = m.y - spec.feetOffsetY - (m.isElite ? 22 : 12);
     var leftX = m.x - barW / 2;
@@ -2767,9 +2836,14 @@
     getMonsterSheetStatus: function () {
       var alias = { thao_tinh: 'thaotinh_sheet', nhen_xanh: 'nhenxanh_sheet', co_thu_yeu: 'cothuye_sheet' };
       var out = {};
-      for (var sid in alias) {
-        var img = assets[sid + '_sheet'] || assets[alias[sid]];
+      var species = (monstersAPI && monstersAPI.SPECIES) ? monstersAPI.SPECIES : {};
+      for (var sid in species) {
+        var img = assets[sid + '_sheet'] || (alias[sid] ? assets[alias[sid]] : null);
         out[sid] = !!(img && img.complete && img.naturalWidth > 0);
+        if (species[sid].skillAsset) {
+          var skImg = assets[sid + '_skill_sheet'];
+          out[sid + '_skill'] = !!(skImg && skImg.complete && skImg.naturalWidth > 0);
+        }
       }
       return out;
     },
