@@ -789,6 +789,7 @@
 
   var UIAPI = {
     init: initUI,
+    openSettingsModal: openSettingsModal,
     update: update,
     refreshHUD: refreshHUD,
     openDialogue: openDialogue,
