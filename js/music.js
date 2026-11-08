@@ -125,6 +125,42 @@
       padChords: [[0, 3, 5, 7], [4, 7, 9, 12], [2, 5, 7, 10], [3, 5, 8, 10]], padBars: 2,
       flutePhrases: [FLUTE_SECT], fluteEveryBars: 4, fluteOffsetBars: 2,
       fluteKind: 'dizi', bellEveryBars: 4, softDrum: true
+    },
+    // — Hồ băng: tiêu trầm thưa, arpeggio cao như gió qua băng —
+    ice: {
+      id: 'ice', bpm: 44, gain: 0.8,
+      rhythm: [0, 4], leadChance: 0.55, walkMax: 1,
+      melLow: 7, melHigh: 13, arp: true,
+      padChords: [[0, 3, 5], [2, 5, 7], [4, 7, 9], [1, 4, 6]], padBars: 2,
+      flutePhrases: [FLUTE_XIAO], fluteEveryBars: 6, fluteOffsetBars: 2,
+      fluteKind: 'xiao', bellEveryBars: 6, softDrum: false
+    },
+    // — Mỏ lửa: trầm thấp, trống nhẹ, hơi thở lửa —
+    fire: {
+      id: 'fire', bpm: 58, gain: 0.9,
+      rhythm: [0, 3, 6], leadChance: 0.7, walkMax: 2,
+      melLow: 2, melHigh: 8, arp: false,
+      padChords: [[0, 2, 5], [0, 3, 5], [1, 4, 6], [0, 2, 5]], padBars: 1,
+      flutePhrases: [FLUTE_XIAO], fluteEveryBars: 6, fluteOffsetBars: 3,
+      fluteKind: 'xiao', bellEveryBars: 0, softDrum: true
+    },
+    // — Hoang mạc: tiêu hoang, gió lớn, nhịp thưa —
+    desert: {
+      id: 'desert', bpm: 50, gain: 0.85,
+      rhythm: [0, 5], leadChance: 0.5, walkMax: 2,
+      melLow: 5, melHigh: 11, arp: false,
+      padChords: [[0, 3, 5], [1, 4, 6], [0, 3, 5], [2, 5, 7]], padBars: 2,
+      flutePhrases: [FLUTE_VALLEY], fluteEveryBars: 5, fluteOffsetBars: 2,
+      fluteKind: 'xiao', bellEveryBars: 0, softDrum: false
+    },
+    // — Kiếm trủng: chuông kim loại, arpeggio cao —
+    sword: {
+      id: 'sword', bpm: 62, gain: 0.9,
+      rhythm: [0, 2, 4, 6], leadChance: 0.75, walkMax: 3,
+      melLow: 8, melHigh: 15, arp: true,
+      padChords: [[0, 3, 5, 7], [2, 5, 7, 10], [4, 7, 9, 12], [0, 3, 5, 7]], padBars: 2,
+      flutePhrases: [FLUTE_SECT], fluteEveryBars: 4, fluteOffsetBars: 2,
+      fluteKind: 'dizi', bellEveryBars: 2, softDrum: false
     }
   };
 
@@ -138,7 +174,11 @@
     'tong-mon': 'sect', 'tong_mon': 'sect',
     'dai-dien': 'interior', 'dai_dien': 'interior',
     'dai-truyen-tong': 'teleport', 'dai_truyen_tong': 'teleport',
-    'son-coc': 'valley', 'son_coc': 'valley'
+    'son-coc': 'valley', 'son_coc': 'valley',
+    'ho-bang': 'ice', 'ho_bang': 'ice',
+    'mo-lua': 'fire', 'mo_lua': 'fire',
+    'hoang-mac': 'desert', 'hoang_mac': 'desert',
+    'kiem-trung': 'sword', 'kiem_trung': 'sword'
   };
   var DEFAULT_THEME_ID = 'temple';
 
@@ -176,6 +216,22 @@
     teleport: {
       wind: 0.6, windFreq: 1050, stream: 0,
       bell: [18, 36], bird: 0, insect: 0, rustle: 0, flap: [4, 9], wood: [10, 20]
+    },
+    ice: {
+      wind: 0.85, windFreq: 1400, stream: 0,
+      bell: [26, 48], bird: 0, insect: 0, rustle: 0, flap: 0, wood: 0
+    },
+    fire: {
+      wind: 0.45, windFreq: 350, stream: 0,
+      bell: 0, bird: 0, insect: 0, rustle: 0, flap: 0, wood: [4, 9]
+    },
+    desert: {
+      wind: 0.95, windFreq: 500, stream: 0,
+      bell: 0, bird: 0, insect: 0, rustle: [7, 15], flap: 0, wood: 0
+    },
+    sword: {
+      wind: 0.55, windFreq: 1100, stream: 0,
+      bell: [9, 18], bird: 0, insect: 0, rustle: 0, flap: 0, wood: 0
     }
   };
 

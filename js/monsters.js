@@ -171,12 +171,96 @@
       iconCol: 3,
       iconRow: 4,
       desc: 'Khối đá vân vàng lấy từ địa tâm hoang mạc, nặng trĩu linh khí hệ Thổ.'
+    },
+    'bang-tinh': {
+      id: 'bang-tinh',
+      name: 'Băng Tinh',
+      type: 'material',
+      stackable: true,
+      iconCol: 0,
+      iconRow: 5,
+      desc: 'Mảnh tinh thể băng kết từ mặt hồ Hàn Kính, lạnh thấu xương.'
+    },
+    'ngoc-bang-tam': {
+      id: 'ngoc-bang-tam',
+      name: 'Ngọc Băng Tâm',
+      type: 'material',
+      stackable: true,
+      iconCol: 2,
+      iconRow: 5,
+      desc: 'Ngọc hàn tâm trong thân Hàn Kính Thủy Xà, nghìn năm không tan.'
+    },
+    'hoa-tinh-tho': {
+      id: 'hoa-tinh-tho',
+      name: 'Hỏa Tinh Thổ',
+      type: 'material',
+      stackable: true,
+      iconCol: 3,
+      iconRow: 5,
+      desc: 'Tinh hỏa trong lòng đất nung, hơi nóng bốc mãi không tắt.'
+    },
+    'da-nung': {
+      id: 'da-nung',
+      name: 'Đá Nung',
+      type: 'material',
+      stackable: true,
+      iconCol: 4,
+      iconRow: 5,
+      desc: 'Mảnh đá bị dung nham nung đỏ bong ra từ Hỏa Nham Thú, cầm lâu bỏng tay.'
+    },
+    'cat-tinh': {
+      id: 'cat-tinh',
+      name: 'Cát Tinh',
+      type: 'material',
+      stackable: true,
+      iconCol: 0,
+      iconRow: 6,
+      desc: 'Hạt cát kết tinh trong Hoàng Sa, nặng hơn cát thường nhiều lần.'
+    },
+    'ngoc-cat-tam': {
+      id: 'ngoc-cat-tam',
+      name: 'Ngọc Cát Tâm',
+      type: 'material',
+      stackable: true,
+      iconCol: 2,
+      iconRow: 6,
+      desc: 'Viên ngọc chôn sâu trong thân Sa Thạch Tượng, giữ cát nghìn năm.'
+    },
+    'manh-kiem-gay': {
+      id: 'manh-kiem-gay',
+      name: 'Mảnh Kiếm Gãy',
+      type: 'material',
+      stackable: true,
+      iconCol: 3,
+      iconRow: 6,
+      desc: 'Mảnh thép gãy bong ra từ giáp Huyền Thiết, vẫn còn sắc.'
+    },
+    'hon-kiem-nho': {
+      id: 'hon-kiem-nho',
+      name: 'Hồn Kiếm Nhỏ',
+      type: 'material',
+      stackable: true,
+      iconCol: 4,
+      iconRow: 6,
+      desc: 'Vệt hồn kiếm vụn lơ lửng quanh Tàn Kiếm Linh, nắm vào như có tiếng chuông ngân.'
+    },
+    'loi-huyen-thiet': {
+      id: 'loi-huyen-thiet',
+      name: 'Lõi Huyền Thiết',
+      type: 'material',
+      stackable: true,
+      iconCol: 5,
+      iconRow: 6,
+      desc: 'Lõi thép huyền thiết trong ngực Giáp Thú, lạnh và nặng như một lời thề chưa trả.'
     }
   };
 
-  // Các nhóm trang bị (Gear Pools)
+  // Các nhóm trang bị (Gear Pools) & tokens rơi đồ
   var COMMON_GEAR_POOL = ['dao-cui-cu', 'ao-vai-tho'];
   var BETTER_GEAR_POOL = ['gay-co-thu', 'ao-vai-tho'];
+  var LINH_THACH = 'linh-thach';
+  var GEAR_WORSE = COMMON_GEAR_POOL;
+  var GEAR_BETTER = BETTER_GEAR_POOL;
 
   // Định nghĩa chỉ số 3 loài quái vật Rừng Độc Thanh Tụy (Brief §4)
   var SPECIES = {
@@ -267,6 +351,244 @@
         damage: 12,
         snareDuration: 1.5
       }
+    },
+    // --- 8 loài quái vật 4 vùng săn mới (Đợt 5) ---
+    bang_tinh: {
+      id: 'bang_tinh',
+      name: 'Băng Tinh Linh',
+      element: 'thuy',
+      majorPath: 'THUY',
+      hp: 85,
+      damage: 10,
+      armor: 0,
+      speed: 118,
+      aggroRange: 190,
+      attackRange: 46,
+      attackCd: 1.2,
+      leashDistance: 340,
+      tuViAmount: 4,
+      isElite: false,
+      isBoss: false,
+      respawnTime: 60,
+      sheetAsset: 'assets/chars/bangtinh-sheet.png',
+      cellW: 96,
+      cellH: 80,
+      feetOffsetX: 48,
+      feetOffsetY: 68,
+      drawScale: 1.0,
+      dropTable: [
+        { id: 'bang-tinh', chance: 0.50, min: 1, max: 1, isMaterial: true },
+        { id: 'linh-thach', chance: 0.18, min: 1, max: 2, isCurrency: true },
+        { gearPool: COMMON_GEAR_POOL, chance: 0.04, isGear: true }
+      ]
+    },
+    han_xa: {
+      id: 'han_xa',
+      name: 'Hàn Kính Thủy Xà',
+      element: 'thuy',
+      majorPath: 'THUY',
+      hp: 950,
+      damage: 18,
+      armor: 6,
+      speed: 96,
+      aggroRange: 300,
+      attackRange: 80,
+      attackCd: 1.6,
+      leashDistance: 900,
+      tuViAmount: 45,
+      isElite: true,
+      isBoss: false,
+      respawnTime: 600,
+      sheetAsset: 'assets/chars/hanxa-sheet.png',
+      cellW: 128,
+      cellH: 96,
+      feetOffsetX: 64,
+      feetOffsetY: 82,
+      drawScale: 1.0,
+      dropTable: [
+        { id: 'ngoc-bang-tam', chance: 1.0, min: 1, max: 1, isMaterial: true },
+        { id: 'bang-tinh', chance: 0.70, min: 1, max: 1, isMaterial: true },
+        { id: 'linh-thach', chance: 1.0, min: 6, max: 10, isCurrency: true },
+        { gearPool: BETTER_GEAR_POOL, chance: 0.35, isGear: true }
+      ]
+    },
+    hoa_thu: {
+      id: 'hoa_thu',
+      name: 'Hỏa Nham Thú',
+      element: 'hoa',
+      majorPath: 'HOA',
+      hp: 160,
+      damage: 15,
+      armor: 2,
+      speed: 104,
+      aggroRange: 190,
+      attackRange: 46,
+      attackCd: 1.2,
+      leashDistance: 340,
+      tuViAmount: 6,
+      isElite: false,
+      isBoss: false,
+      respawnTime: 60,
+      sheetAsset: 'assets/chars/hoathu-sheet.png',
+      cellW: 96,
+      cellH: 80,
+      feetOffsetX: 48,
+      feetOffsetY: 68,
+      drawScale: 1.0,
+      dropTable: [
+        { id: 'da-nung', chance: 0.55, min: 1, max: 1, isMaterial: true },
+        { id: 'linh-thach', chance: 0.18, min: 1, max: 2, isCurrency: true },
+        { gearPool: COMMON_GEAR_POOL, chance: 0.04, isGear: true }
+      ]
+    },
+    diem_ma: {
+      id: 'diem_ma',
+      name: 'Xích Diệm Ma',
+      element: 'hoa',
+      majorPath: 'HOA',
+      hp: 1500,
+      damage: 26,
+      armor: 11,
+      speed: 68,
+      aggroRange: 300,
+      attackRange: 80,
+      attackCd: 1.6,
+      leashDistance: 900,
+      tuViAmount: 70,
+      isElite: true,
+      isBoss: false,
+      respawnTime: 600,
+      sheetAsset: 'assets/chars/diemma-sheet.png',
+      cellW: 112,
+      cellH: 96,
+      feetOffsetX: 56,
+      feetOffsetY: 82,
+      drawScale: 1.0,
+      dropTable: [
+        { id: 'hoa-tinh-tho', chance: 1.0, min: 1, max: 1, isMaterial: true },
+        { id: 'da-nung', chance: 0.70, min: 1, max: 1, isMaterial: true },
+        { id: 'linh-thach', chance: 1.0, min: 8, max: 12, isCurrency: true },
+        { gearPool: BETTER_GEAR_POOL, chance: 0.35, isGear: true }
+      ]
+    },
+    sa_trung: {
+      id: 'sa_trung',
+      name: 'Hoàng Sa Trùng',
+      element: 'tho',
+      majorPath: 'THO',
+      hp: 290,
+      damage: 22,
+      armor: 0,
+      speed: 92,
+      aggroRange: 190,
+      attackRange: 46,
+      attackCd: 1.2,
+      leashDistance: 340,
+      tuViAmount: 9,
+      isElite: false,
+      isBoss: false,
+      respawnTime: 60,
+      sheetAsset: 'assets/chars/satrung-sheet.png',
+      cellW: 96,
+      cellH: 80,
+      feetOffsetX: 48,
+      feetOffsetY: 68,
+      drawScale: 1.0,
+      dropTable: [
+        { id: 'cat-tinh', chance: 0.60, min: 1, max: 1, isMaterial: true },
+        { id: 'linh-thach', chance: 0.18, min: 1, max: 2, isCurrency: true },
+        { gearPool: COMMON_GEAR_POOL, chance: 0.04, isGear: true }
+      ]
+    },
+    sa_tuong: {
+      id: 'sa_tuong',
+      name: 'Sa Thạch Tượng',
+      element: 'tho',
+      majorPath: 'THO',
+      hp: 2600,
+      damage: 40,
+      armor: 14,
+      speed: 44,
+      aggroRange: 300,
+      attackRange: 80,
+      attackCd: 1.6,
+      leashDistance: 900,
+      tuViAmount: 110,
+      isElite: true,
+      isBoss: false,
+      respawnTime: 600,
+      sheetAsset: 'assets/chars/satuong-sheet.png',
+      cellW: 128,
+      cellH: 112,
+      feetOffsetX: 64,
+      feetOffsetY: 98,
+      drawScale: 1.0,
+      dropTable: [
+        { id: 'ngoc-cat-tam', chance: 1.0, min: 1, max: 1, isMaterial: true },
+        { id: 'cat-tinh', chance: 0.70, min: 1, max: 1, isMaterial: true },
+        { id: 'linh-thach', chance: 1.0, min: 10, max: 16, isCurrency: true },
+        { gearPool: BETTER_GEAR_POOL, chance: 0.35, isGear: true }
+      ]
+    },
+    kiem_linh: {
+      id: 'kiem_linh',
+      name: 'Tàn Kiếm Linh',
+      element: 'kim',
+      majorPath: 'KIM',
+      hp: 590,
+      damage: 34,
+      armor: 0,
+      speed: 126,
+      aggroRange: 190,
+      attackRange: 46,
+      attackCd: 1.2,
+      leashDistance: 340,
+      tuViAmount: 14,
+      isElite: false,
+      isBoss: false,
+      respawnTime: 60,
+      sheetAsset: 'assets/chars/kiemlinh-sheet.png',
+      cellW: 80,
+      cellH: 80,
+      feetOffsetX: 40,
+      feetOffsetY: 66,
+      drawScale: 1.0,
+      dropTable: [
+        { id: 'hon-kiem-nho', chance: 0.55, min: 1, max: 1, isMaterial: true },
+        { id: 'manh-kiem-gay', chance: 0.30, min: 1, max: 1, isMaterial: true },
+        { id: 'linh-thach', chance: 0.20, min: 1, max: 3, isCurrency: true },
+        { gearPool: COMMON_GEAR_POOL, chance: 0.05, isGear: true }
+      ]
+    },
+    thiet_giap: {
+      id: 'thiet_giap',
+      name: 'Huyền Thiết Giáp Thú',
+      element: 'kim',
+      majorPath: 'KIM',
+      hp: 4200,
+      damage: 55,
+      armor: 16,
+      speed: 58,
+      aggroRange: 300,
+      attackRange: 80,
+      attackCd: 1.6,
+      leashDistance: 900,
+      tuViAmount: 160,
+      isElite: true,
+      isBoss: false,
+      respawnTime: 600,
+      sheetAsset: 'assets/chars/thietgiap-sheet.png',
+      cellW: 128,
+      cellH: 96,
+      feetOffsetX: 64,
+      feetOffsetY: 82,
+      drawScale: 1.0,
+      dropTable: [
+        { id: 'loi-huyen-thiet', chance: 1.0, min: 1, max: 1, isMaterial: true },
+        { id: 'manh-kiem-gay', chance: 0.70, min: 1, max: 1, isMaterial: true },
+        { id: 'linh-thach', chance: 1.0, min: 14, max: 20, isCurrency: true },
+        { gearPool: BETTER_GEAR_POOL, chance: 0.40, isGear: true }
+      ]
     },
     boss_moc_linh_co_vuong: {
       id: 'boss_moc_linh_co_vuong',
@@ -545,7 +867,7 @@
       // Máy trạng thái: roam, aggro, attack, return, hit, dead
       state: opts.state || 'roam',
       spawnGraceTimer: opts.spawnGraceTimer !== undefined ? opts.spawnGraceTimer : 2.0, // 2s ân hạn hồi sinh
-      leashDistance: 340,
+      leashDistance: (spec.leashDistance !== undefined) ? spec.leashDistance : 340,
 
       // Đồng hồ đếm thời gian
       attackTimer: 0,
@@ -841,6 +1163,9 @@
   exports.ITEM_DEFS = ITEM_DEFS;
   exports.COMMON_GEAR_POOL = COMMON_GEAR_POOL;
   exports.BETTER_GEAR_POOL = BETTER_GEAR_POOL;
+  exports.LINH_THACH = LINH_THACH;
+  exports.GEAR_WORSE = GEAR_WORSE;
+  exports.GEAR_BETTER = GEAR_BETTER;
   exports.SPECIES = SPECIES;
   exports.rollDrops = rollDrops;
   exports.createMonster = createMonster;

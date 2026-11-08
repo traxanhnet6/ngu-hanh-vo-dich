@@ -266,6 +266,39 @@
         }
       });
     }
+
+    var tpHoBang = document.getElementById('teleport-btn-hobang');
+    if (tpHoBang) {
+      tpHoBang.addEventListener('click', function () {
+        if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.teleportTo) {
+          window.GameEngine.teleportTo('ho-bang', 90, 640);
+        }
+      });
+    }
+    var tpMoLua = document.getElementById('teleport-btn-molua');
+    if (tpMoLua) {
+      tpMoLua.addEventListener('click', function () {
+        if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.teleportTo) {
+          window.GameEngine.teleportTo('mo-lua', 90, 640);
+        }
+      });
+    }
+    var tpHoangMac = document.getElementById('teleport-btn-hoangmac');
+    if (tpHoangMac) {
+      tpHoangMac.addEventListener('click', function () {
+        if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.teleportTo) {
+          window.GameEngine.teleportTo('hoang-mac', 90, 640);
+        }
+      });
+    }
+    var tpKiemTrung = document.getElementById('teleport-btn-kiemtrung');
+    if (tpKiemTrung) {
+      tpKiemTrung.addEventListener('click', function () {
+        if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.teleportTo) {
+          window.GameEngine.teleportTo('kiem-trung', 90, 640);
+        }
+      });
+    }
   }
 
   function openBagModal() {
@@ -350,6 +383,11 @@
    */
   function showDeathModal(revivalPool) {
     var modal = document.getElementById('death-modal');
+    var titleEl = modal ? modal.querySelector('.death-title') : null;
+    if (titleEl && typeof window !== 'undefined' && window.GameEngine && window.GameEngine.getCurrentMap) {
+      var cur = window.GameEngine.getCurrentMap();
+      if (cur && cur.name) titleEl.textContent = 'BẠN ĐÃ GỤC TẠI ' + cur.name.toUpperCase();
+    }
     var poolEl = document.getElementById('death-pool-count');
     var btnSpot = document.getElementById('btn-revive-spot');
     var pool = revivalPool !== undefined ? revivalPool : (player ? player.revivalPool : 5);
@@ -977,10 +1015,35 @@
     if (modal) modal.classList.add('hidden');
   }
 
+  var TELEPORT_ZONE_BTNS = [
+    { id: 'teleport-btn-hobang', mapId: 'ho-bang' },
+    { id: 'teleport-btn-molua', mapId: 'mo-lua' },
+    { id: 'teleport-btn-hoangmac', mapId: 'hoang-mac' },
+    { id: 'teleport-btn-kiemtrung', mapId: 'kiem-trung' }
+  ];
+
+  function refreshTeleportLocks() {
+    var st = stateAPI || (typeof window !== 'undefined' ? window.GameState : null);
+    var md = (typeof window !== 'undefined' && window.GameMapData) ? window.GameMapData : null;
+    if (!st || !st.getRealmRank || !player || !md || !md.getMap) return;
+    var rank = st.getRealmRank(player);
+    for (var i = 0; i < TELEPORT_ZONE_BTNS.length; i++) {
+      var z = TELEPORT_ZONE_BTNS[i];
+      var btn = document.getElementById(z.id);
+      var map = md.getMap(z.mapId);
+      if (!btn || !map) continue;
+      if (!btn.dataset.baseLabel) btn.dataset.baseLabel = btn.textContent;
+      var locked = !!(map.minRealmRank && rank < map.minRealmRank);
+      btn.classList.toggle('teleport-locked', locked);
+      btn.textContent = locked ? (btn.dataset.baseLabel + ' — cần ' + (map.minRealmLabel || '')) : btn.dataset.baseLabel;
+    }
+  }
+
   function openTeleportModal() {
     if (audioAPI) audioAPI.playClick();
     var modal = document.getElementById('teleport-modal');
     if (modal) modal.classList.remove('hidden');
+    refreshTeleportLocks();
   }
 
   function closeTeleportModal() {

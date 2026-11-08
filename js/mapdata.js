@@ -1480,6 +1480,469 @@
   };
 
   // ============================================================
+  // HÀM TRỢ GIÚP DÙNG CHUNG CHO CÁC MAP VÙNG SĂN
+  // ============================================================
+
+  function makeZoneIsWalkable(exits, standees, obstacles) {
+    return function (x, y) {
+      if (x < 10 || x > 1920 - 10 || y < 10 || y > 1280 - 10) {
+        var inExit = false;
+        for (var e = 0; e < exits.length; e++) {
+          var er = exits[e].rect;
+          if (x >= er.x && x <= er.x + er.w && y >= er.y && y <= er.y + er.h) { inExit = true; break; }
+        }
+        if (!inExit) return false;
+      }
+      for (var i = 0; i < standees.length; i++) {
+        var obj = standees[i];
+        if (obj.ellipse) {
+          if (pointInEllipse(x, y, obj.ellipse)) return false;
+        } else if (obj.trunk) {
+          var dx = x - obj.trunk.x, dy = y - obj.trunk.y;
+          if (dx * dx + dy * dy <= obj.trunk.r * obj.trunk.r) return false;
+        }
+      }
+      for (var j = 0; j < obstacles.length; j++) {
+        var obs = obstacles[j];
+        if (obs.rect) {
+          var inExitZone = false;
+          for (var k = 0; k < exits.length; k++) {
+            var exr = exits[k].rect;
+            if (x >= exr.x && x <= exr.x + exr.w && y >= exr.y && y <= exr.y + exr.h) { inExitZone = true; break; }
+          }
+          if (!inExitZone && x >= obs.rect.x && x <= obs.rect.x + obs.rect.w &&
+              y >= obs.rect.y && y <= obs.rect.y + obs.rect.h) return false;
+        } else if (obs.r) {
+          var ox = x - obs.x, oy = y - obs.y;
+          if (ox * ox + oy * oy <= obs.r * obs.r) return false;
+        }
+      }
+      return true;
+    };
+  }
+
+  // ============================================================
+  // MAP 7: HỒ BĂNG HÀN KÍNH (1920 x 1280)
+  // ============================================================
+
+  var SPAWN_HO_BANG = {
+    x: 90,
+    y: 640
+  };
+
+  var EXITS_HO_BANG = [
+    {
+      id: 'exit_to_teleport',
+      name: 'Đài Truyền Tống',
+      rect: { x: 0, y: 560, w: 45, h: 160 },
+      chipLabel: null,
+      target: { x: 60, y: 640 },
+      targetMap: 'dai-truyen-tong',
+      targetSpawn: { x: 480, y: 560 }
+    }
+  ];
+
+  var ZONES_HO_BANG = [
+    {
+      id: 'ho_bang',
+      name: 'Hồ Băng Hàn Kính',
+      desc: 'Hồ băng trong như gương trên cao nguyên tuyết, gió cắt quanh năm và mặt băng nứt dưới chân.',
+      rect: { x: 0, y: 0, w: 1920, h: 1280 }
+    }
+  ];
+
+  var STAND_OBJECTS_HO_BANG = [
+    { id: 'ip1', asset: 'assets/art/standee-ice-pine.png', originalW: 392, originalH: 585, w: 150, h: 224, x: 134, y: 96, baseY: 320, ellipse: { cx: 210.0, cy: 299.7, rx: 34.6, ry: 10.4 } },
+    { id: 'ip2', asset: 'assets/art/standee-ice-pine.png', originalW: 392, originalH: 585, w: 165, h: 246, x: 216, y: 874, baseY: 1120, ellipse: { cx: 300.0, cy: 1097.8, rx: 38.1, ry: 11.4 } },
+    { id: 'ip3', asset: 'assets/art/standee-ice-pine.png', originalW: 392, originalH: 585, w: 120, h: 179, x: 59, y: 701, baseY: 880, ellipse: { cx: 120.0, cy: 863.8, rx: 27.7, ry: 8.3 } },
+    { id: 'ip4', asset: 'assets/art/standee-ice-pine.png', originalW: 392, originalH: 585, w: 140, h: 209, x: 1429, y: -29, baseY: 180, ellipse: { cx: 1500.0, cy: 161.1, rx: 32.3, ry: 9.7 } },
+    { id: 'ip5', asset: 'assets/art/standee-ice-pine.png', originalW: 392, originalH: 585, w: 120, h: 179, x: 1719, y: 121, baseY: 300, ellipse: { cx: 1780.0, cy: 283.8, rx: 27.7, ry: 8.3 } },
+    { id: 'ir1', asset: 'assets/art/standee-ice-rock.png', originalW: 306, originalH: 355, w: 170, h: 197, x: 351, y: 323, baseY: 520, ellipse: { cx: 430.0, cy: 490.0, rx: 71.1, ry: 21.3 } },
+    { id: 'ir2', asset: 'assets/art/standee-ice-rock.png', originalW: 306, originalH: 355, w: 190, h: 220, x: 1662, y: 860, baseY: 1080, ellipse: { cx: 1750.0, cy: 1046.4, rx: 79.5, ry: 23.9 } },
+    { id: 'ir3', asset: 'assets/art/standee-ice-rock.png', originalW: 306, originalH: 355, w: 150, h: 174, x: 830, y: 956, baseY: 1130, ellipse: { cx: 900.0, cy: 1103.5, rx: 62.8, ry: 18.8 } },
+    { id: 'ir4', asset: 'assets/art/standee-ice-rock.png', originalW: 306, originalH: 355, w: 140, h: 162, x: 555, y: 18, baseY: 180, ellipse: { cx: 620.0, cy: 155.3, rx: 58.6, ry: 17.6 } }
+  ];
+
+  var SCENERY_OBSTACLES_HO_BANG = [
+    { rect: { x: 0, y: 0, w: 1920, h: 45 } },
+    { rect: { x: 0, y: 1255, w: 1920, h: 25 } },
+    { rect: { x: 0, y: 0, w: 25, h: 555 } },
+    { rect: { x: 0, y: 725, w: 25, h: 555 } },
+    { rect: { x: 1900, y: 0, w: 20, h: 1280 } }
+  ];
+
+  var HO_BANG_KEY_ANCHORS = [
+    { x: 420, y: 750 },
+    { x: 550, y: 360 },
+    { x: 920, y: 920 },
+    { x: 1460, y: 905 },
+    { x: 1080, y: 460 },
+    { x: 1620, y: 980 },
+    { x: 1180, y: 680 }
+  ];
+
+  var HO_BANG_PACKS = [
+    { id: 'pack_bangtinh_1', speciesId: 'bang_tinh', anchor: { x: 420, y: 750 }, count: 4, spread: 60 },
+    { id: 'pack_bangtinh_2', speciesId: 'bang_tinh', anchor: { x: 550, y: 360 }, count: 4, spread: 60 },
+    { id: 'pack_bangtinh_3', speciesId: 'bang_tinh', anchor: { x: 920, y: 920 }, count: 5, spread: 60 },
+    { id: 'pack_bangtinh_4', speciesId: 'bang_tinh', anchor: { x: 1460, y: 905 }, count: 4, spread: 60 },
+    { id: 'pack_elite_hanxa_1', speciesId: 'han_xa', anchor: { x: 1080, y: 460 }, count: 1, spread: 0, isElite: true },
+    { id: 'pack_elite_hanxa_2', speciesId: 'han_xa', anchor: { x: 1620, y: 980 }, count: 1, spread: 0, isElite: true },
+    { id: 'pack_boss_han_kinh', speciesId: 'boss_han_kinh_giao_vuong', anchor: { x: 1180, y: 680 }, count: 1, spread: 0, isBoss: true }
+  ];
+
+  var isWalkableHoBang = makeZoneIsWalkable(EXITS_HO_BANG, STAND_OBJECTS_HO_BANG, SCENERY_OBSTACLES_HO_BANG);
+
+  var collisionGridHoBang = buildGrid(1920, 1280, isWalkableHoBang);
+  forceWalkable(collisionGridHoBang, SPAWN_HO_BANG.x, SPAWN_HO_BANG.y);
+  forceWalkable(collisionGridHoBang, EXITS_HO_BANG[0].target.x, EXITS_HO_BANG[0].target.y);
+  for (var a = 0; a < HO_BANG_KEY_ANCHORS.length; a++) {
+    forceWalkable(collisionGridHoBang, HO_BANG_KEY_ANCHORS[a].x, HO_BANG_KEY_ANCHORS[a].y);
+  }
+
+  var MAP_HO_BANG = {
+    id: 'ho-bang',
+    name: 'Hồ Băng Hàn Kính',
+    width: 1920,
+    height: 1280,
+    gridSize: GRID_SIZE,
+    cols: Math.ceil(1920 / GRID_SIZE),
+    rows: Math.ceil(1280 / GRID_SIZE),
+    bgImage: 'assets/art/map-ho-bang-bg.png',
+    spawn: SPAWN_HO_BANG,
+    standees: STAND_OBJECTS_HO_BANG,
+    obstacles: SCENERY_OBSTACLES_HO_BANG,
+    exits: EXITS_HO_BANG,
+    collisionGrid: collisionGridHoBang,
+    isWalkable: isWalkableHoBang,
+    keyAnchors: HO_BANG_KEY_ANCHORS,
+    npcs: [],
+    interactables: [],
+    harvestNodes: [],
+    monsterPacks: HO_BANG_PACKS,
+    packs: HO_BANG_PACKS,
+    zones: ZONES_HO_BANG,
+    minRealmRank: 4,
+    minRealmLabel: 'Luyện Khí tầng 4'
+  };
+
+  // ============================================================
+  // MAP 8: MỎ LỬA XÍCH DIỆM (1920 x 1280)
+  // ============================================================
+
+  var SPAWN_MO_LUA = {
+    x: 90,
+    y: 640
+  };
+
+  var EXITS_MO_LUA = [
+    {
+      id: 'exit_to_teleport',
+      name: 'Đài Truyền Tống',
+      rect: { x: 0, y: 560, w: 45, h: 160 },
+      chipLabel: null,
+      target: { x: 60, y: 640 },
+      targetMap: 'dai-truyen-tong',
+      targetSpawn: { x: 480, y: 560 }
+    }
+  ];
+
+  var ZONES_MO_LUA = [
+    {
+      id: 'mo_lua',
+      name: 'Mỏ Lửa Xích Diệm',
+      desc: 'Mỏ quặng bỏ hoang trong lòng núi lửa, dung nham chảy ở rãnh thấp, tro nóng bay theo gió.',
+      rect: { x: 0, y: 0, w: 1920, h: 1280 }
+    }
+  ];
+
+  var STAND_OBJECTS_MO_LUA = [
+    { id: 'os1', asset: 'assets/art/standee-obsidian-spire.png', originalW: 245, originalH: 647, w: 110, h: 290, x: 193, y: 10, baseY: 300, ellipse: { cx: 250.0, cy: 272.6, rx: 48.5, ry: 14.6 } },
+    { id: 'os2', asset: 'assets/art/standee-obsidian-spire.png', originalW: 245, originalH: 647, w: 130, h: 343, x: 633, y: -163, baseY: 180, ellipse: { cx: 700.0, cy: 147.7, rx: 57.3, ry: 17.2 } },
+    { id: 'os3', asset: 'assets/art/standee-obsidian-spire.png', originalW: 245, originalH: 647, w: 120, h: 317, x: 1688, y: -67, baseY: 250, ellipse: { cx: 1750.0, cy: 220.2, rx: 52.9, ry: 15.9 } },
+    { id: 'os4', asset: 'assets/art/standee-obsidian-spire.png', originalW: 245, originalH: 647, w: 115, h: 304, x: 990, y: 776, baseY: 1080, ellipse: { cx: 1050.0, cy: 1051.4, rx: 50.7, ry: 15.2 } },
+    { id: 'lr1', asset: 'assets/art/standee-lava-rock.png', originalW: 426, originalH: 313, w: 170, h: 125, x: 401, y: 895, baseY: 1020, ellipse: { cx: 480.0, cy: 1004.2, rx: 34.3, ry: 10.3 } },
+    { id: 'lr2', asset: 'assets/art/standee-lava-rock.png', originalW: 426, originalH: 313, w: 150, h: 110, x: 831, y: 190, baseY: 300, ellipse: { cx: 900.0, cy: 286.1, rx: 30.3, ry: 9.1 } },
+    { id: 'lr3', asset: 'assets/art/standee-lava-rock.png', originalW: 426, originalH: 313, w: 140, h: 103, x: 185, y: 847, baseY: 950, ellipse: { cx: 250.0, cy: 937.0, rx: 28.3, ry: 8.5 } },
+    { id: 'lr4', asset: 'assets/art/standee-lava-rock.png', originalW: 426, originalH: 313, w: 160, h: 118, x: 1576, y: 902, baseY: 1020, ellipse: { cx: 1650.0, cy: 1005.1, rx: 32.3, ry: 9.7 } },
+    { id: 'lr5', asset: 'assets/art/standee-lava-rock.png', originalW: 426, originalH: 313, w: 130, h: 96, x: 560, y: 464, baseY: 560, ellipse: { cx: 620.0, cy: 547.9, rx: 26.3, ry: 7.9 } }
+  ];
+
+  var SCENERY_OBSTACLES_MO_LUA = [
+    { rect: { x: 0, y: 0, w: 1920, h: 45 } },
+    { rect: { x: 0, y: 1130, w: 1920, h: 150 } },
+    { rect: { x: 0, y: 0, w: 25, h: 555 } },
+    { rect: { x: 0, y: 725, w: 25, h: 405 } },
+    { rect: { x: 1820, y: 0, w: 100, h: 1280 } }
+  ];
+
+  var MO_LUA_KEY_ANCHORS = [
+    { x: 1150, y: 880 },
+    { x: 880, y: 700 },
+    { x: 1250, y: 1080 },
+    { x: 700, y: 1010 },
+    { x: 1000, y: 560 },
+    { x: 1620, y: 760 },
+    { x: 1400, y: 700 }
+  ];
+
+  var MO_LUA_PACKS = [
+    { id: 'pack_hoathu_1', speciesId: 'hoa_thu', anchor: { x: 1150, y: 880 }, count: 4, spread: 60 },
+    { id: 'pack_hoathu_2', speciesId: 'hoa_thu', anchor: { x: 880, y: 700 }, count: 4, spread: 60 },
+    { id: 'pack_hoathu_3', speciesId: 'hoa_thu', anchor: { x: 1250, y: 1080 }, count: 5, spread: 60 },
+    { id: 'pack_hoathu_4', speciesId: 'hoa_thu', anchor: { x: 700, y: 1010 }, count: 4, spread: 60 },
+    { id: 'pack_elite_diemma_1', speciesId: 'diem_ma', anchor: { x: 1000, y: 560 }, count: 1, spread: 0, isElite: true },
+    { id: 'pack_elite_diemma_2', speciesId: 'diem_ma', anchor: { x: 1620, y: 760 }, count: 1, spread: 0, isElite: true },
+    { id: 'pack_boss_xich_diem', speciesId: 'boss_xich_diem_viem_quan', anchor: { x: 1400, y: 700 }, count: 1, spread: 0, isBoss: true }
+  ];
+
+  var isWalkableMoLua = makeZoneIsWalkable(EXITS_MO_LUA, STAND_OBJECTS_MO_LUA, SCENERY_OBSTACLES_MO_LUA);
+
+  var collisionGridMoLua = buildGrid(1920, 1280, isWalkableMoLua);
+  forceWalkable(collisionGridMoLua, SPAWN_MO_LUA.x, SPAWN_MO_LUA.y);
+  forceWalkable(collisionGridMoLua, EXITS_MO_LUA[0].target.x, EXITS_MO_LUA[0].target.y);
+  for (var a = 0; a < MO_LUA_KEY_ANCHORS.length; a++) {
+    forceWalkable(collisionGridMoLua, MO_LUA_KEY_ANCHORS[a].x, MO_LUA_KEY_ANCHORS[a].y);
+  }
+
+  var MAP_MO_LUA = {
+    id: 'mo-lua',
+    name: 'Mỏ Lửa Xích Diệm',
+    width: 1920,
+    height: 1280,
+    gridSize: GRID_SIZE,
+    cols: Math.ceil(1920 / GRID_SIZE),
+    rows: Math.ceil(1280 / GRID_SIZE),
+    bgImage: 'assets/art/map-mo-lua-bg.png',
+    spawn: SPAWN_MO_LUA,
+    standees: STAND_OBJECTS_MO_LUA,
+    obstacles: SCENERY_OBSTACLES_MO_LUA,
+    exits: EXITS_MO_LUA,
+    collisionGrid: collisionGridMoLua,
+    isWalkable: isWalkableMoLua,
+    keyAnchors: MO_LUA_KEY_ANCHORS,
+    npcs: [],
+    interactables: [],
+    harvestNodes: [],
+    monsterPacks: MO_LUA_PACKS,
+    packs: MO_LUA_PACKS,
+    zones: ZONES_MO_LUA,
+    minRealmRank: 7,
+    minRealmLabel: 'Luyện Khí tầng 7'
+  };
+
+  // ============================================================
+  // MAP 9: HOANG MẠC HOÀNG SA (1920 x 1280)
+  // ============================================================
+
+  var SPAWN_HOANG_MAC = {
+    x: 90,
+    y: 640
+  };
+
+  var EXITS_HOANG_MAC = [
+    {
+      id: 'exit_to_teleport',
+      name: 'Đài Truyền Tống',
+      rect: { x: 0, y: 560, w: 45, h: 160 },
+      chipLabel: null,
+      target: { x: 60, y: 640 },
+      targetMap: 'dai-truyen-tong',
+      targetSpawn: { x: 480, y: 560 }
+    }
+  ];
+
+  var ZONES_HOANG_MAC = [
+    {
+      id: 'hoang_mac',
+      name: 'Hoang Mạc Hoàng Sa',
+      desc: 'Hoang mạc cát vàng với tàn tích thành cổ nửa chìm trong cát, xương thú khổng lồ làm mốc giữa biển cát.',
+      rect: { x: 0, y: 0, w: 1920, h: 1280 }
+    }
+  ];
+
+  var STAND_OBJECTS_HOANG_MAC = [
+    { id: 'rp1', asset: 'assets/art/standee-ruin-pillar.png', originalW: 220, originalH: 585, w: 120, h: 319, x: 192, y: 101, baseY: 420, ellipse: { cx: 250.0, cy: 388.6, rx: 57.8, ry: 17.4 } },
+    { id: 'rp2', asset: 'assets/art/standee-ruin-pillar.png', originalW: 220, originalH: 585, w: 140, h: 372, x: 733, y: -172, baseY: 200, ellipse: { cx: 800.0, cy: 163.4, rx: 67.5, ry: 20.2 } },
+    { id: 'rp3', asset: 'assets/art/standee-ruin-pillar.png', originalW: 220, originalH: 585, w: 125, h: 332, x: 1690, y: 368, baseY: 700, ellipse: { cx: 1750.0, cy: 667.3, rx: 60.2, ry: 18.1 } },
+    { id: 'rp4', asset: 'assets/art/standee-ruin-pillar.png', originalW: 220, originalH: 585, w: 135, h: 359, x: 885, y: 761, baseY: 1120, ellipse: { cx: 950.0, cy: 1084.7, rx: 65.1, ry: 19.5 } },
+    { id: 'db1', asset: 'assets/art/standee-desert-bone.png', originalW: 536, originalH: 449, w: 340, h: 285, x: 302, y: -125, baseY: 160, ellipse: { cx: 480.0, cy: 114.9, rx: 108.8, ry: 32.6 } },
+    { id: 'db2', asset: 'assets/art/standee-desert-bone.png', originalW: 536, originalH: 449, w: 300, h: 251, x: 1522, y: 829, baseY: 1080, ellipse: { cx: 1680.0, cy: 1040.2, rx: 96.0, ry: 28.8 } },
+    { id: 'rb1', asset: 'assets/art/standee-ruined-blocks.png', originalW: 409, originalH: 313, w: 200, h: 153, x: 526, y: 927, baseY: 1080, ellipse: { cx: 620.0, cy: 1046.4, rx: 89.5, ry: 26.9 } },
+    { id: 'rb2', asset: 'assets/art/standee-ruined-blocks.png', originalW: 409, originalH: 313, w: 180, h: 138, x: 1116, y: 42, baseY: 180, ellipse: { cx: 1200.0, cy: 149.7, rx: 80.5, ry: 24.2 } },
+    { id: 'rc1', asset: 'assets/art/standee-rock-cluster.png', originalW: 417, originalH: 313, w: 140, h: 105, x: 1437, y: 1075, baseY: 1180, ellipse: { cx: 1500.0, cy: 1158.2, rx: 57.4, ry: 17.2 } }
+  ];
+
+  var SCENERY_OBSTACLES_HOANG_MAC = [
+    { rect: { x: 0, y: 0, w: 1920, h: 45 } },
+    { rect: { x: 0, y: 1255, w: 1920, h: 25 } },
+    { rect: { x: 0, y: 0, w: 25, h: 555 } },
+    { rect: { x: 0, y: 725, w: 25, h: 555 } },
+    { rect: { x: 1900, y: 0, w: 20, h: 1280 } }
+  ];
+
+  var HOANG_MAC_KEY_ANCHORS = [
+    { x: 420, y: 750 },
+    { x: 550, y: 360 },
+    { x: 920, y: 920 },
+    { x: 700, y: 1100 },
+    { x: 1150, y: 300 },
+    { x: 1250, y: 950 },
+    { x: 1470, y: 420 }
+  ];
+
+  var HOANG_MAC_PACKS = [
+    { id: 'pack_satrung_1', speciesId: 'sa_trung', anchor: { x: 420, y: 750 }, count: 4, spread: 60 },
+    { id: 'pack_satrung_2', speciesId: 'sa_trung', anchor: { x: 550, y: 360 }, count: 4, spread: 60 },
+    { id: 'pack_satrung_3', speciesId: 'sa_trung', anchor: { x: 920, y: 920 }, count: 5, spread: 60 },
+    { id: 'pack_satrung_4', speciesId: 'sa_trung', anchor: { x: 700, y: 1100 }, count: 4, spread: 60 },
+    { id: 'pack_elite_satuong_1', speciesId: 'sa_tuong', anchor: { x: 1150, y: 300 }, count: 1, spread: 0, isElite: true },
+    { id: 'pack_elite_satuong_2', speciesId: 'sa_tuong', anchor: { x: 1250, y: 950 }, count: 1, spread: 0, isElite: true },
+    { id: 'pack_boss_hoang_sa', speciesId: 'boss_hoang_sa_co_vuong', anchor: { x: 1470, y: 420 }, count: 1, spread: 0, isBoss: true }
+  ];
+
+  var isWalkableHoangMac = makeZoneIsWalkable(EXITS_HOANG_MAC, STAND_OBJECTS_HOANG_MAC, SCENERY_OBSTACLES_HOANG_MAC);
+
+  var collisionGridHoangMac = buildGrid(1920, 1280, isWalkableHoangMac);
+  forceWalkable(collisionGridHoangMac, SPAWN_HOANG_MAC.x, SPAWN_HOANG_MAC.y);
+  forceWalkable(collisionGridHoangMac, EXITS_HOANG_MAC[0].target.x, EXITS_HOANG_MAC[0].target.y);
+  for (var a = 0; a < HOANG_MAC_KEY_ANCHORS.length; a++) {
+    forceWalkable(collisionGridHoangMac, HOANG_MAC_KEY_ANCHORS[a].x, HOANG_MAC_KEY_ANCHORS[a].y);
+  }
+
+  var MAP_HOANG_MAC = {
+    id: 'hoang-mac',
+    name: 'Hoang Mạc Hoàng Sa',
+    width: 1920,
+    height: 1280,
+    gridSize: GRID_SIZE,
+    cols: Math.ceil(1920 / GRID_SIZE),
+    rows: Math.ceil(1280 / GRID_SIZE),
+    bgImage: 'assets/art/map-hoang-mac-bg.png',
+    spawn: SPAWN_HOANG_MAC,
+    standees: STAND_OBJECTS_HOANG_MAC,
+    obstacles: SCENERY_OBSTACLES_HOANG_MAC,
+    exits: EXITS_HOANG_MAC,
+    collisionGrid: collisionGridHoangMac,
+    isWalkable: isWalkableHoangMac,
+    keyAnchors: HOANG_MAC_KEY_ANCHORS,
+    npcs: [],
+    interactables: [],
+    harvestNodes: [],
+    monsterPacks: HOANG_MAC_PACKS,
+    packs: HOANG_MAC_PACKS,
+    zones: ZONES_HOANG_MAC,
+    minRealmRank: 10,
+    minRealmLabel: 'Trúc Cơ Sơ Kỳ'
+  };
+
+  // ============================================================
+  // MAP 10: KIẾM TRỦNG HUYỀN THIẾT (1920 x 1280)
+  // ============================================================
+
+  var SPAWN_KIEM_TRUNG = {
+    x: 90,
+    y: 640
+  };
+
+  var EXITS_KIEM_TRUNG = [
+    {
+      id: 'exit_to_teleport',
+      name: 'Đài Truyền Tống',
+      rect: { x: 0, y: 560, w: 45, h: 160 },
+      chipLabel: null,
+      target: { x: 60, y: 640 },
+      targetMap: 'dai-truyen-tong',
+      targetSpawn: { x: 480, y: 560 }
+    }
+  ];
+
+  var ZONES_KIEM_TRUNG = [
+    {
+      id: 'kiem_trung',
+      name: 'Kiếm Trủng Huyền Thiết',
+      desc: 'Thung lũng chôn kiếm cổ sau đại chiến thượng cổ, sương lạnh và tiếng kim loại va nhau khi gió qua.',
+      rect: { x: 0, y: 0, w: 1920, h: 1280 }
+    }
+  ];
+
+  var STAND_OBJECTS_KIEM_TRUNG = [
+    { id: 'sm1', asset: 'assets/art/standee-sword-monolith.png', originalW: 304, originalH: 668, w: 150, h: 330, x: 645, y: -30, baseY: 300, ellipse: { cx: 720.0, cy: 263.1, rx: 74.8, ry: 22.4 } },
+    { id: 'sm2', asset: 'assets/art/standee-sword-monolith.png', originalW: 304, originalH: 668, w: 160, h: 352, x: 1540, y: -22, baseY: 330, ellipse: { cx: 1620.0, cy: 290.6, rx: 79.8, ry: 23.9 } },
+    { id: 'sm3', asset: 'assets/art/standee-sword-monolith.png', originalW: 304, originalH: 668, w: 150, h: 330, x: 1605, y: 650, baseY: 980, ellipse: { cx: 1680.0, cy: 943.1, rx: 74.8, ry: 22.4 } },
+    { id: 'rl1', asset: 'assets/art/standee-rust-blades.png', originalW: 371, originalH: 334, w: 150, h: 135, x: 322, y: 345, baseY: 480, ellipse: { cx: 400.0, cy: 457.1, rx: 56.6, ry: 17.0 } },
+    { id: 'rl2', asset: 'assets/art/standee-rust-blades.png', originalW: 371, originalH: 334, w: 160, h: 144, x: 536, y: 936, baseY: 1080, ellipse: { cx: 620.0, cy: 1055.6, rx: 60.4, ry: 18.1 } },
+    { id: 'rl3', asset: 'assets/art/standee-rust-blades.png', originalW: 371, originalH: 334, w: 140, h: 126, x: 977, y: 54, baseY: 180, ellipse: { cx: 1050.0, cy: 158.6, rx: 52.9, ry: 15.9 } },
+    { id: 'rl4', asset: 'assets/art/standee-rust-blades.png', originalW: 371, originalH: 334, w: 150, h: 135, x: 1372, y: 985, baseY: 1120, ellipse: { cx: 1450.0, cy: 1097.1, rx: 56.6, ry: 17.0 } },
+    { id: 'rl5', asset: 'assets/art/standee-rust-blades.png', originalW: 371, originalH: 334, w: 130, h: 117, x: 232, y: 783, baseY: 900, ellipse: { cx: 300.0, cy: 880.2, rx: 49.1, ry: 14.7 } },
+    { id: 'rc1', asset: 'assets/art/standee-rock-cluster.png', originalW: 417, originalH: 313, w: 140, h: 105, x: 837, y: 1045, baseY: 1150, ellipse: { cx: 900.0, cy: 1128.2, rx: 57.4, ry: 17.2 } },
+    { id: 'rc2', asset: 'assets/art/standee-rock-cluster.png', originalW: 417, originalH: 313, w: 150, h: 113, x: 1732, y: 487, baseY: 600, ellipse: { cx: 1800.0, cy: 576.6, rx: 61.5, ry: 18.4 } }
+  ];
+
+  var SCENERY_OBSTACLES_KIEM_TRUNG = [
+    { rect: { x: 0, y: 0, w: 1920, h: 45 } },
+    { rect: { x: 0, y: 1255, w: 1920, h: 25 } },
+    { rect: { x: 0, y: 0, w: 25, h: 555 } },
+    { rect: { x: 0, y: 725, w: 25, h: 555 } },
+    { rect: { x: 1900, y: 0, w: 20, h: 1280 } }
+  ];
+
+  var KIEM_TRUNG_KEY_ANCHORS = [
+    { x: 420, y: 750 },
+    { x: 550, y: 360 },
+    { x: 920, y: 920 },
+    { x: 1500, y: 905 },
+    { x: 1080, y: 460 },
+    { x: 920, y: 300 },
+    { x: 1250, y: 640 }
+  ];
+
+  var KIEM_TRUNG_PACKS = [
+    { id: 'pack_kiemlinh_1', speciesId: 'kiem_linh', anchor: { x: 420, y: 750 }, count: 4, spread: 60 },
+    { id: 'pack_kiemlinh_2', speciesId: 'kiem_linh', anchor: { x: 550, y: 360 }, count: 4, spread: 60 },
+    { id: 'pack_kiemlinh_3', speciesId: 'kiem_linh', anchor: { x: 920, y: 920 }, count: 5, spread: 60 },
+    { id: 'pack_kiemlinh_4', speciesId: 'kiem_linh', anchor: { x: 1500, y: 905 }, count: 4, spread: 60 },
+    { id: 'pack_elite_thietgiap_1', speciesId: 'thiet_giap', anchor: { x: 1080, y: 460 }, count: 1, spread: 0, isElite: true },
+    { id: 'pack_elite_thietgiap_2', speciesId: 'thiet_giap', anchor: { x: 920, y: 300 }, count: 1, spread: 0, isElite: true },
+    { id: 'pack_boss_tan_kiem', speciesId: 'boss_tan_kiem_vo_danh', anchor: { x: 1250, y: 640 }, count: 1, spread: 0, isBoss: true }
+  ];
+
+  var isWalkableKiemTrung = makeZoneIsWalkable(EXITS_KIEM_TRUNG, STAND_OBJECTS_KIEM_TRUNG, SCENERY_OBSTACLES_KIEM_TRUNG);
+
+  var collisionGridKiemTrung = buildGrid(1920, 1280, isWalkableKiemTrung);
+  forceWalkable(collisionGridKiemTrung, SPAWN_KIEM_TRUNG.x, SPAWN_KIEM_TRUNG.y);
+  forceWalkable(collisionGridKiemTrung, EXITS_KIEM_TRUNG[0].target.x, EXITS_KIEM_TRUNG[0].target.y);
+  for (var a = 0; a < KIEM_TRUNG_KEY_ANCHORS.length; a++) {
+    forceWalkable(collisionGridKiemTrung, KIEM_TRUNG_KEY_ANCHORS[a].x, KIEM_TRUNG_KEY_ANCHORS[a].y);
+  }
+
+  var MAP_KIEM_TRUNG = {
+    id: 'kiem-trung',
+    name: 'Kiếm Trủng Huyền Thiết',
+    width: 1920,
+    height: 1280,
+    gridSize: GRID_SIZE,
+    cols: Math.ceil(1920 / GRID_SIZE),
+    rows: Math.ceil(1280 / GRID_SIZE),
+    bgImage: 'assets/art/map-kiem-trung-bg.png',
+    spawn: SPAWN_KIEM_TRUNG,
+    standees: STAND_OBJECTS_KIEM_TRUNG,
+    obstacles: SCENERY_OBSTACLES_KIEM_TRUNG,
+    exits: EXITS_KIEM_TRUNG,
+    collisionGrid: collisionGridKiemTrung,
+    isWalkable: isWalkableKiemTrung,
+    keyAnchors: KIEM_TRUNG_KEY_ANCHORS,
+    npcs: [],
+    interactables: [],
+    harvestNodes: [],
+    monsterPacks: KIEM_TRUNG_PACKS,
+    packs: KIEM_TRUNG_PACKS,
+    zones: ZONES_KIEM_TRUNG,
+    minRealmRank: 11,
+    minRealmLabel: 'Trúc Cơ Trung Kỳ'
+  };
+
+  // ============================================================
   // HỆ THỐNG QUẢN LÝ BẢN ĐỒ TOÀN CỤC
   // ============================================================
 
@@ -1489,7 +1952,11 @@
     'tong-mon': MAP_TONG_MON,
     'dai-dien': MAP_DAI_DIEN,
     'son-coc': MAP_SON_COC,
-    'dai-truyen-tong': MAP_DAI_TRUYEN_TONG
+    'dai-truyen-tong': MAP_DAI_TRUYEN_TONG,
+    'ho-bang': MAP_HO_BANG,
+    'mo-lua': MAP_MO_LUA,
+    'hoang-mac': MAP_HOANG_MAC,
+    'kiem-trung': MAP_KIEM_TRUNG
   };
 
   var MapData = Object.assign({}, MAP_MIEU_HOANG, {
@@ -1506,6 +1973,10 @@
       if (id === 'dai_dien' || id === 'dai-dien') return MAP_DAI_DIEN;
       if (id === 'son_coc' || id === 'son-coc') return MAP_SON_COC;
       if (id === 'dai_truyen_tong' || id === 'dai-truyen-tong') return MAP_DAI_TRUYEN_TONG;
+      if (id === 'ho_bang' || id === 'ho-bang') return MAP_HO_BANG;
+      if (id === 'mo_lua' || id === 'mo-lua') return MAP_MO_LUA;
+      if (id === 'hoang_mac' || id === 'hoang-mac') return MAP_HOANG_MAC;
+      if (id === 'kiem_trung' || id === 'kiem-trung') return MAP_KIEM_TRUNG;
       return MAP_MIEU_HOANG;
     }
   });

@@ -1514,6 +1514,11 @@ button, .btn, .skill-slot, .char-select-btn {
   transform: translateY(-1px);
 }
 
+.teleport-btn.teleport-locked {
+  opacity: 0.45;
+  filter: grayscale(0.7);
+}
+
 /* Điện thoại dọc hẹp: panel nhiệm vụ gọn hơn, thanh kỹ năng không tràn */
 @media (max-width: 420px) {
   #quest-panel {

@@ -212,6 +212,63 @@
     }
   }
 
+  // ==========================================================================
+  // HẠNG CẢNH GIỚI SUY RA (REALM RANK) — Dùng cho khóa cổng bản đồ
+  // ==========================================================================
+  var REALM_STAGE_SUFFIX = ['Sơ Kỳ', 'Trung Kỳ', 'Hậu Kỳ', 'Viên Mãn'];
+
+  function realmRankFromString(realm) {
+    if (!realm || typeof realm !== 'string') return -1;
+    var m = realm.match(/Luyện Khí.*?(?:tầng|Tầng)\s*(\d+)/);
+    if (m) return Math.max(1, Math.min(9, parseInt(m[1], 10)));
+    var bases = [ ['Trúc Cơ', 10], ['Kim Đan', 14], ['Nguyên Anh', 18], ['Hóa Thần', 22] ];
+    for (var i = 0; i < bases.length; i++) {
+      if (realm.indexOf(bases[i][0]) !== -1) {
+        var off = 0;
+        for (var s = 0; s < 4; s++) {
+          if (realm.indexOf(REALM_STAGE_SUFFIX[s]) !== -1) { off = s; break; }
+        }
+        return bases[i][1] + off;
+      }
+    }
+    if (realm.indexOf('Phàm Nhân') !== -1) return 0;
+    return -1;
+  }
+
+  function realmRankFromPaths(paths) {
+    if (!paths) return 0;
+    var keys = ['moc', 'thuy', 'hoa', 'tho', 'kim'];
+    var min = Infinity;
+    for (var i = 0; i < keys.length; i++) {
+      var p = paths[keys[i]];
+      var v = p && typeof p.tuVi === 'number' ? p.tuVi : 0;
+      if (v < min) min = v;
+    }
+    if (!isFinite(min) || min <= 0) return 0;
+    if (min < 900) return Math.min(9, Math.floor(min / 100) + 1);
+    if (min < 2500) return Math.min(13, 10 + Math.floor((min - 900) / 400));
+    if (min < 7300) return Math.min(17, 14 + Math.floor((min - 2500) / 1200));
+    if (min < 21700) return Math.min(21, 18 + Math.floor((min - 7300) / 3600));
+    if (min < 100000) return Math.min(25, 22 + Math.floor((min - 21700) / 19575));
+    return 25;
+  }
+
+  function getRealmRank(player) {
+    if (!player) return 0;
+    var byString = realmRankFromString(player.realm);
+    var byPaths = realmRankFromPaths(player.paths);
+    return Math.max(byString >= 0 ? byString : 0, byPaths);
+  }
+
+  function realmRankLabel(rank) {
+    if (rank <= 0) return 'Phàm Nhân';
+    if (rank <= 9) return 'Luyện Khí tầng ' + rank;
+    if (rank <= 13) return 'Trúc Cơ ' + REALM_STAGE_SUFFIX[rank - 10];
+    if (rank <= 17) return 'Kim Đan ' + REALM_STAGE_SUFFIX[rank - 14];
+    if (rank <= 21) return 'Nguyên Anh ' + REALM_STAGE_SUFFIX[rank - 18];
+    return 'Hóa Thần ' + REALM_STAGE_SUFFIX[Math.min(3, rank - 22)];
+  }
+
   /**
    * Lấy danh sách tên nhân vật đã lưu
    */
@@ -452,6 +509,10 @@
     defaultSettings: defaultSettings,
     savePlayer: savePlayer,
     loadPlayer: loadPlayer,
+    getRealmRank: getRealmRank,
+    realmRankLabel: realmRankLabel,
+    realmRankFromString: realmRankFromString,
+    realmRankFromPaths: realmRankFromPaths,
     listCharacters: listCharacters,
     deleteCharacter: deleteCharacter,
     loadSettings: loadSettings,

@@ -1120,6 +1120,18 @@
   }
 
   function teleportTo(mapId, x, y) {
+    var gateHolder = (typeof window !== 'undefined' && window.GameMapData) ? window.GameMapData : (mapData && mapData.maps ? mapData : null);
+    var gateMap = (gateHolder && gateHolder.getMap) ? gateHolder.getMap(mapId) : null;
+    if (gateMap && gateMap.minRealmRank) {
+      var gateState = (typeof window !== 'undefined' && window.GameState) ? window.GameState : stateAPI;
+      var myRank = (gateState && gateState.getRealmRank && player) ? gateState.getRealmRank(player) : 99;
+      if (myRank < gateMap.minRealmRank) {
+        if (typeof window !== 'undefined' && window.GameUI) {
+          window.GameUI.showToast('Cảnh giới chưa đủ — ' + gateMap.name + ' cần ' + (gateMap.minRealmLabel || '') + '. Hãy tu luyện cân bằng cả năm đường.');
+        }
+        return;
+      }
+    }
     if (typeof window !== 'undefined' && window.GameUI && window.GameUI.closeTeleportModal) {
       window.GameUI.closeTeleportModal();
     }
@@ -2685,10 +2697,14 @@
       }
     }
     // Đài Truyền Tống: bia đá ghi từng điểm đến quanh đài (thấy trước khi dùng)
-    if (mapData.id === 'dai-truyen-tong') {
+    if (mapData.id === 'dai-truyen-tong' || currentMapId === 'dai-truyen-tong') {
       signs.push({ x: 268, y: 300, label: 'Miếu Hoang', kind: 'stele' });
       signs.push({ x: 692, y: 300, label: 'Rừng Độc Thanh Tụy', kind: 'stele' });
       signs.push({ x: 480, y: 486, label: 'Sơn Môn', kind: 'stele' });
+      signs.push({ x: 150, y: 180, label: 'Hồ Băng Hàn Kính', kind: 'stele' });
+      signs.push({ x: 810, y: 180, label: 'Mỏ Lửa Xích Diệm', kind: 'stele' });
+      signs.push({ x: 150, y: 486, label: 'Hoang Mạc Hoàng Sa', kind: 'stele' });
+      signs.push({ x: 810, y: 486, label: 'Kiếm Trủng Huyền Thiết', kind: 'stele' });
     }
     return signs;
   }
