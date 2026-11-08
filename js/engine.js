@@ -53,6 +53,14 @@
   // Chiến đấu người chơi
   var targetMonster = null;
   var basicAttackCd = 0;
+  // Tự tìm đường theo nhiệm vụ + nút hành động theo ngữ cảnh (Đợt 2, lệnh Bui)
+  var autoPath = { active: false, lastLegAt: 0, combatStamp: 0 };
+  var currentActionMode = 'attack';
+  var ACTION_PICKUP_RADIUS = 72;
+  var DIR_VECTORS = [
+    { x: 0, y: 1 }, { x: 0.7071, y: 0.7071 }, { x: 1, y: 0 }, { x: 0.7071, y: -0.7071 },
+    { x: 0, y: -1 }, { x: -0.7071, y: -0.7071 }, { x: -1, y: 0 }, { x: -0.7071, y: 0.7071 }
+  ];
   var skill1Cd = 0;
   var skill2Cd = 0;
   var lastCombatTime = 0;
@@ -201,10 +209,17 @@
         case 'arrowright':
           keysDown.right = true;
           break;
+        case ' ':
+        case 'e':
+          // Phím Space/E = nút hành động theo ngữ cảnh (cùng hành vi với nút trên HUD)
+          e.preventDefault();
+          performContextAction();
+          break;
         default:
           handled = false;
       }
       if (handled) {
+        autoPath.active = false; // Phím di chuyển thủ công -> dừng tự tìm đường ngay
         currentPath = [];
         pendingInteraction = null;
         if (audioAPI) audioAPI.init();
@@ -247,6 +262,7 @@
 
   function handleWorldClick(worldX, worldY) {
     if (!player || !mapData) return;
+    if (autoPath.active) autoPath.active = false; // Chạm để tự đi -> dừng tự tìm đường
 
     // 1. Kiểm tra click vào quái vật (khi ở Rừng Độc)
     if (mapData.id === 'rung-doc') {
@@ -314,6 +330,251 @@
 
     // 4. Click di chuyển thông thường
     triggerPathTo(worldX, worldY, null);
+  }
+
+  // ============================================================
+  // NHẶT ĐỒ RƠI — hàm dùng chung cho "bước qua nhặt" và nút "Nhặt Đồ"
+  // ============================================================
+  function collectDropAtIndex(i, todayData) {
+    var drop = groundDrops[i];
+    if (!drop) return false;
+    if (drop.itemId === 'linh-thach') {
+      // Tính Linh Thạch qua trần farm theo ngày (Hồ sơ 50)
+      var gainedLt = stateAPI ? stateAPI.calcLinhThachGain(todayData.farmLinhThach, drop.count) : drop.count;
+      player.linhThach = (player.linhThach || 0) + gainedLt;
+      todayData.farmLinhThach += gainedLt;
+      if (player.farmSession) {
+        player.farmSession.linhThach += gainedLt;
+      }
+      spawnFloatingText('+' + gainedLt + ' Linh Thạch', player.x, player.y - 35, '#ffe9a8');
+      if (audioAPI) audioAPI.playPickup();
+      groundDrops.splice(i, 1);
+      return true;
+    }
+    // Cho vào túi trữ vật (Brief §6)
+    var addResult = stateAPI ? stateAPI.addItemToBag(player, drop.itemId, drop.count) : { success: true };
+    if (addResult.success) {
+      var def = monstersAPI.ITEM_DEFS[drop.itemId];
+      var itemName = def ? def.name : drop.itemId;
+      spawnFloatingText('+' + drop.count + ' ' + itemName, player.x, player.y - 35, '#7ce898');
+      if (player.farmSession && def) {
+        player.farmSession.notableLoot.push(def.name);
+      }
+      if (audioAPI) audioAPI.playPickup();
+      groundDrops.splice(i, 1);
+      return true;
+    }
+    // Túi đầy -> để lại trên đất
+    if (typeof window !== 'undefined' && window.GameUI) {
+      window.GameUI.showToast('Túi đầy');
+    }
+    return false;
+  }
+
+  function collectDropsInRadius() {
+    // Cách nhặt bằng nút đã chốt: nhặt TẤT CẢ đồ trong bán kính, món gần nhất trước
+    if (!player) return;
+    var dateKey = new Date().toISOString().slice(0, 10);
+    if (!player.daily) player.daily = {};
+    if (!player.daily[dateKey]) player.daily[dateKey] = { farmTuVi: 0, farmLinhThach: 0 };
+    var todayData = player.daily[dateKey];
+    var inRange = [];
+    for (var i = 0; i < groundDrops.length; i++) {
+      var d = Math.hypot(player.x - groundDrops[i].x, player.y - groundDrops[i].y);
+      if (d <= ACTION_PICKUP_RADIUS) inRange.push({ drop: groundDrops[i], d: d });
+    }
+    inRange.sort(function (a, b) { return a.d - b.d; });
+    for (var k = 0; k < inRange.length; k++) {
+      var idx = groundDrops.indexOf(inRange[k].drop);
+      if (idx >= 0) collectDropAtIndex(idx, todayData);
+    }
+  }
+
+  // ============================================================
+  // NÚT HÀNH ĐỘNG THEO NGỮ CẢNH (Đợt 2, lệnh Bui)
+  // Ưu tiên: vật tương tác nhiệm vụ > nói chuyện NPC > nhặt đồ > đánh
+  // ============================================================
+  function computeActionContext() {
+    if (!player || !mapData) return { mode: 'attack', label: 'Đánh' };
+    if (mapData.id === 'mieu_hoang' && mapData.temple && mapData.temple.doorAnchor) {
+      var dd = Math.hypot(player.x - mapData.temple.doorAnchor.x, player.y - mapData.temple.doorAnchor.y);
+      if (dd <= INTERACTION_RANGE) return { mode: 'interact', label: 'Cửa Miếu' };
+    }
+    if (mapData.id === 'mieu_hoang' && mapData.linhnhi) {
+      var nd = Math.hypot(player.x - mapData.linhnhi.feetX, player.y - mapData.linhnhi.feetY);
+      if (nd <= INTERACTION_RANGE) return { mode: 'talk', label: 'Nói Chuyện' };
+    }
+    for (var i = 0; i < groundDrops.length; i++) {
+      var gd = Math.hypot(player.x - groundDrops[i].x, player.y - groundDrops[i].y);
+      if (gd <= ACTION_PICKUP_RADIUS) return { mode: 'pickup', label: 'Nhặt Đồ' };
+    }
+    return { mode: 'attack', label: 'Đánh' };
+  }
+
+  function performContextAction() {
+    if (!player || !mapData || player.hp <= 0) return;
+    if (typeof document !== 'undefined') {
+      var dlg = document.getElementById('dialogue-box');
+      if (dlg && !dlg.classList.contains('hidden')) return; // Đang trong hội thoại
+    }
+    if (autoPath.active) autoPath.active = false; // Bấm nút hành động = người chơi tự điều khiển
+    var ctx = computeActionContext();
+    if (ctx.mode === 'talk') { triggerDialogueLinhNhi(); return; }
+    if (ctx.mode === 'interact') { triggerLockedDoorToast(); return; }
+    if (ctx.mode === 'pickup') { collectDropsInRadius(); return; }
+    // Đánh: mục tiêu đã chọn còn trong tầm, hoặc quái gần nhất trong tầm 60; không có thì vung kiếm theo hướng mặt
+    var m = null;
+    if (targetMonster && targetMonster.state !== 'dead' && targetMonster.hp > 0 &&
+        Math.hypot(player.x - targetMonster.x, player.y - targetMonster.y) <= 60) {
+      m = targetMonster;
+    } else {
+      var best = 60;
+      for (var i = 0; i < fieldMonsters.length; i++) {
+        var fm = fieldMonsters[i];
+        if (fm.state === 'dead' || fm.hp <= 0) continue;
+        var fd = Math.hypot(player.x - fm.x, player.y - fm.y);
+        if (fd <= best) { best = fd; m = fm; }
+      }
+    }
+    if (basicAttackCd > 0) return;
+    basicAttackCd = 0.45;
+    if (m) {
+      targetMonster = m;
+      player.dir = getDirFromVelocity(m.x - player.x, m.y - player.y);
+      executePlayerBasicAttack(m);
+    } else {
+      var v = DIR_VECTORS[player.dir] || DIR_VECTORS[0];
+      if (audioAPI) audioAPI.playSlash();
+      visualEffects.push({
+        type: 'slash_crescent',
+        x: player.x,
+        y: player.y - 25,
+        targetX: player.x + v.x * 46,
+        targetY: player.y - 20 + v.y * 46,
+        timer: 0.22,
+        duration: 0.22
+      });
+      lastCombatTime = performance.now();
+    }
+  }
+
+  // ============================================================
+  // NÚT TỰ TÌM ĐƯỜNG THEO NHIỆM VỤ (Đợt 2, lệnh Bui)
+  // Đích đến dùng cùng nguồn dữ kiện với mũi tên dẫn đường nên hai bên luôn khớp nhau.
+  // Tới nơi: dừng CẠNH NPC, KHÔNG tự mở thoại.
+  // ============================================================
+  function getQuestTargetInfo() {
+    if (!player || !player.quests) return null;
+    if (!player.quests.talked_linhnhi) return { mapId: 'mieu_hoang', kind: 'npc' };
+    if (!player.quests.huntCompleted) return { mapId: 'rung-doc', kind: 'hunt' };
+    return null;
+  }
+
+  function resolveQuestDestination(info) {
+    if (info.kind === 'npc') {
+      var ln = mapData.linhnhi;
+      if (!ln) {
+        var holder = (typeof window !== 'undefined' && window.GameMapData) ? window.GameMapData : null;
+        var tm = holder && holder.getMap ? holder.getMap('mieu_hoang') : null;
+        ln = tm ? tm.linhnhi : null;
+      }
+      if (!ln || !ln.standTile) return null;
+      return { x: ln.standTile.x, y: ln.standTile.y, radius: 26 };
+    }
+    if (info.kind === 'hunt') {
+      var near = getNearestLivingThaoTinh();
+      if (near) return { x: near.x, y: near.y, radius: 64 };
+      if (monstersAPI && monstersAPI.RUNG_DOC_PACKS) {
+        for (var i = 0; i < monstersAPI.RUNG_DOC_PACKS.length; i++) {
+          var pk = monstersAPI.RUNG_DOC_PACKS[i];
+          if (pk.speciesId === 'thao_tinh' && pk.anchor) return { x: pk.anchor.x, y: pk.anchor.y, radius: 44 };
+        }
+      }
+      return null;
+    }
+    return null;
+  }
+
+  function findExitPointTo(destMapId) {
+    if (!mapData || !mapData.exits) return null;
+    for (var i = 0; i < mapData.exits.length; i++) {
+      var ex = mapData.exits[i];
+      if (ex.targetMap === destMapId && ex.rect) {
+        return { x: ex.rect.x + 10, y: ex.rect.y + ex.rect.h / 2 };
+      }
+    }
+    return null;
+  }
+
+  function startAutoQuestPath() {
+    var info = getQuestTargetInfo();
+    if (!info) {
+      if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.showToast('Chưa có mục tiêu nhiệm vụ.');
+      }
+      return;
+    }
+    autoPath.active = true;
+    autoPath.lastLegAt = 0;
+    autoPath.combatStamp = lastCombatTime;
+    targetMonster = null;
+  }
+
+  function cancelAutoPath(clearPath) {
+    autoPath.active = false;
+    if (clearPath) {
+      currentPath = [];
+      pendingInteraction = null;
+    }
+  }
+
+  function failAutoPath(msg) {
+    cancelAutoPath(true);
+    if (typeof window !== 'undefined' && window.GameUI) {
+      window.GameUI.showToast(msg);
+    }
+  }
+
+  function toggleAutoQuestPath() {
+    if (autoPath.active) { cancelAutoPath(true); return; }
+    startAutoQuestPath();
+  }
+
+  function updateAutoPath() {
+    if (!autoPath.active || !player || !mapData) return;
+    if (mapFade.alpha > 0) return; // Đang chuyển cảnh: chờ sang hẳn bản đồ mới
+    var info = getQuestTargetInfo();
+    if (!info) { cancelAutoPath(false); return; }
+    var now = performance.now();
+    // Ưu tiên kiểm tra tới nơi trước: chạm bãi quái là hoàn thành chuyến đi dù quái bắt đầu đánh
+    if (info.mapId === currentMapId) {
+      var dest = resolveQuestDestination(info);
+      if (!dest) { failAutoPath('Mục tiêu chưa xuất hiện, hãy thử lại sau.'); return; }
+      var d = Math.hypot(player.x - dest.x, player.y - dest.y);
+      if (d <= dest.radius) { cancelAutoPath(false); return; } // Đã tới nơi
+    }
+    if (lastCombatTime > autoPath.combatStamp) {
+      cancelAutoPath(true);
+      if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.showToast('Vào chiến đấu — đã dừng tự tìm đường.');
+      }
+      return;
+    }
+    if (info.mapId === currentMapId) {
+      if (currentPath.length === 0 && now - autoPath.lastLegAt > 500) {
+        autoPath.lastLegAt = now;
+        triggerPathTo(dest.x, dest.y, null);
+        if (currentPath.length === 0) failAutoPath('Không tìm được đường tới mục tiêu.');
+      }
+    } else {
+      if (currentPath.length === 0 && now - autoPath.lastLegAt > 500) {
+        var pt = findExitPointTo(info.mapId);
+        if (!pt) { failAutoPath('Không thấy cổng sang bản đồ đích.'); return; }
+        autoPath.lastLegAt = now;
+        triggerPathTo(pt.x, pt.y, null);
+        if (currentPath.length === 0) failAutoPath('Không tìm được đường ra cổng.');
+      }
+    }
   }
 
   function findMonsterAt(wx, wy) {
@@ -755,6 +1016,16 @@
       }
     }
 
+    // Tự tìm đường theo nhiệm vụ + đồng bộ nút hành động theo ngữ cảnh
+    updateAutoPath();
+    var actx = computeActionContext();
+    if (actx.mode !== currentActionMode) {
+      currentActionMode = actx.mode;
+      if (typeof window !== 'undefined' && window.GameUI && window.GameUI.setActionMode) {
+        window.GameUI.setActionMode(actx.mode, actx.label);
+      }
+    }
+
     // Cập nhật quái vật trên bản đồ Rừng Độc
     if (mapData.id === 'rung-doc') {
       updateFieldMonsters(dt);
@@ -999,6 +1270,7 @@
   }
 
   function handleRevive(type) {
+    autoPath.active = false; // Hồi sinh -> dừng tự tìm đường
     if (type === 'spot') {
       if (stateAPI && stateAPI.revivePlayer(player, 'spot')) {
         // Đẩy lùi quái gần điểm chết về trạng thái roam/nhà
@@ -1045,38 +1317,7 @@
       // Người chơi bước qua để nhặt (khoảng cách <= 26px)
       var dist = Math.hypot(player.x - drop.x, player.y - drop.y);
       if (dist <= 26) {
-        if (drop.itemId === 'linh-thach') {
-          // Tính Linh Thạch qua trần farm theo ngày (Hồ sơ 50)
-          var gainedLt = stateAPI ? stateAPI.calcLinhThachGain(todayData.farmLinhThach, drop.count) : drop.count;
-          player.linhThach = (player.linhThach || 0) + gainedLt;
-          todayData.farmLinhThach += gainedLt;
-
-          if (player.farmSession) {
-            player.farmSession.linhThach += gainedLt;
-          }
-
-          spawnFloatingText('+' + gainedLt + ' Linh Thạch', player.x, player.y - 35, '#ffe9a8');
-          if (audioAPI) audioAPI.playPickup();
-          groundDrops.splice(i, 1);
-        } else {
-          // Cho vào túi trữ vật (Brief §6)
-          var addResult = stateAPI ? stateAPI.addItemToBag(player, drop.itemId, drop.count) : { success: true };
-          if (addResult.success) {
-            var def = monstersAPI.ITEM_DEFS[drop.itemId];
-            var itemName = def ? def.name : drop.itemId;
-            spawnFloatingText('+' + drop.count + ' ' + itemName, player.x, player.y - 35, '#7ce898');
-            if (player.farmSession && def) {
-              player.farmSession.notableLoot.push(def.name);
-            }
-            if (audioAPI) audioAPI.playPickup();
-            groundDrops.splice(i, 1);
-          } else {
-            // Túi đầy -> để lại trên đất
-            if (typeof window !== 'undefined' && window.GameUI) {
-              window.GameUI.showToast('Túi đầy');
-            }
-          }
-        }
+        collectDropAtIndex(i, todayData);
       }
     }
   }
@@ -1734,7 +1975,14 @@
     handleRevive: handleRevive,
     switchMap: switchMap,
     getFieldMonsters: function () { return fieldMonsters; },
-    getGroundDrops: function () { return groundDrops; }
+    getGroundDrops: function () { return groundDrops; },
+    performContextAction: performContextAction,
+    getActionContext: function () { return computeActionContext(); },
+    startAutoQuestPath: startAutoQuestPath,
+    toggleAutoQuestPath: toggleAutoQuestPath,
+    cancelAutoPath: function () { cancelAutoPath(true); },
+    isAutoPathActive: function () { return autoPath.active; },
+    hasQuestTarget: function () { return getQuestTargetInfo() !== null; }
   };
 
   if (typeof module !== 'undefined' && module.exports) {

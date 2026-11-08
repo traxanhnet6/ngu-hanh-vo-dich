@@ -168,6 +168,24 @@
       });
     }
 
+    // 5b. Nút hành động theo ngữ cảnh + nút tự tìm đường theo nhiệm vụ
+    var btnAction = document.getElementById('btn-action');
+    if (btnAction) {
+      btnAction.addEventListener('click', function () {
+        if (window.GameEngine && window.GameEngine.performContextAction) {
+          window.GameEngine.performContextAction();
+        }
+      });
+    }
+    var btnAutoPath = document.getElementById('btn-auto-path');
+    if (btnAutoPath) {
+      btnAutoPath.addEventListener('click', function () {
+        if (window.GameEngine && window.GameEngine.toggleAutoQuestPath) {
+          window.GameEngine.toggleAutoQuestPath();
+        }
+      });
+    }
+
     // 6. Death buttons
     var btnReviveSpot = document.getElementById('btn-revive-spot');
     var btnReviveHome = document.getElementById('btn-revive-home');
@@ -530,6 +548,8 @@
   function updateQuestPanel() {
     if (!player || !mapData) return;
 
+    syncAutoPathButton();
+
     var titleEl = document.getElementById('quest-title');
     var descEl = document.getElementById('quest-desc');
     var distEl = document.getElementById('quest-dist');
@@ -540,8 +560,14 @@
         descEl.textContent = 'Linh Nhi đang đợi ở trước miếu hoang.';
         descEl.classList.remove('greyed');
       }
-      var dist = Math.round(Math.hypot(player.x - mapData.linhnhi.feetX, player.y - mapData.linhnhi.feetY) / 24);
-      if (distEl) distEl.textContent = 'Khoảng cách: ~' + dist + ' bước';
+      if (distEl) {
+        if (mapData.linhnhi) {
+          var dist = Math.round(Math.hypot(player.x - mapData.linhnhi.feetX, player.y - mapData.linhnhi.feetY) / 24);
+          distEl.textContent = 'Khoảng cách: ~' + dist + ' bước';
+        } else {
+          distEl.textContent = 'Linh Nhi đang ở Miếu Hoang';
+        }
+      }
     } else if (!player.quests.huntCompleted) {
       var kills = player.quests.thaotinhKills || 0;
       if (titleEl) titleEl.textContent = 'Săn Thảo Tinh ở Rừng Độc (' + kills + '/5)';
@@ -781,15 +807,55 @@
     }, 2800);
   }
 
+  // Đồng bộ nút hành động theo ngữ cảnh (engine gọi khi ngữ cảnh đổi)
+  var lastActionMode = '';
+  function setActionMode(mode, label) {
+    if (mode === lastActionMode) return;
+    lastActionMode = mode;
+    var btn = document.getElementById('btn-action');
+    if (!btn) return;
+    btn.classList.remove('action-mode-attack', 'action-mode-talk', 'action-mode-pickup', 'action-mode-interact');
+    btn.classList.add('action-mode-' + mode);
+    var labelEl = document.getElementById('action-label');
+    if (labelEl) labelEl.textContent = label || 'Đánh';
+    btn.setAttribute('aria-label', label || 'Đánh');
+  }
+
+  // Đồng bộ nút tự tìm đường: ẩn khi không có mục tiêu nhiệm vụ; đang đi thì hiện trạng thái Dừng
+  var lastAutoBtnState = '';
+  function syncAutoPathButton() {
+    var btn = document.getElementById('btn-auto-path');
+    if (!btn || !player) return;
+    var hasTarget = !!(player.quests && (!player.quests.talked_linhnhi || !player.quests.huntCompleted));
+    var active = !!(typeof window !== 'undefined' && window.GameEngine && window.GameEngine.isAutoPathActive && window.GameEngine.isAutoPathActive());
+    var stateKey = (hasTarget ? '1' : '0') + (active ? '1' : '0');
+    if (stateKey === lastAutoBtnState) return;
+    lastAutoBtnState = stateKey;
+    if (!hasTarget && !active) {
+      btn.classList.add('hidden');
+      return;
+    }
+    btn.classList.remove('hidden');
+    btn.textContent = active ? 'Đang đi… — Dừng' : 'Tự Tìm Đường';
+    btn.classList.toggle('auto-walking', active);
+  }
+
   function openSettingsModal() {
     var modal = document.getElementById('settings-modal');
     if (!modal) return;
     modal.classList.remove('hidden');
+    // Ở màn hình bắt đầu, initUI chưa chạy nên nút đóng chưa có sự kiện: gắn tại đây (một lần duy nhất)
+    var closeBtn = document.getElementById('close-settings');
+    if (closeBtn && !closeBtn.dataset.closeWired) {
+      closeBtn.dataset.closeWired = '1';
+      closeBtn.addEventListener('click', function () {
+        modal.classList.add('hidden');
+      });
+    }
   }
 
   var UIAPI = {
     init: initUI,
-    openSettingsModal: openSettingsModal,
     update: update,
     refreshHUD: refreshHUD,
     openDialogue: openDialogue,
@@ -797,7 +863,9 @@
     triggerSkillShake: triggerSkillShake,
     showDeathModal: showDeathModal,
     hideDeathModal: hideDeathModal,
-    showSessionSummary: showSessionSummary
+    showSessionSummary: showSessionSummary,
+    openSettingsModal: openSettingsModal,
+    setActionMode: setActionMode
   };
 
   if (typeof module !== 'undefined' && module.exports) {
