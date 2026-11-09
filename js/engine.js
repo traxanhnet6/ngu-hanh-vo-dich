@@ -207,24 +207,42 @@
   // Triệu chứng người chơi báo: trang bị kiếm mà nhân vật không cầm kiếm —
   // đường vẽ cũ lẫn bộ sinh hình đều không có lớp vũ khí (khung gốc tay không).
   // Vẽ icon THẬT của món vũ khí đang trang bị (ô icon trong assets/art/
-  // icons-sheet.png — cùng tài sản game dùng cho túi đồ) tại vị trí bàn tay,
-  // xoay cho lưỡi kiếm chúc xuống trước theo hướng nhân vật. Điểm tay ĐO THẬT
-  // trên khung 0 của từng hướng (tỉ lệ theo hộp khung đã vẽ), điểm nắm cán
-  // (9.6, 22.4) đo trên ô icon Kiếm Đệ Tử 32px (cán dưới sống kiếm, sát đốc).
+  // icons-sheet.png — cùng tài sản game dùng cho túi đồ) tại vị trí bàn tay.
   // Không trang bị vũ khí -> không vẽ gì. Lớp này chỉ chạy ở nhánh đứng yên/
   // đi bộ thường; nhánh diễn tung chiêu Thái Cực (K2) trả về sớm ở trên nên
   // không bị đụng.
-  var HH_WEAPON_GRIP = { x: 9.6, y: 22.4 };
-  var HH_WEAPON_SCALE = 1.7;
-  var HH_WEAPON_POSE = {
-    south:     { rot: 113, flip: false },
-    southeast: { rot: 113, flip: false },
-    east:      { rot: 113, flip: false },
-    northeast: { rot: 113, flip: false },
-    north:     { rot: 128, flip: false },
-    northwest: { rot: -113, flip: true },
-    west:      { rot: -113, flip: true },
-    southwest: { rot: -113, flip: true }
+  //
+  // Đợt GRIPFIX 2026-11-09: người chơi phán "tay nhân vật phải NẮM kiếm" —
+  // bản JOYFIX mới đặt icon cạnh tay nên kiếm trông như dán/lơ lửng. Bản này
+  // đo lại toàn bộ theo số thật (tools/build-grip-data.py):
+  //  - Điểm nắm TRONG icon tính riêng từng món (giữa chuôi thật, không phải
+  //    đốc kiếm như bản cũ) + góc trục lưỡi riêng từng icon; góc xoay suy ra
+  //    từ góc lưỡi đích theo hướng mặt trừ góc trục icon — cổ tay, chuôi và
+  //    lưỡi thành một đường thẳng, lưỡi chúc xuống theo hướng nhân vật.
+  //  - Tỉ lệ icon 1.0 (bản cũ 1.7 làm chuôi to gấp đôi nắm tay thật ~7px).
+  //  - Vị trí nắm tay ĐO TRÊN TỪNG KHUNG (assets/chars/hanhan-gen-grip-v1.json:
+  //    tâm + hộp nắm tay phải/chắp sau lưng cho đủ 112 khung idle+walk) —
+  //    kiếm bám tay khi tay vung theo bước đi, không trượt như neo tĩnh cũ;
+  //    khung nào tay bị áo choàng che hẳn thì ẩn kiếm (đúng chiều sâu).
+  //  - Sau khi vẽ kiếm, vẽ LẠI vùng nắm tay của chính khung nhân vật lên
+  //    trên chuôi: nắm tay che đoạn chuôi nằm trong tay nên đọc đúng là tay
+  //    đang nắm chặt chuôi ( đốc + lưỡi ló hai đầu nắm tay).
+  // Thiếu dữ liệu grip (nạp hỏng) thì lùi về neo tĩnh của JOYFIX với toán
+  // nắm mới — hành vi an toàn, không vỡ hình.
+  var HH_WEAPON_SCALE = 1.0;
+  var HH_WEAPON_ICON = {
+    'kiem-de-tu': { gx: 7.6, gy: 25.5, axis: -49.9 },
+    'kiem-sat': { gx: 5.9, gy: 24.3, axis: -42.2 },
+    'kiem-go': { gx: 6.7, gy: 25.3, axis: -47.4 },
+    'dao-cui-cu': { gx: 6.2, gy: 23.4, axis: -38.9 },
+    'gay-co-thu': { gx: 15.7, gy: 15.0, axis: -48.6 }
+  };
+  var HH_WEAPON_ICON_DEFAULT = { gx: 8, gy: 25, axis: -47 };
+  // Góc lưỡi đích trên màn hình theo hướng mặt (độ, 0 = hướng đông, chiều
+  // kim đồng hồ): lưỡi treo chúc xuống, hơi nghiêng về phía nhân vật nhìn.
+  var HH_WEAPON_BLADE = {
+    south: 72, southeast: 62, east: 68, northeast: 78,
+    north: 84, northwest: 96, west: 112, southwest: 118
   };
   var HH_HAND_GEN_IDLE = {
     south: [0.14, 0.70], southeast: [0.22, 0.71], east: [0.42, 0.72], northeast: [0.47, 0.68],
@@ -238,25 +256,67 @@
     south: [0.27, 0.62], southeast: [0.30, 0.62], east: [0.46, 0.62], northeast: [0.50, 0.58],
     north: [0.50, 0.58], northwest: [0.50, 0.58], west: [0.54, 0.62], southwest: [0.73, 0.62]
   };
+  var hanhanGrip = null; // Đợt GRIPFIX: dữ liệu nắm tay đo từng khung
 
-  function drawHeldWeapon(dest, dirName, handTable) {
+  function drawHeldWeapon(dest, dirName, handTable, gripCtx) {
     if (!dest || !player || !player.equipment || !player.equipment.weapon) return;
     var sheet = assets.icons_sheet;
     if (!sheet || !sheet.complete || !sheet.naturalWidth) return;
     var def = (monstersAPI && monstersAPI.ITEM_DEFS) ? monstersAPI.ITEM_DEFS[player.equipment.weapon] : null;
     if (!def || typeof def.iconCol !== 'number' || typeof def.iconRow !== 'number') return;
-    var anchor = handTable ? handTable[dirName] : null;
-    var pose = HH_WEAPON_POSE[dirName];
-    if (!anchor || !pose) return;
-    var hx = dest.x + anchor[0] * dest.w;
-    var hy = dest.y + anchor[1] * dest.h;
+    var icon = HH_WEAPON_ICON[player.equipment.weapon] || HH_WEAPON_ICON_DEFAULT;
+    var blade = HH_WEAPON_BLADE[dirName];
+    if (typeof blade !== 'number') return;
+    var rot = (blade - icon.axis) * Math.PI / 180;
     var s = HH_WEAPON_SCALE;
+
+    // Đường GRIPFIX: có dữ liệu nắm của đúng khung đang vẽ.
+    var entry = null;
+    if (gripCtx && hanhanGrip && hanhanGrip.gen && gripCtx.f) {
+      var per = hanhanGrip.gen[gripCtx.mode] && hanhanGrip.gen[gripCtx.mode][dirName];
+      if (per && per.length) entry = per[gripCtx.frameIdx % per.length];
+    }
+    if (entry) {
+      if (entry.hidden) return; // tay bị che hẳn trong khung này -> kiếm cũng khuất
+      if (!(entry.cx > 0) || !(gripCtx.f.w > 0)) entry = null;
+    }
+    if (entry) {
+      var k = dest.w / gripCtx.f.w;
+      var hx = dest.x + entry.cx * k;
+      var hy = dest.y + entry.cy * k;
+      ctx.save();
+      ctx.translate(hx, hy);
+      ctx.rotate(rot);
+      ctx.drawImage(sheet, def.iconCol * 32, def.iconRow * 32, 32, 32,
+        -icon.gx * s, -icon.gy * s, 32 * s, 32 * s);
+      ctx.restore();
+      // Vá nắm tay: vẽ lại đúng vùng nắm tay của khung nhân vật lên trên
+      // chuôi — nắm tay che đoạn chuôi trong tay, đọc thành nắm thật.
+      var f = gripCtx.f;
+      var pad = 2;
+      var sx = Math.max(f.x, f.x + entry.x0 - pad);
+      var sy = Math.max(f.y, f.y + entry.y0 - pad);
+      var sx2 = Math.min(f.x + f.w, f.x + entry.x1 + pad);
+      var sy2 = Math.min(f.y + f.h, f.y + entry.y1 + pad);
+      if (sx2 > sx && sy2 > sy) {
+        ctx.drawImage(gripCtx.img, sx, sy, sx2 - sx, sy2 - sy,
+          dest.x + (sx - f.x) * k, dest.y + (sy - f.y) * k,
+          (sx2 - sx) * k, (sy2 - sy) * k);
+      }
+      return;
+    }
+
+    // Đường dự phòng (sheet cũ / thiếu dữ liệu grip): neo tĩnh JOYFIX nhưng
+    // dùng điểm nắm trong icon + góc lưỡi + tỉ lệ của GRIPFIX.
+    var anchor = handTable ? handTable[dirName] : null;
+    if (!anchor) return;
+    var ax = dest.x + anchor[0] * dest.w;
+    var ay = dest.y + anchor[1] * dest.h;
     ctx.save();
-    ctx.translate(hx, hy);
-    ctx.rotate(pose.rot * Math.PI / 180);
-    ctx.scale(pose.flip ? -s : s, s);
+    ctx.translate(ax, ay);
+    ctx.rotate(rot);
     ctx.drawImage(sheet, def.iconCol * 32, def.iconRow * 32, 32, 32,
-      -HH_WEAPON_GRIP.x, -HH_WEAPON_GRIP.y, 32, 32);
+      -icon.gx * s, -icon.gy * s, 32 * s, 32 * s);
     ctx.restore();
   }
 
@@ -439,6 +499,11 @@
         }).then(function (j) {
           var idx = buildGenHatIndex(j);
           if (idx) hanhanGenHat = idx;
+        }).catch(function () {});
+        fetch('assets/chars/hanhan-gen-grip-v1.json').then(function (r) {
+          return r && r.ok ? r.json() : null;
+        }).then(function (j) {
+          if (j && j.gen && j.gen.idle && j.gen.walk) hanhanGrip = j;
         }).catch(function () {});
       } catch (e) {}
     }
@@ -3934,8 +3999,14 @@
         }
 
         // Đợt JOYFIX: kiếm trang bị cầm tay trên bộ sinh hình (vẽ ngay sau thân)
+        // Đợt GRIPFIX: truyền kèm khung đang vẽ để kiếm bám nắm tay đo thật
+        // của đúng khung đó + vá nắm tay phủ lên chuôi sau khi vẽ kiếm.
         if (genDrawn) {
-          drawHeldWeapon(genFrameDest, genDirName, playerMoving ? HH_HAND_GEN_WALK : HH_HAND_GEN_IDLE);
+          drawHeldWeapon(genFrameDest, genDirName,
+            playerMoving ? HH_HAND_GEN_WALK : HH_HAND_GEN_IDLE,
+            playerMoving
+              ? { mode: 'walk', frameIdx: genWalkFrame, img: assets.hanhan_gen_walk, f: genFrameObj }
+              : { mode: 'idle', frameIdx: genIdleFrame, img: assets.hanhan_gen_idle, f: genFrameObj });
         }
 
         var walkSheet = assets.hanhan_walk;
