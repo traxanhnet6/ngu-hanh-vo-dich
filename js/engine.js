@@ -156,6 +156,7 @@
   var HH_GEN_DIRS = ['south', 'southeast', 'east', 'northeast', 'north', 'northwest', 'west', 'southwest'];
   var HH_GEN_DISPLAY_H = 112; // chiều cao nhân vật trên màn hình — khớp cỡ hình cũ (~111px đo thật)
   var hanhanGenData = { idle: null, walk: null };
+  var hanhanGenHat = null; // Đợt HATLAYER: dữ liệu lớp nón cho bộ sinh hình
 
   function buildGenIndex(json) {
     if (!json || !Array.isArray(json.frames)) return null;
@@ -195,6 +196,42 @@
     var k = HH_GEN_DISPLAY_H / (data.charH * data.scaleFromMaster);
     ctx.drawImage(img, f.x, f.y, f.w, f.h,
       player.x - f.px * k, player.y - f.py * k, f.w * k, f.h * k);
+    return f;
+  }
+
+  function buildGenHatIndex(json) {
+    if (!json || !json.sprites || !json.frames || !json.size) return null;
+    if (!(json.size.w > 0 && json.size.h > 0)) return null;
+    return { w: json.size.w, h: json.size.h, sprites: json.sprites, frames: json.frames };
+  }
+
+  // Đợt HATLAYER: vẽ lớp nón trang bị phủ lên khung sinh hình VỪA vẽ.
+  // Sprite nón trích từ các dải "có nón" của chính đợt sản xuất (không
+  // sinh hình mới); vị trí neo theo ĐẦU của đúng khung đang vẽ: gói dữ
+  // liệu mang sẵn, cho từng khung, điểm neo đầu (ax, ay — tọa độ cục bộ
+  // của khung nhân vật) đo thật từ hình khung, và điểm ngồi của nón
+  // (seat) trong sprite. Cùng hệ số tỉ lệ k và cùng neo pivot với khung
+  // nhân vật nên nón bám đầu ở mọi hướng/khung; thiếu dữ liệu thì bỏ qua
+  // lặng lẽ (đầu trần như hành vi đã duyệt của CHARINTEG).
+  function drawGenHat(img, mode, dirName, frameIdx, f, data) {
+    var hat = hanhanGenHat;
+    if (!hat || !img || !img.complete || !f || !data) return false;
+    if (img.naturalWidth !== hat.w || img.naturalHeight !== hat.h) return false;
+    var per = hat.frames[mode] && hat.frames[mode][dirName];
+    if (!per || !per.length) return false;
+    var e = per[frameIdx % per.length];
+    if (!e) return false;
+    var spr = hat.sprites[e.sprite];
+    if (!spr || !spr.rect || !spr.seat) return false;
+    var r = spr.rect;
+    if (!(r.w > 0 && r.h > 0) || r.x < 0 || r.y < 0 ||
+        r.x + r.w > img.naturalWidth || r.y + r.h > img.naturalHeight) return false;
+    if (!isFinite(e.ax) || !isFinite(e.ay) || !isFinite(spr.seat.x) || !isFinite(spr.seat.y)) return false;
+    var k = HH_GEN_DISPLAY_H / (data.charH * data.scaleFromMaster);
+    ctx.drawImage(img, r.x, r.y, r.w, r.h,
+      player.x - f.px * k + (e.ax - spr.seat.x) * k,
+      player.y - f.py * k + (e.ay - spr.seat.y) * k,
+      r.w * k, r.h * k);
     return true;
   }
 
@@ -209,6 +246,7 @@
       'assets/chars/hanhan-walk.png',
       'assets/chars/hanhan-gen-idle-v1.png',
       'assets/chars/hanhan-gen-walk-v1.png',
+      'assets/chars/hanhan-gen-hat-v1.png',
       'assets/chars/hanhan-face.png',
       'assets/chars/thaotinh-sheet.png',
       'assets/chars/nhenxanh-sheet.png',
@@ -294,6 +332,7 @@
         if (url === 'assets/chars/hanhan-face.png') assets['hanhan_face'] = img;
         if (url === 'assets/chars/hanhan-gen-idle-v1.png') assets['hanhan_gen_idle'] = img;
         if (url === 'assets/chars/hanhan-gen-walk-v1.png') assets['hanhan_gen_walk'] = img;
+        if (url === 'assets/chars/hanhan-gen-hat-v1.png') assets['hanhan_gen_hat'] = img;
         if (url === 'assets/chars/thaotinh-sheet.png') assets['thaotinh_sheet'] = img;
         if (url === 'assets/chars/nhenxanh-sheet.png') assets['nhenxanh_sheet'] = img;
         if (url === 'assets/chars/cothuye-sheet.png') assets['cothuye_sheet'] = img;
@@ -333,6 +372,12 @@
         }).then(function (j) {
           var idx = buildGenIndex(j);
           if (idx) hanhanGenData.walk = idx;
+        }).catch(function () {});
+        fetch('assets/chars/hanhan-gen-hat-v1.json').then(function (r) {
+          return r && r.ok ? r.json() : null;
+        }).then(function (j) {
+          var idx = buildGenHatIndex(j);
+          if (idx) hanhanGenHat = idx;
         }).catch(function () {});
       } catch (e) {}
     }
@@ -3776,21 +3821,31 @@
         // Walk chọn khung theo quãng đường đã đi (chân khớp đất như luật
         // đợt 3), đứng yên thì diễn Idle theo nhịp fps của gói khung. Bộ
         // chưa sẵn sàng (thiếu JSON, atlas chưa nạp hoặc sai khổ) thì lùi
-        // nguyên về đường sheet cũ ở dưới. Lớp nón trang bị chỉ phủ trên
-        // đường cũ (sheet nón căn theo lưới cũ; gói sinh hình có nhóm nón
-        // riêng chưa thuộc đợt này).
+        // nguyên về đường sheet cũ ở dưới.
+        // Đợt HATLAYER: khi đang trang bị nón (đúng điều kiện isHat của
+        // đường cũ) thì phủ thêm lớp nón của bộ sinh hình ngay trên khung
+        // vừa vẽ; chưa trang bị thì đầu trần như thiết kế gốc.
         var genDirName = HH_GEN_DIRS[(player.dir || 0) % 8];
         var genDrawn = false;
+        var genFrameObj = null;
         if (playerMoving) {
           var genWalkFrames = hanhanGenData.walk && hanhanGenData.walk.dirs[genDirName];
           var genWalkCount = genWalkFrames ? genWalkFrames.length : 8;
           var genWalkFrame = Math.floor(walkDist / WALK_CYCLE_DIST * genWalkCount) % genWalkCount;
-          genDrawn = drawGenFrame(assets.hanhan_gen_walk, hanhanGenData.walk, genDirName, genWalkFrame);
+          genFrameObj = drawGenFrame(assets.hanhan_gen_walk, hanhanGenData.walk, genDirName, genWalkFrame);
+          genDrawn = !!genFrameObj;
+          if (genDrawn && isHat) {
+            drawGenHat(assets.hanhan_gen_hat, 'walk', genDirName, genWalkFrame, genFrameObj, hanhanGenData.walk);
+          }
         } else {
           var genIdleFrames = hanhanGenData.idle && hanhanGenData.idle.dirs[genDirName];
           var genIdleFps = (genIdleFrames && genIdleFrames[0] && genIdleFrames[0].fps) || 6;
           var genIdleFrame = Math.floor(performance.now() / 1000 * genIdleFps);
-          genDrawn = drawGenFrame(assets.hanhan_gen_idle, hanhanGenData.idle, genDirName, genIdleFrame);
+          genFrameObj = drawGenFrame(assets.hanhan_gen_idle, hanhanGenData.idle, genDirName, genIdleFrame);
+          genDrawn = !!genFrameObj;
+          if (genDrawn && isHat) {
+            drawGenHat(assets.hanhan_gen_hat, 'idle', genDirName, genIdleFrame, genFrameObj, hanhanGenData.idle);
+          }
         }
 
         var walkSheet = assets.hanhan_walk;
