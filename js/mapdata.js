@@ -834,6 +834,16 @@
       action: 'notice_board'
     },
     {
+      // Đợt DANPHONG: Lò Đan của Đan Phòng đặt ở khu dược, cạnh Vườn Linh Dược
+      // và Dược Sư (745,610) — điểm đứng (850,560) đã kiểm đi lại được.
+      id: 'interact_dan_phong',
+      label: 'Đan Phòng',
+      x: 850,
+      y: 560,
+      radius: 50,
+      action: 'dan_phong'
+    },
+    {
       id: 'interact_rest_inn',
       label: 'Nhà Trọ',
       x: 430,

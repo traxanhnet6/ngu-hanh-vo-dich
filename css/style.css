@@ -2648,3 +2648,188 @@ body.photo-mode #toast-container { visibility: hidden; }
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* ===== ĐAN PHÒNG + BẢNG NHIỆM VỤ THU THẬP (đợt DANPHONG) ===== */
+.danphong-box {
+  width: 600px;
+  max-width: 95vw;
+  max-height: 92vh;
+  position: relative;
+  background: rgba(22, 20, 16, 0.97);
+  border: 2px solid #a8893a;
+  display: flex;
+  flex-direction: column;
+}
+
+.danphong-header-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.danphong-sub-badge {
+  display: inline-block;
+  background: #3e2e1a;
+  border: 1px solid #a8893a;
+  color: #ffd978;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.danphong-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 10px 14px 0;
+}
+
+.danphong-tab {
+  flex: 1;
+  opacity: 0.65;
+}
+
+.danphong-tab.active {
+  opacity: 1;
+  outline: 2px solid #ffd978;
+  outline-offset: -2px;
+}
+
+.danphong-body {
+  padding: 12px 14px 16px;
+  overflow-y: auto;
+}
+
+.danphong-intro {
+  font-size: 12px;
+  color: #b7b09d;
+  font-style: italic;
+  margin-bottom: 12px;
+  line-height: 1.45;
+}
+
+.danphong-card {
+  background: linear-gradient(180deg, #282015, #16110a);
+  border: 1.5px solid #6b5329;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+
+.danphong-card.locked {
+  opacity: 0.62;
+}
+
+.danphong-card-active {
+  border-color: #ffd978;
+  box-shadow: 0 0 10px rgba(212, 163, 62, 0.3);
+}
+
+.danphong-card-trucco {
+  border-color: #8a6d2f;
+  background: linear-gradient(180deg, #2e2412, #1a1408);
+}
+
+.danphong-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.danphong-card-icon {
+  flex: 0 0 auto;
+  image-rendering: pixelated;
+}
+
+.danphong-card-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.danphong-card-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffe9a8;
+}
+
+.danphong-card-sub {
+  font-size: 12px;
+  color: #cbd5e1;
+}
+
+.danphong-mats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 6px 0;
+}
+
+.danphong-mat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.danphong-mat-icon {
+  flex: 0 0 auto;
+  image-rendering: pixelated;
+}
+
+.danphong-mat-name {
+  color: #e5e0cf;
+  flex: 1;
+}
+
+.danphong-mat-count {
+  font-weight: 700;
+}
+
+.danphong-mat-count.enough {
+  color: #7ce898;
+}
+
+.danphong-mat-count.lacking {
+  color: #ff9a5c;
+}
+
+.danphong-source {
+  font-size: 11.5px;
+  color: #9d9682;
+  line-height: 1.4;
+  margin: 4px 0 8px;
+}
+
+.danphong-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.danphong-btn {
+  min-width: 110px;
+}
+
+.danphong-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.danphong-btn-danger {
+  filter: hue-rotate(-18deg) saturate(0.85);
+}
+
+.danphong-lock-note {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #ffb35c;
+}
+
+.danphong-miss-note {
+  font-size: 12px;
+  color: #9d9682;
+}

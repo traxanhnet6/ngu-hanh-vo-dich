@@ -52,6 +52,9 @@
     if (typeof window !== 'undefined' && window.GameLinhDien && window.GameLinhDien.attach) {
       window.GameLinhDien.attach(playerObj);
     }
+    if (typeof window !== 'undefined' && window.GameDanPhong && window.GameDanPhong.attach) {
+      window.GameDanPhong.attach(playerObj);
+    }
   }
 
   function updateMinimapBackground() {
@@ -2059,6 +2062,30 @@
       }
       closeDialogue();
     });
+    // Đợt DANPHONG: Bảng Nhiệm Vụ Thu Thập + trả nhiệm vụ ngay tại Chấp Sự
+    var dp = (typeof window !== 'undefined' && window.GameDanPhong) ? window.GameDanPhong : null;
+    if (dp && player && player.quests && (player.quests.sectStage || 0) >= 4) {
+      var activeDef = dp.activeQuest ? dp.activeQuest(player) : null;
+      if (activeDef) {
+        var prog = dp.questProgress(player, activeDef);
+        if (prog && prog.ready) {
+          mkBtn('Trả Nhiệm Vụ Thu Thập (đã đủ ' + prog.need + ' vật phẩm)', function () {
+            var res = dp.turnInQuest(player);
+            if (res && res.msg) showToast(res.msg);
+            refreshHUD();
+            closeDialogue();
+          });
+        }
+      }
+      mkBtn('Bảng Nhiệm Vụ Thu Thập', function () {
+        closeDialogue();
+        if (dp.openPanel) dp.openPanel('board');
+      });
+      mkBtn('Vào Đan Phòng (Luyện Đan)', function () {
+        closeDialogue();
+        if (dp.openPanel) dp.openPanel('refine');
+      });
+    }
     mkBtn('Rời đi', function () { closeDialogue(); });
   }
 

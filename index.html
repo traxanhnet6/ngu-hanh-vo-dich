@@ -872,6 +872,26 @@
     </div>
   </div>
 
+  <!-- Modal Đan Phòng + Bảng Nhiệm Vụ Thu Thập (Đợt DANPHONG) -->
+  <div id="danphong-modal" class="modal-overlay hidden">
+    <div class="panel modal-box danphong-box">
+      <div class="modal-header">
+        <div class="danphong-header-title-wrap">
+          <h2 class="modal-title">ĐAN PHÒNG TÔNG MÔN</h2>
+          <span class="danphong-sub-badge">Lò đan khu dược — luyện đan bằng nguyên liệu cày được</span>
+        </div>
+        <button id="close-danphong-modal" class="btn-close" type="button" aria-label="Đóng">×</button>
+      </div>
+      <div class="danphong-tabs">
+        <button id="danphong-tab-refine" class="btn wood danphong-tab active" type="button">Luyện Đan</button>
+        <button id="danphong-tab-board" class="btn wood danphong-tab" type="button">Nhiệm Vụ Thu Thập</button>
+      </div>
+      <div id="danphong-body" class="danphong-body">
+        <!-- Nội dung hai thẻ render bởi GameDanPhong -->
+      </div>
+    </div>
+  </div>
+
   <!-- Lớp phủ Hướng Dẫn Tân Thủ (Tutorial Overlay) -->
   <div id="tutorial-overlay" class="tutorial-overlay hidden">
     <div id="tutorial-spotlight" class="tutorial-spotlight"></div>
@@ -901,6 +921,7 @@
   <script src="js/tutorial.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/linhdien.js"></script>
+  <script src="js/danphong.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

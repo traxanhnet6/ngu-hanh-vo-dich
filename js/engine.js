@@ -1160,6 +1160,12 @@
           window.GameUI.showToast('Bảng Tông Môn: Sự kiện bí cảnh sẽ mở ở đợt sau.');
         }
         break;
+      case 'dan_phong':
+        // Đợt DANPHONG: Lò Đan ở khu dược Tông Môn — mở bảng Đan Phòng (thẻ Luyện Đan)
+        if (typeof window !== 'undefined' && window.GameDanPhong && window.GameDanPhong.openPanel) {
+          window.GameDanPhong.openPanel('refine');
+        }
+        break;
       case 'practice_dummy':
         var stats = stateAPI ? stateAPI.deriveStats(player.paths, player.equipment) : { attack: 10 };
         var dmg = Math.round(stats.attack * (0.9 + Math.random() * 0.2));
@@ -1419,6 +1425,19 @@
     }
     if (sectStage === 3) {
       return { stepId: 'orders', stage: 3, mapId: 'tong-mon', kind: 'npc', npcId: 'npc_chapsu' };
+    }
+
+    // Đợt DANPHONG: nhiệm vụ BẢNG THU THẬP đang được theo dõi — dẫn đường
+    // (mũi tên, Tự Tìm Đường, bảng theo dõi) ưu tiên chỉ tới mục tiêu của
+    // nhiệm vụ bảng. Chuỗi chính không đổi bước/ngưỡng/thoại; khi nhiệm vụ
+    // bảng không còn được theo dõi (đã trả, đã hủy, hoặc tắt theo dõi),
+    // hàm này trả null và dẫn đường quay về chuỗi chính ngay bên dưới.
+    var dpAPI = (typeof window !== 'undefined' && window.GameDanPhong)
+      ? window.GameDanPhong
+      : (typeof global !== 'undefined' && global.GameDanPhong ? global.GameDanPhong : null);
+    if (dpAPI && dpAPI.getTrackedTargetInfo) {
+      var boardTarget = dpAPI.getTrackedTargetInfo(player);
+      if (boardTarget) return boardTarget;
     }
 
     // Khi sectStage >= 4: Chuỗi nhiệm vụ chính (Đợt 6 - Việc 1)
