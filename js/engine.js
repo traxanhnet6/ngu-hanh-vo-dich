@@ -3091,7 +3091,20 @@
 
               var nImg = assets[npc.asset] || (npc.id === 'npc_linhnhi' ? assets.linhnhi : null);
               if (nImg && nImg.complete) {
-                ctx.drawImage(nImg, npc.x, npc.y, npc.w, npc.h);
+                // NPCFIX 2026-11-09 "NPC đứng bị vỡ hình": bề rộng vẽ suy từ tỉ lệ của
+                // chính bitmap ĐÃ NẠP (naturalWidth/naturalHeight), neo tâm tại feetX,
+                // đáy giữ nguyên feetY. GitHub Pages phát Cache-Control max-age=600:
+                // sau mỗi đợt deploy đổi khổ ảnh, máy người chơi có thể còn giữ ảnh
+                // phiên bản cũ khác tỉ lệ với mapdata mới trong cửa sổ cache — vẽ ép
+                // vào hộp (w,h) của dữ liệu sẽ bóp NPC tới 31% (đợt 6B). Vẽ theo tỉ
+                // lệ bitmap thật thì mọi cặp (dữ liệu, ảnh) đều đúng hình.
+                var npcDrawW = npc.w;
+                var npcDrawX = npc.x;
+                if (nImg.naturalWidth > 0 && nImg.naturalHeight > 0) {
+                  npcDrawW = npc.h * nImg.naturalWidth / nImg.naturalHeight;
+                  npcDrawX = (typeof npc.feetX === 'number' ? npc.feetX : npc.x + npc.w / 2) - npcDrawW / 2;
+                }
+                ctx.drawImage(nImg, npcDrawX, npc.y, npcDrawW, npc.h);
               }
 
               var qTarget = getQuestTargetInfo();

@@ -1860,6 +1860,22 @@
       var portraitW = Math.max(68, Math.round(portraitH * natW / natH));
       portraitEl.style.backgroundSize = portraitW + 'px ' + portraitH + 'px';
       portraitEl.style.backgroundPosition = Math.round(-(portraitW - 68) / 2) + 'px -12px';
+      // NPCFIX 2026-11-09: chốt lại bề rộng theo bitmap THẬT khi ảnh nạp xong.
+      // Cùng gốc lỗi "vỡ hình" ngoài thế giới: cache Pages còn giữ ảnh cũ khác khổ
+      // với dữ liệu mới thì tỉ lệ tính từ originalW/originalH vẫn bóp chân dung.
+      portraitEl.setAttribute('data-portrait-asset', npc.asset);
+      (function (el, asset, ph) {
+        var probe = new Image();
+        probe.onload = function () {
+          if (el.getAttribute('data-portrait-asset') !== asset) return;
+          if (probe.naturalWidth > 0 && probe.naturalHeight > 0) {
+            var pw = Math.max(68, Math.round(ph * probe.naturalWidth / probe.naturalHeight));
+            el.style.backgroundSize = pw + 'px ' + ph + 'px';
+            el.style.backgroundPosition = Math.round(-(pw - 68) / 2) + 'px -12px';
+          }
+        };
+        probe.src = asset;
+      })(portraitEl, npc.asset, portraitH);
     }
 
     if (dialogueBox) dialogueBox.classList.remove('hidden');
