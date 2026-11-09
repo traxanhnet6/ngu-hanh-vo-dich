@@ -2228,3 +2228,47 @@ body.photo-mode .quest-toggle-btn,
 body.photo-mode #minimap-wrap,
 body.photo-mode .modal-overlay,
 body.photo-mode #toast-container { visibility: hidden; }
+
+/* ===== Đợt K2: Sổ Chiêu trong Bảng Nhân Vật + đĩa hệ cho chiêu mới ===== */
+.skill-book-wrap { margin-top: 14px; }
+.sb-group { margin-bottom: 10px; }
+.sb-group-title {
+  font-weight: 700; color: #f3d74e; margin: 8px 0 6px;
+  border-bottom: 1px solid rgba(243, 215, 78, 0.25); padding-bottom: 3px;
+}
+.sb-row {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 7px 8px; border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04); margin-bottom: 6px;
+}
+.sb-row.sb-locked { opacity: 0.62; }
+.sb-chip {
+  flex: 0 0 auto; width: 18px; height: 18px; border-radius: 50%;
+  border: 2px solid #888; margin-top: 2px;
+}
+.sb-main { flex: 1 1 auto; min-width: 0; }
+.sb-name { font-weight: 700; }
+.sb-prov { font-weight: 400; font-size: 11px; color: #ffb35c; }
+.sb-meta { font-size: 12px; color: #cfe3c0; }
+.sb-desc { font-size: 12px; color: #aab; margin-top: 2px; }
+.sb-state { flex: 0 0 auto; text-align: right; font-size: 12px; }
+.sb-open { color: #8be26b; font-weight: 700; }
+.sb-key { color: #f3d74e; }
+.sb-lock { color: #ffb35c; }
+.sb-cast {
+  display: inline-block; margin-top: 4px; padding: 4px 10px;
+  border-radius: 6px; border: 1px solid #b98a2f; cursor: pointer;
+  background: linear-gradient(180deg, #6d5320, #4a3a14); color: #ffe9a8;
+  font-size: 12px; font-weight: 700;
+}
+.sb-cast:active { transform: translateY(1px); }
+
+/* Đĩa biểu tượng hệ cho các chiêu K2 (vẽ bằng gradient — không nạp tệp
+   ngoài; hai chiêu chứng Phi Diệp/Dây Leo giữ nguyên lớp ảnh của chúng). */
+.skill-elem-kim { background: radial-gradient(circle at 35% 35%, #ffffff, #c8d2e0 55%, #5f7086); }
+.skill-elem-moc { background: radial-gradient(circle at 35% 35%, #eaffea, #8be26b 55%, #2f6b1e); }
+.skill-elem-thuy { background: radial-gradient(circle at 35% 35%, #eaf7ff, #5cc8ff 55%, #14507a); }
+.skill-elem-hoa { background: radial-gradient(circle at 35% 35%, #fff3e0, #ffb35c 55%, #8a2f14); }
+.skill-elem-tho { background: radial-gradient(circle at 35% 35%, #fff6d8, #e8c56b 55%, #6d5320); }
+.skill-elem-nguhanh { background: conic-gradient(#c8d2e0, #5cc8ff, #8be26b, #ffb35c, #e8c56b, #c8d2e0); }
+.skill-elem-amduong { background: linear-gradient(90deg, #f5f5f5 50%, #2b2b33 50%); }

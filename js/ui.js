@@ -1488,6 +1488,104 @@
     if (tvEl) tvEl.textContent = farmTuVi + ' / 65';
     if (ltEl) ltEl.textContent = farmLt + ' / 300';
     if (rvEl) rvEl.textContent = revival + ' / 5';
+
+    // Đợt K2: tỉ lệ Hài Hòa HH + trạng thái Liên Hoàn (chỉ hiển thị)
+    var hhEl = document.getElementById('char-panel-hh');
+    var lhEl = document.getElementById('char-panel-lienhoan');
+    if (stateAPI && stateAPI.harmonyRatio) {
+      var hhNow = stateAPI.harmonyRatio(player.paths);
+      if (hhEl) hhEl.textContent = Math.round(hhNow * 100) + '%';
+      if (lhEl) {
+        var lhState = (window.GameEngine && window.GameEngine.getLienHoan) ? window.GameEngine.getLienHoan() : null;
+        if (hhNow >= 0.8) {
+          lhEl.textContent = 'Đang kích hoạt' + (lhState && lhState.stacks > 0 ? ' — chuỗi ×' + Math.min(lhState.stacks, 5) : '');
+        } else {
+          lhEl.textContent = 'Chưa kích hoạt (cần HH ≥ 80%)';
+        }
+      }
+    }
+
+    renderSkillBook();
+  }
+
+  /**
+   * Đợt K2 — Sổ Chiêu: dựng thẳng từ registry kỹ năng (nguồn sự thật duy
+   * nhất). Mọi họ đều hiện; chiêu chưa mở hiện rõ điều kiện mở; chiêu đã
+   * mở hiện phím trong đội hình và nút tung chiêu (đi qua đúng một đường
+   * engine.castSkill như phím số).
+   */
+  function renderSkillBook() {
+    var host = document.getElementById('skill-book');
+    if (!host) return;
+    var SK = (typeof window !== 'undefined') ? window.GameSkills : null;
+    if (!SK || !player) { host.innerHTML = ''; return; }
+    var pathNames = { kim: 'Kim', moc: 'Mộc', thuy: 'Thủy', hoa: 'Hỏa', tho: 'Thổ' };
+    var groups = [
+      { fam: 'kim', title: 'Họ Kim' },
+      { fam: 'moc', title: 'Họ Mộc' },
+      { fam: 'thuy', title: 'Họ Thủy' },
+      { fam: 'hoa', title: 'Họ Hỏa' },
+      { fam: 'tho', title: 'Họ Thổ' },
+      { fam: 'hop-kich', title: 'Họ Hợp Kích' },
+      { fam: 'vo-hoc', title: 'Võ Học Tay Không' },
+      { fam: 'co-ban', title: 'Cơ Bản' }
+    ];
+    var loadout = SK.getLoadout();
+    var all = SK.listSkills();
+    var html = '';
+    for (var g = 0; g < groups.length; g++) {
+      var fam = groups[g].fam;
+      var inFam = [];
+      for (var a = 0; a < all.length; a++) if (all[a].family === fam) inFam.push(all[a]);
+      if (!inFam.length) continue;
+      html += '<div class="sb-group"><div class="sb-group-title">' + groups[g].title + '</div>';
+      for (var s = 0; s < inFam.length; s++) {
+        var d = inFam[s];
+        var lang = SK.elementLang(SK.elementOf(d));
+        var unlocked = SK.isUnlocked(d, player);
+        var slotIdx = -1;
+        for (var l = 0; l < loadout.length; l++) if (loadout[l].id === d.id) slotIdx = l;
+        var meta = [];
+        if (d.thuc) meta.push('Thức ' + d.thuc);
+        if (d.cost && d.cost.amount) meta.push('Tốn ' + d.cost.amount + ' linh lực');
+        if (typeof d.cooldown === 'number') meta.push('Hồi ' + String(d.cooldown).replace('.', ',') + ' giây');
+        if (d.range) meta.push('Tầm ' + d.range);
+        var stateHtml;
+        if (unlocked) {
+          stateHtml = '<span class="sb-open">Đã mở</span>' +
+            (slotIdx >= 0 ? ' <span class="sb-key">Phím ' + (slotIdx + 1) + '</span>' : '') +
+            (d.delivery !== 'melee' ? ' <button type="button" class="sb-cast" data-skill="' + d.id + '">Tung chiêu</button>' : '');
+        } else if (d.unlock && d.unlock.type === 'harmony') {
+          var hhCur = SK.harmonyRatioOf(player.paths);
+          stateHtml = '<span class="sb-lock">Khóa — cần Hài Hòa ≥ ' + String(d.unlock.min).replace('.', ',') +
+            ' (hiện tại ' + String(Math.round(hhCur * 100) / 100).replace('.', ',') + ')</span>';
+        } else if (d.unlock && d.unlock.type === 'pathTuVi') {
+          var cur = (player.paths && player.paths[d.unlock.path]) ? (player.paths[d.unlock.path].tuVi || 0) : 0;
+          stateHtml = '<span class="sb-lock">Khóa — cần tu vi ' + (pathNames[d.unlock.path] || d.unlock.path) +
+            ' ≥ ' + d.unlock.min + ' (hiện tại ' + cur + ')</span>';
+        } else {
+          stateHtml = '<span class="sb-lock">Khóa</span>';
+        }
+        html += '<div class="sb-row' + (unlocked ? '' : ' sb-locked') + '">' +
+          '<span class="sb-chip" style="background:' + lang.glow + ';border-color:' + lang.deep + '"></span>' +
+          '<div class="sb-main"><div class="sb-name">' + d.name +
+          (d.provisional ? ' <span class="sb-prov">số tạm theo khuôn chiêu chứng</span>' : '') + '</div>' +
+          '<div class="sb-meta">' + meta.join(' · ') + '</div>' +
+          '<div class="sb-desc">' + (d.desc || '') + '</div></div>' +
+          '<div class="sb-state">' + stateHtml + '</div></div>';
+      }
+      html += '</div>';
+    }
+    host.innerHTML = html;
+    var btns = host.querySelectorAll('.sb-cast');
+    for (var b = 0; b < btns.length; b++) {
+      btns[b].addEventListener('click', function () {
+        var id = this.getAttribute('data-skill');
+        var panel = document.getElementById('char-panel');
+        if (panel) panel.classList.add('hidden');
+        if (window.GameEngine && window.GameEngine.castSkill) window.GameEngine.castSkill(id);
+      });
+    }
   }
 
   // Đợt 6: tiến độ dạng x/y cho từng bước chuỗi chính (đọc thẳng trạng thái người chơi)

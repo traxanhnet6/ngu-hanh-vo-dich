@@ -1,0 +1,729 @@
+{
+ "meta": {
+  "size": [
+   4096,
+   4096
+  ],
+  "frame_size": [
+   512,
+   512
+  ],
+  "pivot": [
+   256,
+   476
+  ],
+  "pivot_norm": [
+   0.5,
+   0.9296875
+  ],
+  "baseline_y": 476,
+  "fps_suggested": 16,
+  "layout": "rows = directions [n,ne,e,se,s,sw,w,nw], cols = phases f1..f8"
+ },
+ "frames": {
+  "hanhan_thaicuc_n_f1.png": {
+   "x": 0,
+   "y": 0,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_n_f2.png": {
+   "x": 512,
+   "y": 0,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_n_f3.png": {
+   "x": 1024,
+   "y": 0,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_n_f4.png": {
+   "x": 1536,
+   "y": 0,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_n_f5.png": {
+   "x": 2048,
+   "y": 0,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_n_f6.png": {
+   "x": 2560,
+   "y": 0,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_n_f7.png": {
+   "x": 3072,
+   "y": 0,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_n_f8.png": {
+   "x": 3584,
+   "y": 0,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_ne_f1.png": {
+   "x": 0,
+   "y": 512,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_ne_f2.png": {
+   "x": 512,
+   "y": 512,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_ne_f3.png": {
+   "x": 1024,
+   "y": 512,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_ne_f4.png": {
+   "x": 1536,
+   "y": 512,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_ne_f5.png": {
+   "x": 2048,
+   "y": 512,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_ne_f6.png": {
+   "x": 2560,
+   "y": 512,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_ne_f7.png": {
+   "x": 3072,
+   "y": 512,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_ne_f8.png": {
+   "x": 3584,
+   "y": 512,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_e_f1.png": {
+   "x": 0,
+   "y": 1024,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_e_f2.png": {
+   "x": 512,
+   "y": 1024,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_e_f3.png": {
+   "x": 1024,
+   "y": 1024,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_e_f4.png": {
+   "x": 1536,
+   "y": 1024,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_e_f5.png": {
+   "x": 2048,
+   "y": 1024,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_e_f6.png": {
+   "x": 2560,
+   "y": 1024,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_e_f7.png": {
+   "x": 3072,
+   "y": 1024,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_e_f8.png": {
+   "x": 3584,
+   "y": 1024,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_se_f1.png": {
+   "x": 0,
+   "y": 1536,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_se_f2.png": {
+   "x": 512,
+   "y": 1536,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_se_f3.png": {
+   "x": 1024,
+   "y": 1536,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_se_f4.png": {
+   "x": 1536,
+   "y": 1536,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_se_f5.png": {
+   "x": 2048,
+   "y": 1536,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_se_f6.png": {
+   "x": 2560,
+   "y": 1536,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_se_f7.png": {
+   "x": 3072,
+   "y": 1536,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_se_f8.png": {
+   "x": 3584,
+   "y": 1536,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_s_f1.png": {
+   "x": 0,
+   "y": 2048,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_s_f2.png": {
+   "x": 512,
+   "y": 2048,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_s_f3.png": {
+   "x": 1024,
+   "y": 2048,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_s_f4.png": {
+   "x": 1536,
+   "y": 2048,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_s_f5.png": {
+   "x": 2048,
+   "y": 2048,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_s_f6.png": {
+   "x": 2560,
+   "y": 2048,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_s_f7.png": {
+   "x": 3072,
+   "y": 2048,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_s_f8.png": {
+   "x": 3584,
+   "y": 2048,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_sw_f1.png": {
+   "x": 0,
+   "y": 2560,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_sw_f2.png": {
+   "x": 512,
+   "y": 2560,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_sw_f3.png": {
+   "x": 1024,
+   "y": 2560,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_sw_f4.png": {
+   "x": 1536,
+   "y": 2560,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_sw_f5.png": {
+   "x": 2048,
+   "y": 2560,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_sw_f6.png": {
+   "x": 2560,
+   "y": 2560,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_sw_f7.png": {
+   "x": 3072,
+   "y": 2560,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_sw_f8.png": {
+   "x": 3584,
+   "y": 2560,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_w_f1.png": {
+   "x": 0,
+   "y": 3072,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_w_f2.png": {
+   "x": 512,
+   "y": 3072,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_w_f3.png": {
+   "x": 1024,
+   "y": 3072,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_w_f4.png": {
+   "x": 1536,
+   "y": 3072,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_w_f5.png": {
+   "x": 2048,
+   "y": 3072,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_w_f6.png": {
+   "x": 2560,
+   "y": 3072,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_w_f7.png": {
+   "x": 3072,
+   "y": 3072,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_w_f8.png": {
+   "x": 3584,
+   "y": 3072,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_nw_f1.png": {
+   "x": 0,
+   "y": 3584,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_nw_f2.png": {
+   "x": 512,
+   "y": 3584,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_nw_f3.png": {
+   "x": 1024,
+   "y": 3584,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_nw_f4.png": {
+   "x": 1536,
+   "y": 3584,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_nw_f5.png": {
+   "x": 2048,
+   "y": 3584,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_nw_f6.png": {
+   "x": 2560,
+   "y": 3584,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_nw_f7.png": {
+   "x": 3072,
+   "y": 3584,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  },
+  "hanhan_thaicuc_nw_f8.png": {
+   "x": 3584,
+   "y": 3584,
+   "w": 512,
+   "h": 512,
+   "pivot": [
+    256,
+    476
+   ],
+   "baseline_y": 476
+  }
+ }
+}

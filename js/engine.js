@@ -90,6 +90,15 @@
   // thời gian hồi/tầm/hao phí — không còn biến cứng skill1Cd/skill2Cd).
   var skillCds = {};    // { skillId: giây còn lại }
   var castState = null; // chiêu đang vận: { def, target, timer, total }
+  // Đợt K2: Tương Sinh Liên Hoàn (hồ sơ 02 §5) — chuỗi hệ của đòn vừa chuyển.
+  var lienHoanState = { elem: null, stacks: 0 };
+  // Đợt K2: hoạt ảnh tung chiêu bằng khung thật (vd Thái Cực Chưởng):
+  // { def, timer, duration, row, frames } — thay hình nhân vật khi đang diễn.
+  var skillCastAnim = null;
+  // Đợt K2: ngưỡng đòn nặng ngắt vận chiêu = 10% máu tối đa (đầu trên của
+  // khung "một đòn 5–10% máu tối đa" ở hồ sơ 49; hồ sơ 52 §3 không chốt
+  // con số — cách đọc này ghi rõ trong docs/k2-report.md).
+  var INTERRUPT_HP_FRACTION = 0.10;
   var lastCombatTime = 0;
 
   // Danh sách thực thể thế giới
@@ -150,7 +159,9 @@
       'assets/chars/thaotinh-sheet.png',
       'assets/chars/nhenxanh-sheet.png',
       'assets/chars/cothuye-sheet.png',
-      'assets/art/icons-sheet.png'
+      'assets/art/icons-sheet.png',
+      'assets/chars/hanhan-thaicuc-atlas.png',
+      'assets/chars/fx-thaicuc-yinyang.png'
     ];
 
     var holder = (typeof window !== 'undefined' && window.GameMapData) ? window.GameMapData : (mapData && mapData.maps ? mapData : null);
@@ -231,6 +242,8 @@
         if (url === 'assets/chars/nhenxanh-sheet.png') assets['nhenxanh_sheet'] = img;
         if (url === 'assets/chars/cothuye-sheet.png') assets['cothuye_sheet'] = img;
         if (url === 'assets/art/icons-sheet.png') assets['icons_sheet'] = img;
+        if (url === 'assets/chars/hanhan-thaicuc-atlas.png') assets['thaicuc_atlas'] = img;
+        if (url === 'assets/chars/fx-thaicuc-yinyang.png') assets['thaicuc_yinyang'] = img;
       })(urls[i]);
     }
 
@@ -1640,6 +1653,8 @@
       currentPath = [];
       targetMonster = null;
       castState = null; // đổi map = ngắt chiêu đang vận
+      skillCastAnim = null; // Đợt K2: khung tung chiêu + chuỗi Liên Hoàn cũng gãy khi đổi map
+      lienHoanState = { elem: null, stacks: 0 };
       groundDrops = [];
       visualEffects = [];
       projectiles = [];
@@ -2091,6 +2106,9 @@
     } else {
       releaseSkill(def, target);
     }
+    // Đợt K2: chiêu có bộ khung tung chiêu riêng thì diễn ngay từ lúc vận
+    // (hướng đã chốt về phía mục tiêu ở trên).
+    startSkillCastAnim(def);
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('combat_action'));
     }
@@ -2098,12 +2116,111 @@
 
   /** Cập nhật chiêu đang vận mỗi khung; hết giờ vận thì phát chiêu. */
   function updateCast(dt) {
+    if (skillCastAnim) {
+      skillCastAnim.timer -= dt;
+      if (skillCastAnim.timer <= 0) skillCastAnim = null;
+    }
     if (!castState) return;
     castState.timer -= dt;
     if (castState.timer > 0) return;
     var cs = castState;
     castState = null;
     releaseSkill(cs.def, cs.target);
+  }
+
+  /**
+   * Đợt K2: bắt đầu hoạt ảnh tung chiêu bằng khung thật của chiêu (nếu có
+   * castAnim trong registry). Hàng atlas theo thứ tự dirs của gói khung;
+   * player.dir (0 = nam ... 4 = bắc, DIR_VECTORS) đổi sang hàng atlas
+   * [n, ne, e, se, s, sw, w, nw] bằng (12 − dir) mod 8. Thời lượng phủ
+   * hết thời gian vận + nhịp thu chiêu, tối thiểu đủ một lượt 8 khung.
+   */
+  function startSkillCastAnim(def) {
+    if (!def || !def.castAnim || !player) return;
+    var ca = def.castAnim;
+    var dur = Math.max((def.castTime || 0) + 0.45, (ca.framesPerDir || 8) / (ca.fps || 16));
+    skillCastAnim = {
+      def: def,
+      timer: dur,
+      duration: dur,
+      row: (12 - (player.dir || 0)) % 8,
+      frames: ca.framesPerDir || 8
+    };
+  }
+
+  /**
+   * Đợt K2 — Tương Sinh Liên Hoàn: bước chuỗi cho MỘT hành động tung đòn
+   * (một lần tung chiêu hoặc một đòn thường). Toán thuần nằm ở skills.js
+   * (lienHoanStep); ở đây chỉ đọc HH hiện tại và giữ trạng thái chuỗi.
+   * Trả null khi HH < 0,8 (chuỗi gãy, đặt lại từ đầu).
+   */
+  function advanceLienHoan() {
+    if (!skillsAPI || !player || !player.paths) return null;
+    var hh = stateAPI ? stateAPI.harmonyRatio(player.paths) : skillsAPI.harmonyRatioOf(player.paths);
+    var step = skillsAPI.lienHoanStep(lienHoanState, hh);
+    if (!step.active) {
+      if (lienHoanState.stacks > 0) lienHoanState = { elem: null, stacks: 0 };
+      return null;
+    }
+    lienHoanState = { elem: step.elem, stacks: step.stacks };
+    return step;
+  }
+
+  /** Phản hồi UI của Liên Hoàn: chữ nổi theo hệ vừa chuyển + vòng phù dưới chân. */
+  function spawnLienHoanFeedback(step) {
+    var shown = Math.min(step.stacks, skillsAPI.LIEN_HOAN.maxStacks);
+    spawnFloatingText('Liên Hoàn ×' + shown, player.x, player.y - 100, fxLang(step.elem).glow);
+    visualEffects.push({
+      kind: 'runecircle', elem: step.elem, lang: fxLang(step.elem),
+      x: player.x, y: player.y, timer: 0.8, duration: 0.8, radius: 42
+    });
+    if (step.stacks === 1 && typeof window !== 'undefined' && window.GameUI) {
+      window.GameUI.showToast('Tương Sinh Liên Hoàn kích hoạt — đòn đánh tự chuyển hệ theo vòng tương sinh!');
+    }
+  }
+
+  /**
+   * Đợt K2: đòn hoàn thành một vòng Liên Hoàn (tầng 5, 10, ...) gây thêm
+   * một lần sát thương hệ Ngũ Hành bằng 50% đòn chính lên mục tiêu chính
+   * (hồ sơ 02 §5).
+   */
+  function applyLienHoanCycleBonus(def, target, mainDealt) {
+    if (!target || target.hp <= 0 || !(mainDealt > 0) || !skillsAPI) return;
+    var bonus = mainDealt * skillsAPI.LIEN_HOAN.cycleBonusRatio;
+    monstersAPI.damageMonster(target, bonus, player);
+    spawnDamageNumber(target.x, target.y - 58, Math.round(bonus), 'nguhanh', false);
+    spawnReleaseBurst(target.x, target.y - 20, 'nguhanh', def && def.tier);
+    if (target.hp <= 0) handleMonsterDeath(target);
+  }
+
+  /**
+   * Đợt K2 — Luật ngắt vận chiêu (hồ sơ 52 §3): đang vận chiêu mà trúng
+   * đòn NẶNG (>= ngưỡng INTERRUPT_HP_FRACTION của máu tối đa) thì chiêu
+   * bị ngắt: mất lần tung, hoàn nửa linh lực đã trừ, hồi chiêu của chiêu
+   * đó xóa sạch (tung lại được ngay), hiệu ứng tụ khí và khung tung chiêu
+   * tan theo. Đòn nhẹ không ngắt. Trả true nếu vừa ngắt.
+   */
+  function tryInterruptCast(dealtToPlayer) {
+    if (!castState || !player || !(dealtToPlayer > 0)) return false;
+    var stats = stateAPI ? stateAPI.deriveStats(player.paths, player.equipment) : { hpMax: 100, linhLucMax: 20 };
+    if (dealtToPlayer < INTERRUPT_HP_FRACTION * stats.hpMax) return false;
+    var def = castState.def;
+    castState = null;
+    skillCastAnim = null;
+    for (var i = visualEffects.length - 1; i >= 0; i--) {
+      if (visualEffects[i].kind === 'gather' && visualEffects[i].skillId === def.id) {
+        visualEffects.splice(i, 1);
+      }
+    }
+    if (def.cost && def.cost.type === 'linhLuc' && def.cost.amount > 0) {
+      player.linhLuc = Math.min(player.linhLuc + Math.floor(def.cost.amount / 2), stats.linhLucMax);
+    }
+    skillCds[def.id] = 0;
+    spawnFloatingText('Bị ngắt!', player.x, player.y - 100, '#ff9d5c');
+    if (typeof window !== 'undefined' && window.GameUI) {
+      window.GameUI.showToast('Chiêu bị ngắt giữa chừng — hoàn nửa linh lực, tung lại được ngay.');
+    }
+    return true;
   }
 
   /**
@@ -2126,6 +2243,19 @@
     var raw = baseRaw * (def.damage ? def.damage.ratio : 1) +
       (def.damage && def.damage.flat ? def.damage.flat : 0);
 
+    // Đợt K2 — Tương Sinh Liên Hoàn: chuyển hệ + cộng uy lực MỘT LẦN cho
+    // cả hành động tung chiêu này (đạn mang theo hệ đã chuyển tới đích;
+    // chiêu diện áp một hệ cho cả vùng). Hệ số Hài Hòa đã nằm sẵn trong
+    // stats.attack (deriveStats) nên số hiện trên bảng nhân vật và số
+    // gây ra luôn là một.
+    var conv = advanceLienHoan();
+    if (conv) {
+      elem = conv.elem;
+      raw = raw * conv.mult;
+      spawnLienHoanFeedback(conv);
+    }
+    var cycleBonus = !!(conv && conv.completedCycle);
+
     if (def.delivery === 'projectile') {
       if (!target || target.state === 'dead') return; // đích đã gục trong lúc vận: chiêu tan
       projectiles.push({
@@ -2138,14 +2268,34 @@
         raw: raw,
         element: elem,
         status: def.status || null,
+        cycleBonus: cycleBonus,
         trail: []
       });
     } else if (def.delivery === 'instant') {
       if (!target || target.state === 'dead') return;
-      resolveSkillHit(def, target, raw, elem);
+      var dealtInstant = resolveSkillHit(def, target, raw, elem);
+      if (cycleBonus) applyLienHoanCycleBonus(def, target, dealtInstant);
+    } else if (def.delivery === 'area') {
+      // Đợt K2: chiêu diện — mọi địch còn sống trong bán kính quanh mục
+      // tiêu chính đều trúng cùng một đòn (cùng hệ, cùng uy lực).
+      if (!target || target.state === 'dead') return;
+      var radius = def.radius || 90;
+      var victims = [];
+      for (var vi = 0; vi < fieldMonsters.length; vi++) {
+        var vm = fieldMonsters[vi];
+        if (vm.state === 'dead' || vm.hp <= 0) continue;
+        if (Math.hypot(vm.x - target.x, vm.y - target.y) <= radius) victims.push(vm);
+      }
+      if (victims.indexOf(target) < 0) victims.push(target);
+      var dealtMain = 0;
+      for (var vj = 0; vj < victims.length; vj++) {
+        var dealtV = resolveSkillHit(def, victims[vj], raw, elem);
+        if (victims[vj] === target) dealtMain = dealtV;
+      }
+      if (cycleBonus) applyLienHoanCycleBonus(def, target, dealtMain);
     }
     // delivery 'melee' đi qua kênh đánh tự động (executePlayerBasicAttack);
-    // 'area' / 'rain' / 'self' là đất của K2 trên cùng khung này.
+    // 'rain' / 'self' vẫn để ngỏ cho các đợt nội dung sau trên cùng khung này.
   }
 
   /**
@@ -2167,14 +2317,28 @@
     // 0.2s + aggro, sẽ ghi đè mất thời gian trói của chiêu nếu áp trước
     // (bản live cũ áp trước nên trói 1,2s thực tế chỉ còn 0,2s — K1 sửa
     // đúng đặc tả chiêu, số sát thương/hao phí/hồi chiêu không đổi).
-    if (def.status && def.status.type === 'snare' && target.hp > 0) {
-      target.state = 'hit';
-      target.hitStunTimer = def.status.duration;
+    // Đợt K2 mở đủ bốn họ trạng thái của khung: trói/choáng (đứng yên),
+    // làm chậm (monsters.js tự giảm tốc), đốt (engine tự trừ máu theo nhịp).
+    if (def.status && target.hp > 0) {
+      var st = def.status;
+      if (st.type === 'snare' || st.type === 'stun') {
+        target.state = 'hit';
+        target.hitStunTimer = Math.max(target.hitStunTimer || 0, st.duration);
+      } else if (st.type === 'slow') {
+        target.slowTimer = st.duration;
+        target.slowRatio = st.ratio || 0.4;
+      } else if (st.type === 'dot') {
+        target.dotTimer = st.duration;
+        target.dotDps = dealt * (st.ratio || 0.3) / st.duration;
+        target.dotElem = elem;
+        target.dotSource = player;
+      }
     }
 
     if (target.hp <= 0) {
       handleMonsterDeath(target);
     }
+    return dealt;
   }
 
   /* ==================================================================
@@ -2212,7 +2376,7 @@
       parts.push({ ang: (i / n) * Math.PI * 2, rad: 26 + (i % 3) * 5, speed: 5.2 + (i % 4) * 0.7, size: 1.8 + (i % 3) * 0.7 });
     }
     visualEffects.push({
-      kind: 'gather', elem: elem, lang: lang,
+      kind: 'gather', elem: elem, lang: lang, skillId: def.id,
       x: player.x, y: player.y - 30, followPlayer: true,
       timer: def.castTime, duration: Math.max(0.05, def.castTime),
       particles: parts
@@ -2479,6 +2643,8 @@
       currentPath = [];
       targetMonster = null;
       castState = null; // gục ngã = ngắt chiêu đang vận (K1: ngắt khi gục/đổi map)
+      skillCastAnim = null; // Đợt K2: khung tung chiêu + chuỗi Liên Hoàn cũng gãy khi gục
+      lienHoanState = { elem: null, stacks: 0 };
       return;
     }
 
@@ -2725,21 +2891,32 @@
     var basicDef = skillsAPI ? skillsAPI.getSkill('basic') : null;
     var stats = stateAPI ? stateAPI.deriveStats(player.paths, player.equipment) : { attack: 10, critRate: 5 };
     var raw = (10 + (stats.attack - 10)) * (basicDef && basicDef.damage ? basicDef.damage.ratio : 1);
-    var elemFac = combatAPI ? combatAPI.getElementFactor('neutral', m.element) : 1.0;
+    // Đợt K2: đòn thường cũng là một nhịp của Tương Sinh Liên Hoàn — bước
+    // chuỗi TRƯỚC khi tính sát thương để hệ số khắc dùng đúng hệ vừa
+    // chuyển, uy lực nhân hệ số tầng TRƯỚC bạo kích (cùng một luật với
+    // chiêu ở releaseSkill: hệ của đòn = hệ đã chuyển).
+    var conv = advanceLienHoan();
+    var elemFac = combatAPI ? combatAPI.getElementFactor(conv ? conv.elem : 'neutral', m.element) : 1.0;
     var dealt = combatAPI ? combatAPI.calcDamage(raw, elemFac, m.armor) : raw;
+    if (conv) {
+      dealt = dealt * conv.mult;
+      spawnLienHoanFeedback(conv);
+    }
     var isCrit = combatAPI ? combatAPI.rollCrit((stats.critRate || 5) / 100) : false;
     if (isCrit) dealt *= 1.5;
 
     if (audioAPI) audioAPI.playSlash();
 
     // Vệt chém cong thon hai đầu hướng về phía quái (nguyên thủy crescent của K1)
-    spawnSlashCrescent(player.x, player.y - 25, m.x, m.y - 20, 'neutral', basicDef ? basicDef.tier : 1);
+    spawnSlashCrescent(player.x, player.y - 25, m.x, m.y - 20, conv ? conv.elem : 'neutral', basicDef ? basicDef.tier : 1);
 
     monstersAPI.damageMonster(m, dealt, player);
-    spawnDamageNumber(m.x, m.y - 35, Math.round(dealt), 'moc', isCrit);
+    spawnDamageNumber(m.x, m.y - 35, Math.round(dealt), conv ? conv.elem : 'moc', isCrit);
 
     if (m.hp <= 0) {
       handleMonsterDeath(m);
+    } else if (conv && conv.completedCycle) {
+      applyLienHoanCycleBonus(basicDef, m, dealt);
     }
   }
 
@@ -2762,6 +2939,9 @@
           m.deathTimer = 0;
           m.spawnGraceTimer = 2.0; // 2s ân hạn hồi sinh
           m.summonedAdds = false;
+          // Đợt K2: hồi sinh sạch trạng thái khống chế/đốt của kiếp trước
+          m.slowTimer = 0; m.slowRatio = 0;
+          m.dotTimer = 0; m.dotDps = 0; m.dotAcc = 0;
         } else {
           m.deathTimer += dt;
         }
@@ -2783,6 +2963,25 @@
           handleMonsterAttackPlayer(attacker);
         }
       });
+
+      // Đợt K2: hiệu ứng đốt trừ máu theo nhịp tích lũy (không qua giáp —
+      // giá trị đã chốt từ đòn gây đốt); đốt kết liễu thì tính là hạ quái
+      // như một đòn thường, qua đúng handleMonsterDeath.
+      if (m.dotTimer > 0 && m.dotDps > 0 && m.state !== 'dead' && m.hp > 0) {
+        m.dotAcc = (m.dotAcc || 0) + m.dotDps * dt;
+        if (m.dotAcc >= 1) {
+          var tickDmg = Math.floor(m.dotAcc);
+          m.dotAcc -= tickDmg;
+          m.hp -= tickDmg;
+          spawnDamageNumber(m.x, m.y - 46, tickDmg, m.dotElem || 'hoa', false);
+          if (m.hp <= 0) {
+            m.state = 'dead';
+            m.deathTimer = 0;
+            m.animRow = 4;
+            handleMonsterDeath(m);
+          }
+        }
+      }
 
       // Nếu quái tung kỹ năng Rễ Trói (Telegraph r=90, 1.2s nổ, 12 dmg + snare 1.5s)
       if (m.activeTelegraph) {
@@ -2858,6 +3057,8 @@
     }
 
     player.hp = Math.max(0, player.hp - dealt);
+    // Đợt K2: đòn nặng trúng giữa lúc vận chiêu thì ngắt chiêu (hồ sơ 52 §3)
+    if (player.hp > 0) tryInterruptCast(dealt);
     if (audioAPI) audioAPI.playHit();
     triggerScreenShake(0.2, 5);
 
@@ -3052,7 +3253,9 @@
         // Đạn chạm đích: giải quyết qua cùng đường resolveSkillHit như chiêu tức thì
         var def = p.skillId && skillsAPI ? skillsAPI.getSkill(p.skillId) : null;
         if (def) {
-          resolveSkillHit(def, p.target, p.raw, p.element);
+          var dealtP = resolveSkillHit(def, p.target, p.raw, p.element);
+          // Đợt K2: đạn mang cờ hoàn vòng Liên Hoàn từ lúc phát chiêu
+          if (p.cycleBonus) applyLienHoanCycleBonus(def, p.target, dealtP);
         } else {
           var elemFac = combatAPI ? combatAPI.getElementFactor(p.element, p.target.element) : 1.0;
           var dealt = combatAPI ? combatAPI.calcDamage(p.raw, elemFac, p.target.armor) : p.raw;
@@ -3121,6 +3324,8 @@
         var distToPlayer = Math.hypot(player.x - vfx.x, player.y - vfx.y);
         if (distToPlayer <= vfx.radius) {
           player.hp = Math.max(0, player.hp - vfx.damage);
+          // Đợt K2: nổ trấn vùng của boss cũng là đòn nặng — ngắt vận chiêu
+          if (player.hp > 0) tryInterruptCast(vfx.damage);
           playerSnareTimer = vfx.snareDuration;
           if (vfx.slowRatio && vfx.slowDuration) {
             playerSlowTimer = Math.max(playerSlowTimer, vfx.slowDuration);
@@ -3471,6 +3676,25 @@
         var isHat = player && player.equipment && player.equipment.head === 'non-la' && getSettingsCached().hideHat !== true;
         var hatWalk = assets.hanhan_hat_walk;
         var hatIdle = assets.hanhan_hat_idle;
+
+        // Đợt K2: đang diễn khung tung chiêu riêng (Thái Cực Chưởng) thì
+        // hình nhân vật lấy từ atlas của chiêu: ô 256×256 neo bằng pivot
+        // của gói khung [128, 238], chân bám đúng điểm chân nhân vật;
+        // lớp nón trang bị không phủ thêm (khung chiêu đã là hình trọn).
+        var tcSheet = assets.thaicuc_atlas;
+        if (skillCastAnim && tcSheet && tcSheet.complete && tcSheet.naturalWidth >= 2048) {
+          var tcCa = skillCastAnim.def.castAnim;
+          var tcScale = (tcCa.displayH || 192) / tcCa.frameH;
+          var tcProg = 1 - (skillCastAnim.timer / skillCastAnim.duration);
+          var tcFrame = Math.min(skillCastAnim.frames - 1, Math.floor(tcProg * skillCastAnim.frames));
+          ctx.drawImage(
+            tcSheet,
+            tcFrame * tcCa.frameW, skillCastAnim.row * tcCa.frameH, tcCa.frameW, tcCa.frameH,
+            player.x - tcCa.pivotX * tcScale, player.y - tcCa.pivotY * tcScale,
+            tcCa.frameW * tcScale, tcCa.frameH * tcScale
+          );
+          return;
+        }
 
         var walkSheet = assets.hanhan_walk;
         if (playerMoving && walkSheet && walkSheet.complete && walkSheet.naturalWidth >= 768) {
@@ -4711,6 +4935,16 @@
       return castState ? { skillId: castState.def.id, timer: castState.timer, total: castState.total } : null;
     },
     getSkillCds: function () { return Object.assign({}, skillCds); },
+    // Đợt K2: móc kiểm thử Liên Hoàn + khung tung chiêu + tỉ lệ Hài Hòa
+    getLienHoan: function () {
+      return { elem: lienHoanState.elem, stacks: lienHoanState.stacks };
+    },
+    getSkillCastAnim: function () {
+      return skillCastAnim ? { skillId: skillCastAnim.def.id, row: skillCastAnim.row, timer: skillCastAnim.timer, duration: skillCastAnim.duration } : null;
+    },
+    getHarmonyRatio: function () {
+      return (stateAPI && player) ? stateAPI.harmonyRatio(player.paths) : null;
+    },
     handleRevive: handleRevive,
     switchMap: switchMap,
     teleportTo: teleportTo,

@@ -39,6 +39,70 @@
   }
 
   /**
+   * Đợt K2 — Chỉ số Hài Hòa HH theo hồ sơ 02 §5 (khác harmonyOf ở trên vốn
+   * là tu vi đường yếu nhất dùng cho hiển thị/cổng đột phá):
+   * mỗi đường tính theo % trần của MỐC hiện tại (mốc do đường yếu nhất quyết
+   * định, thang trần tích lũy khớp realmRankFromPaths: Luyện Khí 100/tầng,
+   * Trúc Cơ 400/giai đoạn, Kim Đan 1.200, Nguyên Anh 3.600, Hóa Thần 9.000):
+   *   frac(đường) = kẹp((tuVi − đáy mốc) / trần mốc, 0, 1)
+   *   HH = min(frac) / max(frac); mọi đường bằng nhau (kể cả cùng 0) → HH = 1.
+   * Hệ số lực Hài Hòa: f(HH) = 0,8 + 0,45 × HH (hồ sơ 02 §5), CHUẨN HÓA trên
+   * f(1) = 1,25 để trạng thái cân bằng giữ nguyên 100% số cân bằng bản live
+   * (đợt 6 đã chỉnh quái đầu game theo số này); lệch cân bằng thì bị kéo
+   * xuống tối đa −36% — đúng tinh thần "lực tổng kéo theo đường yếu nhất" và
+   * đúng chênh tương đối 0,8↔1,25 của khung hồ sơ.
+   */
+  function harmonyMilestone(minTuVi) {
+    if (minTuVi < 900) {
+      var lkBase = Math.floor(minTuVi / 100) * 100;
+      return { base: lkBase, cap: 100 };
+    }
+    if (minTuVi < 2500) return { base: 900 + Math.floor((minTuVi - 900) / 400) * 400, cap: 400 };
+    if (minTuVi < 7300) return { base: 2500 + Math.floor((minTuVi - 2500) / 1200) * 1200, cap: 1200 };
+    if (minTuVi < 21700) return { base: 7300 + Math.floor((minTuVi - 7300) / 3600) * 3600, cap: 3600 };
+    return { base: 21700 + Math.floor((minTuVi - 21700) / 9000) * 9000, cap: 9000 };
+  }
+
+  function harmonyDetail(paths) {
+    var keys = ['kim', 'moc', 'thuy', 'hoa', 'tho'];
+    var vals = {};
+    var min = Infinity;
+    for (var i = 0; i < keys.length; i++) {
+      var p = paths ? paths[keys[i]] : null;
+      var v = (p && typeof p.tuVi === 'number') ? p.tuVi : 0;
+      vals[keys[i]] = v;
+      if (v < min) min = v;
+    }
+    if (!isFinite(min)) min = 0;
+    var ms = harmonyMilestone(min);
+    var fracs = {};
+    var minF = Infinity, maxF = 0;
+    for (var j = 0; j < keys.length; j++) {
+      var f = (vals[keys[j]] - ms.base) / ms.cap;
+      if (f < 0) f = 0;
+      if (f > 1) f = 1;
+      fracs[keys[j]] = f;
+      if (f < minF) minF = f;
+      if (f > maxF) maxF = f;
+    }
+    var hh = (maxF > 0) ? (minF / maxF) : 1;
+    var rawF = 0.8 + 0.45 * hh;
+    return {
+      hh: hh,
+      fracs: fracs,
+      rawFactor: rawF,
+      factor: rawF / 1.25,
+      milestoneBase: ms.base,
+      milestoneCap: ms.cap
+    };
+  }
+
+  /** HH thuần (0..1) theo hồ sơ 02 §5 — dùng cho cổng Liên Hoàn/hợp kích. */
+  function harmonyRatio(paths) {
+    return harmonyDetail(paths).hh;
+  }
+
+  /**
    * Dẫn xuất chỉ số nhân vật từ 5 trụ ngũ hành (theo hồ sơ 49):
    * - Thổ: Khí huyết & phòng thủ (tăng hpMax vượt trội)
    * - Kim: Công kích & xuyên giáp
@@ -64,7 +128,11 @@
     // linhLucMax bắt đầu từ 20, tăng chủ yếu từ Thủy (+1.5/tuVi)
     var linhLucMax = Math.round(20 + (t * 1.5) + (m * 0.2));
 
-    var attack = Math.round(10 + (k * 1.5));
+    // Đợt K2: Công kích của năm đường nhân hệ số Hài Hòa (hồ sơ 02 §5) —
+    // một nguồn số duy nhất: bảng nhân vật hiện đúng số này và engine cũng
+    // lấy đúng số này làm nền sát thương nên hai bên không bao giờ lệch.
+    var harmony = harmonyDetail(paths);
+    var attack = Math.round((10 + (k * 1.5)) * harmony.factor);
     var defense = Math.round(5 + (th * 1.2));
     var critRate = +(5.0 + (h * 0.2)).toFixed(1);
     var regenRate = +(1.0 + (m * 0.15)).toFixed(1);
@@ -98,7 +166,9 @@
       attack: attack,
       defense: defense,
       critRate: critRate,
-      regenRate: regenRate
+      regenRate: regenRate,
+      harmonyHH: harmony.hh,
+      harmonyFactor: harmony.factor
     };
   }
 
@@ -762,6 +832,8 @@
   var StateAPI = {
     STORAGE_PREFIX: STORAGE_PREFIX,
     harmonyOf: harmonyOf,
+    harmonyRatio: harmonyRatio,
+    harmonyDetail: harmonyDetail,
     deriveStats: deriveStats,
     createPlayer: createPlayer,
     defaultSettings: defaultSettings,

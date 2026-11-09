@@ -1025,6 +1025,15 @@
       roamTarget: null,
       deathTimer: 0,
 
+      // Đợt K2: trạng thái người chơi áp lên (làm chậm / đốt theo thời gian) —
+      // engine ghi, updateMonster ở đây chỉ đọc làm chậm để tính tốc độ.
+      slowTimer: 0,     // > 0: đang bị làm chậm
+      slowRatio: 0,     // tỉ lệ giảm tốc (0.4 = chậm 40%)
+      dotTimer: 0,      // > 0: đang bị đốt — engine tự trừ máu theo dotDps
+      dotDps: 0,        // sát thương mỗi giây của hiệu ứng đốt
+      dotElem: 'hoa',   // hệ của hiệu ứng đốt (để hiện số sát thương đúng màu)
+      dotSource: null,  // nguồn gây đốt (engine gắn để tính công trạng hạ quái)
+
       // Đặc tính tinh anh
       summonedAdds: false,
       reTroiTimer: spec.bossSkill ? (spec.bossSkill.firstDelay || 5.0) : (spec.reTroi ? 4.0 : 0), // đếm chiêu đặc biệt (rễ trói / chiêu boss)
@@ -1069,6 +1078,11 @@
     if (m.attackTimer > 0) {
       m.attackTimer = Math.max(0, m.attackTimer - dt);
     }
+    // Đợt K2: làm chậm tự hết hạn (hệ số tốc độ tính ở spdMul bên dưới);
+    // hiệu ứng đốt do engine tự trừ máu (nơi duy nhất được phép kết liễu).
+    if (m.slowTimer > 0) m.slowTimer = Math.max(0, m.slowTimer - dt);
+    if (m.dotTimer > 0) m.dotTimer = Math.max(0, m.dotTimer - dt);
+    var spdMul = (m.slowTimer > 0 && m.slowRatio > 0) ? (1 - m.slowRatio) : 1;
 
     // Khoảng cách tới điểm nhà (home) và tới người chơi
     var distHome = Math.hypot(m.x - m.homeX, m.y - m.homeY);
@@ -1130,7 +1144,7 @@
           m.state = 'roam';
           m.roamTarget = null;
         } else {
-          var moveStep = m.speed * 1.3 * dt;
+          var moveStep = m.speed * 1.3 * spdMul * dt;
           m.x += (dxHome / dHome) * Math.min(moveStep, dHome);
           m.y += (dyHome / dHome) * Math.min(moveStep, dHome);
           m.facingLeft = (dxHome < 0);
@@ -1166,7 +1180,7 @@
             m.roamTarget = null;
             m.roamPauseTimer = 2.0 + Math.random() * 2.0; // Nghỉ 2-4s
           } else {
-            var rstep = (m.speed * 0.5) * dt;
+            var rstep = (m.speed * 0.5 * spdMul) * dt;
             m.x += (rx / rd) * Math.min(rstep, rd);
             m.y += (ry / rd) * Math.min(rstep, rd);
             m.facingLeft = (rx < 0);
@@ -1190,7 +1204,7 @@
         var px = playerPos.x - m.x;
         var py = playerPos.y - m.y;
         if (distPlayer > 0) {
-          var aStep = m.speed * dt;
+          var aStep = m.speed * spdMul * dt;
           m.x += (px / distPlayer) * aStep;
           m.y += (py / distPlayer) * aStep;
           m.facingLeft = (px < 0);
