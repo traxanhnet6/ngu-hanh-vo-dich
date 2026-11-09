@@ -197,6 +197,10 @@
   // hiện nằm sát vùng cổng quay về (Tông Môn -> Miếu chỉ cách 50px, Đài Truyền
   // Tống chỉ 32-35px) nên người chơi giữ nguyên hướng đi sau khi qua cổng sẽ
   // chạm lại vùng cổng quay về trong chưa đầy nửa giây và bị trả về map cũ.
+  // GUIDEFIX (cùng ngày): điều kiện (b) có thêm nhánh "đã dừng hẳn trong vùng
+  // cổng" ở chỗ mở khóa — nếu không, người đi theo dẫn đường vào thẳng tâm cổng
+  // của Đài Truyền Tống (điểm rơi cách cổng 32-82px) sẽ đứng trong vùng cổng
+  // trước khi hết ân hạn và khóa không bao giờ mở, kẹt ngay trong cổng.
   var portalsArmed = true;
   var portalRearmAt = 0;
 
@@ -1730,6 +1734,15 @@
       if (ex.targetMap === nextHopMapId) {
         var x = ex.target ? ex.target.x : (ex.rect ? ex.rect.x + ex.rect.w / 2 : 0);
         var y = ex.target ? ex.target.y : (ex.rect ? ex.rect.y + ex.rect.h / 2 : 0);
+        // GUIDEFIX: cổng chỉ kích hoạt khi nhân vật đứng TRONG vùng cổng (rect),
+        // nên điểm dẫn đường bắt buộc phải nằm trong rect. Nếu dữ liệu cổng khai
+        // target nằm ngoài rect (đã từng xảy ra: Rừng Độc khai nhầm tọa độ map
+        // đích, 4 map săn khai lệch 15px) thì dẫn về tâm vùng cổng thay vì dắt
+        // người chơi tới một điểm không bao giờ mở cổng được.
+        if (ex.rect && (x < ex.rect.x || x > ex.rect.x + ex.rect.w || y < ex.rect.y || y > ex.rect.y + ex.rect.h)) {
+          x = ex.rect.x + ex.rect.w / 2;
+          y = ex.rect.y + ex.rect.h / 2;
+        }
         return { exit: ex, target: { x: x, y: y }, targetMap: nextHopMapId };
       }
     }
@@ -3157,9 +3170,16 @@
       }
     }
 
-    // Mở khóa cổng sau khi tới nơi: cần qua thời gian ân hạn VÀ đã đứng ngoài
-    // mọi vùng cổng ít nhất một khung hình (đang đứng trong vùng cổng thì giữ khóa,
-    // nên giữ nguyên hướng đi qua cổng không bao giờ bị trả về).
+    // Mở khóa cổng sau khi tới nơi: cần qua thời gian ân hạn VÀ (đã đứng ngoài
+    // mọi vùng cổng ít nhất một khung hình — đang đi xuyên qua vùng cổng thì giữ
+    // khóa, nên giữ nguyên hướng đi qua cổng không bao giờ bị trả về).
+    // GUIDEFIX: thêm nhánh mở khóa khi người chơi ĐÃ DỪNG HẲN trong vùng cổng
+    // (không còn đường đi, không di chuyển). Điểm rơi của Đài Truyền Tống chỉ
+    // cách cổng về Tông Môn 32-82px: người chơi đi theo dẫn đường vào thẳng
+    // vùng cổng trong chưa đầy 1,6 giây ân hạn rồi đứng tại tâm cổng — theo
+    // điều kiện cũ, khóa không bao giờ mở vì nhân vật không hề ra khỏi vùng
+    // cổng, kẹt vĩnh viễn ngay trong cổng. Người còn đang đi xuyên qua (còn
+    // đường đi/đang di chuyển) vẫn bị giữ khóa như cũ nên chống nảy còn nguyên.
     if (!portalsArmed) {
       var insideAnyExit = false;
       for (var gi = 0; gi < mapData.exits.length; gi++) {
@@ -3167,7 +3187,8 @@
         if (player.x >= gr.x && player.x <= gr.x + gr.w &&
             player.y >= gr.y && player.y <= gr.y + gr.h) { insideAnyExit = true; break; }
       }
-      if (!insideAnyExit && performance.now() >= portalRearmAt) portalsArmed = true;
+      var stoppedInsideExit = insideAnyExit && !playerMoving && currentPath.length === 0;
+      if ((!insideAnyExit || stoppedInsideExit) && performance.now() >= portalRearmAt) portalsArmed = true;
     }
 
     // Kiểm tra các vùng thoát (Portals)

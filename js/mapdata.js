@@ -289,7 +289,11 @@
       name: 'Về Miếu Hoang',
       rect: { x: 0, y: 480, w: 45, h: 160 },
       chipLabel: null,
-      target: { x: 1850, y: 475 },
+      // target là điểm DẪN ĐƯỜNG trên chính map này (phải nằm trong rect cổng —
+      // cổng chỉ kích hoạt khi nhân vật đứng trong rect). Bản cũ ghi nhầm tọa độ
+      // điểm rơi ở map đích (1850,475) khiến dẫn đường về tông môn dắt người chơi
+      // sang bờ đông Rừng Độc rồi kẹt — đã sửa về tâm vùng cổng (đợt GUIDEFIX).
+      target: { x: 22, y: 560 },
       targetMap: 'mieu_hoang',
       targetSpawn: { x: 1850, y: 475 }
     }
@@ -1566,7 +1570,10 @@
       name: 'Đài Truyền Tống',
       rect: { x: 0, y: 560, w: 45, h: 160 },
       chipLabel: null,
-      target: { x: 60, y: 640 },
+      // target phải nằm TRONG rect cổng (tâm vùng cổng) ở cả 4 map săn qua Đài
+      // Truyền Tống — bản cũ để (60,640) nằm ngoài rect 15px khiến dẫn đường
+      // dừng ngay trước cổng và kẹt (đợt GUIDEFIX)
+      target: { x: 22, y: 640 },
       targetMap: 'dai-truyen-tong',
       targetSpawn: { x: 480, y: 560 }
     }
@@ -1671,7 +1678,7 @@
       name: 'Đài Truyền Tống',
       rect: { x: 0, y: 560, w: 45, h: 160 },
       chipLabel: null,
-      target: { x: 60, y: 640 },
+      target: { x: 22, y: 640 },
       targetMap: 'dai-truyen-tong',
       targetSpawn: { x: 480, y: 560 }
     }
@@ -1776,7 +1783,7 @@
       name: 'Đài Truyền Tống',
       rect: { x: 0, y: 560, w: 45, h: 160 },
       chipLabel: null,
-      target: { x: 60, y: 640 },
+      target: { x: 22, y: 640 },
       targetMap: 'dai-truyen-tong',
       targetSpawn: { x: 480, y: 560 }
     }
@@ -1881,7 +1888,7 @@
       name: 'Đài Truyền Tống',
       rect: { x: 0, y: 560, w: 45, h: 160 },
       chipLabel: null,
-      target: { x: 60, y: 640 },
+      target: { x: 22, y: 640 },
       targetMap: 'dai-truyen-tong',
       targetSpawn: { x: 480, y: 560 }
     }
