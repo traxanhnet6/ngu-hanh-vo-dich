@@ -14,6 +14,7 @@
   var pathfinder = null;
   var combatAPI = null;
   var monstersAPI = null;
+  var skillsAPI = null; // Đợt K1: registry kỹ năng (js/skills.js)
 
   var currentMapId = 'mieu_hoang';
   var isRunning = false;
@@ -85,8 +86,10 @@
     { x: 0, y: 1 }, { x: 0.7071, y: 0.7071 }, { x: 1, y: 0 }, { x: 0.7071, y: -0.7071 },
     { x: 0, y: -1 }, { x: -0.7071, y: -0.7071 }, { x: -1, y: 0 }, { x: -0.7071, y: 0.7071 }
   ];
-  var skill1Cd = 0;
-  var skill2Cd = 0;
+  // Đợt K1: hồi chiêu theo id chiêu (registry là nguồn sự thật duy nhất về
+  // thời gian hồi/tầm/hao phí — không còn biến cứng skill1Cd/skill2Cd).
+  var skillCds = {};    // { skillId: giây còn lại }
+  var castState = null; // chiêu đang vận: { def, target, timer, total }
   var lastCombatTime = 0;
 
   // Danh sách thực thể thế giới
@@ -284,6 +287,7 @@
     pathfinder = typeof window !== 'undefined' ? window.Pathfinder : (typeof require !== 'undefined' ? require('./pathfind.js') : null);
     combatAPI = typeof window !== 'undefined' ? window.GameCombat : null;
     monstersAPI = typeof window !== 'undefined' ? window.GameMonsters : (typeof require !== 'undefined' ? require('./monsters.js') : null);
+    skillsAPI = typeof window !== 'undefined' ? window.GameSkills : (typeof require !== 'undefined' ? require('./skills.js') : null);
     // Tương thích save cũ: đã nhận nhiệm vụ tông môn đầu tiên (sectStage >= 2) mà chưa
     // có kiếm nào trong túi/trang bị thì được cấp Kiếm Đệ Tử một lần ngay khi nạp.
     if (player && player.quests && (player.quests.sectStage || 0) >= 2 && !player.quests.starterSwordGranted) {
@@ -1635,6 +1639,7 @@
       }
       currentPath = [];
       targetMonster = null;
+      castState = null; // đổi map = ngắt chiêu đang vận
       groundDrops = [];
       visualEffects = [];
       projectiles = [];
@@ -2003,11 +2008,27 @@
     return triggerPathTo(x, y, null);
   }
 
+  /** Số ô (1-based) của chiêu trên thanh kỹ năng, 0 nếu không nằm trên thanh. */
+  function getSkillSlotNumber(skillId) {
+    if (!skillsAPI) return 0;
+    var idx = skillsAPI.slotOf(skillId);
+    return idx >= 0 ? idx + 1 : 0;
+  }
+
   /**
-   * Tung kỹ năng từ bàn phím hoặc nút giao diện
+   * Tung kỹ năng từ bàn phím hoặc nút giao diện — Đợt K1: đường ống tổng quát
+   * theo registry (js/skills.js), không còn nhánh cứng theo từng chiêu:
+   *   kiểm tra mở khóa → kiểm tra tung chiêu thuần (skills.checkCast) →
+   *   trừ phí + bắt đầu hồi chiêu → vận chiêu (castState, thanh vận chiêu) →
+   *   phát chiêu tại điểm phát (releaseSkill) → đạn/diện/tức thì → trúng đích.
+   * Số học giữ nguyên bản live: phí và hồi chiêu tính từ lúc bắt đầu vận,
+   * raw = nền công × damage.ratio của chiêu, bạo kích chiêu 5% như cũ.
    */
   function castSkill(skillId) {
     if (!player || player.hp <= 0) return;
+    if (!skillsAPI) return;
+    var def = skillsAPI.getSkill(skillId);
+    if (!def) return;
     var hasPacks = mapData && mapData.monsterPacks && mapData.monsterPacks.length > 0;
     if (!hasPacks && mapData.id !== 'rung-doc') {
       if (typeof window !== 'undefined' && window.GameUI) {
@@ -2016,98 +2037,294 @@
       return;
     }
 
-    var stats = stateAPI ? stateAPI.deriveStats(player.paths, player.equipment) : { attack: 10 };
-    var baseRaw = 10 + (stats.attack - 10);
+    if (!skillsAPI.isUnlocked(def, player)) {
+      if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.showToast('Chưa mở khóa chiêu này');
+      }
+      return;
+    }
 
-    if (skillId === 'phi_diep') {
-      if (skill1Cd > 0) return;
-      if (player.linhLuc < 4) {
+    var target = null;
+    var targetDist = null;
+    if (def.targetMode === 'single') {
+      target = getSkillTarget(def.range);
+      if (target) targetDist = Math.hypot(player.x - target.x, player.y - target.y);
+    }
+
+    var verdict = skillsAPI.checkCast(def, {
+      casting: !!castState,
+      cooldownLeft: skillCds[skillId] || 0,
+      resource: def.cost && def.cost.type === 'linhLuc' ? player.linhLuc : 0,
+      hasTarget: !!target,
+      targetDist: targetDist
+    });
+    if (!verdict.ok) {
+      if (verdict.code === 'cost') {
         if (audioAPI) audioAPI.playDull();
         if (typeof window !== 'undefined' && window.GameUI) {
-          window.GameUI.triggerSkillShake(1);
-          window.GameUI.showToast('Linh lực không đủ (cần 4)');
+          var slotNum = getSkillSlotNumber(skillId);
+          if (slotNum > 0) window.GameUI.triggerSkillShake(slotNum);
+          window.GameUI.showToast(verdict.reason);
         }
-        return;
-      }
-
-      var target = getSkillTarget(280);
-      if (!target) {
+      } else if (verdict.code === 'target' || verdict.code === 'range') {
         if (typeof window !== 'undefined' && window.GameUI) {
-          window.GameUI.showToast('Không có mục tiêu trong tầm 280px');
+          window.GameUI.showToast(verdict.reason);
         }
-        return;
       }
+      // 'cooldown' / 'casting': im lặng như bản live (bấm lúc đang hồi không báo)
+      return;
+    }
 
-      player.linhLuc -= 4;
-      skill1Cd = 3.0;
-      lastCombatTime = performance.now();
-      if (audioAPI) audioAPI.playLeafCast();
+    // Trừ phí + bắt đầu hồi chiêu ngay khi bắt đầu vận (nhịp bản live giữ nguyên)
+    if (def.cost && def.cost.type === 'linhLuc' && def.cost.amount > 0) {
+      player.linhLuc -= def.cost.amount;
+    }
+    skillCds[skillId] = def.cooldown;
+    lastCombatTime = performance.now();
+    if (target) {
+      player.dir = getDirFromVelocity(target.x - player.x, target.y - player.y);
+    }
 
+    if (def.castTime > 0) {
+      castState = { def: def, target: target, timer: def.castTime, total: def.castTime };
+      spawnCastGather(def);
+    } else {
+      releaseSkill(def, target);
+    }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('combat_action'));
+    }
+  }
+
+  /** Cập nhật chiêu đang vận mỗi khung; hết giờ vận thì phát chiêu. */
+  function updateCast(dt) {
+    if (!castState) return;
+    castState.timer -= dt;
+    if (castState.timer > 0) return;
+    var cs = castState;
+    castState = null;
+    releaseSkill(cs.def, cs.target);
+  }
+
+  /**
+   * Phát chiêu tại điểm phát (tay nhân vật): âm thanh theo chiêu, hiệu ứng
+   * điểm phát (bùng sáng + vòng chấn động, mạnh dần theo bậc), rồi chuyển
+   * giao theo delivery của chiêu: đạn truy đuổi / tức thì / (K2: diện, mưa).
+   */
+  function releaseSkill(def, target) {
+    if (!player) return;
+    var elem = skillsAPI ? skillsAPI.elementOf(def) : 'neutral';
+    if (audioAPI) {
+      if (def.sfx === 'leafCast' && audioAPI.playLeafCast) audioAPI.playLeafCast();
+      else if (def.sfx === 'vineSnare' && audioAPI.playVineSnare) audioAPI.playVineSnare();
+      else if (def.sfx === 'slash' && audioAPI.playSlash) audioAPI.playSlash();
+    }
+    spawnReleaseBurst(player.x, player.y - 30, elem, def.tier);
+
+    var stats = stateAPI ? stateAPI.deriveStats(player.paths, player.equipment) : { attack: 10 };
+    var baseRaw = 10 + (stats.attack - 10);
+    var raw = baseRaw * (def.damage ? def.damage.ratio : 1) +
+      (def.damage && def.damage.flat ? def.damage.flat : 0);
+
+    if (def.delivery === 'projectile') {
+      if (!target || target.state === 'dead') return; // đích đã gục trong lúc vận: chiêu tan
       projectiles.push({
-        type: 'leaf',
+        kind: 'skill',
+        skillId: def.id,
         x: player.x,
         y: player.y - 30,
         target: target,
-        speed: 520,
-        raw: baseRaw * 1.6,
-        element: 'moc'
+        speed: def.projectileSpeed || 520,
+        raw: raw,
+        element: elem,
+        status: def.status || null,
+        trail: []
       });
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('combat_action'));
-      }
-    } else if (skillId === 'day_leo') {
-      if (skill2Cd > 0) return;
-      if (player.linhLuc < 6) {
-        if (audioAPI) audioAPI.playDull();
-        if (typeof window !== 'undefined' && window.GameUI) {
-          window.GameUI.triggerSkillShake(2);
-          window.GameUI.showToast('Linh lực không đủ (cần 6)');
-        }
-        return;
-      }
-
-      var targetSnare = getSkillTarget(240);
-      if (!targetSnare) {
-        if (typeof window !== 'undefined' && window.GameUI) {
-          window.GameUI.showToast('Không có mục tiêu trong tầm 240px');
-        }
-        return;
-      }
-
-      player.linhLuc -= 6;
-      skill2Cd = 8.0;
-      lastCombatTime = performance.now();
-      if (audioAPI) audioAPI.playVineSnare();
-
-      // Trói chân 1.2s và gây 80% basic damage
-      targetSnare.state = 'hit';
-      targetSnare.hitStunTimer = 1.2;
-
-      var rawDmg = baseRaw * 0.8;
-      var elemFac = combatAPI ? combatAPI.getElementFactor('moc', targetSnare.element) : 1.0;
-      var dealt = combatAPI ? combatAPI.calcDamage(rawDmg, elemFac, targetSnare.armor) : rawDmg;
-      var isCrit = combatAPI ? combatAPI.rollCrit(0.05) : false;
-      if (isCrit) dealt *= 1.5;
-
-      monstersAPI.damageMonster(targetSnare, dealt, player);
-      spawnDamageNumber(targetSnare.x, targetSnare.y - 40, Math.round(dealt), 'moc', isCrit);
-
-      // Hiệu ứng dây leo trói dưới chân
-      visualEffects.push({
-        type: 'vine_snare',
-        x: targetSnare.x,
-        y: targetSnare.y,
-        timer: 1.2,
-        duration: 1.2
-      });
-
-      if (targetSnare.hp <= 0) {
-        handleMonsterDeath(targetSnare);
-      }
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('combat_action'));
-      }
+    } else if (def.delivery === 'instant') {
+      if (!target || target.state === 'dead') return;
+      resolveSkillHit(def, target, raw, elem);
     }
+    // delivery 'melee' đi qua kênh đánh tự động (executePlayerBasicAttack);
+    // 'area' / 'rain' / 'self' là đất của K2 trên cùng khung này.
+  }
+
+  /**
+   * Giải quyết một đòn chiêu trúng mục tiêu: khung sát thương combat.js
+   * (khắc hệ → giáp cong → bạo kích 5% như bản live), trạng thái kèm chiêu,
+   * số sát thương bay và hiệu ứng trúng đích theo ngôn ngữ hình của hệ.
+   */
+  function resolveSkillHit(def, target, raw, elem) {
+    var elemFac = combatAPI ? combatAPI.getElementFactor(elem, target.element) : 1.0;
+    var dealt = combatAPI ? combatAPI.calcDamage(raw, elemFac, target.armor) : raw;
+    var isCrit = combatAPI ? combatAPI.rollCrit(0.05) : false;
+    if (isCrit) dealt *= (combatAPI ? combatAPI.CRIT_MULTIPLIER : 1.5);
+
+    monstersAPI.damageMonster(target, dealt, player);
+    spawnDamageNumber(target.x, target.y - 40, Math.round(dealt), elem === 'neutral' ? 'moc' : elem, isCrit);
+    spawnImpactFx(target.x, target.y, elem, def);
+
+    // Trạng thái kèm chiêu áp SAU damageMonster: hàm đó tự đặt choáng nhẹ
+    // 0.2s + aggro, sẽ ghi đè mất thời gian trói của chiêu nếu áp trước
+    // (bản live cũ áp trước nên trói 1,2s thực tế chỉ còn 0,2s — K1 sửa
+    // đúng đặc tả chiêu, số sát thương/hao phí/hồi chiêu không đổi).
+    if (def.status && def.status.type === 'snare' && target.hp > 0) {
+      target.state = 'hit';
+      target.hitStunTimer = def.status.duration;
+    }
+
+    if (target.hp <= 0) {
+      handleMonsterDeath(target);
+    }
+  }
+
+  /* ==================================================================
+   * ENGINE HIỆU ỨNG K1 (chuyển ngôn ngữ VFX của Vô Sắc, viết lại cho
+   * ngũ hành): mọi hiệu ứng là CHUYỂN ĐỘNG SỐNG tính theo timer/duration,
+   * không ảnh tĩnh. Nguyên thủy (primitives) dùng chung cho mọi chiêu:
+   *   gather     — tụ linh khí xoáy vào điểm phát trong lúc vận chiêu
+   *   burst      — bùng hạt sáng tại một điểm (điểm phát / trúng đích)
+   *   ring       — vòng chấn động nở ra (ellipse nén theo phối cảnh đất)
+   *   swirl      — vòng xoáy/trận xoay thật quanh một tâm
+   *   runecircle — vòng phù văn mặt đất: 2 vòng + sao tương sinh xoay
+   *   rain       — mưa đạn theo nhịp trong một bán kính
+   *   streak     — vệt lướt theo quỹ đạo cong (triệu hồi/lướt)
+   *   crescent   — vệt chém cong thon hai đầu quét theo hướng đòn
+   *   ground_motif — hình mặt đất theo motif hệ (dây leo/lưỡi/giọt...)
+   * Màu + motif lấy từ ngôn ngữ hình của hệ trong skills.js (ELEMENTS);
+   * kích thước/cường độ phóng theo bậc qua tierScale.
+   * ================================================================== */
+
+  function fxLang(elem) {
+    return skillsAPI ? skillsAPI.elementLang(elem) : { core: '#ffffff', glow: '#cccccc', deep: '#888888', motif: 'slash', trail: 'plain' };
+  }
+
+  function fxScale(tier) {
+    return skillsAPI ? skillsAPI.tierScale(tier) : 1;
+  }
+
+  /** Tụ linh khí tại điểm phát trong lúc vận chiêu (xoáy vào + nhân sáng lớn dần). */
+  function spawnCastGather(def) {
+    var elem = skillsAPI ? skillsAPI.elementOf(def) : 'neutral';
+    var lang = fxLang(elem);
+    var parts = [];
+    var n = 10;
+    for (var i = 0; i < n; i++) {
+      parts.push({ ang: (i / n) * Math.PI * 2, rad: 26 + (i % 3) * 5, speed: 5.2 + (i % 4) * 0.7, size: 1.8 + (i % 3) * 0.7 });
+    }
+    visualEffects.push({
+      kind: 'gather', elem: elem, lang: lang,
+      x: player.x, y: player.y - 30, followPlayer: true,
+      timer: def.castTime, duration: Math.max(0.05, def.castTime),
+      particles: parts
+    });
+  }
+
+  /** Hiệu ứng tại điểm phát chiêu: bùng sáng + vòng chấn động, mạnh dần theo bậc. */
+  function spawnReleaseBurst(x, y, elem, tier) {
+    var s = fxScale(tier);
+    var lang = fxLang(elem);
+    var parts = [];
+    var n = Math.round(10 * s);
+    for (var i = 0; i < n; i++) {
+      var a = (i / n) * Math.PI * 2 + (i % 5) * 0.13;
+      var sp = (60 + (i % 4) * 26) * s;
+      parts.push({
+        x: x, y: y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 14,
+        size: (1.6 + (i % 3) * 0.8) * s, drag: 3.2
+      });
+    }
+    visualEffects.push({
+      kind: 'burst', elem: elem, lang: lang, x: x, y: y,
+      timer: 0.34, duration: 0.34, particles: parts
+    });
+    visualEffects.push({
+      kind: 'ring', elem: elem, lang: lang, x: x, y: y + 16,
+      timer: 0.32, duration: 0.32, maxR: 36 * s, ground: true
+    });
+  }
+
+  /** Hiệu ứng trúng đích: bùng hạt theo hệ + vòng nhỏ; chiêu trói thêm hình mặt đất. */
+  function spawnImpactFx(x, yFeet, elem, def) {
+    var tier = def ? def.tier : 1;
+    var s = fxScale(tier);
+    var lang = fxLang(elem);
+    var parts = [];
+    var n = Math.round(8 * s);
+    for (var i = 0; i < n; i++) {
+      var a = (i / n) * Math.PI * 2 + (i % 4) * 0.21;
+      var sp = (46 + (i % 3) * 22) * s;
+      parts.push({
+        x: x, y: yFeet - 22, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 20,
+        size: (1.5 + (i % 3) * 0.7) * s, drag: 3.6
+      });
+    }
+    visualEffects.push({
+      kind: 'burst', elem: elem, lang: lang, x: x, y: yFeet - 22,
+      timer: 0.3, duration: 0.3, particles: parts
+    });
+    visualEffects.push({
+      kind: 'ring', elem: elem, lang: lang, x: x, y: yFeet,
+      timer: 0.28, duration: 0.28, maxR: 26 * s, ground: true
+    });
+    if (def && def.effect === 'vine_snare') {
+      visualEffects.push({
+        kind: 'ground_motif', elem: elem, lang: lang, x: x, y: yFeet,
+        timer: def.status ? def.status.duration : 1.2,
+        duration: def.status ? def.status.duration : 1.2
+      });
+    }
+  }
+
+  /** Vệt chém cong thon hai đầu cho đòn thường (thay slash_crescent cũ). */
+  function spawnSlashCrescent(x, y, targetX, targetY, elem, tier) {
+    visualEffects.push({
+      kind: 'crescent', elem: elem, lang: fxLang(elem),
+      x: x, y: y, targetX: targetX, targetY: targetY,
+      timer: 0.22, duration: 0.22, scale: fxScale(tier)
+    });
+  }
+
+  /**
+   * Móc kiểm thử/trình diễn: sinh một nguyên thủy VFX bất kỳ tại một điểm.
+   * Dùng bởi test/k1-playtest.js để nghiệm thu renderer; không gắn nội dung.
+   */
+  function debugSpawnVfx(kind, x, y, elem, tier) {
+    var lang = fxLang(elem || 'neutral');
+    var s = fxScale(tier || 1);
+    var base = { kind: kind, elem: elem || 'neutral', lang: lang, x: x, y: y };
+    if (kind === 'burst') {
+      var parts = [];
+      for (var i = 0; i < 14; i++) {
+        var a = (i / 14) * Math.PI * 2;
+        var sp = (60 + (i % 4) * 26) * s;
+        parts.push({ x: x, y: y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 14, size: 2 * s, drag: 3.2 });
+      }
+      base.timer = 0.4; base.duration = 0.4; base.particles = parts;
+    } else if (kind === 'ring') {
+      base.timer = 0.5; base.duration = 0.5; base.maxR = 52 * s; base.ground = true;
+    } else if (kind === 'swirl') {
+      base.timer = 1.4; base.duration = 1.4; base.radius = 34 * s;
+    } else if (kind === 'runecircle') {
+      base.timer = 1.6; base.duration = 1.6; base.radius = 40 * s;
+    } else if (kind === 'rain') {
+      base.timer = 1.5; base.duration = 1.5; base.radius = 56 * s; base.drops = [];
+    } else if (kind === 'streak') {
+      base.timer = 0.9; base.duration = 0.9;
+      base.x0 = x - 130 * s; base.y0 = y - 90; base.x1 = x + 40 * s; base.y1 = y - 6;
+      base.cx = x - 40 * s; base.cy = y - 110;
+    } else if (kind === 'crescent') {
+      base.timer = 0.3; base.duration = 0.3; base.targetX = x + 60; base.targetY = y - 6; base.scale = s;
+    } else if (kind === 'gather') {
+      var gp = [];
+      for (var g = 0; g < 10; g++) gp.push({ ang: (g / 10) * Math.PI * 2, rad: 27, speed: 5.4, size: 2 });
+      base.timer = 1.2; base.duration = 1.2; base.particles = gp;
+    } else if (kind === 'ground_motif') {
+      base.timer = 1.4; base.duration = 1.4;
+    } else {
+      return false;
+    }
+    visualEffects.push(base);
+    return true;
   }
 
   function getSkillTarget(maxRange) {
@@ -2261,13 +2478,17 @@
     if (player.hp <= 0) {
       currentPath = [];
       targetMonster = null;
+      castState = null; // gục ngã = ngắt chiêu đang vận (K1: ngắt khi gục/đổi map)
       return;
     }
 
-    // Cập nhật hồi chiêu kỹ năng người chơi
+    // Cập nhật hồi chiêu kỹ năng người chơi (theo id chiêu trong registry)
     if (basicAttackCd > 0) basicAttackCd = Math.max(0, basicAttackCd - dt);
-    if (skill1Cd > 0) skill1Cd = Math.max(0, skill1Cd - dt);
-    if (skill2Cd > 0) skill2Cd = Math.max(0, skill2Cd - dt);
+    for (var cdId in skillCds) {
+      if (skillCds[cdId] > 0) skillCds[cdId] = Math.max(0, skillCds[cdId] - dt);
+    }
+    // Cập nhật chiêu đang vận (hết giờ vận -> phát chiêu tại điểm phát)
+    updateCast(dt);
 
     // Cập nhật hiệu ứng khống chế lên người chơi (Trói chân / Làm chậm)
     var canMove = true;
@@ -2396,7 +2617,8 @@
           player.dir = getDirFromVelocity(targetMonster.x - player.x, targetMonster.y - player.y);
 
           if (basicAttackCd <= 0) {
-            basicAttackCd = 0.45;
+            var basicDef = skillsAPI ? skillsAPI.getSkill('basic') : null;
+            basicAttackCd = basicDef ? basicDef.cooldown : 0.45;
             executePlayerBasicAttack(targetMonster);
           }
         } else if (!playerMoving && currentPath.length === 0) {
@@ -2491,15 +2713,18 @@
     if (typeof window !== 'undefined' && window.GameUI) {
       window.GameUI.update(player, mapData, {
         monsters: (mapData.id === 'rung-doc') ? fieldMonsters : [],
-        skillsCd: { phi_diep: skill1Cd, day_leo: skill2Cd }
+        skillsCd: Object.assign({}, skillCds)
       });
     }
   }
 
   function executePlayerBasicAttack(m) {
     lastCombatTime = performance.now();
+    // Đợt K1: thông số đòn thường đọc từ registry (id 'basic'); ratio 1.0 nên
+    // số học giữ nguyên bản live từng ly.
+    var basicDef = skillsAPI ? skillsAPI.getSkill('basic') : null;
     var stats = stateAPI ? stateAPI.deriveStats(player.paths, player.equipment) : { attack: 10, critRate: 5 };
-    var raw = 10 + (stats.attack - 10);
+    var raw = (10 + (stats.attack - 10)) * (basicDef && basicDef.damage ? basicDef.damage.ratio : 1);
     var elemFac = combatAPI ? combatAPI.getElementFactor('neutral', m.element) : 1.0;
     var dealt = combatAPI ? combatAPI.calcDamage(raw, elemFac, m.armor) : raw;
     var isCrit = combatAPI ? combatAPI.rollCrit((stats.critRate || 5) / 100) : false;
@@ -2507,16 +2732,8 @@
 
     if (audioAPI) audioAPI.playSlash();
 
-    // Hiệu ứng chém vầng trăng khuyết hướng về phía quái (Brief §5)
-    visualEffects.push({
-      type: 'slash_crescent',
-      x: player.x,
-      y: player.y - 25,
-      targetX: m.x,
-      targetY: m.y - 20,
-      timer: 0.22,
-      duration: 0.22
-    });
+    // Vệt chém cong thon hai đầu hướng về phía quái (nguyên thủy crescent của K1)
+    spawnSlashCrescent(player.x, player.y - 25, m.x, m.y - 20, 'neutral', basicDef ? basicDef.tier : 1);
 
     monstersAPI.damageMonster(m, dealt, player);
     spawnDamageNumber(m.x, m.y - 35, Math.round(dealt), 'moc', isCrit);
@@ -2832,22 +3049,30 @@
       var moveStep = p.speed * dt;
 
       if (dist <= moveStep) {
-        // Đạn chạm đích
-        var elemFac = combatAPI ? combatAPI.getElementFactor(p.element, p.target.element) : 1.0;
-        var dealt = combatAPI ? combatAPI.calcDamage(p.raw, elemFac, p.target.armor) : p.raw;
-        var isCrit = combatAPI ? combatAPI.rollCrit(0.05) : false;
-        if (isCrit) dealt *= 1.5;
-
-        monstersAPI.damageMonster(p.target, dealt, player);
-        spawnDamageNumber(p.target.x, p.target.y - 40, Math.round(dealt), p.element, isCrit);
-
-        if (p.target.hp <= 0) {
-          handleMonsterDeath(p.target);
+        // Đạn chạm đích: giải quyết qua cùng đường resolveSkillHit như chiêu tức thì
+        var def = p.skillId && skillsAPI ? skillsAPI.getSkill(p.skillId) : null;
+        if (def) {
+          resolveSkillHit(def, p.target, p.raw, p.element);
+        } else {
+          var elemFac = combatAPI ? combatAPI.getElementFactor(p.element, p.target.element) : 1.0;
+          var dealt = combatAPI ? combatAPI.calcDamage(p.raw, elemFac, p.target.armor) : p.raw;
+          var isCrit = combatAPI ? combatAPI.rollCrit(0.05) : false;
+          if (isCrit) dealt *= 1.5;
+          monstersAPI.damageMonster(p.target, dealt, player);
+          spawnDamageNumber(p.target.x, p.target.y - 40, Math.round(dealt), p.element, isCrit);
+          if (p.target.hp <= 0) {
+            handleMonsterDeath(p.target);
+          }
         }
         projectiles.splice(i, 1);
       } else {
         p.x += (dx / dist) * moveStep;
         p.y += (dy / dist) * moveStep;
+        // Ghi vệt đuôi: giữ tối đa 14 điểm vị trí gần nhất cho renderer vẽ dải mờ dần
+        if (p.trail) {
+          p.trail.push({ x: p.x, y: p.y });
+          if (p.trail.length > 14) p.trail.shift();
+        }
       }
     }
   }
@@ -2856,6 +3081,40 @@
     for (var i = visualEffects.length - 1; i >= 0; i--) {
       var vfx = visualEffects[i];
       vfx.timer -= dt;
+
+      // Đợt K1: cập nhật vật lý cho các nguyên thủy VFX mới
+      if (vfx.kind === 'burst' && vfx.particles) {
+        for (var bp = 0; bp < vfx.particles.length; bp++) {
+          var pt = vfx.particles[bp];
+          pt.x += pt.vx * dt;
+          pt.y += pt.vy * dt;
+          var dragF = Math.max(0, 1 - (pt.drag || 3) * dt);
+          pt.vx *= dragF;
+          pt.vy = pt.vy * dragF + 30 * dt; // hạt hơi rơi xuống
+        }
+      } else if (vfx.kind === 'gather' && vfx.followPlayer && player) {
+        vfx.x = player.x;
+        vfx.y = player.y - 30;
+      } else if (vfx.kind === 'rain') {
+        // Mưa đạn theo nhịp: duy trì ~14 giọt trong bán kính, rơi nhanh, chạm đất thì tái sinh trên cao
+        if (!vfx.drops) vfx.drops = [];
+        var targetDrops = 14;
+        while (vfx.drops.length < targetDrops) {
+          var ang = Math.random() * Math.PI * 2;
+          var rr = Math.sqrt(Math.random()) * (vfx.radius || 50);
+          vfx.drops.push({
+            x: vfx.x + Math.cos(ang) * rr,
+            y: vfx.y - 70 - Math.random() * 50,
+            groundY: vfx.y + Math.sin(ang) * rr * 0.42,
+            vy: 330 + Math.random() * 120
+          });
+        }
+        for (var rd = vfx.drops.length - 1; rd >= 0; rd--) {
+          var dr = vfx.drops[rd];
+          dr.y += dr.vy * dt;
+          if (dr.y >= dr.groundY) vfx.drops.splice(rd, 1);
+        }
+      }
 
       // Xử lý nổ kỹ năng Rễ Trói khi hết 1.2s telegraph
       if (vfx.type === 'telegraph_re_troi' && vfx.timer <= 0) {
@@ -3054,6 +3313,10 @@
         ctx.restore();
       }
     }
+
+    // 3b. (Đợt K1) Hiệu ứng mặt đất của engine VFX mới: vòng phù văn, hình
+    // motif hệ trên đất, vòng chấn động — vẽ cùng lớp đất như telegraph.
+    renderGroundVfx();
 
     // 4. (Đợt 6) Chiến lợi phẩm được vẽ SAU lớp thực thể (bước 5b) để tán cây tiền cảnh
     // không nuốt mất đế sáng + nhãn tên — vật rơi phải luôn đọc được từ xa.
@@ -3702,7 +3965,137 @@
     ctx.restore();
   }
 
+  /**
+   * Lớp mặt đất của engine VFX K1: runecircle (vòng phù văn + sao tương
+   * sinh xoay), ground_motif (hình theo motif hệ), ring chạm đất.
+   * Mọi thứ đều xoay/chuyển động theo thời gian sống — không hình tĩnh.
+   */
+  function renderGroundVfx() {
+    var nowSec = performance.now() / 1000;
+    for (var i = 0; i < visualEffects.length; i++) {
+      var vfx = visualEffects[i];
+      var lang = vfx.lang;
+      if (!lang) continue;
+      var progress = 1.0 - (vfx.timer / vfx.duration);
+      var fadeIn = Math.min(1, progress / 0.18);
+      var fadeOut = Math.min(1, vfx.timer / Math.min(0.3, vfx.duration * 0.4));
+      var alpha = Math.max(0, Math.min(fadeIn, fadeOut));
+
+      if (vfx.kind === 'runecircle') {
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = lang.glow;
+        ctx.fillStyle = lang.core;
+        ctx.shadowColor = lang.glow;
+        ctx.shadowBlur = qualityShadow(6);
+        var R = vfx.radius || 40;
+        // Hai vòng tròn (ellipse theo phối cảnh đất)
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.ellipse(vfx.x, vfx.y, R, R * 0.42, 0, 0, Math.PI * 2); ctx.stroke();
+        ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.ellipse(vfx.x, vfx.y, R * 0.78, R * 0.78 * 0.42, 0, 0, Math.PI * 2); ctx.stroke();
+        // Vạch phù văn xoay quanh vòng ngoài
+        var rot = nowSec * 0.9;
+        ctx.lineWidth = 2;
+        for (var t = 0; t < 10; t++) {
+          var ta = rot + (t / 10) * Math.PI * 2;
+          var x1 = vfx.x + Math.cos(ta) * R * 0.86, y1 = vfx.y + Math.sin(ta) * R * 0.86 * 0.42;
+          var x2 = vfx.x + Math.cos(ta) * R * 0.97, y2 = vfx.y + Math.sin(ta) * R * 0.97 * 0.42;
+          ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+        }
+        // Sao tương sinh 5 cánh xoay ngược chiều trong lòng vòng
+        var rot2 = -nowSec * 0.55;
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        for (var sIdx = 0; sIdx <= 5; sIdx++) {
+          var sa = rot2 + ((sIdx * 2) % 5) / 5 * Math.PI * 2 - Math.PI / 2;
+          var sx = vfx.x + Math.cos(sa) * R * 0.66, sy = vfx.y + Math.sin(sa) * R * 0.66 * 0.42;
+          if (sIdx === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+        }
+        ctx.stroke();
+        ctx.restore();
+      } else if (vfx.kind === 'ground_motif') {
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = lang.glow;
+        ctx.shadowColor = lang.deep;
+        ctx.shadowBlur = qualityShadow(4);
+        var grow = 0.55 + 0.45 * Math.min(1, progress / 0.25);
+        var motif = lang.motif;
+        ctx.lineWidth = 2.2;
+        if (motif === 'leaf') {
+          // Dây leo: 6 nhánh cong bò ra từ tâm (kế thừa hình bản live của Dây Leo Trói)
+          for (var a = 0; a < 6; a++) {
+            var ang = a * Math.PI / 3 + Math.sin(nowSec * 2 + a) * 0.05;
+            var ex = vfx.x + Math.cos(ang) * 24 * grow, ey = vfx.y + Math.sin(ang) * 12 * grow;
+            var mx = vfx.x + Math.cos(ang + 0.5) * 13 * grow, my = vfx.y + Math.sin(ang + 0.5) * 6 * grow;
+            ctx.beginPath(); ctx.moveTo(vfx.x, vfx.y); ctx.quadraticCurveTo(mx, my, ex, ey); ctx.stroke();
+          }
+        } else if (motif === 'blade') {
+          for (var b = 0; b < 5; b++) {
+            var ba = (b / 5) * Math.PI * 2;
+            ctx.beginPath();
+            ctx.moveTo(vfx.x + Math.cos(ba) * 6, vfx.y + Math.sin(ba) * 3);
+            ctx.lineTo(vfx.x + Math.cos(ba) * 22 * grow, vfx.y + Math.sin(ba) * 11 * grow);
+            ctx.stroke();
+          }
+        } else if (motif === 'drop') {
+          for (var c = 0; c < 3; c++) {
+            var cr = (6 + c * 7) * grow;
+            ctx.beginPath(); ctx.ellipse(vfx.x, vfx.y, cr, cr * 0.42, 0, 0, Math.PI * 2); ctx.stroke();
+          }
+        } else if (motif === 'flame') {
+          for (var f = 0; f < 7; f++) {
+            var fa = (f / 7) * Math.PI * 2;
+            ctx.beginPath();
+            ctx.moveTo(vfx.x, vfx.y);
+            ctx.lineTo(vfx.x + Math.cos(fa) * 18 * grow, vfx.y + Math.sin(fa) * 9 * grow);
+            ctx.stroke();
+          }
+        } else {
+          // shard/slash: các mảnh nứt tỏa ra
+          for (var g2 = 0; g2 < 6; g2++) {
+            var ga = (g2 / 6) * Math.PI * 2 + 0.3;
+            ctx.beginPath();
+            ctx.moveTo(vfx.x + Math.cos(ga) * 4, vfx.y + Math.sin(ga) * 2);
+            ctx.lineTo(vfx.x + Math.cos(ga) * 20 * grow, vfx.y + Math.sin(ga) * 10 * grow);
+            ctx.stroke();
+          }
+        }
+        ctx.restore();
+      } else if (vfx.kind === 'ring' && vfx.ground) {
+        renderRingVfx(vfx, progress);
+      }
+    }
+  }
+
+  /** Vòng chấn động nở ra (dùng cho cả lớp đất và lớp không). */
+  function renderRingVfx(vfx, progress) {
+    var ease = 1 - Math.pow(1 - progress, 2.2);
+    var r = (vfx.maxR || 36) * ease;
+    var alpha = Math.max(0, 1 - progress);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = vfx.lang.glow;
+    ctx.shadowColor = vfx.lang.glow;
+    ctx.shadowBlur = qualityShadow(7);
+    ctx.lineWidth = 3 * (1 - progress * 0.6);
+    ctx.beginPath();
+    if (vfx.ground) ctx.ellipse(vfx.x, vfx.y, r, r * 0.42, 0, 0, Math.PI * 2);
+    else ctx.arc(vfx.x, vfx.y, r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.lineWidth = 1.4;
+    ctx.globalAlpha = alpha * 0.7;
+    ctx.beginPath();
+    var r2 = r * 0.72;
+    if (vfx.ground) ctx.ellipse(vfx.x, vfx.y, r2, r2 * 0.42, 0, 0, Math.PI * 2);
+    else ctx.arc(vfx.x, vfx.y, r2, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
   function renderCombatVfx() {
+    var nowSec = performance.now() / 1000;
     for (var i = 0; i < visualEffects.length; i++) {
       var vfx = visualEffects[i];
       if (vfx.type === 'slash_crescent') {
@@ -3730,19 +4123,224 @@
         }
         ctx.stroke();
         ctx.restore();
+      } else if (vfx.kind === 'burst') {
+        // Bùng hạt: mỗi hạt sáng lõi + hào quang, mờ dần theo tuổi
+        var bAlpha = Math.max(0, vfx.timer / vfx.duration);
+        ctx.save();
+        ctx.shadowColor = vfx.lang.glow;
+        ctx.shadowBlur = qualityShadow(7);
+        for (var bp = 0; bp < (vfx.particles || []).length; bp++) {
+          var pt = vfx.particles[bp];
+          ctx.globalAlpha = bAlpha;
+          ctx.fillStyle = vfx.lang.core;
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, Math.max(0.4, pt.size * bAlpha), 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      } else if (vfx.kind === 'ring' && !vfx.ground) {
+        renderRingVfx(vfx, 1.0 - (vfx.timer / vfx.duration));
+      } else if (vfx.kind === 'gather') {
+        // Tụ linh khí: hạt xoáy vào điểm phát, nhân sáng lớn dần theo tiến độ vận
+        var gProg = 1.0 - (vfx.timer / vfx.duration);
+        ctx.save();
+        for (var gp = 0; gp < (vfx.particles || []).length; gp++) {
+          var gpt = vfx.particles[gp];
+          var gAng = gpt.ang + nowSec * gpt.speed;
+          var gRad = gpt.rad * (1 - gProg * 0.82);
+          var gx = vfx.x + Math.cos(gAng) * gRad;
+          var gy = vfx.y + Math.sin(gAng) * gRad * 0.7;
+          ctx.globalAlpha = 0.35 + gProg * 0.65;
+          ctx.fillStyle = vfx.lang.core;
+          ctx.shadowColor = vfx.lang.glow;
+          ctx.shadowBlur = qualityShadow(6);
+          ctx.beginPath();
+          ctx.arc(gx, gy, gpt.size, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 0.25 + gProg * 0.55;
+        ctx.fillStyle = vfx.lang.glow;
+        ctx.beginPath();
+        ctx.arc(vfx.x, vfx.y, 3 + gProg * 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      } else if (vfx.kind === 'swirl') {
+        // Vòng xoáy/trận xoay: 3 cung xoay thật quanh tâm
+        var sProg = 1.0 - (vfx.timer / vfx.duration);
+        var sAlpha = Math.min(1, sProg / 0.15) * Math.min(1, vfx.timer / 0.3);
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, sAlpha);
+        ctx.strokeStyle = vfx.lang.glow;
+        ctx.shadowColor = vfx.lang.glow;
+        ctx.shadowBlur = qualityShadow(6);
+        ctx.lineWidth = 2.4;
+        var sR = vfx.radius || 34;
+        for (var sw = 0; sw < 3; sw++) {
+          var sA0 = nowSec * 3.4 + sw * (Math.PI * 2 / 3);
+          ctx.beginPath();
+          ctx.ellipse(vfx.x, vfx.y, sR, sR * 0.45, 0, sA0, sA0 + Math.PI * 0.85);
+          ctx.stroke();
+        }
+        ctx.restore();
+      } else if (vfx.kind === 'rain') {
+        // Mưa đạn: giọt rơi có vệt, màu theo hệ, chạm đất tắt
+        ctx.save();
+        ctx.strokeStyle = vfx.lang.core;
+        ctx.shadowColor = vfx.lang.glow;
+        ctx.shadowBlur = qualityShadow(5);
+        ctx.lineWidth = 2;
+        var drops = vfx.drops || [];
+        for (var rd = 0; rd < drops.length; rd++) {
+          var dr = drops[rd];
+          ctx.globalAlpha = 0.85;
+          ctx.beginPath();
+          ctx.moveTo(dr.x + 3, dr.y - 13);
+          ctx.lineTo(dr.x, dr.y);
+          ctx.stroke();
+        }
+        ctx.restore();
+      } else if (vfx.kind === 'streak') {
+        // Vệt lướt theo quỹ đạo cong bậc hai: đầu sao chổi + đuôi thon mờ dần
+        var tProg = 1.0 - (vfx.timer / vfx.duration);
+        ctx.save();
+        ctx.lineCap = 'round';
+        var SEG = 14;
+        for (var sg = 1; sg <= SEG; sg++) {
+          var t1 = tProg * (sg / SEG);
+          var t0 = tProg * ((sg - 1) / SEG);
+          var qx1 = (1 - t1) * (1 - t1) * vfx.x0 + 2 * (1 - t1) * t1 * vfx.cx + t1 * t1 * vfx.x1;
+          var qy1 = (1 - t1) * (1 - t1) * vfx.y0 + 2 * (1 - t1) * t1 * vfx.cy + t1 * t1 * vfx.y1;
+          var qx0 = (1 - t0) * (1 - t0) * vfx.x0 + 2 * (1 - t0) * t0 * vfx.cx + t0 * t0 * vfx.x1;
+          var qy0 = (1 - t0) * (1 - t0) * vfx.y0 + 2 * (1 - t0) * t0 * vfx.cy + t0 * t0 * vfx.y1;
+          var segA = (sg / SEG) * (sg / SEG);
+          ctx.strokeStyle = vfx.lang.glow;
+          ctx.globalAlpha = segA * 0.85;
+          ctx.lineWidth = 1 + 4.5 * segA;
+          ctx.shadowColor = vfx.lang.glow;
+          ctx.shadowBlur = qualityShadow(6);
+          ctx.beginPath(); ctx.moveTo(qx0, qy0); ctx.lineTo(qx1, qy1); ctx.stroke();
+        }
+        var hx = (1 - tProg) * (1 - tProg) * vfx.x0 + 2 * (1 - tProg) * tProg * vfx.cx + tProg * tProg * vfx.x1;
+        var hy = (1 - tProg) * (1 - tProg) * vfx.y0 + 2 * (1 - tProg) * tProg * vfx.cy + tProg * tProg * vfx.y1;
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = vfx.lang.core;
+        ctx.beginPath(); ctx.arc(hx, hy, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      } else if (vfx.kind === 'crescent') {
+        // Vệt chém cong thon hai đầu: dải lưỡi liềm quét từ góc bắt đầu sang góc kết,
+        // bề dày phình ở giữa và thon về hai đầu, lõi trắng nóng + viền hào quang hệ.
+        var cProg = 1.0 - (vfx.timer / vfx.duration);
+        var cAngle = Math.atan2(vfx.targetY - vfx.y, vfx.targetX - vfx.x);
+        var sweep = Math.PI * 0.95;
+        var a0 = cAngle - sweep / 2 + sweep * cProg * 0.55;
+        var a1 = a0 + sweep * 0.62;
+        var cR = 30 * (vfx.scale || 1);
+        var cFade = Math.sin(Math.min(1, cProg * 1.15) * Math.PI);
+        ctx.save();
+        ctx.translate(vfx.x + Math.cos(cAngle) * 10, vfx.y + Math.sin(cAngle) * 10);
+        for (var pass = 0; pass < 2; pass++) {
+          ctx.beginPath();
+          var STEPS = 12;
+          for (var ci = 0; ci <= STEPS; ci++) {
+            var ct = ci / STEPS;
+            var ca = a0 + (a1 - a0) * ct;
+            var wHalf = Math.sin(ct * Math.PI) * (pass === 0 ? 5.2 : 2.4) * (vfx.scale || 1);
+            var px = Math.cos(ca) * (cR + wHalf), py = Math.sin(ca) * (cR + wHalf);
+            if (ci === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+          }
+          for (var cj = STEPS; cj >= 0; cj--) {
+            var ct2 = cj / STEPS;
+            var ca2 = a0 + (a1 - a0) * ct2;
+            var wHalf2 = Math.sin(ct2 * Math.PI) * (pass === 0 ? 5.2 : 2.4) * (vfx.scale || 1);
+            ctx.lineTo(Math.cos(ca2) * (cR - wHalf2), Math.sin(ca2) * (cR - wHalf2));
+          }
+          ctx.closePath();
+          ctx.globalAlpha = cFade * (pass === 0 ? 0.55 : 0.95);
+          ctx.fillStyle = pass === 0 ? vfx.lang.glow : vfx.lang.core;
+          ctx.shadowColor = vfx.lang.glow;
+          ctx.shadowBlur = qualityShadow(pass === 0 ? 10 : 4);
+          ctx.fill();
+        }
+        ctx.restore();
       }
     }
 
-    // Projectile lá bay
+    // Đạn chiêu: vệt đuôi mờ dần + đầu đạn theo motif hệ (K1 thay vòng tròn lá cũ)
     for (var p = 0; p < projectiles.length; p++) {
       var proj = projectiles[p];
+      var pLang = fxLang(proj.element);
       ctx.save();
-      ctx.fillStyle = '#55d882';
-      ctx.shadowColor = '#8cd96a';
-      ctx.shadowBlur = qualityShadow(8);
-      ctx.beginPath();
-      ctx.arc(proj.x, proj.y, 6.5, 0, Math.PI * 2);
-      ctx.fill();
+      // Vệt đuôi: dải nối các điểm đã ghi, mảnh và mờ dần về đuôi
+      if (proj.trail && proj.trail.length > 1) {
+        ctx.lineCap = 'round';
+        for (var ti = 1; ti < proj.trail.length; ti++) {
+          var tA = ti / proj.trail.length;
+          ctx.strokeStyle = pLang.glow;
+          ctx.globalAlpha = tA * 0.5;
+          ctx.lineWidth = 1 + 4 * tA;
+          ctx.beginPath();
+          ctx.moveTo(proj.trail[ti - 1].x, proj.trail[ti - 1].y);
+          ctx.lineTo(proj.trail[ti].x, proj.trail[ti].y);
+          ctx.stroke();
+        }
+      }
+      // Đầu đạn theo motif ngôn ngữ hình của hệ
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = pLang.core;
+      ctx.shadowColor = pLang.glow;
+      ctx.shadowBlur = qualityShadow(9);
+      var headAng = proj.trail && proj.trail.length > 1
+        ? Math.atan2(proj.y - proj.trail[0].y, proj.x - proj.trail[0].x) : 0;
+      var motif = pLang.motif;
+      if (motif === 'leaf') {
+        ctx.translate(proj.x, proj.y);
+        ctx.rotate(headAng);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 8, 4.2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = pLang.deep;
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(-7, 0); ctx.lineTo(7, 0); ctx.stroke();
+      } else if (motif === 'blade') {
+        ctx.translate(proj.x, proj.y);
+        ctx.rotate(headAng);
+        ctx.beginPath();
+        ctx.moveTo(9, 0); ctx.lineTo(-6, -3.4); ctx.lineTo(-3.4, 0); ctx.lineTo(-6, 3.4);
+        ctx.closePath(); ctx.fill();
+      } else if (motif === 'flame') {
+        ctx.beginPath(); ctx.arc(proj.x, proj.y, 6, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = pLang.glow;
+        ctx.beginPath(); ctx.arc(proj.x - Math.cos(headAng) * 4, proj.y - Math.sin(headAng) * 4, 3.6, 0, Math.PI * 2); ctx.fill();
+      } else if (motif === 'drop') {
+        ctx.beginPath(); ctx.arc(proj.x, proj.y, 5.6, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.beginPath(); ctx.arc(proj.x - 1.8, proj.y - 1.8, 1.8, 0, Math.PI * 2); ctx.fill();
+      } else if (motif === 'shard') {
+        ctx.translate(proj.x, proj.y);
+        ctx.rotate(headAng + Math.PI / 4);
+        ctx.fillRect(-4.4, -4.4, 8.8, 8.8);
+      } else {
+        ctx.beginPath(); ctx.arc(proj.x, proj.y, 6, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // Thanh vận chiêu trên đầu nhân vật khi đang vận chiêu (hồ sơ 52§3, bản K1):
+    // viền theo màu hệ + phần đã vận sáng lõi; hết vận là chiêu phát ngay.
+    if (castState && player) {
+      var csProg = 1 - Math.max(0, castState.timer) / Math.max(0.01, castState.total);
+      var csLang = fxLang(skillsAPI ? skillsAPI.elementOf(castState.def) : 'neutral');
+      var barW = 46, barH = 5.5;
+      var barX = player.x - barW / 2, barY = player.y - 138;
+      ctx.save();
+      ctx.fillStyle = 'rgba(8, 10, 14, 0.72)';
+      ctx.beginPath(); ctx.rect(barX - 1.5, barY - 1.5, barW + 3, barH + 3); ctx.fill();
+      ctx.fillStyle = csLang.deep;
+      ctx.beginPath(); ctx.rect(barX, barY, barW, barH); ctx.fill();
+      ctx.fillStyle = csLang.core;
+      ctx.shadowColor = csLang.glow;
+      ctx.shadowBlur = qualityShadow(6);
+      ctx.beginPath(); ctx.rect(barX, barY, barW * Math.min(1, csProg), barH); ctx.fill();
       ctx.restore();
     }
   }
@@ -4107,6 +4705,12 @@
     setQuality: setQuality,
     getQuality: function () { return currentQuality; },
     castSkill: castSkill,
+    // Đợt K1: móc kiểm thử renderer VFX + đọc trạng thái vận chiêu/hồi chiêu
+    debugSpawnVfx: debugSpawnVfx,
+    getCastState: function () {
+      return castState ? { skillId: castState.def.id, timer: castState.timer, total: castState.total } : null;
+    },
+    getSkillCds: function () { return Object.assign({}, skillCds); },
     handleRevive: handleRevive,
     switchMap: switchMap,
     teleportTo: teleportTo,

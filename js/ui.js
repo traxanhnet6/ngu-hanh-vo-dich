@@ -134,39 +134,24 @@
     if (btnBag) btnBag.addEventListener('click', toggleBag);
     if (closeBag) closeBag.addEventListener('click', closeBagModal);
 
-    // Phím tắt bàn phím: B mở túi, 1 cast Phi Diệp, 2 cast Dây Leo
+    // Phím tắt bàn phím: B mở túi, phím số 1..9 tung chiêu theo thứ tự
+    // trên thanh kỹ năng của registry (Đợt K1 — không gán cứng id chiêu).
     window.addEventListener('keydown', function (e) {
       if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
       if (e.key === 'b' || e.key === 'B') {
         toggleBag();
-      } else if (e.key === '1') {
-        if (window.GameEngine && window.GameEngine.castSkill) {
-          window.GameEngine.castSkill('phi_diep');
-        }
-      } else if (e.key === '2') {
-        if (window.GameEngine && window.GameEngine.castSkill) {
-          window.GameEngine.castSkill('day_leo');
+      } else if (/^[1-9]$/.test(e.key)) {
+        var loadoutKey = window.GameSkills ? window.GameSkills.getLoadout() : [];
+        var keyDef = loadoutKey[parseInt(e.key, 10) - 1];
+        if (keyDef && window.GameEngine && window.GameEngine.castSkill) {
+          window.GameEngine.castSkill(keyDef.id);
         }
       }
     });
 
-    // 5. Skill Buttons click
-    var s1 = document.getElementById('skill-slot-1');
-    var s2 = document.getElementById('skill-slot-2');
-    if (s1) {
-      s1.addEventListener('click', function () {
-        if (window.GameEngine && window.GameEngine.castSkill) {
-          window.GameEngine.castSkill('phi_diep');
-        }
-      });
-    }
-    if (s2) {
-      s2.addEventListener('click', function () {
-        if (window.GameEngine && window.GameEngine.castSkill) {
-          window.GameEngine.castSkill('day_leo');
-        }
-      });
-    }
+    // 5. Nút kỹ năng: dựng từ registry (tên, icon, tooltip, hành vi bấm đều
+    // lấy từ định nghĩa chiêu — thêm chiêu mới chỉ cần thêm dữ liệu + ô nút).
+    bindSkillSlots();
 
     // 5b. Nút hành động theo ngữ cảnh + nút tự tìm đường theo nhiệm vụ
     var btnAction = document.getElementById('btn-action');
@@ -1792,10 +1777,46 @@
       }
     }
 
-    // Cập nhật Cooldown kỹ năng trên thanh skill
-    if (extras.skillsCd) {
-      updateSkillSlotUI(1, extras.skillsCd.phi_diep, 3.0);
-      updateSkillSlotUI(2, extras.skillsCd.day_leo, 8.0);
+    // Cập nhật Cooldown kỹ năng trên thanh skill (theo registry, Đợt K1):
+    // tổng hồi chiêu lấy từ định nghĩa chiêu, phần còn lại từ engine.
+    if (extras.skillsCd && window.GameSkills) {
+      var loadoutCd = window.GameSkills.getLoadout();
+      for (var si = 0; si < loadoutCd.length; si++) {
+        updateSkillSlotUI(si + 1, extras.skillsCd[loadoutCd[si].id] || 0, loadoutCd[si].cooldown);
+      }
+    }
+  }
+
+  /**
+   * Dựng các ô nút kỹ năng từ registry (Đợt K1): mỗi ô trên thanh lấy
+   * chiêu theo LOADOUT của js/skills.js — tooltip gồm tên + hệ + hao phí,
+   * icon theo def.icon, nhãn theo def.shortName, bấm để castSkill(id).
+   */
+  function bindSkillSlots() {
+    if (!window.GameSkills) return;
+    var loadout = window.GameSkills.getLoadout();
+    for (var i = 0; i < loadout.length; i++) {
+      (function (def, idx) {
+        var slot = document.getElementById('skill-slot-' + (idx + 1));
+        if (!slot) return;
+        var lang = window.GameSkills.elementLang(window.GameSkills.elementOf(def));
+        var title = '[' + (idx + 1) + '] ' + def.name + ' (' + lang.name + ')';
+        if (def.cost && def.cost.amount > 0) title += ' - Tốn ' + def.cost.amount + ' Linh lực';
+        if (def.desc) title += ' — ' + def.desc;
+        slot.title = title;
+        slot.setAttribute('aria-label', def.name);
+        var icon = slot.querySelector('.skill-icon');
+        if (icon) icon.className = 'skill-icon ' + def.icon;
+        var tag = slot.querySelector('.skill-name-tag');
+        if (tag) tag.textContent = def.shortName || def.name;
+        var hk = slot.querySelector('.skill-hotkey');
+        if (hk) hk.textContent = String(idx + 1);
+        slot.addEventListener('click', function () {
+          if (window.GameEngine && window.GameEngine.castSkill) {
+            window.GameEngine.castSkill(def.id);
+          }
+        });
+      })(loadout[i], i);
     }
   }
 
