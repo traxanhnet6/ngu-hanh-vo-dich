@@ -3531,6 +3531,10 @@
     var gainedTuVi = stateAPI ? stateAPI.calcTuViGain(todayData.farmTuVi, rawTuVi) : rawTuVi;
     if (!player.paths[tuViElem]) player.paths[tuViElem] = { tuVi: 0 };
     player.paths[tuViElem].tuVi += gainedTuVi;
+    // REALMFIX: đồng bộ nhãn cảnh giới ngay khi tu vi đổi (trước đây nhãn
+    // chỉ đổi ở savePlayer/loadPlayer — hạ quái không lưu ngay nên HUD
+    // phải chờ; nay nhãn khớp hạng tại đúng khoảnh khắc cộng tu vi)
+    if (stateAPI && stateAPI.syncRealmLabel) stateAPI.syncRealmLabel(player);
     todayData.farmTuVi += gainedTuVi;
 
     if (player.farmSession) {

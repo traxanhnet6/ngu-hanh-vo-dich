@@ -300,6 +300,9 @@
     if (player.hp > player.hpMax) player.hp = player.hpMax;
     if (player.linhLuc > player.linhLucMax) player.linhLuc = player.linhLucMax;
 
+    // REALMFIX: nhãn cảnh giới luôn khớp hạng suy ra từ tu vi mỗi lần lưu
+    syncRealmLabel(player);
+
     var serialized = JSON.stringify(player);
     var key = STORAGE_PREFIX + 'char_' + player.name;
     storage.setItem(key, serialized);
@@ -384,6 +387,10 @@
       var stats = deriveStats(data.paths, data.equipment);
       data.hpMax = stats.hpMax;
       data.linhLucMax = stats.linhLucMax;
+      // REALMFIX: chuẩn hóa nhãn cảnh giới cho bản lưu cũ ngay khi nạp
+      // (chỉ đổi trường realm trong bộ nhớ; các dữ liệu khác giữ nguyên,
+      // nhãn mới được ghi xuống ở lần lưu kế tiếp như mọi trường phái sinh)
+      syncRealmLabel(data);
       return data;
     } catch (e) {
       return null;
@@ -445,6 +452,22 @@
     if (rank <= 17) return 'Kim Đan ' + REALM_STAGE_SUFFIX[rank - 14];
     if (rank <= 21) return 'Nguyên Anh ' + REALM_STAGE_SUFFIX[rank - 18];
     return 'Hóa Thần ' + REALM_STAGE_SUFFIX[Math.min(3, rank - 22)];
+  }
+
+  /**
+   * REALMFIX (2026-11-09): đồng bộ nhãn cảnh giới lưu trong player.realm với
+   * hạng suy ra — nhãn hiển thị (HUD, bảng nhân vật) đọc player.realm dạng
+   * chuỗi tĩnh, mà trước đây chuỗi này chỉ được ghi lúc tạo nhân vật
+   * ('Phàm Nhân') và lúc đột phá Trúc Cơ, nên qua các tầng Luyện Khí nhãn
+   * không bao giờ đổi. getRealmRank lấy max(hạng từ chuỗi, hạng từ tu vi)
+   * nên nhãn đồng bộ chỉ GIỮ NGUYÊN hoặc NÂNG lên — không bao giờ hạ một
+   * cảnh giới đã đạt. Gọi tại: savePlayer, loadPlayer (chuẩn hóa bản lưu
+   * cũ) và điểm cộng tu vi khi hạ quái trong engine.
+   */
+  function syncRealmLabel(player) {
+    if (!player) return player;
+    player.realm = realmRankLabel(getRealmRank(player));
+    return player;
   }
 
   /**
@@ -841,6 +864,7 @@
     loadPlayer: loadPlayer,
     getRealmRank: getRealmRank,
     realmRankLabel: realmRankLabel,
+    syncRealmLabel: syncRealmLabel,
     realmRankFromString: realmRankFromString,
     realmRankFromPaths: realmRankFromPaths,
     listCharacters: listCharacters,
