@@ -284,6 +284,11 @@
     pathfinder = typeof window !== 'undefined' ? window.Pathfinder : (typeof require !== 'undefined' ? require('./pathfind.js') : null);
     combatAPI = typeof window !== 'undefined' ? window.GameCombat : null;
     monstersAPI = typeof window !== 'undefined' ? window.GameMonsters : (typeof require !== 'undefined' ? require('./monsters.js') : null);
+    // Tương thích save cũ: đã nhận nhiệm vụ tông môn đầu tiên (sectStage >= 2) mà chưa
+    // có kiếm nào trong túi/trang bị thì được cấp Kiếm Đệ Tử một lần ngay khi nạp.
+    if (player && player.quests && (player.quests.sectStage || 0) >= 2 && !player.quests.starterSwordGranted) {
+      grantStarterSword(false);
+    }
     onReadyCallback = onReady;
 
     if (canvas) resizeCanvas();
@@ -611,6 +616,49 @@
     }
   }
 
+  // ---- Đợt questsword: TẶNG KIẾM ĐỆ TỬ khi nhận nhiệm vụ tông môn đầu tiên ----
+  var STARTER_SWORD_ID = 'kiem-de-tu';
+  var SWORD_ITEM_IDS = ['kiem-de-tu', 'kiem-go', 'kiem-sat'];
+  var pendingSwordToast = false;
+
+  function playerOwnsSword() {
+    if (!player) return false;
+    if (player.equipment && SWORD_ITEM_IDS.indexOf(player.equipment.weapon) !== -1) return true;
+    if (player.bag && player.bag.slots) {
+      for (var i = 0; i < player.bag.slots.length; i++) {
+        var s = player.bag.slots[i];
+        if (s && SWORD_ITEM_IDS.indexOf(s.itemId) !== -1) return true;
+      }
+    }
+    return false;
+  }
+
+  // Tặng Kiếm Đệ Tử đúng một lần: cờ quests.starterSwordGranted lưu trong save.
+  // Trả true nếu vừa tặng xong. feedback=false khi chạy lúc nạp save (toast hoãn tới start()).
+  function grantStarterSword(feedback) {
+    if (!player || !player.quests || !stateAPI) return false;
+    if (player.quests.starterSwordGranted) return false;
+    if (playerOwnsSword()) {
+      player.quests.starterSwordGranted = true;
+      stateAPI.savePlayer(player);
+      return false;
+    }
+    var res = stateAPI.addItemToBag(player, STARTER_SWORD_ID, 1);
+    if (!res || !res.success) return false; // Túi đầy: giữ cờ tắt, lần nạp sau thử lại
+    player.quests.starterSwordGranted = true;
+    stateAPI.savePlayer(player);
+    if (feedback) {
+      spawnFloatingText('Nhận được: Kiếm Đệ Tử', player.x, player.y - 35, '#ffe9a8');
+      if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.refreshHUD();
+        window.GameUI.showToast('Nhận được: Kiếm Đệ Tử');
+      }
+    } else {
+      pendingSwordToast = true;
+    }
+    return true;
+  }
+
   function handleNpcTalked(npcId) {
     if (!player || !player.quests) return;
     var q = player.quests;
@@ -644,6 +692,8 @@
           window.GameUI.refreshHUD();
           window.GameUI.showToast('Nhiệm vụ mới: Diện kiến Chưởng Môn ở Đại Điện');
         }
+        // Nhận nhiệm vụ tông môn đầu tiên: tông môn cấp ngay Kiếm Đệ Tử (toast kiếm hiện sau cùng)
+        grantStarterSword(true);
       }
     } else if (npcId === 'npc_chuongmon') {
       if ((q.sectStage || 0) === 2) {
@@ -2083,6 +2133,12 @@
   function start() {
     if (isRunning) return;
     isRunning = true;
+    if (pendingSwordToast) {
+      pendingSwordToast = false;
+      if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.showToast('Nhận được: Kiếm Đệ Tử');
+      }
+    }
     lastFrameTime = performance.now();
     requestAnimationFrame(gameLoop);
     // Note 8: nạp cờ chất lượng độc lập với hệ âm thanh
@@ -3623,7 +3679,7 @@
       var row = def.iconRow || 0;
       ctx.drawImage(
         iconsImg,
-        col * 48, row * 48, 48, 48,
+        col * 32, row * 32, 32, 32,
         drop.x - 15, drop.y - 30 + bob, 30, 30
       );
     }

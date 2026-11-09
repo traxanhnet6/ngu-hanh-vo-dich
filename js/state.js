@@ -146,7 +146,8 @@
         mainStage: 0,
         nhenKills: 0,
         bangXaKills: 0,
-        hatClaimed: false
+        hatClaimed: false,
+        starterSwordGranted: false
       },
       face: options.face || 'Quyết tâm',
       linhThach: options.linhThach || 0,
@@ -275,7 +276,8 @@
           mainStage: 0,
           nhenKills: 0,
           bangXaKills: 0,
-          hatClaimed: false
+          hatClaimed: false,
+          starterSwordGranted: false
         };
       } else {
         if (data.quests.sectStage === undefined) {
@@ -292,6 +294,9 @@
         }
         if (data.quests.hatClaimed === undefined) {
           data.quests.hatClaimed = false;
+        }
+        if (data.quests.starterSwordGranted === undefined) {
+          data.quests.starterSwordGranted = false;
         }
       }
       if (data.lastSpringUse === undefined) {

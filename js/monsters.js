@@ -60,7 +60,7 @@
       def: 1,
       quality: 'common',
       stackable: false,
-      iconCol: 1,
+      iconCol: 4,
       iconRow: 1,
       desc: 'Nón lá quê nhà, che nắng che mưa. +1 phòng thủ'
     },
@@ -72,9 +72,21 @@
       atk: 2,
       quality: 'common',
       stackable: false,
-      iconCol: 1,
-      iconRow: 1,
+      iconCol: 4,
+      iconRow: 0,
       desc: 'Kiếm gỗ tập luyện cho đệ tử mới vào tông (+2 công kích).'
+    },
+    'kiem-de-tu': {
+      id: 'kiem-de-tu',
+      name: 'Kiếm Đệ Tử',
+      type: 'gear',
+      slot: 'weapon',
+      atk: 3,
+      quality: 'common',
+      stackable: false,
+      iconCol: 5,
+      iconRow: 1,
+      desc: 'Kiếm thép thô tông môn cấp phát cho đệ tử mới nhập môn (+3 công kích).'
     },
     'kiem-sat': {
       id: 'kiem-sat',
@@ -84,8 +96,8 @@
       atk: 5,
       quality: 'good',
       stackable: false,
-      iconCol: 1,
-      iconRow: 1,
+      iconCol: 5,
+      iconRow: 0,
       desc: 'Kiếm rèn từ huyền thiết thô, lưỡi sắc bén (+5 công kích).'
     },
     'ao-vai': {
@@ -96,8 +108,8 @@
       def: 1,
       quality: 'common',
       stackable: false,
-      iconCol: 2,
-      iconRow: 1,
+      iconCol: 1,
+      iconRow: 6,
       desc: 'Áo vải thanh đạm mộc mạc (+1 phòng thủ).'
     },
     'ao-linh': {
@@ -108,8 +120,8 @@
       def: 3,
       quality: 'good',
       stackable: false,
-      iconCol: 2,
-      iconRow: 1,
+      iconCol: 5,
+      iconRow: 4,
       desc: 'Áo dệt từ linh tơ mềm mại, ngăn cản khí độc (+3 phòng thủ).'
     },
     'dao-cui-cu': {
@@ -216,7 +228,7 @@
       name: 'Băng Tủy Ngàn Năm',
       type: 'material',
       stackable: true,
-      iconCol: 1,
+      iconCol: 4,
       iconRow: 4,
       desc: 'Băng tủy trong veo kết tinh ngàn năm dưới hồ băng, chạm vào lạnh thấu xương.'
     },

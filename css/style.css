@@ -1249,7 +1249,7 @@ input:checked + .slider:before {
   width: 32px;
   height: 32px;
   background-image: url('../assets/art/icons-sheet.png');
-  background-size: 128px 64px; /* 4x2 ô 32px */
+  background-size: 192px 224px; /* 6x7 ô 32px */
   background-repeat: no-repeat;
 }
 

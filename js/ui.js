@@ -962,9 +962,9 @@
 
   function setIconSprite(el, def, cellPx) {
     if (!el || !def) return;
-    var scale = cellPx / 32; // sheet hiển thị gốc: 4x2 ô 32px (nền 128x64)
+    var scale = cellPx / 32; // sheet gốc: 6x7 ô 32px (nền 192x224)
     el.style.backgroundImage = "url('assets/art/icons-sheet.png')";
-    el.style.backgroundSize = (128 * scale) + 'px ' + (64 * scale) + 'px';
+    el.style.backgroundSize = (192 * scale) + 'px ' + (224 * scale) + 'px';
     el.style.backgroundPosition = (-(def.iconCol || 0) * cellPx) + 'px ' + (-(def.iconRow || 0) * cellPx) + 'px';
     el.style.backgroundRepeat = 'no-repeat';
     el.style.width = cellPx + 'px';
@@ -1473,8 +1473,8 @@
     if (tuviThuy) tuviThuy.textContent = (p.thuy && p.thuy.tuVi) || 0;
     if (tuviMoc) tuviMoc.textContent = (p.moc && p.moc.tuVi) || 0;
 
-    // Chỉ số phái sinh
-    var stats = stateAPI.deriveStats(player.paths);
+    // Chỉ số phái sinh (gồm cả trang bị đang mặc — khớp công thức chiến đấu của engine)
+    var stats = stateAPI.deriveStats(player.paths, player.equipment);
     var statHp = document.getElementById('stat-hpmax');
     var statLl = document.getElementById('stat-llmax');
     var statAtk = document.getElementById('stat-atk');
@@ -1602,7 +1602,8 @@
     } else if (sectStage === 2) {
       if (titleEl) titleEl.textContent = 'Diện kiến Chưởng Môn';
       if (descEl) {
-        descEl.textContent = 'Vào Đại Điện ở giữa trục chính của sơn môn, chưởng môn đang đợi.';
+        descEl.textContent = 'Vào Đại Điện ở giữa trục chính của sơn môn, chưởng môn đang đợi.' +
+          (q.starterSwordGranted ? ' Tông môn đã cấp Kiếm Đệ Tử — mở Túi đồ, chọn kiếm rồi bấm Trang bị để cầm kiếm.' : '');
         descEl.classList.remove('greyed');
       }
     } else if (sectStage === 3) {

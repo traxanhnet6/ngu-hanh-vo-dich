@@ -1,0 +1,2230 @@
+/* ============================================================
+   NGŨ HÀNH VÔ ĐỊCH — Giao diện Tiên Hiệp (Xianxia UI)
+   Kế thừa kiến trúc chuẩn từ reference game:
+   - Tông sẫm bán trong suốt, điểm viền vàng đồng cổ
+   - Panels gọn gàng, chạm cảm ứng di động >= 40px
+   - Hoàn toàn KHÔNG dùng emoji
+   ============================================================ */
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: #141a16;
+  color: #e8e2d0;
+  font-family: "Noto Serif", "Times New Roman", serif;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  overflow: hidden;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ================= Các loại Nút Bấm ================= */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  border: 1px solid #77683c;
+  background: #2c2c22;
+  color: #e8dfc0;
+  padding: 10px 16px;
+  min-height: 44px;
+  border-radius: 6px;
+  font-size: 14.5px;
+  font-family: inherit;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.btn:hover {
+  background: #3d3a2a;
+  border-color: #a8893a;
+}
+
+.btn-main {
+  background: linear-gradient(180deg, #8a6d2f, #6d5522);
+  color: #fff7dd;
+  font-weight: bold;
+  border-color: #c9a227;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.btn-main:hover {
+  background: linear-gradient(180deg, #a07d35, #7d6026);
+  border-color: #e8c858;
+}
+
+.btn.wide {
+  width: 100%;
+}
+
+.btn.small {
+  padding: 5px 12px;
+  min-height: 32px;
+  font-size: 12.5px;
+}
+
+.btn.wood {
+  background: linear-gradient(180deg, #5c4328 0%, #3e2b17 50%, #2a1c0d 100%);
+  border: 1px solid #c9a227;
+  color: #f7ead0;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 235, 175, 0.45), inset 0 -1px 0 rgba(0, 0, 0, 0.5);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.15s;
+}
+
+.btn.wood:hover {
+  background: linear-gradient(180deg, #6e5132 0%, #4a341d 50%, #342312 100%);
+  border-color: #ffd978;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 245, 205, 0.6);
+}
+
+.btn.wood:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.8), inset 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.btn[disabled],
+.btn.disabled {
+  filter: grayscale(0.85) contrast(0.8);
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.btn-danger {
+  background: linear-gradient(180deg, #9a2b22, #751a14);
+  border: 1px solid #e85848;
+  color: #fff0ed;
+}
+
+.btn-danger:hover {
+  background: linear-gradient(180deg, #b8352b, #8a2019);
+}
+
+.btn-close {
+  background: none;
+  border: none;
+  color: #c9b88d;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-close:hover {
+  color: #ffffff;
+}
+
+/* ================= Panel chuẩn ================= */
+.panel {
+  background: rgba(24, 30, 24, 0.88);
+  border: 1px solid #77683c;
+  border-radius: 8px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.55), inset 0 0 30px rgba(0, 0, 0, 0.35);
+  color: #f0e8d2;
+}
+
+/* ================= Màn hình Khởi Đầu ================= */
+.screen {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+}
+
+#screen-start {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at 50% 35%, #24382a 0%, #101612 75%);
+  padding: 16px;
+}
+
+.auth-box {
+  width: 440px;
+  max-width: 92vw;
+  padding: 30px 28px;
+  border-color: #a8893a;
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.7), inset 0 0 50px rgba(201, 162, 39, 0.06);
+}
+
+.game-title {
+  margin: 0 0 8px;
+  text-align: center;
+  font-size: 32px;
+  letter-spacing: 3px;
+  color: #e9d9a8;
+  text-shadow: 0 2px 0 #5d4a1e, 0 0 20px rgba(201, 162, 39, 0.4);
+}
+
+.game-sub {
+  text-align: center;
+  color: #b9ac8d;
+  font-size: 13.5px;
+  line-height: 1.55;
+  margin: 0 0 22px;
+}
+
+.form-label {
+  display: block;
+  font-size: 13.5px;
+  color: #cbbfa0;
+  margin-bottom: 14px;
+}
+
+.form-label input {
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid #5d5136;
+  background: #10140f;
+  color: #f0e8d2;
+  font-size: 15.5px;
+  font-family: inherit;
+}
+
+.face-template-note {
+  font-size: 12.5px;
+  color: #8d8271;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 8px 10px;
+  border-radius: 5px;
+  border-left: 3px solid #77683c;
+  margin-bottom: 18px;
+  line-height: 1.45;
+}
+
+.face-template-note .note-title {
+  color: #c9b88d;
+  font-weight: bold;
+}
+
+.char-list-label {
+  font-size: 12.5px;
+  color: #b9ac8d;
+  margin: 14px 0 6px;
+}
+
+.saved-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 100px;
+  overflow-y: auto;
+}
+
+.char-select-btn.active {
+  border-color: #ffd978;
+  background: linear-gradient(180deg, rgba(120, 88, 50, 0.95), rgba(80, 54, 30, 0.95));
+  color: #ffffff;
+}
+
+.start-footer {
+  margin-top: 22px;
+  border-top: 1px solid #443c26;
+  padding-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.note {
+  margin: 0;
+  font-size: 11px;
+  color: #7d7260;
+  line-height: 1.4;
+}
+
+/* ================= Sân Khấu Chơi (Stage & HUD) ================= */
+#screen-game {
+  padding: 0;
+  touch-action: none;
+}
+
+#stage {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#game-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.hud-panel {
+  position: absolute;
+  z-index: 10;
+  pointer-events: auto;
+}
+
+/* Khung nhân vật góc trên bên trái */
+#char-frame {
+  top: 10px;
+  left: 10px;
+  padding: 8px 10px;
+  min-width: 250px;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+#char-frame:hover {
+  border-color: #a8893a;
+}
+
+.hud-top-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.char-portrait {
+  width: 44px;
+  height: 48px;
+  flex: none;
+  border: 1px solid #77683c;
+  border-radius: 5px;
+  background-color: #1a221a;
+  background-image: url('../assets/chars/hanhan-face.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  image-rendering: crisp-edges;
+}
+
+.char-summary {
+  flex: 1;
+  min-width: 0;
+}
+
+.hud-name {
+  font-size: 15px;
+  font-weight: bold;
+  color: #ffe9a8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hud-realm {
+  font-size: 11.5px;
+  color: #a8c8e8;
+  margin-top: 2px;
+}
+
+.ring-container {
+  width: 84px;
+  height: 84px;
+  flex: none;
+  margin: -10px -4px -10px 0;
+}
+
+.ring-svg {
+  display: block;
+}
+
+.bar-rows {
+  margin-top: 6px;
+  border-top: 1px solid rgba(119, 104, 60, 0.3);
+  padding-top: 6px;
+}
+
+.bar-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+
+.bar-row:last-child {
+  margin-bottom: 0;
+}
+
+.bar-label {
+  width: 52px;
+  color: #d8c9a3;
+  font-size: 10.5px;
+}
+
+.bar-track {
+  flex: 1;
+  height: 8px;
+  background: #141008;
+  border: 1px solid #5d4a26;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  width: 0%;
+  transition: width 0.2s ease-out;
+}
+
+.bar-fill.hp-bar {
+  background: linear-gradient(90deg, #9a2b22, #e06048);
+}
+
+.bar-fill.linhluc-bar {
+  background: linear-gradient(90deg, #386ba0, #5ca8e8);
+}
+
+.bar-val {
+  min-width: 65px;
+  text-align: right;
+  font-weight: normal;
+  color: #f0e8d2;
+  font-size: 10.5px;
+}
+
+/* Bảng nhiệm vụ bên trái */
+#quest-panel {
+  top: 135px;
+  left: 10px;
+  width: 220px;
+  padding: 8px 10px;
+  font-size: 12px;
+  transition: max-height 0.25s;
+}
+
+.quest-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(119, 104, 60, 0.35);
+  padding-bottom: 4px;
+  margin-bottom: 6px;
+}
+
+.quest-tag {
+  color: #e9d9a8;
+  font-weight: bold;
+  font-size: 11.5px;
+  letter-spacing: 1px;
+}
+
+.btn-toggle {
+  background: none;
+  border: none;
+  color: #c9b88d;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.quest-title {
+  color: #ffd978;
+  font-weight: bold;
+  margin-bottom: 3px;
+  font-size: 12.5px;
+}
+
+.quest-desc {
+  color: #d0c8b2;
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+
+.quest-desc.greyed {
+  color: #7d7565;
+}
+
+.quest-dist {
+  color: #92b4d8;
+  font-size: 11px;
+}
+
+#quest-panel.collapsed .quest-body {
+  display: none;
+}
+
+/* Minimap góc trên bên phải */
+#minimap-wrap {
+  top: 10px;
+  right: 10px;
+  padding: 4px;
+  text-align: center;
+}
+
+#minimap-canvas {
+  display: block;
+  border: 1px solid #77683c;
+  border-radius: 4px;
+}
+
+.minimap-label {
+  font-size: 11px;
+  color: #ffd978;
+  margin-top: 3px;
+}
+
+/* Nút Cài đặt góc dưới bên phải */
+.hud-btn {
+  /* Không dùng position:absolute nữa: từ Đợt 2 hai nút Túi/Cài Đặt nằm trong cụm flex
+     .hud-bottom-right-btns — absolute với cùng bottom/right khiến chúng chồng khít lên nhau,
+     nút Cài Đặt (ở sau trong DOM) che mất nút Túi và hứng mọi cú chạm. */
+  padding: 6px 12px;
+  font-size: 12.5px;
+}
+
+/* Hộp thoại NPC */
+#dialogue-box {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  max-width: 92vw;
+  /* Trên thanh kỹ năng (z 40): khi đang thoại, chạm vào giữa hộp thoại phải trúng hộp thoại để sang câu */
+  z-index: 45;
+  display: flex;
+  gap: 14px;
+  padding: 12px 16px;
+  cursor: pointer;
+  border-color: #a8893a;
+  background: rgba(20, 26, 20, 0.94);
+}
+
+.dialogue-portrait {
+  width: 68px;
+  height: 80px;
+  flex: none;
+  border: 1px solid #77683c;
+  border-radius: 6px;
+  background-color: #1a221a;
+  background-image: url('../assets/art/npc-linhnhi.png');
+  background-size: 140px 311px;
+  background-position: -36px -12px;
+  background-repeat: no-repeat;
+}
+
+.dialogue-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.dialogue-name {
+  font-size: 14.5px;
+  font-weight: bold;
+  color: #ffd978;
+  margin-bottom: 4px;
+}
+
+.dialogue-text {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #f7ead0;
+  flex: 1;
+}
+
+.dialogue-hint {
+  font-size: 11px;
+  color: #8d8271;
+  text-align: right;
+  margin-top: 4px;
+}
+
+/* Toast Thông Báo */
+.toast {
+  position: absolute;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 25;
+  background: rgba(24, 30, 24, 0.95);
+  border: 1px solid #c9a227;
+  border-radius: 20px;
+  padding: 8px 22px;
+  color: #fff7dd;
+  font-size: 13.5px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.toast.visible {
+  opacity: 1;
+}
+
+/* ================= Modals ================= */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 30;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.modal-box {
+  width: 520px;
+  max-width: 94vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  padding: 18px 20px;
+  border-color: #a8893a;
+  background: rgba(22, 28, 22, 0.96);
+}
+
+.modal-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #4d4022;
+  padding-bottom: 8px;
+  margin-bottom: 14px;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 18px;
+  color: #ffd978;
+  letter-spacing: 1px;
+}
+
+/* Bảng nhân vật */
+.char-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.detail-row {
+  font-size: 13px;
+  margin-bottom: 5px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.gold-text {
+  color: #ffd978;
+  font-weight: bold;
+}
+
+.section-title {
+  font-size: 13.5px;
+  color: #e9d9a8;
+  margin: 12px 0 8px;
+  border-bottom: 1px dashed rgba(119, 104, 60, 0.4);
+  padding-bottom: 3px;
+}
+
+.pillar-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 4px 6px;
+  border-radius: 4px;
+}
+
+.pillar-tag {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: bold;
+  color: #ffffff;
+}
+
+.pillar-tag.tho { background: #b07e38; }
+.pillar-tag.kim { background: #b59840; }
+.pillar-tag.hoa { background: #b84030; }
+.pillar-tag.thuy { background: #3d7fb8; }
+.pillar-tag.moc { background: #449948; }
+
+.pillar-desc {
+  flex: 1;
+  font-size: 11px;
+}
+
+.pillar-role {
+  color: #d8c9a3;
+}
+
+.pillar-val {
+  color: #ffd978;
+}
+
+.stat-card {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid #443c26;
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+  margin-bottom: 5px;
+}
+
+.stat-row:last-child {
+  margin-bottom: 0;
+}
+
+.pillar-note {
+  font-size: 11px;
+  color: #9d927d;
+  line-height: 1.45;
+  margin-top: 10px;
+}
+
+/* Modal Cài Đặt */
+.settings-box {
+  width: 400px;
+}
+
+.settings-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  max-height: 70vh;
+  padding-right: 4px;
+}
+
+.setting-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.setting-item.toggle-item {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.setting-item input[type="range"] {
+  accent-color: #c9a227;
+}
+
+/* Mục HIỂN THỊ trong Cài Đặt (Đợt 3, Note 8) */
+.settings-section-title {
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(119, 104, 60, 0.35);
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #ffd978;
+}
+
+.setting-select {
+  background: rgba(12, 24, 15, 0.9);
+  color: #e8e2d0;
+  border: 1px solid #77683c;
+  border-radius: 6px;
+  padding: 7px 8px;
+  font-size: 13px;
+  font-family: inherit;
+  width: 100%;
+}
+
+/*
+ * Tỉ lệ hiển thị do người chơi chỉnh (JS đặt biến trên :root qua
+ * applyDisplaySettings). Dùng thuộc tính `scale` độc lập nên không xung đột
+ * với `transform` sẵn có (ví dụ .skill-bar căn giữa bằng translateX(-50%),
+ * #char-frame có transition transform). Mỗi cụm HUD neo theo góc của nó.
+ */
+:root {
+  --ui-scale: 1;
+  --ctl-scale: 1;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+#char-frame,
+#quest-panel {
+  transform-origin: top left;
+  scale: var(--ui-scale);
+}
+
+#minimap-wrap {
+  transform-origin: top right;
+  scale: var(--ui-scale);
+}
+
+#hud-right-controls {
+  transform-origin: top right;
+  scale: var(--ui-scale);
+}
+
+#joystick-zone {
+  transform-origin: bottom left;
+  scale: calc(var(--ui-scale) * var(--ctl-scale));
+}
+
+#zone-title,
+#hud-hunt-chain {
+  transform-origin: top left;
+  scale: var(--ui-scale);
+}
+
+#dialogue-box {
+  transform-origin: bottom center;
+  scale: var(--ui-scale);
+}
+
+.hud-bottom-right-btns {
+  transform-origin: bottom right;
+  scale: var(--ui-scale);
+}
+
+#skill-bar {
+  transform-origin: bottom right;
+  scale: calc(var(--ui-scale) * var(--ctl-scale));
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 42px;
+  height: 22px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #2c2c22;
+  border: 1px solid #77683c;
+  transition: 0.2s;
+  border-radius: 22px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background-color: #e8dfc0;
+  transition: 0.2s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: #8a6d2f;
+  border-color: #c9a227;
+}
+
+input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+.danger-zone {
+  margin-top: 10px;
+  border-top: 1px solid #5a2a24;
+  padding-top: 10px;
+}
+
+.danger-title {
+  font-size: 12px;
+  color: #e88a7a;
+  margin-bottom: 8px;
+}
+
+/* Confirm modal */
+.confirm-box {
+  width: 360px;
+  text-align: center;
+}
+
+.confirm-title {
+  margin: 0 0 10px;
+  color: #e85848;
+  font-size: 16px;
+}
+
+.confirm-text {
+  font-size: 13px;
+  color: #d8c9a3;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+/* ================= Đáp ứng màn hình nhỏ (Mobile) ================= */
+@media (max-width: 640px) {
+  /* Cụm Túi/Cài Đặt xếp dọc ở mép phải, phía trên thanh kỹ năng:
+     xếp ngang ở góc dưới-phải sẽ đè lên thanh kỹ năng ở giữa trên màn hình hẹp */
+  .hud-bottom-right-btns {
+    flex-direction: column;
+    align-items: flex-end;
+    bottom: 100px;
+    right: 8px;
+    gap: 6px;
+  }
+  #char-frame {
+    min-width: 200px;
+    padding: 6px;
+  }
+  .char-portrait {
+    width: 38px;
+    height: 42px;
+  }
+  .ring-container {
+    width: 70px;
+    height: 70px;
+    margin: -10px -6px -10px 0;
+  }
+  .ring-svg {
+    width: 70px;
+    height: 70px;
+  }
+  #quest-panel {
+    top: 125px;
+    width: 175px;
+    font-size: 11px;
+  }
+  #minimap-wrap {
+    top: 6px;
+    right: 6px;
+  }
+  #minimap-canvas {
+    width: 110px;
+    height: 73px;
+  }
+  .char-details-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ================= ĐỢT 2: CHIẾN ĐẤU, TÚI ĐỒ, CHUỖI SĂN & HỒI SINH ================= */
+
+/* Cụm nút góc dưới bên phải */
+.hud-bottom-right-btns {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  display: flex;
+  gap: 8px;
+  z-index: 30;
+}
+
+/* Cụm điều khiển phải: Zoom, Túi, Cài Đặt (Dưới minimap) */
+#hud-right-controls {
+  position: absolute;
+  top: 135px;
+  right: calc(10px + var(--safe-right));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 25;
+  align-items: flex-end;
+  pointer-events: auto;
+}
+
+.hud-zoom-row {
+  display: flex;
+  gap: 6px;
+}
+
+.hud-zoom-btn {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  font-size: 20px;
+  font-weight: bold;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+}
+
+#hud-right-controls .hud-btn {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 8px 12px;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Vùng cần điều khiển Joystick ảo góc dưới bên trái */
+#joystick-zone {
+  position: absolute;
+  bottom: calc(20px + var(--safe-bottom));
+  left: calc(16px + var(--safe-left));
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  pointer-events: auto;
+  touch-action: none;
+  z-index: 25;
+}
+
+.joystick-base {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  top: 5px;
+  left: 5px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(20, 28, 20, 0.4) 0%, rgba(20, 28, 20, 0.7) 100%);
+  border: 2px solid rgba(201, 162, 39, 0.4);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.joystick-stick {
+  position: absolute;
+  width: 46px;
+  height: 46px;
+  top: 37px;
+  left: 37px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #e6c86e 0%, #a67c1e 100%);
+  border: 2px solid #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  transition: transform 0.05s ease-out;
+}
+
+/* Thanh kỹ năng chiến đấu (Brief §5) */
+.skill-bar {
+  position: absolute;
+  bottom: calc(16px + var(--safe-bottom));
+  right: calc(16px + var(--safe-right));
+  left: auto;
+  transform: none;
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  z-index: 40;
+  pointer-events: auto;
+}
+
+.skill-slot {
+  width: 58px;
+  height: 58px;
+  position: relative;
+  border-radius: 8px;
+  border: 2px solid #2e7d48; /* Khung xanh hệ Mộc */
+  background: rgba(12, 24, 15, 0.85);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6), inset 0 0 8px rgba(60, 163, 93, 0.3);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: transform 0.1s, border-color 0.2s, box-shadow 0.2s;
+  overflow: hidden;
+}
+
+.skill-slot:hover {
+  transform: translateY(-2px);
+  border-color: #55d882;
+  box-shadow: 0 6px 16px rgba(40, 120, 60, 0.5), inset 0 0 10px rgba(85, 216, 130, 0.5);
+}
+
+.skill-slot:active {
+  transform: translateY(1px);
+}
+
+.skill-hotkey {
+  position: absolute;
+  top: 3px;
+  left: 4px;
+  font-size: 11px;
+  font-weight: bold;
+  color: #ffe9a8;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 1px 4px;
+  border-radius: 3px;
+  z-index: 5;
+}
+
+.skill-icon {
+  width: 36px;
+  height: 36px;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  margin-top: 2px;
+}
+
+.skill-phi-diep {
+  background-image: url('../assets/ui/icon-skill-phi-diep.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  border-radius: 4px;
+}
+
+.skill-day-leo {
+  background-image: url('../assets/ui/icon-skill-day-leo.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  border-radius: 4px;
+}
+
+.skill-name-tag {
+  font-size: 10px;
+  color: #d8eedb;
+  margin-top: -2px;
+  z-index: 5;
+}
+
+.skill-cd-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(10, 15, 10, 0.75);
+  transform-origin: bottom;
+  transform: scaleY(0);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.skill-cd-text {
+  position: absolute;
+  font-size: 16px;
+  font-weight: bold;
+  color: #ffffff;
+  text-shadow: 0 2px 4px #000000;
+  z-index: 6;
+  pointer-events: none;
+}
+
+.skill-slot.low-mana {
+  filter: grayscale(0.85);
+  border-color: #555555;
+  opacity: 0.65;
+}
+
+@keyframes skillShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+.skill-slot.shake {
+  animation: skillShake 0.25s ease-in-out;
+}
+
+/* Chip Chuỗi Săn (Brief §6) */
+.hunt-chain-chip {
+  position: absolute;
+  top: 76px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 25, 18, 0.88);
+  border: 1px solid #3ca35d;
+  border-radius: 20px;
+  padding: 4px 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #e5f6e8;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  z-index: 25;
+}
+
+.chain-num {
+  font-size: 16px;
+  color: #ffe9a8;
+}
+
+.chain-bonus {
+  font-size: 11px;
+  color: #7ce898;
+}
+
+/* Modal Túi Trữ Vật (Brief §6: 8x6 = 48 ô) */
+.bag-box {
+  width: 440px;
+  max-width: 95vw;
+  background: #171d18;
+  border: 1px solid #6b5c33;
+}
+
+.bag-header-currency {
+  font-size: 13px;
+  color: #dcd7c5;
+}
+
+.bag-body {
+  padding: 12px;
+}
+
+.bag-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 6px;
+  background: rgba(10, 15, 12, 0.6);
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #2e3b2e;
+}
+
+.bag-slot {
+  width: 42px;
+  height: 42px;
+  background: rgba(25, 35, 27, 0.85);
+  border: 1px solid #3c4a3d;
+  border-radius: 4px;
+  position: relative;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s;
+}
+
+.bag-slot:hover {
+  border-color: #ffe9a8;
+}
+
+.bag-slot.selected {
+  border-color: #55d882;
+  box-shadow: 0 0 6px rgba(85, 216, 130, 0.6);
+}
+
+.bag-slot-icon {
+  width: 32px;
+  height: 32px;
+  background-image: url('../assets/art/icons-sheet.png');
+  background-size: 192px 224px; /* 6x7 ô 32px */
+  background-repeat: no-repeat;
+}
+
+.bag-slot-count {
+  position: absolute;
+  bottom: 1px;
+  right: 3px;
+  font-size: 10px;
+  font-weight: bold;
+  color: #ffffff;
+  text-shadow: 0 1px 2px #000000;
+}
+
+.bag-item-info {
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: rgba(18, 26, 20, 0.7);
+  border-radius: 5px;
+  min-height: 48px;
+}
+
+.info-name {
+  font-size: 13px;
+  font-weight: bold;
+  color: #ffe9a8;
+}
+
+.info-desc {
+  font-size: 11px;
+  color: #b5c7b8;
+  margin-top: 3px;
+}
+
+/* Modal Bạn Đã Gục (Brief §7) */
+.death-box {
+  width: 400px;
+  max-width: 90vw;
+  background: rgba(30, 12, 12, 0.96);
+  border: 2px solid #8f2b2b;
+  text-align: center;
+  padding: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), 0 0 20px rgba(180, 40, 40, 0.4);
+}
+
+.death-title {
+  font-size: 20px;
+  color: #ff6b6b;
+  margin: 0 0 8px 0;
+  letter-spacing: 1px;
+}
+
+.death-subtitle {
+  font-size: 13px;
+  color: #d1a8a8;
+  margin: 0 0 16px 0;
+  font-style: italic;
+}
+
+.death-pool-info {
+  font-size: 14px;
+  color: #ffe9a8;
+  margin-bottom: 20px;
+  padding: 6px;
+  background: rgba(50, 18, 18, 0.6);
+  border-radius: 4px;
+}
+
+.death-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.death-btn {
+  padding: 10px;
+  font-size: 14px;
+}
+
+/* Modal Tổng Kết Buổi Farm (Brief §6) */
+.summary-box {
+  width: 380px;
+  max-width: 90vw;
+  background: #172019;
+  border: 1px solid #45784f;
+}
+
+.summary-body {
+  padding: 14px;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  font-size: 13px;
+  color: #d4e0d6;
+}
+
+.summary-loot-section {
+  margin-top: 12px;
+}
+
+.loot-title {
+  font-size: 12px;
+  color: #ffe9a8;
+  margin-bottom: 6px;
+}
+
+.loot-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 36px;
+}
+
+.loot-chip {
+  background: rgba(30, 45, 34, 0.7);
+  border: 1px solid #3c6144;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: #c9e2cd;
+}
+
+/* ================= ĐỢT 2 BỔ SUNG: NÚT HÀNH ĐỘNG NGỮ CẢNH + TỰ TÌM ĐƯỜNG ================= */
+
+/* Nút hành động chính: lớn hơn ô kỹ năng, luôn ở đầu thanh kỹ năng (vị trí cố định, không nhảy bố cục) */
+.action-slot {
+  width: 66px;
+  height: 66px;
+  border-width: 3px;
+  color: #ffd9d0;
+  border-color: #a03d31;
+  background: rgba(30, 14, 12, 0.88);
+}
+.action-slot .skill-name-tag {
+  font-size: 10.5px;
+  font-weight: 700;
+}
+.action-icon {
+  display: none;
+}
+.action-mode-attack .action-icon-attack {
+  display: block;
+  width: 34px;
+  height: 34px;
+  background-image: url('../assets/ui/icon-skill-danh.png');
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  margin-top: 2px;
+}
+.action-mode-talk .action-icon-talk { display: block; }
+.action-mode-pickup .action-icon-pickup { display: block; }
+.action-mode-interact .action-icon-interact { display: block; }
+.action-mode-talk {
+  border-color: #8b5cf6;
+  color: #e4dcff;
+  background: rgba(24, 16, 44, 0.88);
+}
+.action-mode-pickup {
+  border-color: #d4a017;
+  color: #ffeeb0;
+  background: rgba(34, 26, 8, 0.88);
+}
+.action-mode-interact {
+  border-color: #b0793f;
+  color: #ffe3c2;
+  background: rgba(34, 22, 10, 0.88);
+}
+
+/* Nút tự tìm đường trong panel nhiệm vụ: đủ 44px chạm, trạng thái đang đi */
+.auto-path-btn {
+  width: 100%;
+  margin-top: 7px;
+  min-height: 44px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+.auto-path-btn.auto-walking {
+  border-color: #ffd978;
+  color: #ffeeb0;
+}
+
+/* ================= TỐI ƯU CẢM ỨNG ĐIỆN THOẠI (Đợt 2, lệnh Bui) ================= */
+
+/* Chặn menu cảm ứng dài (callout), nháy đúp phóng to trên nút, giữ cuộn trong panel */
+html, body {
+  -webkit-touch-callout: none;
+}
+button, .btn, .skill-slot, .char-select-btn {
+  touch-action: manipulation;
+}
+.modal-box, .bag-grid-wrap, .settings-box, .char-panel-box {
+  touch-action: pan-y;
+}
+
+/* Nút công cụ HUD (Túi / Cài Đặt) đạt chuẩn chạm 44px */
+.hud-btn {
+  min-height: 44px;
+  padding: 10px 14px;
+  font-size: 13px;
+}
+
+/* Nút thu nhỏ panel nhiệm vụ cũng phải chạm trúng dễ dàng */
+.btn-toggle {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* Màn hình thấp (điện thoại nằm ngang ~390px cao): thu gọn HUD theo chiều cao */
+@media (max-height: 480px) {
+  #char-frame {
+    min-width: 190px;
+    padding: 5px;
+  }
+  .char-portrait {
+    width: 34px;
+    height: 38px;
+  }
+  .ring-container, .ring-svg {
+    width: 62px;
+    height: 62px;
+  }
+  #quest-panel {
+    top: 118px;
+    width: 178px;
+    font-size: 11px;
+  }
+  #minimap-canvas {
+    width: 104px;
+    height: 69px;
+  }
+  .skill-bar {
+    bottom: 8px;
+    gap: 10px;
+  }
+  .skill-slot {
+    width: 52px;
+    height: 52px;
+  }
+  .action-slot {
+    width: 60px;
+    height: 60px;
+  }
+  .hud-bottom-right-btns {
+    flex-direction: column;
+    align-items: flex-end;
+    bottom: 100px;
+    right: 8px;
+    gap: 6px;
+  }
+  #dialogue-box {
+    max-height: 42vh;
+    overflow-y: auto;
+  }
+  .start-box, .modal-box {
+    max-height: 92vh;
+    overflow-y: auto;
+  }
+}
+
+/* ================= Đợt 3: Khu Vực & Đài Truyền Tống ================= */
+
+/* Chip Tên Khu Vực (Brief §7) */
+.zone-title-chip {
+  position: absolute;
+  top: 86px;
+  left: 10px;
+  transform: none;
+  background: rgba(18, 24, 18, 0.92);
+  border: 1px solid #d4af37;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6), 0 0 12px rgba(212, 175, 55, 0.35);
+  border-radius: 8px;
+  padding: 6px 14px;
+  text-align: left;
+  pointer-events: none;
+  z-index: 85;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.zone-title-chip.hidden {
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+  display: none;
+}
+@media (min-width: 768px) {
+  .zone-title-chip {
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    padding: 8px 24px;
+  }
+  .zone-title-chip.hidden {
+    transform: translateX(-50%) translateY(-10px);
+  }
+}
+.zone-title-name {
+  font-family: 'Cinzel', 'Noto Serif', serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #f5e298;
+  letter-spacing: 1px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+.zone-title-desc {
+  font-size: 12px;
+  color: #c7d2c3;
+  margin-top: 3px;
+  line-height: 1.35;
+}
+
+/* Modal Danh Mục Khu Vực (Brief §7) */
+.zone-box {
+  width: 540px;
+  max-width: 92vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+.zone-body {
+  overflow-y: auto;
+  max-height: 60vh;
+  margin-top: 10px;
+  padding-right: 4px;
+}
+.zone-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.zone-item {
+  background: rgba(30, 38, 30, 0.85);
+  border: 1px solid #3c4d3c;
+  border-radius: 6px;
+  padding: 10px 14px;
+  transition: all 0.2s ease;
+}
+.zone-item.active-zone {
+  background: rgba(50, 65, 45, 0.95);
+  border-color: #d4af37;
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+}
+.zone-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.zone-item-name {
+  font-weight: bold;
+  color: #f0dfa8;
+  font-size: 14px;
+}
+.zone-item.active-zone .zone-item-name {
+  color: #ffe682;
+}
+.current-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  background: #2a5a3a;
+  color: #a3f7bf;
+  border: 1px solid #4ade80;
+  border-radius: 12px;
+  font-weight: bold;
+}
+.zone-item-desc {
+  font-size: 12px;
+  color: #aebfb0;
+  margin-top: 4px;
+  line-height: 1.35;
+}
+
+/* Modal Đài Truyền Tống (Brief §7) */
+.teleport-box {
+  width: 460px;
+  max-width: 90vw;
+  text-align: center;
+}
+.teleport-body {
+  margin-top: 14px;
+}
+.teleport-prompt {
+  font-size: 13px;
+  color: #b5c7b5;
+  margin-bottom: 16px;
+}
+.teleport-destinations {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.teleport-btn {
+  min-height: 48px;
+  font-size: 14px;
+  font-weight: bold;
+  padding: 12px 18px;
+  border: 1px solid #c9a646;
+  background: linear-gradient(180deg, #3a2e1e 0%, #241a10 100%);
+  color: #f7e6a6;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.teleport-btn:hover {
+  background: linear-gradient(180deg, #4d3d28 0%, #302316 100%);
+  border-color: #ffe07a;
+  transform: translateY(-1px);
+}
+
+.teleport-btn.teleport-locked {
+  opacity: 0.45;
+  filter: grayscale(0.7);
+}
+
+/* Điện thoại dọc hẹp: panel nhiệm vụ gọn hơn, thanh kỹ năng không tràn.
+   Bề rộng 150px: mép phải của bảng (x=160) không còn lấn sang nút Túi (x=164)
+   như số đo 168px trước đây (chồng 14x44 ở mọi trạng thái). */
+@media (max-width: 420px) {
+  #quest-panel {
+    width: 150px;
+  }
+  .skill-bar {
+    gap: 10px;
+  }
+}
+
+/* Khóa phóng to trình duyệt trên game */
+#game-container, canvas {
+  touch-action: none;
+}
+.modal-box, .bag-grid-wrap, .settings-box, .char-panel-box, .overview-map-grid, .settings-body {
+  touch-action: pan-y;
+}
+
+/* Khu vực Trang Bị Nhân Vật trong Túi */
+.bag-equipment-section {
+  margin-bottom: 12px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid #5a4b27;
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+.bag-equipment-title {
+  font-size: 11px;
+  font-weight: bold;
+  color: #ffd978;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.bag-equipment-row {
+  display: flex;
+  gap: 12px;
+}
+.equip-slot-box {
+  width: 52px;
+  height: 52px;
+  background: rgba(18, 24, 18, 0.9);
+  border: 2px dashed #6f5f30;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.equip-slot-box:hover, .equip-slot-box.selected {
+  border-color: #ffd978;
+  box-shadow: 0 0 8px rgba(255, 217, 120, 0.4);
+}
+.equip-slot-box.equipped {
+  border-style: solid;
+  border-color: #e6c86e;
+  background: rgba(28, 40, 24, 0.95);
+}
+.equip-slot-title {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  font-size: 9px;
+  color: #9d927d;
+  pointer-events: none;
+}
+.equip-slot-placeholder {
+  font-size: 10px;
+  color: #6a604c;
+  margin-top: 8px;
+  text-align: center;
+  pointer-events: none;
+}
+.equip-slot-icon {
+  width: 32px;
+  height: 32px;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  margin-top: 8px;
+}
+.equip-badge {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  background: #2e7d48;
+  color: #fff;
+  font-size: 8px;
+  font-weight: bold;
+  padding: 1px 3px;
+  border-radius: 2px;
+}
+
+/* Thẻ Chi Tiết Vật Phẩm trong Túi */
+.bag-item-detail-card {
+  margin-top: 10px;
+  background: rgba(15, 20, 15, 0.9);
+  border: 1px solid #5a4b27;
+  border-radius: 6px;
+  padding: 10px;
+  min-height: 80px;
+}
+.detail-card-content {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.detail-icon-frame {
+  width: 48px;
+  height: 48px;
+  border: 2px solid #77683c;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.detail-icon-large {
+  width: 40px;
+  height: 40px;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.detail-card-info {
+  flex: 1;
+  min-width: 0;
+}
+.detail-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+.detail-item-name {
+  font-size: 13.5px;
+  font-weight: bold;
+  color: #f7ead0;
+}
+.detail-item-type {
+  font-size: 11px;
+  color: #aebfb0;
+}
+.detail-item-desc {
+  font-size: 12px;
+  color: #c7d2c3;
+  line-height: 1.35;
+  margin-bottom: 4px;
+}
+.detail-item-stats {
+  font-size: 11.5px;
+  font-weight: bold;
+  color: #ffd978;
+  margin-bottom: 4px;
+}
+.detail-item-count {
+  font-size: 11px;
+  color: #9d927d;
+}
+.detail-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.detail-btn {
+  min-height: 36px;
+  padding: 6px 14px;
+  font-size: 12px;
+}
+.detail-btn.btn-discard-warn {
+  border-color: #e55353;
+  color: #ff9999;
+}
+
+/* Lưới 10 Bản Đồ Tổng Quan */
+.overview-map-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 4px;
+  margin-bottom: 12px;
+}
+.overview-map-card {
+  background: rgba(18, 24, 18, 0.85);
+  border: 1px solid #5a4b27;
+  border-radius: 6px;
+  padding: 8px 6px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.overview-map-card:hover {
+  border-color: #ffd978;
+  background: rgba(30, 40, 25, 0.95);
+}
+.overview-map-card.current {
+  border-color: #6ce676;
+  background: rgba(20, 45, 20, 0.95);
+  box-shadow: 0 0 8px rgba(108, 230, 118, 0.4);
+}
+.overview-map-card.locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(0.8);
+}
+.overview-map-name {
+  font-size: 12px;
+  font-weight: bold;
+  color: #f7ead0;
+  margin-bottom: 3px;
+}
+.overview-map-badge {
+  font-size: 10px;
+  padding: 2px 5px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.4);
+  color: #aebfb0;
+  display: inline-block;
+}
+
+/* Hệ thống hướng dẫn tân thủ */
+.tutorial-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 90;
+  pointer-events: none;
+}
+.tutorial-spotlight {
+  position: absolute;
+  border-radius: 8px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.65);
+  border: 2px solid #ffd978;
+  transition: all 0.3s ease;
+  pointer-events: none;
+}
+.tutorial-box {
+  position: absolute;
+  width: 280px;
+  max-width: 85vw;
+  padding: 12px 14px;
+  z-index: 95;
+  pointer-events: auto;
+  border: 2px solid #ffd978;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+  animation: tutPulse 2s infinite ease-in-out;
+}
+@keyframes tutPulse {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+.tutorial-box.pos-bottom-center {
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.tutorial-box.pos-top-left {
+  top: 90px;
+  left: 20px;
+}
+.tutorial-box.pos-bottom-left {
+  bottom: 160px;
+  left: 20px;
+}
+.tutorial-box.pos-bottom-right {
+  bottom: 140px;
+  right: 20px;
+}
+.tutorial-box.pos-top-right {
+  top: 140px;
+  right: 20px;
+}
+.tutorial-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.tutorial-badge {
+  background: #a67c1e;
+  color: #fff;
+  font-size: 10px;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 3px;
+  letter-spacing: 0.5px;
+}
+.tutorial-skip-btn {
+  background: none;
+  border: none;
+  color: #aebfb0;
+  font-size: 11px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.tutorial-text {
+  font-size: 13px;
+  color: #f7ead0;
+  line-height: 1.4;
+  margin-bottom: 8px;
+}
+.tutorial-progress {
+  display: flex;
+  justify-content: flex-end;
+  font-size: 10.5px;
+  color: #ffd978;
+}
+
+/* Nón lá overlay trên sprite */
+.hat-overlay {
+  pointer-events: none;
+}
+
+
+/* Đợt 6 — bổ sung lớp cho thẻ chi tiết / lựa chọn thoại / trạng thái nút Bỏ */
+.detail-stat-line { font-size: 13px; color: #ffe9a8; margin: 2px 0; }
+.detail-stat-line b { color: #fff; }
+#btn-card-drop.armed { background: linear-gradient(180deg, #a33b2e, #6e2318); color: #fff; }
+.dialogue-choice-btn { min-height: 44px; padding: 8px 14px; font-size: 14px; }
+.equip-slot-item { cursor: pointer; }
+.equip-slot-item.selected .equip-slot-box { outline: 2px solid #ffe9a8; outline-offset: 2px; }
+.bag-slot { position: relative; }
+
+/* ===== ĐỢT 6 (mục 15): CSS cho các cài đặt bổ sung ===== */
+:root { --ctl-opacity: 1; }
+#joystick-zone, #skill-bar { opacity: var(--ctl-opacity); }
+
+.hud-clock-chip {
+  position: absolute;
+  /* Trước đây ở top 8px giữa màn hình: đè lên khung nhân vật 47x24 (đo thật).
+     Nay nằm ở dải trống ngay dưới hàng trên: khung nhân vật kết thúc ở y=119,
+     bảng nhiệm vụ chỉ rộng tới x=160 nên chip giữa (x từ 163) không chạm gì. */
+  top: 122px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 26;
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: rgba(16, 22, 16, 0.72);
+  border: 1px solid rgba(255, 233, 168, 0.5);
+  color: #ffe9a8;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  pointer-events: none;
+}
+.hud-timer-chip { top: 156px; color: #bfe9ff; border-color: rgba(127, 212, 255, 0.55); }
+
+.quest-toggle-btn {
+  position: absolute;
+  left: 10px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 196px);
+  z-index: 26;
+  min-width: 44px;
+  min-height: 44px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.bag-slot-lock {
+  position: absolute;
+  left: 2px;
+  bottom: 2px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: rgba(20, 16, 8, 0.85);
+  color: #ffd94d;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  pointer-events: none;
+}
+
+#dialogue-box.dlg-size-nho .dialogue-text { font-size: 13px; }
+#dialogue-box.dlg-size-vua .dialogue-text { font-size: 15px; }
+#dialogue-box.dlg-size-lon .dialogue-text { font-size: 18px; }
+
+/* Lật điều khiển cho người thuận tay trái (hồ sơ 27F) */
+body.lefty #joystick-zone { left: auto; right: 14px; }
+body.lefty #skill-bar { right: auto; left: 14px; }
+body.lefty .quest-toggle-btn { left: auto; right: 10px; }
+
+/* ===== ĐỢT 6 (mục 14 + 16): sửa chồng lấp HUD và tràn hộp hướng dẫn ===== */
+/* Chip tên khu vực: trước đây nằm ở top 86px, tràn gần hết bề ngang, che mất số máu
+   và đầu bảng nhiệm vụ. Nay neo ở khoảng trống giữa màn hình, phía trên cụm điều khiển. */
+.zone-title-chip {
+  top: auto;
+  bottom: 188px;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  max-width: 68%;
+  text-align: center;
+}
+/* Nhãn bản đồ nhỏ: tên dài ("Tông Môn — Núi Chính") tràn khỏi mép phải — cắt ellipsis */
+.minimap-label {
+  max-width: 150px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Hoạt ảnh nhịp của hộp hướng dẫn từng ghi đè transform căn giữa (translateX(-50%))
+   khiến hộp tràn khỏi mép phải ở 390px — đổi sang nhịp phát sáng, không đụng transform */
+@keyframes tutPulse {
+  0%, 100% { box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8), 0 0 0 rgba(255, 217, 120, 0); }
+  50% { box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8), 0 0 18px rgba(255, 217, 120, 0.55); }
+}
+
+/* Thẻ chi tiết vật phẩm: bản cũ ép nội dung thành hàng ngang 4 cột (tên bị bóp còn ~70px,
+   chữ rụng từng từ). Nay xếp dọc đúng cấu trúc: hàng biểu tượng + tên, chỉ số, mô tả, nút. */
+#detail-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.detail-top-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.detail-icon-frame {
+  width: 72px;
+  height: 72px;
+  flex: none;
+}
+.detail-card-icon {
+  width: 64px;
+  height: 64px;
+  margin: 2px auto;
+}
+.detail-meta { flex: 1; min-width: 0; }
+.detail-card-name {
+  font-size: 17px;
+  font-weight: 800;
+  color: #f7ead0;
+}
+.detail-card-badge {
+  background: #2f9e57;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-left: 8px;
+  vertical-align: 2px;
+}
+.detail-sub-line {
+  font-size: 12.5px;
+  color: #aebfb0;
+  margin-top: 2px;
+}
+.detail-card-count {
+  font-size: 12.5px;
+  color: #c9bfa8;
+  margin-top: 2px;
+}
+.detail-card-stats {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #ffd978;
+}
+.detail-card-desc {
+  font-size: 13.5px;
+  color: #d8e2d2;
+  line-height: 1.45;
+}
+.detail-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+.detail-action-btn {
+  min-height: 44px;
+  padding: 8px 18px;
+  font-size: 14px;
+}
+/* Chip chuỗi săn: trước ở top 76px giữa màn hình, đè lên số máu khung nhân vật.
+   Nay nằm trong cột phải, ngay dưới cụm công cụ — không tranh chỗ với chip nào khác. */
+.hunt-chain-chip {
+  top: 248px;
+  bottom: auto;
+  left: auto;
+  right: 10px;
+  transform: none;
+}
+/* Màn hình hẹp (≤420px): hàng trên (khung nhân vật + bản đồ nhỏ) đã gần kín bề ngang
+   ngay ở tỉ lệ 100%, hễ phóng thêm là hai cụm góc đâm vào nhau và vào bảng nhiệm vụ
+   (đo thật ở 120%: chồng 180x16, 24x117, 69x53, 40x75). Vì vậy trên điện thoại hẹp:
+   các cụm góc trên giữ nguyên cỡ khi tăng tỉ lệ (thu nhỏ vẫn áp dụng đầy đủ),
+   hai cụm điều khiển dưới phóng tối đa 112% — đủ để không chạm nhau ở 390px. */
+@media (max-width: 420px) {
+  #char-frame, #quest-panel, #minimap-wrap, #hud-right-controls, #zone-title, #hud-hunt-chain {
+    scale: min(var(--ui-scale), 1);
+  }
+  #joystick-zone, #skill-bar {
+    scale: min(calc(var(--ui-scale) * var(--ctl-scale)), 1.06);
+  }
+  #dialogue-box, .hud-bottom-right-btns {
+    scale: min(var(--ui-scale), 1.12);
+  }
+}
+
+/* Huy hiệu "Đang mặc" ở ô trang bị: trước đây không có CSS (tràn chữ che mất biểu tượng).
+   Nay là nhãn nhỏ ở góc ô, biểu tượng vật phẩm nằm giữa ô. */
+.equip-slot-badge {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  background: #2e7d48;
+  color: #fff;
+  font-size: 8px;
+  font-weight: bold;
+  padding: 1px 4px;
+  border-radius: 3px;
+  pointer-events: none;
+}
+.equip-slot-icon {
+  margin-top: 0;
+}
+/* Lớp phủ modal phải nằm trên cụm nút kỹ năng (trước đây z-index 30 thấp hơn,
+   khiến nút hành động nổi lên trên đáy modal túi ở màn hình 390px) */
+.modal-overlay {
+  z-index: 60;
+}
+/* Hộp túi: giới hạn chiều cao theo màn hình, phần thân cuộn trong — thẻ chi tiết
+   và hàng nút không còn tràn khỏi mép dưới điện thoại */
+#bag-modal .modal-box {
+  max-height: 94vh;
+  display: flex;
+  flex-direction: column;
+}
+#bag-modal .bag-body {
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* Chế độ chụp hình (hồ sơ 28A): ẩn toàn bộ lớp giao diện */
+body.photo-mode #joystick-zone,
+body.photo-mode #skill-bar,
+body.photo-mode .hud-panel,
+body.photo-mode #hud-right-controls,
+body.photo-mode #quest-panel,
+body.photo-mode #hud-clock,
+body.photo-mode #hud-timer,
+body.photo-mode #hud-hunt-chain,
+body.photo-mode #zone-title,
+body.photo-mode .quest-toggle-btn,
+body.photo-mode #minimap-wrap,
+body.photo-mode .modal-overlay,
+body.photo-mode #toast-container { visibility: hidden; }
