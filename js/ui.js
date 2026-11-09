@@ -2113,9 +2113,14 @@
 
     toast.textContent = message;
     toast.classList.remove('hidden');
+    // CSS .toast để opacity 0 mặc định và chỉ hiện khi có class 'visible':
+    // phải bật 'visible' thì người chơi mới THẤY thông báo (trước đây thiếu
+    // dòng này nên mọi toast đều chạy ngầm mà không hiện — kể cả đổi quà).
+    toast.classList.add('visible');
 
     if (toastTimer) clearTimeout(toastTimer);
     toastTimer = setTimeout(function () {
+      toast.classList.remove('visible');
       toast.classList.add('hidden');
     }, 2800);
   }
