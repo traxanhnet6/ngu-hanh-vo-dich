@@ -156,6 +156,7 @@
   var HH_GEN_DIRS = ['south', 'southeast', 'east', 'northeast', 'north', 'northwest', 'west', 'southwest'];
   var HH_GEN_DISPLAY_H = 112; // chiều cao nhân vật trên màn hình — khớp cỡ hình cũ (~111px đo thật)
   var hanhanGenData = { idle: null, walk: null };
+  var genFrameDest = null; // hộp đích của khung sinh hình vừa vẽ xong (lớp kiếm trang bị bám theo)
   var hanhanGenHat = null; // Đợt HATLAYER: dữ liệu lớp nón cho bộ sinh hình
 
   function buildGenIndex(json) {
@@ -194,9 +195,69 @@
         f.x + f.w > img.naturalWidth || f.y + f.h > img.naturalHeight) return false;
     if (!isFinite(f.px) || !isFinite(f.py)) return false;
     var k = HH_GEN_DISPLAY_H / (data.charH * data.scaleFromMaster);
+    genFrameDest = {
+      x: player.x - f.px * k, y: player.y - f.py * k, w: f.w * k, h: f.h * k
+    };
     ctx.drawImage(img, f.x, f.y, f.w, f.h,
-      player.x - f.px * k, player.y - f.py * k, f.w * k, f.h * k);
+      genFrameDest.x, genFrameDest.y, genFrameDest.w, genFrameDest.h);
     return f;
+  }
+
+  // Đợt JOYFIX 2026-11-09: LỚP KIẾM TRANG BỊ CẦM TAY cho nhân vật.
+  // Triệu chứng người chơi báo: trang bị kiếm mà nhân vật không cầm kiếm —
+  // đường vẽ cũ lẫn bộ sinh hình đều không có lớp vũ khí (khung gốc tay không).
+  // Vẽ icon THẬT của món vũ khí đang trang bị (ô icon trong assets/art/
+  // icons-sheet.png — cùng tài sản game dùng cho túi đồ) tại vị trí bàn tay,
+  // xoay cho lưỡi kiếm chúc xuống trước theo hướng nhân vật. Điểm tay ĐO THẬT
+  // trên khung 0 của từng hướng (tỉ lệ theo hộp khung đã vẽ), điểm nắm cán
+  // (9.6, 22.4) đo trên ô icon Kiếm Đệ Tử 32px (cán dưới sống kiếm, sát đốc).
+  // Không trang bị vũ khí -> không vẽ gì. Lớp này chỉ chạy ở nhánh đứng yên/
+  // đi bộ thường; nhánh diễn tung chiêu Thái Cực (K2) trả về sớm ở trên nên
+  // không bị đụng.
+  var HH_WEAPON_GRIP = { x: 9.6, y: 22.4 };
+  var HH_WEAPON_SCALE = 1.7;
+  var HH_WEAPON_POSE = {
+    south:     { rot: 113, flip: false },
+    southeast: { rot: 113, flip: false },
+    east:      { rot: 113, flip: false },
+    northeast: { rot: 113, flip: false },
+    north:     { rot: 128, flip: false },
+    northwest: { rot: -113, flip: true },
+    west:      { rot: -113, flip: true },
+    southwest: { rot: -113, flip: true }
+  };
+  var HH_HAND_GEN_IDLE = {
+    south: [0.14, 0.70], southeast: [0.22, 0.71], east: [0.42, 0.72], northeast: [0.47, 0.68],
+    north: [0.50, 0.68], northwest: [0.52, 0.68], west: [0.60, 0.72], southwest: [0.80, 0.71]
+  };
+  var HH_HAND_GEN_WALK = {
+    south: [0.85, 0.64], southeast: [0.80, 0.55], east: [0.68, 0.55], northeast: [0.30, 0.60],
+    north: [0.47, 0.62], northwest: [0.52, 0.63], west: [0.14, 0.60], southwest: [0.10, 0.60]
+  };
+  var HH_HAND_OLD = {
+    south: [0.27, 0.62], southeast: [0.30, 0.62], east: [0.46, 0.62], northeast: [0.50, 0.58],
+    north: [0.50, 0.58], northwest: [0.50, 0.58], west: [0.54, 0.62], southwest: [0.73, 0.62]
+  };
+
+  function drawHeldWeapon(dest, dirName, handTable) {
+    if (!dest || !player || !player.equipment || !player.equipment.weapon) return;
+    var sheet = assets.icons_sheet;
+    if (!sheet || !sheet.complete || !sheet.naturalWidth) return;
+    var def = (monstersAPI && monstersAPI.ITEM_DEFS) ? monstersAPI.ITEM_DEFS[player.equipment.weapon] : null;
+    if (!def || typeof def.iconCol !== 'number' || typeof def.iconRow !== 'number') return;
+    var anchor = handTable ? handTable[dirName] : null;
+    var pose = HH_WEAPON_POSE[dirName];
+    if (!anchor || !pose) return;
+    var hx = dest.x + anchor[0] * dest.w;
+    var hy = dest.y + anchor[1] * dest.h;
+    var s = HH_WEAPON_SCALE;
+    ctx.save();
+    ctx.translate(hx, hy);
+    ctx.rotate(pose.rot * Math.PI / 180);
+    ctx.scale(pose.flip ? -s : s, s);
+    ctx.drawImage(sheet, def.iconCol * 32, def.iconRow * 32, 32, 32,
+      -HH_WEAPON_GRIP.x, -HH_WEAPON_GRIP.y, 32, 32);
+    ctx.restore();
   }
 
   function buildGenHatIndex(json) {
@@ -424,7 +485,10 @@
     skillsAPI = typeof window !== 'undefined' ? window.GameSkills : (typeof require !== 'undefined' ? require('./skills.js') : null);
     // Tương thích save cũ: đã nhận nhiệm vụ tông môn đầu tiên (sectStage >= 2) mà chưa
     // có kiếm nào trong túi/trang bị thì được cấp Kiếm Đệ Tử một lần ngay khi nạp.
-    if (player && player.quests && (player.quests.sectStage || 0) >= 2 && !player.quests.starterSwordGranted) {
+    // Đợt JOYFIX: điều kiện cấp bù xét theo cờ ĐÃ NHẬN THẬT (starterSwordReceived)
+    // để cả save từng bị bản cũ đóng cờ oan (Granted=true mà chưa hề nhận kiếm)
+    // cũng được cấp bù khi nạp lại.
+    if (player && player.quests && (player.quests.sectStage || 0) >= 2 && !player.quests.starterSwordReceived) {
       grantStarterSword(false);
     }
     onReadyCallback = onReady;
@@ -759,31 +823,46 @@
   var SWORD_ITEM_IDS = ['kiem-de-tu', 'kiem-go', 'kiem-sat'];
   var pendingSwordToast = false;
 
+  // Đợt JOYFIX 2026-11-09: "đã có kiếm" phải là có đúng KIẾM ĐỆ TỬ. Bản cũ
+  // tính cả Kiếm Gỗ/Kiếm Sắt là "đã có kiếm" rồi ĐÓNG cờ cấp trong im lặng —
+  // đệ tử nào có kiếm khác trong người trước mốc nhập môn sẽ mất hẳn lần cấp
+  // tông môn (không kiếm, không thông báo), đúng triệu chứng người chơi báo
+  // "nhập Thanh Vân Tông mà chưa thấy nhiệm vụ cấp kiếm ở đầu".
   function playerOwnsSword() {
     if (!player) return false;
-    if (player.equipment && SWORD_ITEM_IDS.indexOf(player.equipment.weapon) !== -1) return true;
+    if (player.equipment && player.equipment.weapon === STARTER_SWORD_ID) return true;
     if (player.bag && player.bag.slots) {
       for (var i = 0; i < player.bag.slots.length; i++) {
         var s = player.bag.slots[i];
-        if (s && SWORD_ITEM_IDS.indexOf(s.itemId) !== -1) return true;
+        if (s && s.itemId === STARTER_SWORD_ID) return true;
       }
     }
     return false;
   }
 
-  // Tặng Kiếm Đệ Tử đúng một lần: cờ quests.starterSwordGranted lưu trong save.
+  // Tặng Kiếm Đệ Tử đúng một lần: hai cờ tách bạch (đợt JOYFIX) —
+  // quests.starterSwordGranted = đã xử lý mốc cấp; quests.starterSwordReceived
+  // = đã THẬT SỰ nhận kiếm vào túi/trang bị. Save cũ bị bản trước nuốt cấp có
+  // Granted=true nhưng Received trống và trong người không có Kiếm Đệ Tử:
+  // được cấp bù đúng một lần ở lần nạp/mốc này, rồi Received khóa lại (đã nhận
+  // thật mà bán/thả mất thì không cấp lại).
   // Trả true nếu vừa tặng xong. feedback=false khi chạy lúc nạp save (toast hoãn tới start()).
   function grantStarterSword(feedback) {
     if (!player || !player.quests || !stateAPI) return false;
-    if (player.quests.starterSwordGranted) return false;
+    var q = player.quests;
     if (playerOwnsSword()) {
-      player.quests.starterSwordGranted = true;
-      stateAPI.savePlayer(player);
+      if (!q.starterSwordGranted || !q.starterSwordReceived) {
+        q.starterSwordGranted = true;
+        q.starterSwordReceived = true;
+        stateAPI.savePlayer(player);
+      }
       return false;
     }
+    if (q.starterSwordReceived) return false;
     var res = stateAPI.addItemToBag(player, STARTER_SWORD_ID, 1);
     if (!res || !res.success) return false; // Túi đầy: giữ cờ tắt, lần nạp sau thử lại
-    player.quests.starterSwordGranted = true;
+    q.starterSwordGranted = true;
+    q.starterSwordReceived = true;
     stateAPI.savePlayer(player);
     if (feedback) {
       spawnFloatingText('Nhận được: Kiếm Đệ Tử', player.x, player.y - 35, '#ffe9a8');
@@ -857,6 +936,12 @@
           window.GameUI.refreshHUD();
           window.GameUI.showToast('Nhập môn hoàn thành! Đài Truyền Tống phía đông nam đã mở.');
         }
+        // Đợt JOYFIX: lưới an toàn cấp kiếm — mốc này kích hoạt nhiệm vụ chính
+        // đầu tiên "Rèn Luyện Căn Bản" (mainStage 1); nếu vì bất kỳ lý do gì lần
+        // cấp ở Tiếp Dẫn chưa chạy (save cũ, đường thoại khác), cấp ngay tại đây
+        // để đệ tử mới luôn có Kiếm Đệ Tử khi bắt đầu nhiệm vụ căn bản. Hàm cấp
+        // tự khóa một lần duy nhất nên gọi trùng vô hại.
+        grantStarterSword(true);
       } else if ((q.sectStage || 0) >= 4) {
         if (q.mainStage === 8) {
           var countItem = function (id) {
@@ -3848,6 +3933,11 @@
           }
         }
 
+        // Đợt JOYFIX: kiếm trang bị cầm tay trên bộ sinh hình (vẽ ngay sau thân)
+        if (genDrawn) {
+          drawHeldWeapon(genFrameDest, genDirName, playerMoving ? HH_HAND_GEN_WALK : HH_HAND_GEN_IDLE);
+        }
+
         var walkSheet = assets.hanhan_walk;
         if (!genDrawn && playerMoving && walkSheet && walkSheet.complete && walkSheet.naturalWidth >= 768) {
           // Đợt 3 (Note 6): khung hình suy từ quãng đường đã đi — chân khớp mặt đất, không trượt theo thời gian
@@ -3868,6 +3958,7 @@
               player.x - 48, player.y - 118, 96, 120
             );
           }
+          drawHeldWeapon({ x: player.x - 48, y: player.y - 118, w: 96, h: 120 }, genDirName, HH_HAND_OLD);
         } else if (!genDrawn && assets.hanhan_idle && assets.hanhan_idle.complete) {
           var frameY = (player.dir || 0) * 120;
           ctx.drawImage(
@@ -3882,6 +3973,7 @@
               player.x - 48, player.y - 118, 96, 120
             );
           }
+          drawHeldWeapon({ x: player.x - 48, y: player.y - 118, w: 96, h: 120 }, genDirName, HH_HAND_OLD);
         }
       }
     });
