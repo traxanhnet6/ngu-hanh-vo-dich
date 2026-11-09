@@ -557,37 +557,37 @@
     },
     {
      "sprite": "idle/west",
-     "ax": 141.5,
+     "ax": 150.3,
      "ay": 64.0,
      "head": {
-      "cx": 126.2,
+      "cx": 135.0,
       "chin": 172.0
      }
     },
     {
      "sprite": "idle/west",
-     "ax": 145.1,
+     "ax": 153.9,
      "ay": 68.0,
      "head": {
-      "cx": 129.8,
+      "cx": 138.6,
       "chin": 176.0
      }
     },
     {
      "sprite": "idle/west",
-     "ax": 144.9,
+     "ax": 153.7,
      "ay": 68.0,
      "head": {
-      "cx": 129.6,
+      "cx": 138.4,
       "chin": 176.0
      }
     },
     {
      "sprite": "idle/west",
-     "ax": 86.0,
+     "ax": 87.6,
      "ay": 71.0,
      "head": {
-      "cx": 70.7,
+      "cx": 72.3,
       "chin": 179.0
      }
     }
@@ -1529,13 +1529,13 @@
    "src_strip": "hat_walk_west",
    "src_frame": 2,
    "seat_master": [
-    260.0,
-    118.0
+    271.0,
+    123.0
    ],
    "head_master": {
-    "cx": 240.8,
-    "chin": 253.0,
-    "top": 101.0,
+    "cx": 251.8,
+    "chin": 258.0,
+    "top": 106.0,
     "width": 182.0
    },
    "bbox_master": [
