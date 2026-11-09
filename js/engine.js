@@ -39,6 +39,12 @@
     right: false
   };
 
+  var joystickVector = { x: 0, y: 0 };
+  function setJoystickVector(vx, vy) {
+    joystickVector.x = vx || 0;
+    joystickVector.y = vy || 0;
+  }
+
   var currentPath = [];
   var pendingInteraction = null;
   var clickRipple = null;
@@ -89,6 +95,18 @@
   var floatingTexts = [];
   var projectiles = [];
   var visualEffects = []; // slash, vine snare, telegraphs, etc.
+
+  // Đợt 6 (mục 15): bộ nhớ đệm cài đặt cho các cổng vẽ theo khung hình (tránh đọc kho lưu mỗi khung)
+  var _settingsCache = null;
+  var _settingsCacheAt = 0;
+  function getSettingsCached() {
+    var nowMs = Date.now();
+    if (!_settingsCache || nowMs - _settingsCacheAt > 500) {
+      try { _settingsCache = stateAPI ? stateAPI.loadSettings() : {}; } catch (e) { _settingsCache = {}; }
+      _settingsCacheAt = nowMs;
+    }
+    return _settingsCache || {};
+  }
 
   // Chuyển map fade
   var mapFade = {
@@ -203,21 +221,64 @@
         if (url === 'assets/art/icons-sheet.png') assets['icons_sheet'] = img;
       })(urls[i]);
     }
+
+    if (typeof Image !== 'undefined') {
+      try {
+        var hIdle = new Image();
+        hIdle.onload = function () { assets.hanhan_hat_idle = hIdle; };
+        hIdle.onerror = function () { assets.hanhan_hat_idle = null; };
+        hIdle.src = 'assets/chars/hanhan-hat-idle.png';
+
+        var hWalk = new Image();
+        hWalk.onload = function () { assets.hanhan_hat_walk = hWalk; };
+        hWalk.onerror = function () { assets.hanhan_hat_walk = null; };
+        hWalk.src = 'assets/chars/hanhan-hat-walk.png';
+      } catch (e) {}
+    }
   }
 
   function initEngine(canvasEl, playerObj, mapObj, onReady) {
     canvas = canvasEl;
     ctx = canvas && canvas.getContext ? canvas.getContext('2d') : null;
     player = playerObj;
-    mapData = mapObj || (typeof window !== 'undefined' ? window.MapData : (typeof require !== 'undefined' ? require('./mapdata.js') : null));
+    if (player) {
+      try {
+        Object.defineProperty(player, 'path', {
+          get: function () { return currentPath; },
+          set: function (val) { currentPath = Array.isArray(val) ? val : []; },
+          configurable: true,
+          enumerable: true
+        });
+      } catch (e) {
+        player.path = currentPath;
+      }
+    }
+    if (typeof mapObj === 'string') {
+      currentMapId = mapObj;
+      var holder = (typeof window !== 'undefined' && window.GameMapData) ? window.GameMapData : (typeof require !== 'undefined' ? require('./mapdata.js') : null);
+      if (holder && holder.maps && holder.maps[mapObj]) {
+        mapData = holder.maps[mapObj];
+      } else if (holder && holder.getMap) {
+        mapData = holder.getMap(mapObj);
+      } else {
+        mapData = holder;
+      }
+    } else if (mapObj) {
+      mapData = mapObj;
+      if (mapObj.id) currentMapId = mapObj.id;
+    } else {
+      mapData = typeof window !== 'undefined' ? window.MapData : (typeof require !== 'undefined' ? require('./mapdata.js') : null);
+      currentMapId = 'mieu_hoang';
+    }
     stateAPI = typeof window !== 'undefined' ? window.GameState : (typeof require !== 'undefined' ? require('./state.js') : null);
     audioAPI = typeof window !== 'undefined' ? window.GameAudio : null;
     pathfinder = typeof window !== 'undefined' ? window.Pathfinder : (typeof require !== 'undefined' ? require('./pathfind.js') : null);
     combatAPI = typeof window !== 'undefined' ? window.GameCombat : null;
-    monstersAPI = typeof window !== 'undefined' ? window.GameMonsters : null;
+    monstersAPI = typeof window !== 'undefined' ? window.GameMonsters : (typeof require !== 'undefined' ? require('./monsters.js') : null);
     onReadyCallback = onReady;
 
     if (canvas) resizeCanvas();
+    if (player && mapData) updateCamera();
     if (typeof window !== 'undefined') {
       window.addEventListener('resize', resizeCanvas);
       setupInputs();
@@ -229,6 +290,24 @@
     });
   }
 
+  var userZoom = 1.0;
+
+  function getUserZoom() {
+    return userZoom;
+  }
+
+  function setUserZoom(f) {
+    var val = Number(f);
+    if (!isFinite(val)) val = 1.0;
+    userZoom = Math.max(0.75, Math.min(1.5, Math.round(val * 100) / 100));
+    resizeCanvas();
+    return userZoom;
+  }
+
+  function getCameraScale() {
+    return camera.scale;
+  }
+
   function resizeCanvas() {
     if (!canvas || typeof window === 'undefined') return;
     var w = window.innerWidth;
@@ -236,8 +315,9 @@
     canvas.width = w;
     canvas.height = h;
 
-    var targetScale = h / 720;
-    camera.scale = Math.max(0.55, Math.min(1.5, targetScale));
+    var baseScale = h / 720;
+    var targetScale = baseScale * userZoom;
+    camera.scale = Math.max(0.4, Math.min(2.5, targetScale));
     camera.viewportW = w / camera.scale;
     camera.viewportH = h / camera.scale;
   }
@@ -305,7 +385,8 @@
           handled = false;
       }
       if (handled) {
-        autoPath.active = false; // Phím di chuyển thủ công -> dừng tự tìm đường ngay
+        cancelAutoPath(true);
+        cancelTravel();
         currentPath = [];
         pendingInteraction = null;
         if (audioAPI) audioAPI.init();
@@ -355,9 +436,33 @@
     return true;
   }
 
+  /**
+   * Kiểm tra người chơi có đang đứng trong tầm tương tác của NPC:
+   * 1. Khoảng cách chân-chân <= INTERACTION_RANGE (48px) — tầm tương tác chuẩn của game
+   * 2. Hoặc khoảng cách tới standTile <= 60px
+   * 3. Hoặc khoảng cách tâm-tâm <= 110px
+   */
+  function isPlayerInNpcRange(npc) {
+    if (!player || !npc) return false;
+    var distFeet = Math.hypot(player.x - npc.feetX, player.y - npc.feetY);
+    if (distFeet <= INTERACTION_RANGE) return true;
+    if (npc.standTile) {
+      var distStand = Math.hypot(player.x - npc.standTile.x, player.y - npc.standTile.y);
+      if (distStand <= 60) return true;
+    }
+    var cx = (npc.x || 0) + (npc.w || 72) / 2;
+    var cy = (npc.y || 0) + (npc.h || 120) / 2;
+    if (Math.hypot(player.x - cx, player.y - cy) <= 110) return true;
+    return false;
+  }
+
   function handleWorldClick(worldX, worldY) {
     if (!player || !mapData) return;
-    if (autoPath.active) autoPath.active = false; // Chạm để tự đi -> dừng tự tìm đường
+    if (autoPath.active) cancelAutoPath(true);
+    if (travelState.active) cancelTravel();
+    currentPath = [];
+    pendingInteraction = null;
+    if (player) player.path = currentPath;
 
     // 1. Kiểm tra click vào quái vật
     if (fieldMonsters.length > 0) {
@@ -375,9 +480,13 @@
     targetMonster = null;
 
     // 2. Click vào NPC
-    if (mapData.npcs && mapData.npcs.length > 0) {
-      for (var n = 0; n < mapData.npcs.length; n++) {
-        var npc = mapData.npcs[n];
+    var npcsToCheck = (mapData.npcs && mapData.npcs.length > 0) ? mapData.npcs : [];
+    if (mapData.linhnhi && npcsToCheck.indexOf(mapData.linhnhi) === -1) {
+      npcsToCheck = npcsToCheck.concat([mapData.linhnhi]);
+    }
+    if (npcsToCheck.length > 0) {
+      for (var n = 0; n < npcsToCheck.length; n++) {
+        var npc = npcsToCheck[n];
         if (!isNpcActive(npc)) continue;
         var bounds = {
           x: npc.x - 10,
@@ -387,12 +496,18 @@
         };
         if (worldX >= bounds.x && worldX <= bounds.x + bounds.w &&
             worldY >= bounds.y && worldY <= bounds.y + bounds.h) {
-          var distToNpc = Math.hypot(player.x - npc.feetX, player.y - npc.feetY);
-          if (distToNpc <= INTERACTION_RANGE) {
+          if (isPlayerInNpcRange(npc)) {
+            // Đứng gần: Mở thoại ngay trong cùng sự kiện chạm, không tạo đường đi, không di chuyển 1 pixel
+            currentPath = [];
+            pendingInteraction = null;
+            if (player) player.path = currentPath;
             triggerDialogue(npc);
           } else {
+            // Ở xa: Tự tìm đường tới cạnh NPC, mở thoại đúng một lần khi tới nơi
             (function (targetNpc) {
-              triggerPathTo(targetNpc.standTile.x, targetNpc.standTile.y, {
+              var destX = (targetNpc.standTile && targetNpc.standTile.x !== undefined) ? targetNpc.standTile.x : targetNpc.feetX;
+              var destY = (targetNpc.standTile && targetNpc.standTile.y !== undefined) ? targetNpc.standTile.y : targetNpc.feetY;
+              triggerPathTo(destX, destY, {
                 type: 'npc',
                 onArrive: function () { triggerDialogue(targetNpc); }
               });
@@ -411,6 +526,9 @@
         if (Math.hypot(worldX - hn.x, worldY - hn.y) <= hr) {
           var distToHn = Math.hypot(player.x - hn.x, player.y - hn.y);
           if (distToHn <= hr) {
+            currentPath = [];
+            pendingInteraction = null;
+            if (player) player.path = currentPath;
             executeHarvestNode(hn);
           } else {
             (function (targetHn) {
@@ -433,6 +551,9 @@
         if (Math.hypot(worldX - it.x, worldY - it.y) <= ir) {
           var distToIt = Math.hypot(player.x - it.x, player.y - it.y);
           if (distToIt <= ir) {
+            currentPath = [];
+            pendingInteraction = null;
+            if (player) player.path = currentPath;
             executeInteractableAction(it);
           } else {
             (function (targetIt) {
@@ -451,14 +572,22 @@
     triggerPathTo(worldX, worldY, null);
   }
 
+  var lastOpenedDialogue = null;
   function triggerDialogue(npc) {
     if (!npc) return;
-    if (typeof window !== 'undefined' && window.GameUI) {
-      var stepInfo = getQuestTargetInfo();
-      var isTarget = stepInfo && stepInfo.kind === 'npc' && stepInfo.npcId === npc.id;
-      var lines = (isTarget && npc.dialogueQuest && npc.dialogueQuest.length > 0) ? npc.dialogueQuest : (npc.dialogueDefault || npc.dialogue || []);
-      var resolvedNpc = Object.assign({}, npc, { dialogue: lines });
-      window.GameUI.openDialogue(resolvedNpc);
+    var stepInfo = getQuestTargetInfo();
+    var isTarget = stepInfo && stepInfo.kind === 'npc' && stepInfo.npcId === npc.id;
+    var lines = (isTarget && npc.dialogueQuest && npc.dialogueQuest.length > 0) ? npc.dialogueQuest : (npc.dialogueDefault || npc.dialogue || []);
+    var resolvedNpc = Object.assign({}, npc, { dialogue: lines });
+    lastOpenedDialogue = resolvedNpc;
+
+    var ui = (typeof window !== 'undefined' && window.GameUI)
+      ? window.GameUI
+      : (typeof globalThis !== 'undefined' && globalThis.GameUI)
+        ? globalThis.GameUI
+        : (global && global.GameUI ? global.GameUI : null);
+    if (ui && ui.openDialogue) {
+      ui.openDialogue(resolvedNpc);
     }
   }
 
@@ -522,6 +651,7 @@
     } else if (npcId === 'npc_chapsu') {
       if ((q.sectStage || 0) === 3) {
         q.sectStage = 4;
+        if (!q.mainStage) q.mainStage = 1;
         player.linhThach = (player.linhThach || 0) + 30;
         if (audioAPI) audioAPI.playChime();
         spawnFloatingText('+30 Linh Thạch', player.x, player.y - 35, '#ffe9a8');
@@ -529,6 +659,21 @@
         if (typeof window !== 'undefined' && window.GameUI) {
           window.GameUI.refreshHUD();
           window.GameUI.showToast('Nhập môn hoàn thành! Đài Truyền Tống phía đông nam đã mở.');
+        }
+      } else if ((q.sectStage || 0) >= 4) {
+        if (q.mainStage === 8) {
+          var countItem = function (id) {
+            return stateAPI ? stateAPI.countItemInBag(player, id) : 0;
+          };
+          var c1 = countItem('linh-chi-rung');
+          var c2 = countItem('bang-tuy');
+          var c3 = countItem('hoa-tinh-tho');
+          var c4 = countItem('nguyen-tinh-moc');
+          var c5 = countItem('nguyen-tinh-thuy');
+          var lt = player.linhThach || 0;
+          if (c1 >= 3 && c2 >= 1 && c3 >= 2 && c4 >= 1 && c5 >= 1 && lt >= 200) {
+            refineTrucCoDan();
+          }
         }
       }
     }
@@ -596,7 +741,7 @@
         }
         break;
       case 'practice_dummy':
-        var stats = stateAPI ? stateAPI.deriveStats(player.paths) : { attack: 10 };
+        var stats = stateAPI ? stateAPI.deriveStats(player.paths, player.equipment) : { attack: 10 };
         var dmg = Math.round(stats.attack * (0.9 + Math.random() * 0.2));
         player.dir = getDirFromVelocity(it.x - player.x, it.y - player.y);
         if (audioAPI) audioAPI.playSlash();
@@ -639,6 +784,8 @@
       return;
     }
     harvestReadyTimes[node.id] = nowSec + (node.respawnSec || 90);
+    if (!player.stats) player.stats = { playSec: 0, kills: 0, bossKills: 0, harvests: 0, refines: 0 };
+    player.stats.harvests = (player.stats.harvests || 0) + 1;
 
     if (node.itemId === 'linh-thach') {
       var min = node.countMin || 3;
@@ -747,11 +894,11 @@
       }
     }
 
-    // 3. Active NPCs in 48px
+    // 3. Active NPCs in interaction range
     if (mapData.npcs) {
       for (var n = 0; n < mapData.npcs.length; n++) {
         var npc = mapData.npcs[n];
-        if (isNpcActive(npc) && Math.hypot(player.x - npc.feetX, player.y - npc.feetY) <= INTERACTION_RANGE) {
+        if (isNpcActive(npc) && isPlayerInNpcRange(npc)) {
           return { mode: 'talk', label: 'Nói Chuyện', npc: npc };
         }
       }
@@ -814,12 +961,26 @@
       });
       lastCombatTime = performance.now();
     }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('combat_action'));
+    }
   }
 
   // ============================================================
   // NÚT TỰ TÌM ĐƯỜNG THEO NHIỆM VỤ & ĐỊNH TUYẾN ĐA CHẶNG (BFS)
   // Single Source of Truth cho Mũi tên dẫn đường, Tự tìm đường & Panel nhiệm vụ
   // ============================================================
+  function getWeakestTuVi(p) {
+    if (!p || !p.paths) return 0;
+    var keys = ['kim', 'moc', 'thuy', 'hoa', 'tho'];
+    var min = Infinity;
+    for (var i = 0; i < keys.length; i++) {
+      var v = (p.paths[keys[i]] && typeof p.paths[keys[i]].tuVi === 'number') ? p.paths[keys[i]].tuVi : 0;
+      if (v < min) min = v;
+    }
+    return isFinite(min) ? min : 0;
+  }
+
   function getQuestTargetInfo() {
     if (!player || !player.quests) return null;
     var q = player.quests;
@@ -842,14 +1003,212 @@
     if (sectStage === 3) {
       return { stepId: 'orders', stage: 3, mapId: 'tong-mon', kind: 'npc', npcId: 'npc_chapsu' };
     }
-    return { stepId: 'done', stage: 4, mapId: null, kind: 'point' };
+
+    // Khi sectStage >= 4: Chuỗi nhiệm vụ chính (Đợt 6 - Việc 1)
+    var mainStage = q.mainStage;
+    if (!mainStage || mainStage === 0) {
+      return { stepId: 'done', stage: 4, mapId: null, kind: 'point' };
+    }
+
+    var minTuVi = getWeakestTuVi(player);
+    var hasItem = function (id, count) {
+      return stateAPI ? stateAPI.hasItemInBag(player, id, count) : false;
+    };
+
+    // Tự động thăng tiến mainStage khi đạt điều kiện
+    if (mainStage === 1 && minTuVi >= 30) {
+      q.mainStage = 2;
+      mainStage = 2;
+    }
+    if (mainStage === 2 && (q.nhenKills || 0) >= 3) {
+      q.mainStage = 3;
+      mainStage = 3;
+    }
+    if (mainStage === 3 && hasItem('nguyen-tinh-moc', 1)) {
+      q.mainStage = 4;
+      mainStage = 4;
+    }
+    if (mainStage === 4 && minTuVi >= 300) {
+      q.mainStage = 5;
+      mainStage = 5;
+    }
+    if (mainStage === 5 && (q.bangXaKills || 0) >= 4) {
+      q.mainStage = 6;
+      mainStage = 6;
+    }
+    if (mainStage === 6 && hasItem('nguyen-tinh-thuy', 1) && hasItem('bang-tuy', 1)) {
+      q.mainStage = 7;
+      mainStage = 7;
+    }
+    if (mainStage === 7 && minTuVi >= 600) {
+      q.mainStage = 8;
+      mainStage = 8;
+    }
+    if (mainStage === 8 && hasItem('truc-co-dan', 1)) {
+      q.mainStage = 9;
+      mainStage = 9;
+    }
+    if (mainStage === 9 && (player.realm === 'Trúc Cơ Sơ Kỳ' || (minTuVi >= 900 && !hasItem('truc-co-dan', 1) && player.realm !== 'Phàm Nhân' && player.realm.indexOf('Luyện Khí') === -1))) {
+      q.mainStage = 10;
+      mainStage = 10;
+    }
+
+    switch (mainStage) {
+      case 1:
+        return {
+          stepId: 'main_1',
+          mainStage: 1,
+          stage: 4,
+          mapId: 'tong-mon',
+          kind: 'point',
+          x: 960,
+          y: 1250,
+          title: 'Rèn Luyện Căn Bản',
+          desc: 'Đưa cả 5 đường tu đạt 30 tu vi (săn Rừng Độc, hái Vườn Linh Dược Sơn Cốc, đổi đan chỗ Chấp Sự).'
+        };
+      case 2:
+        return {
+          stepId: 'main_2',
+          mainStage: 2,
+          stage: 4,
+          mapId: 'rung-doc',
+          kind: 'monster',
+          speciesId: 'nhen_xanh',
+          title: 'Trừ Nhện Rừng Xanh',
+          desc: 'Tiêu diệt 3 Nhện Rừng Xanh ở Rừng Độc Thanh Tụy.'
+        };
+      case 3:
+        return {
+          stepId: 'main_3',
+          mainStage: 3,
+          stage: 4,
+          mapId: 'rung-doc',
+          kind: 'point',
+          x: 1640,
+          y: 745,
+          title: 'Thử Thách Cổ Thụ',
+          desc: 'Hạ gục Mộc Linh Cổ Vương ở Rừng Độc và đoạt lấy Nguyên Tinh Mộc.'
+        };
+      case 4:
+        return {
+          stepId: 'main_4',
+          mainStage: 4,
+          stage: 4,
+          mapId: 'tong-mon',
+          kind: 'point',
+          x: 960,
+          y: 1250,
+          title: 'Mở Cổng Hồ Băng',
+          desc: 'Tu luyện cả 5 đường đạt 300 tu vi (Luyện Khí tầng 4) để mở cổng Hồ Băng Hàn Kính.'
+        };
+      case 5:
+        return {
+          stepId: 'main_5',
+          mainStage: 5,
+          stage: 4,
+          mapId: 'ho-bang',
+          kind: 'monster',
+          speciesId: 'han_xa',
+          title: 'Săn Băng Xà',
+          desc: 'Tiêu diệt 4 Băng Xà (Hàn Kính Thủy Xà) tại Hồ Băng Hàn Kính.'
+        };
+      case 6:
+        return {
+          stepId: 'main_6',
+          mainStage: 6,
+          stage: 4,
+          mapId: 'ho-bang',
+          kind: 'point',
+          x: 1180,
+          y: 680,
+          title: 'Chúa Tể Hồ Băng',
+          desc: 'Hạ gục Hàn Kính Giao Vương tại Hồ Băng, thu thập Nguyên Tinh Thủy và Băng Tủy.'
+        };
+      case 7:
+        return {
+          stepId: 'main_7',
+          mainStage: 7,
+          stage: 4,
+          mapId: 'dai-truyen-tong',
+          kind: 'point',
+          x: 480,
+          y: 320,
+          title: 'Cân Bằng Ngũ Hành',
+          desc: 'Tu luyện cả 5 đường đạt 600 tu vi (Luyện Khí tầng 7) để mở cổng Mỏ Lửa Xích Diệm.'
+        };
+      case 8:
+        var countItem = function (id) {
+          return stateAPI ? stateAPI.countItemInBag(player, id) : 0;
+        };
+        if (countItem('linh-chi-rung') < 3) {
+          return {
+            stepId: 'main_8_linhchi',
+            mainStage: 8,
+            stage: 4,
+            mapId: 'son-coc',
+            kind: 'point',
+            x: 460,
+            y: 320,
+            title: 'Luyện Trúc Cơ Đan',
+            desc: 'Thu thập 3 Linh Chi Rừng tại Sơn Cốc để luyện đan.'
+          };
+        }
+        if (countItem('hoa-tinh-tho') < 2) {
+          return {
+            stepId: 'main_8_hoatinh',
+            mainStage: 8,
+            stage: 4,
+            mapId: 'mo-lua',
+            kind: 'monster',
+            speciesId: 'diem_ma',
+            title: 'Luyện Trúc Cơ Đan',
+            desc: 'Thu thập 2 Hỏa Tinh Thổ từ quái Mỏ Lửa Xích Diệm để luyện đan.'
+          };
+        }
+        return {
+          stepId: 'main_8_chapsu',
+          mainStage: 8,
+          stage: 4,
+          mapId: 'tong-mon',
+          kind: 'npc',
+          npcId: 'npc_chapsu',
+          title: 'Luyện Trúc Cơ Đan',
+          desc: 'Đem đủ nguyên liệu và 200 Linh Thạch tới gặp Chấp Sự Đường để luyện Trúc Cơ Đan.'
+        };
+      case 9:
+        return {
+          stepId: 'main_9',
+          mainStage: 9,
+          stage: 4,
+          mapId: 'tong-mon',
+          kind: 'point',
+          x: 960,
+          y: 700,
+          title: 'Đột Phá Trúc Cơ',
+          desc: 'Đưa cả 5 đường đạt 900 tu vi (Luyện Khí viên mãn), sau đó dùng Trúc Cơ Đan để đột phá!'
+        };
+      default:
+        // mainStage >= 10: Bước dự phòng KHÔNG BAO GIỜ TRỐNG
+        return {
+          stepId: 'post_main_kiem_trung',
+          mainStage: 10,
+          stage: 10,
+          mapId: 'dai-truyen-tong',
+          kind: 'point',
+          x: 480,
+          y: 320,
+          title: 'Chinh Phục Kiếm Trủng',
+          desc: 'Rèn luyện đạt Trúc Cơ Trung Kỳ để mở cổng Kiếm Trủng Vô Danh.'
+        };
+    }
   }
 
   function resolveQuestDestination(info) {
     if (!info) return null;
+    var holder = (typeof window !== 'undefined' && window.GameMapData) ? window.GameMapData : (mapData && mapData.maps ? mapData : (typeof require !== 'undefined' ? require('./mapdata.js') : null));
+    var targetMap = holder ? (holder.getMap ? holder.getMap(info.mapId) : holder.maps[info.mapId]) : mapData;
+
     if (info.kind === 'npc') {
-      var holder = (typeof window !== 'undefined' && window.GameMapData) ? window.GameMapData : (mapData && mapData.maps ? mapData : (typeof require !== 'undefined' ? require('./mapdata.js') : null));
-      var targetMap = holder ? (holder.getMap ? holder.getMap(info.mapId) : holder.maps[info.mapId]) : mapData;
       if (!targetMap || !targetMap.npcs) return null;
       for (var i = 0; i < targetMap.npcs.length; i++) {
         var n = targetMap.npcs[i];
@@ -872,6 +1231,44 @@
         }
       }
       return { x: 420, y: 750, radius: 64, mapId: 'rung-doc' };
+    }
+    if (info.kind === 'monster') {
+      if (currentMapId === info.mapId && fieldMonsters && fieldMonsters.length > 0) {
+        var bestM = null;
+        var bestDist = Infinity;
+        for (var mIdx = 0; mIdx < fieldMonsters.length; mIdx++) {
+          var fm = fieldMonsters[mIdx];
+          if (fm.state === 'dead' || fm.hp <= 0) continue;
+          var matchSpec = (fm.speciesId === info.speciesId) ||
+            (info.speciesId === 'han_xa' && fm.speciesId === 'bang_xa') ||
+            (info.speciesId === 'bang_xa' && fm.speciesId === 'han_xa');
+          if (matchSpec) {
+            var d = Math.hypot(player.x - fm.x, player.y - fm.y);
+            if (d < bestDist) {
+              bestDist = d;
+              bestM = fm;
+            }
+          }
+        }
+        if (bestM) {
+          return { x: bestM.x, y: bestM.y, radius: 44, mapId: info.mapId };
+        }
+      }
+      if (targetMap && targetMap.monsterPacks) {
+        for (var pi = 0; pi < targetMap.monsterPacks.length; pi++) {
+          var pack = targetMap.monsterPacks[pi];
+          var matchPack = (pack.speciesId === info.speciesId) ||
+            (info.speciesId === 'han_xa' && pack.speciesId === 'bang_xa') ||
+            (info.speciesId === 'bang_xa' && pack.speciesId === 'han_xa');
+          if (matchPack && pack.anchor) {
+            return { x: pack.anchor.x, y: pack.anchor.y, radius: 44, mapId: info.mapId };
+          }
+        }
+      }
+      return { x: 960, y: 640, radius: 44, mapId: info.mapId };
+    }
+    if (info.kind === 'point' || (info.x !== undefined && info.y !== undefined)) {
+      return { x: info.x, y: info.y, radius: info.radius || 32, mapId: info.mapId };
     }
     return null;
   }
@@ -926,7 +1323,7 @@
     return null;
   }
 
-  function startAutoQuestPath() {
+  function startAutoQuestPath(autoStarted) {
     var info = getQuestTargetInfo();
     if (!info || info.stepId === 'done') {
       if (typeof window !== 'undefined' && window.GameUI) {
@@ -935,16 +1332,28 @@
       return;
     }
     autoPath.active = true;
+    autoPath.autoStarted = !!autoStarted;
     autoPath.lastLegAt = 0;
     autoPath.combatStamp = lastCombatTime;
     targetMonster = null;
+    if (typeof window !== 'undefined' && window.GameUI && window.GameUI.syncAutoPathButton) {
+      window.GameUI.syncAutoPathButton();
+    }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('autopath_started'));
+    }
   }
 
   function cancelAutoPath(clearPath) {
     autoPath.active = false;
+    autoPath.autoStarted = false;
     if (clearPath) {
       currentPath = [];
       pendingInteraction = null;
+      if (player) player.path = currentPath;
+    }
+    if (typeof window !== 'undefined' && window.GameUI && window.GameUI.syncAutoPathButton) {
+      window.GameUI.syncAutoPathButton();
     }
   }
 
@@ -956,8 +1365,11 @@
   }
 
   function toggleAutoQuestPath() {
-    if (autoPath.active) { cancelAutoPath(true); return; }
-    startAutoQuestPath();
+    if (autoPath.active) {
+      cancelAutoPath(true);
+      return;
+    }
+    startAutoQuestPath(false);
   }
 
   function updateAutoPath() {
@@ -1016,7 +1428,7 @@
   }
 
   function triggerPathTo(worldX, worldY, interaction) {
-    if (!pathfinder || !mapData) return;
+    if (!pathfinder || !mapData || !player) return;
 
     clickRipple = {
       x: worldX,
@@ -1026,31 +1438,77 @@
       alpha: 0.95
     };
 
+    var grid = mapData.collisionGrid;
+    var gs = mapData.gridSize || 24;
+    var rows = grid ? grid.length : 0;
+    var cols = (rows > 0 && grid[0]) ? grid[0].length : 0;
+
     var path = pathfinder.findPath(
       player.x,
       player.y,
       worldX,
       worldY,
-      mapData.collisionGrid,
-      mapData.gridSize
+      grid,
+      gs
     );
+
+    // Nếu không tìm được đường, dùng findNearestWalkable hoặc quét bán kính tăng dần quanh đích (Đợt 6 - Việc 3)
+    if ((!path || path.length === 0) && grid && rows > 0 && cols > 0) {
+      var tgx = Math.max(0, Math.min(cols - 1, Math.floor(worldX / gs)));
+      var tgy = Math.max(0, Math.min(rows - 1, Math.floor(worldY / gs)));
+
+      var near = pathfinder.findNearestWalkable ? pathfinder.findNearestWalkable(tgx, tgy, grid) : null;
+      if (near) {
+        var altX = (near.gx + 0.5) * gs;
+        var altY = (near.gy + 0.5) * gs;
+        path = pathfinder.findPath(player.x, player.y, altX, altY, grid, gs);
+      }
+
+      // Quét bán kính tăng dần tìm ô đi được mà findPath tới được
+      if (!path || path.length === 0) {
+        var maxR = 25;
+        for (var r = 1; r <= maxR && (!path || path.length === 0); r++) {
+          for (var dx = -r; dx <= r && (!path || path.length === 0); dx++) {
+            for (var dy = -r; dy <= r; dy++) {
+              if (Math.abs(dx) !== r && Math.abs(dy) !== r) continue;
+              var nx = tgx + dx;
+              var ny = tgy + dy;
+              if (ny >= 0 && ny < rows && nx >= 0 && nx < cols && grid[ny][nx] === 0) {
+                var candX = (nx + 0.5) * gs;
+                var candY = (ny + 0.5) * gs;
+                var testPath = pathfinder.findPath(player.x, player.y, candX, candY, grid, gs);
+                if (testPath && testPath.length > 0) {
+                  path = testPath;
+                  break;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
 
     if (path && path.length > 0) {
       if (path.length > 1 && Math.hypot(path[0].x - player.x, path[0].y - player.y) < 6) {
         path.shift();
       }
       currentPath = path;
+      if (player) player.path = currentPath;
       pendingInteraction = interaction;
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('player_first_move'));
+      }
+      return path;
     } else {
       currentPath = [];
+      if (player) player.path = currentPath;
       pendingInteraction = null;
+      return [];
     }
   }
 
   function triggerDialogueLinhNhi() {
-    if (typeof window !== 'undefined' && window.GameUI) {
-      window.GameUI.openDialogue(mapData.linhnhi);
-    }
+    triggerDialogue(mapData.linhnhi);
   }
 
   function triggerLockedDoorToast() {
@@ -1116,6 +1574,9 @@
       if (typeof window !== 'undefined' && window.GameUI) {
         window.GameUI.refreshHUD();
       }
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('map_switched'));
+      }
     };
   }
 
@@ -1141,6 +1602,337 @@
     switchMap(mapId, spawn);
   }
 
+  // ============================================================
+  // DI CHUYỂN BẰNG BẢN ĐỒ TỔNG QUAN & DÙNG VẬT PHẨM (Đợt 6 - Việc 1 & 4)
+  // ============================================================
+  var travelState = {
+    active: false,
+    targetMapId: null,
+    routePlan: null,
+    combatStamp: 0,
+    lastLegAt: 0
+  };
+
+  function planTravelRoute(fromMapId, toMapId) {
+    if (!fromMapId || !toMapId) return null;
+    if (fromMapId === toMapId) return { route: [fromMapId], needsTeleport: false, finalMapId: toMapId };
+
+    var directRoute = findRoute(fromMapId, toMapId);
+    if (directRoute) {
+      return { route: directRoute, needsTeleport: false, finalMapId: toMapId };
+    }
+
+    var teleportMaps = ['ho-bang', 'mo-lua', 'hoang-mac', 'kiem-trung'];
+    if (teleportMaps.indexOf(toMapId) !== -1) {
+      var routeToAltar = findRoute(fromMapId, 'dai-truyen-tong');
+      if (routeToAltar) {
+        return { route: routeToAltar.concat([toMapId]), needsTeleport: true, finalMapId: toMapId };
+      }
+    }
+    return null;
+  }
+
+  function travelToMap(mapId) {
+    if (!mapId || !player) return { ok: false, reason: 'invalid_param' };
+
+    var weakestTuVi = getWeakestTuVi(player);
+
+    // 1. Cùng map
+    if (mapId === currentMapId) {
+      return { ok: true, sameMap: true };
+    }
+
+    // 2. Khóa cảnh giới
+    var holder = (typeof window !== 'undefined' && window.GameMapData) ? window.GameMapData : (mapData && mapData.maps ? mapData : (typeof require !== 'undefined' ? require('./mapdata.js') : null));
+    var gateMap = (holder && holder.getMap) ? holder.getMap(mapId) : null;
+    if (gateMap && gateMap.minRealmRank) {
+      var gateState = (typeof window !== 'undefined' && window.GameState) ? window.GameState : stateAPI;
+      var myRank = (gateState && gateState.getRealmRank && player) ? gateState.getRealmRank(player) : 0;
+      if (myRank < gateMap.minRealmRank) {
+        if (typeof window !== 'undefined' && window.GameUI) {
+          window.GameUI.showToast('Cảnh giới chưa đủ — ' + gateMap.name + ' cần ' + (gateMap.minRealmLabel || '') + '. Hãy tu luyện cân bằng cả năm đường.');
+        }
+        return { ok: false, reason: 'realm_rank_low', minRank: gateMap.minRealmRank, reqTuVi: gateMap.minRealmRank * 100, curTuVi: weakestTuVi };
+      }
+    }
+
+    // 3. Lập tuyến di chuyển
+    var plan = planTravelRoute(currentMapId, mapId);
+    if (!plan || !plan.route || plan.route.length === 0) {
+      if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.showToast('Không tìm được đường tới ' + (gateMap ? gateMap.name : mapId));
+      }
+      return { ok: false, reason: 'no_route' };
+    }
+
+    cancelAutoPath(true);
+    travelState = {
+      active: true,
+      targetMapId: mapId,
+      routePlan: plan,
+      combatStamp: lastCombatTime,
+      lastLegAt: 0
+    };
+
+    return { ok: true, route: plan.route, needsTeleport: plan.needsTeleport };
+  }
+
+  function cancelTravel() {
+    travelState.active = false;
+    travelState.targetMapId = null;
+    travelState.routePlan = null;
+    currentPath = [];
+    pendingInteraction = null;
+    return { ok: true };
+  }
+
+  function updateTravel() {
+    if (!travelState.active || !player || !mapData) return;
+    if (mapFade.alpha > 0) return;
+
+    if (currentMapId === travelState.targetMapId) {
+      cancelTravel();
+      return;
+    }
+
+    if (lastCombatTime > travelState.combatStamp) {
+      cancelTravel();
+      if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.showToast('Vào chiến đấu — đã dừng di chuyển.');
+      }
+      return;
+    }
+
+    var now = performance.now();
+
+    if (travelState.routePlan && travelState.routePlan.needsTeleport && currentMapId === 'dai-truyen-tong') {
+      var altarDist = Math.hypot(player.x - 480, player.y - 320);
+      if (altarDist <= 64) {
+        teleportTo(travelState.targetMapId);
+        cancelTravel();
+        return;
+      }
+      if (currentPath.length === 0 && now - travelState.lastLegAt > 500) {
+        travelState.lastLegAt = now;
+        triggerPathTo(480, 320, null);
+      }
+      return;
+    }
+
+    var nextTargetMap = (travelState.routePlan && travelState.routePlan.needsTeleport) ? 'dai-truyen-tong' : travelState.targetMapId;
+    if (currentPath.length === 0 && now - travelState.lastLegAt > 500) {
+      var exitHop = findNextHopExit(currentMapId, nextTargetMap);
+      if (!exitHop) {
+        cancelTravel();
+        if (typeof window !== 'undefined' && window.GameUI) {
+          window.GameUI.showToast('Không tìm được đường sang chặng tiếp theo.');
+        }
+        return;
+      }
+      travelState.lastLegAt = now;
+      triggerPathTo(exitHop.target.x, exitHop.target.y, null);
+    }
+  }
+
+  function useItem(itemId) {
+    if (!player) return { ok: false, msg: 'Chưa khởi tạo nhân vật' };
+    if (!stateAPI.hasItemInBag(player, itemId, 1)) {
+      var msgNoItem = 'Không có vật phẩm trong túi đồ.';
+      if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.showToast(msgNoItem);
+      }
+      return { ok: false, msg: msgNoItem };
+    }
+
+    var pillElemMap = {
+      'dan-kim': 'kim',
+      'dan-moc': 'moc',
+      'dan-thuy': 'thuy',
+      'dan-hoa': 'hoa',
+      'dan-tho': 'tho'
+    };
+    var elem = pillElemMap[itemId];
+    if (elem) {
+      stateAPI.removeItemFromBag(player, itemId, 1);
+      if (!player.paths[elem]) player.paths[elem] = { tuVi: 0 };
+      player.paths[elem].tuVi = (player.paths[elem].tuVi || 0) + 20;
+
+      var stats = stateAPI.deriveStats(player.paths, player.equipment);
+      player.hpMax = stats.hpMax;
+      player.linhLucMax = stats.linhLucMax;
+      stateAPI.savePlayer(player);
+
+      var elemNames = { kim: 'Kim', moc: 'Mộc', thuy: 'Thủy', hoa: 'Hỏa', tho: 'Thổ' };
+      var msg = 'Đã dùng ' + (elemNames[elem] || elem) + ' Linh Đan, +20 tu vi ' + (elemNames[elem] || elem) + '!';
+      if (audioAPI) audioAPI.playChime();
+      spawnFloatingText('+20 Tu vi ' + (elemNames[elem] || elem), player.x, player.y - 35, '#ffe9a8');
+      if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.showToast(msg);
+        window.GameUI.refreshHUD();
+      }
+      return { ok: true, msg: msg, tuVi: player.paths[elem].tuVi };
+    }
+
+    if (itemId === 'truc-co-dan') {
+      return tryBreakthrough();
+    }
+
+    return { ok: false, msg: 'Vật phẩm không thể sử dụng trực tiếp' };
+  }
+
+  function tryBreakthrough() {
+    if (!player) return { ok: false, msg: 'Chưa khởi tạo nhân vật' };
+
+    var keys = ['kim', 'moc', 'thuy', 'hoa', 'tho'];
+    var minTuVi = Infinity;
+    for (var i = 0; i < keys.length; i++) {
+      var v = (player.paths && player.paths[keys[i]] && player.paths[keys[i]].tuVi) || 0;
+      if (v < minTuVi) minTuVi = v;
+    }
+
+    if (minTuVi < 900) {
+      var msgLow = 'Chưa đủ tu vi để đột phá — cả 5 hệ phải đạt 900 tu vi (hiện tại yếu nhất: ' + minTuVi + '/900).';
+      if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.showToast(msgLow);
+      }
+      return { ok: false, reason: 'insufficient_tuvi', minTuVi: minTuVi, msg: msgLow };
+    }
+
+    var hasPill = stateAPI.hasItemInBag(player, 'truc-co-dan', 1);
+    if (!hasPill) {
+      var msgNoPill = 'Thiếu Trúc Cơ Đan — hãy tìm Chấp Sự tại Tông Môn để luyện đan.';
+      if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.showToast(msgNoPill);
+      }
+      return { ok: false, reason: 'missing_pill', msg: msgNoPill };
+    }
+
+    stateAPI.removeItemFromBag(player, 'truc-co-dan', 1);
+    player.realm = 'Trúc Cơ Sơ Kỳ';
+    if (player.quests) {
+      player.quests.mainStage = 10;
+    }
+    stateAPI.savePlayer(player);
+
+    if (audioAPI) audioAPI.playChime();
+    spawnFloatingText('ĐỘT PHÁ TRÚC CƠ ĐẠI THÀNH!', player.x, player.y - 45, '#ffe9a8');
+    var successMsg = 'Thiên địa rung chuyển! Đã đột phá thành công Trúc Cơ Sơ Kỳ!';
+    if (typeof window !== 'undefined' && window.GameUI) {
+      window.GameUI.showToast(successMsg);
+      window.GameUI.refreshHUD();
+    }
+    return { ok: true, realm: 'Trúc Cơ Sơ Kỳ', newRealm: 'Trúc Cơ Sơ Kỳ', msg: successMsg };
+  }
+
+  function exchangePill(elem) {
+    if (!player) return { ok: false, msg: 'Chưa khởi tạo nhân vật' };
+    var valid = ['kim', 'moc', 'thuy', 'hoa', 'tho'];
+    if (valid.indexOf(elem) === -1) {
+      return { ok: false, reason: 'invalid_element', msg: 'Hệ không hợp lệ' };
+    }
+    var cost = 15;
+    if ((player.linhThach || 0) < cost) {
+      var msgFail = 'Không đủ Linh Thạch — cần 15 Linh Thạch để đổi Tu Luyện Đan (' + elem.toUpperCase() + ').';
+      if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.showToast(msgFail);
+      }
+      return { ok: false, reason: 'insufficient_linh_thach', msg: msgFail };
+    }
+
+    player.linhThach -= cost;
+    var itemId = 'dan-' + elem;
+    stateAPI.addItemToBag(player, itemId, 1);
+    stateAPI.savePlayer(player);
+
+    var elemNames = { kim: 'Kim', moc: 'Mộc', thuy: 'Thủy', hoa: 'Hỏa', tho: 'Thổ' };
+    var elemName = elemNames[elem] || elem;
+    var msgSuccess = 'Đổi thành công 1 Tu Luyện Đan (' + elemName + ')!';
+    if (audioAPI) audioAPI.playChime();
+    spawnFloatingText('-15 Linh Thạch', player.x, player.y - 35, '#ff9a5c');
+    spawnFloatingText('+1 Tu Luyện Đan', player.x, player.y - 55, '#ffe9a8');
+
+    if (typeof window !== 'undefined' && window.GameUI) {
+      window.GameUI.showToast(msgSuccess);
+      window.GameUI.refreshHUD();
+    }
+    return { ok: true, itemId: itemId, msg: msgSuccess };
+  }
+
+  function refineTrucCoDan() {
+    if (!player) return { ok: false, reason: 'no_player' };
+    var countItem = function (id) {
+      return stateAPI ? stateAPI.countItemInBag(player, id) : 0;
+    };
+    var c1 = countItem('linh-chi-rung');
+    var c2 = countItem('bang-tuy');
+    var c3 = countItem('hoa-tinh-tho');
+    var c4 = countItem('nguyen-tinh-moc');
+    var c5 = countItem('nguyen-tinh-thuy');
+    var lt = player.linhThach || 0;
+
+    if (c1 < 3 || c2 < 1 || c3 < 2 || c4 < 1 || c5 < 1 || lt < 200) {
+      var msg = 'Chưa đủ nguyên liệu luyện Trúc Cơ Đan (cần 3 Linh Chi Rừng, 1 Băng Tủy, 2 Hỏa Tinh Thổ, 1 Nguyên Tinh Mộc, 1 Nguyên Tinh Thủy và 200 Linh Thạch).';
+      if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.showToast(msg);
+      }
+      return { ok: false, reason: 'missing_materials', msg: msg };
+    }
+
+    stateAPI.removeItemFromBag(player, 'linh-chi-rung', 3);
+    stateAPI.removeItemFromBag(player, 'bang-tuy', 1);
+    stateAPI.removeItemFromBag(player, 'hoa-tinh-tho', 2);
+    stateAPI.removeItemFromBag(player, 'nguyen-tinh-moc', 1);
+    stateAPI.removeItemFromBag(player, 'nguyen-tinh-thuy', 1);
+    player.linhThach -= 200;
+    stateAPI.addItemToBag(player, 'truc-co-dan', 1);
+    if (!player.stats) player.stats = { playSec: 0, kills: 0, bossKills: 0, harvests: 0, refines: 0 };
+    player.stats.refines = (player.stats.refines || 0) + 1;
+
+    if (player.quests) {
+      player.quests.mainStage = 9;
+    }
+    stateAPI.savePlayer(player);
+
+    if (audioAPI) audioAPI.playChime();
+    spawnFloatingText('Luyện thành Trúc Cơ Đan!', player.x, player.y - 45, '#ffe9a8');
+    var successMsg = 'Khai lò luyện đan thành công! Đã nhận 1 Trúc Cơ Đan.';
+    if (typeof window !== 'undefined' && window.GameUI) {
+      window.GameUI.showToast(successMsg);
+      window.GameUI.refreshHUD();
+    }
+    return { ok: true, msg: successMsg };
+  }
+
+  function equipItem(slotIndex) {
+    if (!stateAPI || !player) return { ok: false, msg: 'Chưa khởi tạo nhân vật' };
+    var res = stateAPI.equipItem(player, slotIndex);
+    if (res.ok) {
+      if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.showToast(res.msg);
+        window.GameUI.refreshHUD();
+      }
+    }
+    return res;
+  }
+
+  function unequipItem(slotName) {
+    if (!stateAPI || !player) return { ok: false, msg: 'Chưa khởi tạo nhân vật' };
+    var res = stateAPI.unequipItem(player, slotName);
+    if (res.ok) {
+      if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.showToast(res.msg);
+        window.GameUI.refreshHUD();
+      }
+    }
+    return res;
+  }
+
+  function pathToPoint(x, y) {
+    cancelAutoPath(true);
+    cancelTravel();
+    return triggerPathTo(x, y, null);
+  }
+
   /**
    * Tung kỹ năng từ bàn phím hoặc nút giao diện
    */
@@ -1154,7 +1946,7 @@
       return;
     }
 
-    var stats = stateAPI ? stateAPI.deriveStats(player.paths) : { attack: 10 };
+    var stats = stateAPI ? stateAPI.deriveStats(player.paths, player.equipment) : { attack: 10 };
     var baseRaw = 10 + (stats.attack - 10);
 
     if (skillId === 'phi_diep') {
@@ -1190,6 +1982,9 @@
         raw: baseRaw * 1.6,
         element: 'moc'
       });
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('combat_action'));
+      }
     } else if (skillId === 'day_leo') {
       if (skill2Cd > 0) return;
       if (player.linhLuc < 6) {
@@ -1239,6 +2034,9 @@
       if (targetSnare.hp <= 0) {
         handleMonsterDeath(targetSnare);
       }
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('combat_action'));
+      }
     }
   }
 
@@ -1270,7 +2068,12 @@
     // Note 8: nạp cờ chất lượng độc lập với hệ âm thanh
     if (stateAPI) {
       var qSettings = stateAPI.loadSettings();
-      if (qSettings) setQuality(qSettings.quality || 'cao');
+      if (qSettings) {
+        setQuality(qSettings.quality || 'cao');
+        if (qSettings.zoom !== undefined) userZoom = qSettings.zoom;
+        else if (qSettings.display && qSettings.display.zoom !== undefined) userZoom = qSettings.display.zoom;
+        resizeCanvas();
+      }
     }
     if (audioAPI) {
       var settings = stateAPI ? stateAPI.loadSettings() : null;
@@ -1309,6 +2112,11 @@
 
   function gameLoop(currentTime) {
     if (!isRunning) return;
+    // Đợt 6 (mục 15, hồ sơ 25): giới hạn 30 FPS khi người chơi chọn tiết kiệm pin
+    if (Number(getSettingsCached().fpsLimit) === 30 && lastFrameTime && (currentTime - lastFrameTime) < 31) {
+      requestAnimationFrame(gameLoop);
+      return;
+    }
     var dt = (currentTime - lastFrameTime) / 1000;
     if (dt > 0.1) dt = 0.1;
     lastFrameTime = currentTime;
@@ -1337,12 +2145,23 @@
 
   function update(dt) {
     if (!player || !mapData) return;
+    // Đợt 6 (mục 15, hồ sơ 29): thống kê thời gian chơi
+    if (!player.stats) player.stats = { playSec: 0, kills: 0, bossKills: 0, harvests: 0, refines: 0 };
+    player.stats.playSec = (player.stats.playSec || 0) + dt;
+
+    if (screenShakeTimer > 0) {
+      screenShakeTimer -= dt;
+      if (screenShakeTimer <= 0) {
+        screenShakeTimer = 0;
+        screenShakeIntensity = 0;
+      }
+    }
 
     var now = performance.now();
 
     // Cập nhật hiệu ứng chuyển map fade
     if (mapFade.dir !== 0) {
-      mapFade.alpha += mapFade.dir * dt * 2.8;
+      mapFade.alpha += mapFade.dir * dt * 4.0;
       if (mapFade.dir === 1 && mapFade.alpha >= 1) {
         mapFade.alpha = 1;
         mapFade.dir = -1;
@@ -1413,6 +2232,10 @@
       if (keysDown.down) vy += 1;
       if (keysDown.left) vx -= 1;
       if (keysDown.right) vx += 1;
+      if (joystickVector.x !== 0 || joystickVector.y !== 0) {
+        vx += joystickVector.x;
+        vy += joystickVector.y;
+      }
 
       if (vx !== 0 || vy !== 0) {
         var len = Math.hypot(vx, vy);
@@ -1436,6 +2259,8 @@
         currentPath = [];
         pendingInteraction = null;
         targetMonster = null;
+        if (autoPath.active) cancelAutoPath(true);
+        if (travelState.active) cancelTravel();
       } else if (currentPath.length > 0) {
         var targetWP = currentPath[0];
         var dwx = targetWP.x - player.x;
@@ -1528,6 +2353,7 @@
 
     // Tự tìm đường theo nhiệm vụ + đồng bộ nút hành động theo ngữ cảnh
     updateAutoPath();
+    updateTravel();
     var actx = computeActionContext();
     if (actx.mode !== currentActionMode) {
       currentActionMode = actx.mode;
@@ -1581,7 +2407,7 @@
 
   function executePlayerBasicAttack(m) {
     lastCombatTime = performance.now();
-    var stats = stateAPI ? stateAPI.deriveStats(player.paths) : { attack: 10, critRate: 5 };
+    var stats = stateAPI ? stateAPI.deriveStats(player.paths, player.equipment) : { attack: 10, critRate: 5 };
     var raw = 10 + (stats.attack - 10);
     var elemFac = combatAPI ? combatAPI.getElementFactor('neutral', m.element) : 1.0;
     var dealt = combatAPI ? combatAPI.calcDamage(raw, elemFac, m.armor) : raw;
@@ -1713,7 +2539,7 @@
 
   function handleMonsterAttackPlayer(m) {
     lastCombatTime = performance.now();
-    var stats = stateAPI ? stateAPI.deriveStats(player.paths) : { defense: 5 };
+    var stats = stateAPI ? stateAPI.deriveStats(player.paths, player.equipment) : { defense: 5 };
     var elemFac = combatAPI ? combatAPI.getElementFactor(m.element, 'moc') : 1.0;
     var rawDmg = m.damage;
     var dealt = combatAPI ? combatAPI.calcDamage(rawDmg, elemFac, stats.defense) : rawDmg;
@@ -1725,6 +2551,7 @@
 
     player.hp = Math.max(0, player.hp - dealt);
     if (audioAPI) audioAPI.playHit();
+    triggerScreenShake(0.2, 5);
 
     // Làm chậm nếu trúng đòn Nhện Rừng Xanh
     if (m.slowOnHit) {
@@ -1783,6 +2610,21 @@
         }
       }
     }
+
+    // Bộ đếm quái cho chuỗi nhiệm vụ chính (Đợt 6 - Việc 1)
+    if (player.quests) {
+      if (m.speciesId === 'nhen_xanh') {
+        player.quests.nhenKills = (player.quests.nhenKills || 0) + 1;
+      }
+      if (m.speciesId === 'han_xa' || m.speciesId === 'bang_xa') {
+        player.quests.bangXaKills = (player.quests.bangXaKills || 0) + 1;
+      }
+    }
+
+    // Thống kê cá nhân (Đợt 6 - mục 15, hồ sơ 29 mục 5)
+    if (!player.stats) player.stats = { playSec: 0, kills: 0, bossKills: 0, harvests: 0, refines: 0 };
+    player.stats.kills = (player.stats.kills || 0) + 1;
+    if (m.isBoss) player.stats.bossKills = (player.stats.bossKills || 0) + 1;
 
     // 4. Rớt chiến lợi phẩm (Brief §6)
     var chainCount = (player.huntChain && player.huntChain.count) || 0;
@@ -1866,9 +2708,20 @@
         continue;
       }
 
-      // Người chơi bước qua để nhặt (khoảng cách <= 26px)
+      // Người chơi bước qua để nhặt (khoảng cách <= 26px, hoặc <= 72px nếu bật Tự Nhặt Đồ)
+      var curSettings = stateAPI ? stateAPI.loadSettings() : null;
+      var maxPickupDist = (curSettings && curSettings.autoPickup === true) ? 72 : 26;
       var dist = Math.hypot(player.x - drop.x, player.y - drop.y);
-      if (dist <= 26) {
+      var canCollect = dist <= 26;
+      if (!canCollect && dist <= maxPickupDist) {
+        // Đợt 6 (mục 15, hồ sơ 25): tự nhặt chỉ áp cho vật phẩm từ phẩm đã chọn trở lên
+        var minRank = (curSettings && curSettings.autoPickupRank) ? Number(curSettings.autoPickupRank) : 1;
+        var dropDef = monstersAPI && monstersAPI.ITEM_DEFS ? monstersAPI.ITEM_DEFS[drop.itemId] : null;
+        var rankMap = { common: 1, good: 2, rare: 3, epic: 4, legend: 5 };
+        var dropRank = dropDef ? (rankMap[dropDef.quality] || 1) : 1;
+        canCollect = dropRank >= minRank;
+      }
+      if (canCollect) {
         collectDropAtIndex(i, todayData);
       }
     }
@@ -1947,6 +2800,8 @@
   }
 
   function spawnDamageNumber(x, y, amount, type, isCrit) {
+    var curSettings = stateAPI ? stateAPI.loadSettings() : null;
+    if (curSettings && curSettings.showDamageNumbers === false) return;
     floatingTexts.push({
       text: '-' + amount,
       x: x + (Math.random() - 0.5) * 16,
@@ -2010,6 +2865,16 @@
     return null;
   }
 
+  var screenShakeTimer = 0;
+  var screenShakeIntensity = 0;
+
+  function triggerScreenShake(duration, intensity) {
+    var s = stateAPI ? stateAPI.loadSettings() : null;
+    if (s && s.screenShake === false) return;
+    screenShakeTimer = duration || 0.2;
+    screenShakeIntensity = intensity || 5;
+  }
+
   function updateCamera() {
     if (!player || !mapData) return;
 
@@ -2037,7 +2902,13 @@
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.scale(camera.scale, camera.scale);
-    ctx.translate(-camera.x, -camera.y);
+    var renderCamX = camera.x;
+    var renderCamY = camera.y;
+    if (screenShakeTimer > 0) {
+      renderCamX += (Math.random() - 0.5) * screenShakeIntensity;
+      renderCamY += (Math.random() - 0.5) * screenShakeIntensity;
+    }
+    ctx.translate(-renderCamX, -renderCamY);
 
     // 1. Vẽ ảnh nền bản đồ hiện tại (Brief §2: 1920x1280)
     var bgImg = assets[mapData.bgImage] || (mapData.id === 'rung-doc' ? assets.map_rung_doc_bg : assets.map_bg);
@@ -2059,7 +2930,7 @@
     // 3. Vẽ hiệu ứng cảnh báo kỹ năng dưới đất (Telegraphs)
     for (var v = 0; v < visualEffects.length; v++) {
       var vfx = visualEffects[v];
-      if (vfx.type === 'telegraph_re_troi') {
+      if (vfx.type === 'telegraph_re_troi' && getSettingsCached().showBossTelegraph !== false) {
         ctx.save();
         var progress = 1.0 - (vfx.timer / vfx.duration);
         ctx.strokeStyle = vfx.color ? vfx.color : 'rgba(180, 70, 220, 0.85)';
@@ -2093,11 +2964,8 @@
       }
     }
 
-    // 4. Vẽ chiến lợi phẩm rớt dưới đất (Ground Drops có hào quang)
-    for (var g = 0; g < groundDrops.length; g++) {
-      var drop = groundDrops[g];
-      drawGroundDrop(drop);
-    }
+    // 4. (Đợt 6) Chiến lợi phẩm được vẽ SAU lớp thực thể (bước 5b) để tán cây tiền cảnh
+    // không nuốt mất đế sáng + nhãn tên — vật rơi phải luôn đọc được từ xa.
 
     // 4b. Vẽ các điểm thu hái (Harvest Nodes)
     if (mapData.harvestNodes) {
@@ -2105,6 +2973,9 @@
       for (var h = 0; h < mapData.harvestNodes.length; h++) {
         var node = mapData.harvestNodes[h];
         var isReady = nowSecH >= (harvestReadyTimes[node.id] || 0);
+        // Đợt 6 (Việc 3 — mục 4): luống linh điền vẽ riêng cho Vườn Linh Dược tông môn
+        var isGardenPlot = (currentMapId === 'tong-mon');
+        if (isGardenPlot) drawGardenPlot(node, isReady, nowSecH, h);
         if (isReady) {
           var bobH = Math.sin(nowSecH * 3 + h) * 3;
           // Note 8: 'thap' bỏ quầng sáng gradient của điểm hái (icon vẫn nhấp nhô như cũ)
@@ -2127,7 +2998,7 @@
             var rowH = defH ? (defH.iconRow || 0) : 0;
             ctx.drawImage(iconImg, colH * 32, rowH * 32, 32, 32, node.x - 12, node.y - 24 + bobH, 24, 24);
           }
-        } else {
+        } else if (!isGardenPlot) {
           ctx.save();
           ctx.fillStyle = 'rgba(80, 140, 80, 0.35)';
           ctx.beginPath();
@@ -2195,7 +3066,7 @@
               }
 
               var dPlayer = Math.hypot(player.x - npc.feetX, player.y - npc.feetY);
-              if (dPlayer <= INTERACTION_RANGE) {
+              if (dPlayer <= INTERACTION_RANGE || isPlayerInNpcRange(npc)) {
                 drawHintChip(npc.feetX, npc.y - 6, 'Nói chuyện');
               }
             }
@@ -2230,6 +3101,10 @@
         ctx.fill();
         ctx.restore();
 
+        var isHat = player && player.equipment && player.equipment.head === 'non-la' && getSettingsCached().hideHat !== true;
+        var hatWalk = assets.hanhan_hat_walk;
+        var hatIdle = assets.hanhan_hat_idle;
+
         var walkSheet = assets.hanhan_walk;
         if (playerMoving && walkSheet && walkSheet.complete && walkSheet.naturalWidth >= 768) {
           // Đợt 3 (Note 6): khung hình suy từ quãng đường đã đi — chân khớp mặt đất, không trượt theo thời gian
@@ -2241,6 +3116,15 @@
             wFrame * 96, wFrameY, 96, 120,
             player.x - 48, player.y - 118, 96, 120
           );
+          if (isHat && hatWalk && hatWalk.complete && hatWalk.naturalWidth > 0) {
+            var hatCols = Math.max(1, Math.round(hatWalk.naturalWidth / 96));
+            var hFrame = Math.floor(walkDist / WALK_CYCLE_DIST * hatCols) % hatCols;
+            ctx.drawImage(
+              hatWalk,
+              hFrame * 96, wFrameY, 96, 120,
+              player.x - 48, player.y - 118, 96, 120
+            );
+          }
         } else if (assets.hanhan_idle && assets.hanhan_idle.complete) {
           var frameY = (player.dir || 0) * 120;
           ctx.drawImage(
@@ -2248,6 +3132,13 @@
             0, frameY, 96, 120,
             player.x - 48, player.y - 118, 96, 120
           );
+          if (isHat && hatIdle && hatIdle.complete && hatIdle.naturalWidth > 0) {
+            ctx.drawImage(
+              hatIdle,
+              0, frameY, 96, 120,
+              player.x - 48, player.y - 118, 96, 120
+            );
+          }
         }
       }
     });
@@ -2265,6 +3156,11 @@
       entities[e].draw();
     }
 
+    // 5b. Vẽ chiến lợi phẩm rớt dưới đất — sau lớp thực thể để luôn đọc được (Đợt 6, mục 3)
+    for (var g = 0; g < groundDrops.length; g++) {
+      drawGroundDrop(groundDrops[g]);
+    }
+
     // 6. Vẽ đạn bay & hiệu ứng trên không (Projectiles & VFX)
     renderCombatVfx();
 
@@ -2273,6 +3169,9 @@
 
     // 7b. Biển chỉ tên tại các điểm chuyển map (Đợt 3, Note 4)
     drawGateSigns();
+
+    // 7c. Mũi tên chỉ xuống tại mọi lối vào / điểm chuyển map (Đợt 6 - Việc 1, mục 12)
+    drawEntranceArrows();
 
     // 8. Mũi tên dẫn đường nhiệm vụ (Guidance Arrow)
     var settings = stateAPI ? stateAPI.loadSettings() : null;
@@ -2478,32 +3377,223 @@
     ctx.fillStyle = m.isElite ? '#e8a53c' : '#e84545';
     ctx.fillRect(leftX, topY, barW * hpRatio, barH);
     ctx.restore();
+
+    // Đợt 6 (mục 15, hồ sơ 28): hiện số máu chính xác khi bật
+    if (getSettingsCached().showMonsterHpText === true) {
+      ctx.save();
+      ctx.font = 'bold 10px "Be Vietnam Pro", sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.shadowColor = '#000000';
+      ctx.shadowBlur = qualityShadow(3);
+      ctx.fillText(Math.max(0, Math.ceil(m.hp)) + '/' + m.maxHp, m.x, topY - 3);
+      ctx.restore();
+    }
+
+    // Đợt 6 (mục 15, hồ sơ 28): vòng tầm phát hiện của quái tinh anh/boss khi bật
+    if ((m.isElite || m.isBoss) && getSettingsCached().showAggroRing === true) {
+      var ringR = m.aggroRange || spec.aggroRange || 150;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255, 90, 90, 0.35)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([6, 6]);
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, ringR, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
   }
 
+  /**
+   * Đợt 6 (Việc 3 — mục 4): vẽ LUỐNG LINH ĐIỀN tại các nút hái Vườn Linh Dược (tong-mon).
+   * Luống 124x88: gò đất nâu có rãnh + viền sáng hơn nền + bóng tiếp xúc.
+   * Trạng thái: sẵn sàng = cụm linh thảo phát sáng + dấu ngọc nảy; đang mọc lại =
+   * mầm theo tiến độ hồi (đất trơ / mầm hai lá / cây non) + vòng tiến độ.
+   */
+  function drawHerbCluster(cx, cy, scale, glow) {
+    ctx.save();
+    if (glow && currentQuality !== 'thap') {
+      ctx.shadowColor = 'rgba(85, 216, 130, 0.9)';
+      ctx.shadowBlur = qualityShadow(9);
+    }
+    ctx.strokeStyle = '#2f9e57';
+    ctx.lineWidth = 2.2;
+    ctx.fillStyle = '#55d882';
+    for (var k = -2; k <= 2; k++) {
+      var sx = cx + k * 9 * scale;
+      var tx = cx + k * 12 * scale;
+      var ty = cy - (16 - Math.abs(k) * 2.5) * scale;
+      ctx.beginPath();
+      ctx.moveTo(sx, cy + 8 * scale);
+      ctx.quadraticCurveTo(sx + (tx - sx) * 0.4, cy - 4 * scale, tx, ty);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(tx, ty, 5.2 * scale, 2.8 * scale, (k * 0.5), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(tx - 4 * scale, ty + 4 * scale, 4 * scale, 2.2 * scale, -0.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawGardenPlot(node, isReady, nowSec, idx) {
+    var cx = node.x;
+    var cy = node.y;
+    var x0 = cx - 62;
+    var y0 = cy - 44;
+    var flourish = getSettingsCached().flourishEffects !== false;
+
+    ctx.save();
+    // Bóng tiếp xúc
+    ctx.fillStyle = 'rgba(8, 10, 6, 0.30)';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy + 42, 68, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Gò đất + rãnh
+    ctx.beginPath();
+    ctx.roundRect(x0, y0, 124, 88, 9);
+    ctx.fillStyle = '#5b4130';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.roundRect(x0 + 6, y0 + 6, 112, 76, 7);
+    ctx.fillStyle = '#684b33';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(43, 28, 15, 0.6)';
+    ctx.lineWidth = 5;
+    ctx.lineCap = 'round';
+    for (var f = -1; f <= 1; f++) {
+      ctx.beginPath();
+      ctx.moveTo(cx + f * 32, y0 + 14);
+      ctx.lineTo(cx + f * 32, y0 + 74);
+      ctx.stroke();
+    }
+    // Đốm đất tạo hạt (vị trí tất định theo chỉ số nút, không nhấp nháy giữa các khung)
+    ctx.fillStyle = 'rgba(255, 230, 180, 0.10)';
+    for (var sp = 0; sp < 14; sp++) {
+      var spx = x0 + 12 + ((Math.sin(idx * 37.7 + sp * 91.3) * 0.5 + 0.5) * 100);
+      var spy = y0 + 10 + ((Math.cos(idx * 21.9 + sp * 57.1) * 0.5 + 0.5) * 68);
+      ctx.beginPath();
+      ctx.arc(spx, spy, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Viền luống sáng hơn nền
+    ctx.beginPath();
+    ctx.roundRect(x0, y0, 124, 88, 9);
+    ctx.strokeStyle = '#9c8a66';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.roundRect(x0 + 3, y0 + 3, 118, 82, 7);
+    ctx.strokeStyle = 'rgba(255, 233, 168, 0.35)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    ctx.restore();
+
+    if (isReady) {
+      drawHerbCluster(cx, cy + 6, 1, true);
+      // Dấu hiệu trạng thái: viên ngọc nảy trên luống
+      var bobM = flourish ? Math.sin(nowSec * 3 + idx) * 3.5 : 0;
+      ctx.save();
+      ctx.translate(cx, cy - 56 + bobM);
+      ctx.rotate(Math.PI / 4);
+      ctx.fillStyle = '#7dffb0';
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.4;
+      ctx.shadowColor = 'rgba(125, 255, 176, 0.9)';
+      ctx.shadowBlur = qualityShadow(8);
+      ctx.fillRect(-6, -6, 12, 12);
+      ctx.strokeRect(-6, -6, 12, 12);
+      ctx.restore();
+    } else {
+      var readyAt = harvestReadyTimes[node.id] || 0;
+      var respawn = node.respawnSec || 90;
+      var prog = 1 - Math.max(0, (readyAt - nowSec)) / respawn;
+      if (prog < 0) prog = 0;
+      if (prog > 1) prog = 1;
+      if (prog >= 0.66) drawHerbCluster(cx, cy + 6, 0.8, false);
+      else if (prog >= 0.33) drawHerbCluster(cx, cy + 6, 0.45, false);
+      // Vòng tiến độ hồi
+      ctx.save();
+      ctx.lineWidth = 2.6;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.30)';
+      ctx.beginPath();
+      ctx.arc(cx, cy - 56, 9, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = '#ffd94d';
+      ctx.beginPath();
+      ctx.arc(cx, cy - 56, 9, -Math.PI / 2, -Math.PI / 2 + prog * Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  // Đợt 6 (Việc 2 — mục 3): màu đế vật rơi theo loại + phẩm chất
+  var DROP_QUALITY_COLORS = {
+    common: '#cfd8dc', good: '#7ed491', rare: '#b78bfa', epic: '#ffb74d', legend: '#ff8a65'
+  };
   function drawGroundDrop(drop) {
     var def = monstersAPI.ITEM_DEFS[drop.itemId];
     var isCurrency = (drop.itemId === 'linh-thach');
+    var flourish = getSettingsCached().flourishEffects !== false;
+    var nowMs = performance.now();
+
+    var plateColor = '#55d882';
+    if (isCurrency) plateColor = '#ffd94d';
+    else if (def && def.type === 'gear') plateColor = DROP_QUALITY_COLORS[def.quality] || '#cfd8dc';
+    else if (def && def.type === 'consumable') plateColor = '#7fd4ff';
+    else if (def && def.quality && def.type !== 'material') plateColor = DROP_QUALITY_COLORS[def.quality] || plateColor;
+
+    var pulse = flourish ? (1 + Math.sin(nowMs / 320 + drop.x) * 0.08) : 1;
 
     ctx.save();
-    // Vầng sáng mềm dưới vật phẩm
-    ctx.shadowColor = isCurrency ? 'rgba(90, 220, 240, 0.9)' : 'rgba(85, 216, 130, 0.8)';
-    ctx.shadowBlur = qualityShadow(10);
-    ctx.fillStyle = isCurrency ? 'rgba(90, 220, 240, 0.25)' : 'rgba(85, 216, 130, 0.2)';
+    // Đế sáng theo phẩm: quầng mềm + đĩa đặc + viền sáng
+    ctx.shadowColor = plateColor;
+    ctx.shadowBlur = qualityShadow(12);
+    ctx.fillStyle = plateColor;
+    ctx.globalAlpha = 0.26;
     ctx.beginPath();
-    ctx.ellipse(drop.x, drop.y + 4, 14, 6, 0, 0, Math.PI * 2);
+    ctx.ellipse(drop.x, drop.y + 4, 21 * pulse, 9.5 * pulse, 0, 0, Math.PI * 2);
     ctx.fill();
+    ctx.globalAlpha = 0.5;
+    ctx.beginPath();
+    ctx.ellipse(drop.x, drop.y + 4, 14.5 * pulse, 6.5 * pulse, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = plateColor;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.ellipse(drop.x, drop.y + 4, 15.5 * pulse, 7 * pulse, 0, 0, Math.PI * 2);
+    ctx.stroke();
 
-    // Vẽ icon từ icons-sheet (mỗi icon 48px, vẽ thu nhỏ 24x24)
+    // Icon thật 30x30 nổi trên đế
     var iconsImg = assets.icons_sheet;
+    var bob = flourish ? Math.sin(nowMs / 300 + drop.x) * 3 : 0;
     if (iconsImg && iconsImg.complete && def) {
       var col = def.iconCol || 0;
       var row = def.iconRow || 0;
-      var bob = Math.sin((performance.now() / 300) + drop.x) * 3;
       ctx.drawImage(
         iconsImg,
         col * 48, row * 48, 48, 48,
-        drop.x - 12, drop.y - 18 + bob, 24, 24
+        drop.x - 15, drop.y - 30 + bob, 30, 30
       );
+    }
+
+    // Nhãn tên khi người chơi ở gần (<= 150px) — đọc rõ ở 390px
+    if (player && def && Math.hypot(player.x - drop.x, player.y - drop.y) <= 150) {
+      var label = def.name || drop.itemId;
+      if (drop.count && drop.count > 1) label += ' ×' + drop.count;
+      ctx.font = 'bold 11px "Be Vietnam Pro", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.shadowColor = '#000000';
+      ctx.shadowBlur = qualityShadow(4);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)';
+      var labelY = drop.y - 36 + bob;
+      ctx.strokeText(label, drop.x, labelY);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(label, drop.x, labelY);
     }
     ctx.restore();
   }
@@ -2673,6 +3763,17 @@
         if (ex.targetMap && ex.rect) {
           // Cửa Đại Điện đã có biển tên riêng ngay cửa (plaque) — không cắm thêm biển cổng trùng
           if (ex.targetMap === 'dai-dien') continue;
+          // Đợt 6: nếu đã có điểm tương tác cửa cùng đích ngay tại cổng thì chỉ giữ MỘT biển (biển cửa)
+          var ecx = ex.rect.x + ex.rect.w / 2;
+          var ecy = ex.rect.y + ex.rect.h / 2;
+          var hasDoorSign = false;
+          if (mapData.interactables) {
+            for (var di = 0; di < mapData.interactables.length; di++) {
+              var dit = mapData.interactables[di];
+              if (dit.targetMap === ex.targetMap && Math.hypot(dit.x - ecx, dit.y - ecy) < 90) { hasDoorSign = true; break; }
+            }
+          }
+          if (hasDoorSign) continue;
           var sx = ex.rect.x + ex.rect.w / 2;
           var sy = ex.rect.y + ex.rect.h / 2;
           // Cổng sát mép bản đồ: cắm biển lùi vào trong để không bị cắt khỏi khung hình
@@ -2688,7 +3789,12 @@
       for (var j = 0; j < mapData.interactables.length; j++) {
         var it = mapData.interactables[j];
         if (it.action === 'door_enter') {
-          signs.push({ x: it.x + 118, y: it.y - 40, label: 'Đại Điện', kind: 'plaque' });
+          // Đợt 6: biển cửa ghi đúng đích — cửa vào Đại Điện ghi "Đại Điện", cửa ra trong điện ghi "Ra Sơn Môn"
+          if (it.targetMap === 'dai-dien') {
+            signs.push({ x: it.x + 118, y: it.y - 40, label: 'Đại Điện', kind: 'plaque' });
+          } else {
+            signs.push({ x: it.x, y: it.y - 46, label: 'Ra ' + destName(it.targetMap), kind: 'plaque' });
+          }
         } else if (it.action === 'door_exit') {
           signs.push({ x: it.x, y: it.y - 46, label: 'Ra Sơn Môn', kind: 'plaque' });
         } else if (it.action === 'open_teleport') {
@@ -2765,15 +3871,75 @@
     for (var i = 0; i < signs.length; i++) drawOneSign(signs[i]);
   }
 
+  /**
+   * Đợt 6 (Việc 1 — mục 12): mũi tên CHỈ XUỐNG động tại mọi điểm chuyển map:
+   * mọi exit của map hiện tại + cửa tòa nhà (door_enter) + đài truyền tống (teleport).
+   * Chevron đôi trắng-xanh ngọc viền tối, nảy nhẹ — khác hẳn mũi tên dẫn nhiệm vụ
+   * (tam giác vàng ở chân nhân vật). Ẩn khi đang mờ chuyển map.
+   */
+  function drawEntranceArrows() {
+    if (!mapData || !player) return;
+    if (mapFade && (mapFade.alpha > 0.02 || mapFade.dir !== 0)) return;
+    var flourish = getSettingsCached().flourishEffects !== false;
+    var t = performance.now() / 1000;
+    var bounce = flourish ? Math.sin(t * 3.2) * 4 : 0;
+
+    var points = [];
+    if (mapData.exits) {
+      for (var i = 0; i < mapData.exits.length; i++) {
+        var ex = mapData.exits[i];
+        if (ex.rect) points.push({ x: ex.rect.x + ex.rect.w / 2, y: ex.rect.y + ex.rect.h / 2 });
+      }
+    }
+    if (mapData.interactables) {
+      for (var j = 0; j < mapData.interactables.length; j++) {
+        var it = mapData.interactables[j];
+        if (it.action === 'door_enter' || it.action === 'door_exit' || it.action === 'teleport' || it.action === 'open_teleport') {
+          points.push({ x: it.x, y: it.y - 6 });
+        }
+      }
+    }
+
+    for (var p = 0; p < points.length; p++) {
+      var px = points[p].x;
+      var py = points[p].y - 30 + bounce;
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      for (var c = 0; c < 2; c++) {
+        var cy = py + c * 11;
+        ctx.beginPath();
+        ctx.moveTo(px - 13, cy);
+        ctx.lineTo(px, cy + 10);
+        ctx.lineTo(px + 13, cy);
+        ctx.strokeStyle = 'rgba(10, 20, 24, 0.9)';
+        ctx.lineWidth = 6;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(px - 13, cy);
+        ctx.lineTo(px, cy + 10);
+        ctx.lineTo(px + 13, cy);
+        ctx.strokeStyle = c === 0 ? '#aef3ff' : '#4fd8ef';
+        ctx.lineWidth = 3.2;
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+
   /** Bảng tên cỡ lớn (không gian màn hình) cho cổng gần nhất — đọc rõ ở 390px. */
   function drawSignPlate() {
     if (!player) return;
     var signs = collectGateSigns();
     var best = null, bestD = 330;
     for (var i = 0; i < signs.length; i++) {
+      // Đợt 6: bảng lớn chỉ dành cho biển cổng — biển cửa (plaque) đã nằm ngay tại cửa, hiện thêm bảng lớn là trùng hai lớp
+      if (signs[i].kind !== 'gate') continue;
       var d = Math.hypot(player.x - signs[i].x, player.y - signs[i].y);
       if (d < bestD) { bestD = d; best = signs[i]; }
     }
+    // Đợt 6: đứng sát cổng (dưới 190px) thì biển gỗ tại cổng đã đọc rõ — ẩn bảng lớn để không trùng hai lớp cùng một tên
+    if (best && bestD < 190) return;
     if (!best) return;
     var sx = (best.x - camera.x) * camera.scale;
     var sy = (best.y - camera.y) * camera.scale - 58;
@@ -2870,7 +4036,39 @@
     toggleAutoQuestPath: toggleAutoQuestPath,
     cancelAutoPath: function () { cancelAutoPath(true); },
     isAutoPathActive: function () { return autoPath.active; },
-    hasQuestTarget: function () { return getQuestTargetInfo() !== null && getQuestTargetInfo().stepId !== 'done'; }
+    hasQuestTarget: function () { return getQuestTargetInfo() !== null && getQuestTargetInfo().stepId !== 'done'; },
+    travelToMap: travelToMap,
+    cancelTravel: cancelTravel,
+    planTravelRoute: planTravelRoute,
+    getTravelState: function () { return travelState; },
+    useItem: useItem,
+    tryBreakthrough: tryBreakthrough,
+    exchangePill: exchangePill,
+    refineTrucCoDan: refineTrucCoDan,
+    equipItem: equipItem,
+    unequipItem: unequipItem,
+    pathToPoint: pathToPoint,
+    getUserZoom: getUserZoom,
+    setUserZoom: setUserZoom,
+    getCameraScale: getCameraScale,
+    setJoystickVector: setJoystickVector,
+    triggerScreenShake: triggerScreenShake,
+    triggerPathTo: triggerPathTo,
+    handleWorldClick: handleWorldClick,
+    getCurrentPath: function () { return currentPath; },
+    getPendingInteraction: function () { return pendingInteraction; },
+    isPlayerInNpcRange: isPlayerInNpcRange,
+    triggerDialogue: triggerDialogue,
+    getLastOpenedDialogue: function () { return lastOpenedDialogue; },
+    setCurrentMap: function (mapId) {
+      currentMapId = mapId;
+      var holder = (typeof window !== 'undefined' && window.GameMapData) ? window.GameMapData : (typeof require !== 'undefined' ? require('./mapdata.js') : null);
+      if (holder && holder.maps && holder.maps[mapId]) {
+        mapData = holder.maps[mapId];
+      } else if (holder && holder.getMap) {
+        mapData = holder.getMap(mapId);
+      }
+    }
   };
 
   if (typeof module !== 'undefined' && module.exports) {
@@ -2879,4 +4077,4 @@
   if (typeof global !== 'undefined') {
     global.GameEngine = EngineAPI;
   }
-})(typeof window !== 'undefined' ? window : this);
+})(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : this));

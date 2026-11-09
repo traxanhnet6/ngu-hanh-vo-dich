@@ -52,10 +52,72 @@
       iconRow: 1,
       desc: 'Nấm linh chi đỏ tía mọc ở gốc cổ thụ, bồi bổ khí huyết và tăng tu vi.'
     },
+    'non-la': {
+      id: 'non-la',
+      name: 'Nón Lá',
+      type: 'gear',
+      slot: 'head',
+      def: 1,
+      quality: 'common',
+      stackable: false,
+      iconCol: 1,
+      iconRow: 1,
+      desc: 'Nón lá quê nhà, che nắng che mưa. +1 phòng thủ'
+    },
+    'kiem-go': {
+      id: 'kiem-go',
+      name: 'Kiếm Gỗ',
+      type: 'gear',
+      slot: 'weapon',
+      atk: 2,
+      quality: 'common',
+      stackable: false,
+      iconCol: 1,
+      iconRow: 1,
+      desc: 'Kiếm gỗ tập luyện cho đệ tử mới vào tông (+2 công kích).'
+    },
+    'kiem-sat': {
+      id: 'kiem-sat',
+      name: 'Kiếm Sắt',
+      type: 'gear',
+      slot: 'weapon',
+      atk: 5,
+      quality: 'good',
+      stackable: false,
+      iconCol: 1,
+      iconRow: 1,
+      desc: 'Kiếm rèn từ huyền thiết thô, lưỡi sắc bén (+5 công kích).'
+    },
+    'ao-vai': {
+      id: 'ao-vai',
+      name: 'Áo Vải',
+      type: 'gear',
+      slot: 'armor',
+      def: 1,
+      quality: 'common',
+      stackable: false,
+      iconCol: 2,
+      iconRow: 1,
+      desc: 'Áo vải thanh đạm mộc mạc (+1 phòng thủ).'
+    },
+    'ao-linh': {
+      id: 'ao-linh',
+      name: 'Áo Linh',
+      type: 'gear',
+      slot: 'armor',
+      def: 3,
+      quality: 'good',
+      stackable: false,
+      iconCol: 2,
+      iconRow: 1,
+      desc: 'Áo dệt từ linh tơ mềm mại, ngăn cản khí độc (+3 phòng thủ).'
+    },
     'dao-cui-cu': {
       id: 'dao-cui-cu',
       name: 'Dao Củi Cũ',
       type: 'gear',
+      slot: 'weapon',
+      atk: 2,
       quality: 'common',
       stackable: false,
       iconCol: 1,
@@ -66,6 +128,8 @@
       id: 'ao-vai-tho',
       name: 'Áo Vải Thô',
       type: 'gear',
+      slot: 'armor',
+      def: 2,
       quality: 'common',
       stackable: false,
       iconCol: 2,
@@ -76,6 +140,8 @@
       id: 'gay-co-thu',
       name: 'Gậy Cổ Thụ',
       type: 'gear',
+      slot: 'weapon',
+      atk: 5,
       quality: 'good',
       stackable: false,
       iconCol: 3,
@@ -252,6 +318,69 @@
       iconCol: 5,
       iconRow: 6,
       desc: 'Lõi thép huyền thiết trong ngực Giáp Thú, lạnh và nặng như một lời thề chưa trả.'
+    },
+    'bang-tuy': {
+      id: 'bang-tuy',
+      name: 'Băng Tủy',
+      type: 'material',
+      stackable: true,
+      iconCol: 1,
+      iconRow: 4,
+      desc: 'Băng tủy tinh khiết kết tinh từ hàn khí hồ băng, nguyên liệu luyện Trúc Cơ Đan.'
+    },
+    'dan-kim': {
+      id: 'dan-kim',
+      name: 'Tu Luyện Đan (Kim)',
+      type: 'consumable',
+      stackable: true,
+      iconCol: 0,
+      iconRow: 2,
+      desc: 'Đan dược chứa kim khí tinh khiết, khi dùng tăng 20 tu vi hệ Kim.'
+    },
+    'dan-moc': {
+      id: 'dan-moc',
+      name: 'Tu Luyện Đan (Mộc)',
+      type: 'consumable',
+      stackable: true,
+      iconCol: 1,
+      iconRow: 2,
+      desc: 'Đan dược chứa mộc khí tinh khiết, khi dùng tăng 20 tu vi hệ Mộc.'
+    },
+    'dan-thuy': {
+      id: 'dan-thuy',
+      name: 'Tu Luyện Đan (Thủy)',
+      type: 'consumable',
+      stackable: true,
+      iconCol: 2,
+      iconRow: 2,
+      desc: 'Đan dược chứa thủy khí tinh khiết, khi dùng tăng 20 tu vi hệ Thủy.'
+    },
+    'dan-hoa': {
+      id: 'dan-hoa',
+      name: 'Tu Luyện Đan (Hỏa)',
+      type: 'consumable',
+      stackable: true,
+      iconCol: 3,
+      iconRow: 2,
+      desc: 'Đan dược chứa hỏa khí tinh khiết, khi dùng tăng 20 tu vi hệ Hỏa.'
+    },
+    'dan-tho': {
+      id: 'dan-tho',
+      name: 'Tu Luyện Đan (Thổ)',
+      type: 'consumable',
+      stackable: true,
+      iconCol: 4,
+      iconRow: 2,
+      desc: 'Đan dược chứa thổ khí tinh khiết, khi dùng tăng 20 tu vi hệ Thổ.'
+    },
+    'truc-co-dan': {
+      id: 'truc-co-dan',
+      name: 'Trúc Cơ Đan',
+      type: 'consumable',
+      stackable: true,
+      iconCol: 5,
+      iconRow: 2,
+      desc: 'Đan dược nghịch thiên cải mệnh, phụ trợ tu sĩ Luyện Khí viên mãn đột phá Trúc Cơ Kỳ.'
     }
   };
 
@@ -268,8 +397,8 @@
       id: 'thao_tinh',
       name: 'Thảo Tinh Nhỏ',
       element: 'moc',
-      hp: 30,
-      damage: 6,
+      hp: 26,
+      damage: 3,
       armor: 0,
       speed: 62, // px/s
       aggroRange: 170,
@@ -294,15 +423,15 @@
       id: 'nhen_xanh',
       name: 'Nhện Rừng Xanh',
       element: 'moc',
-      hp: 44,
-      damage: 5,
+      hp: 40,
+      damage: 4,
       armor: 2,
       speed: 118,
       aggroRange: 190,
       attackRange: 44,
       attackCd: 1.3,
       tuViMoc: 3,
-      slowOnHit: { ratio: 0.30, duration: 2.0 },
+      slowOnHit: { ratio: 0.20, duration: 1.5 },
       isElite: false,
       respawnTime: 60,
       sheetAsset: 'assets/chars/nhenxanh-sheet.png',
@@ -436,6 +565,7 @@
       feetOffsetY: 68,
       drawScale: 1.0,
       dropTable: [
+        { id: 'hoa-tinh-tho', chance: 0.70, min: 1, max: 1, isMaterial: true },
         { id: 'da-nung', chance: 0.55, min: 1, max: 1, isMaterial: true },
         { id: 'linh-thach', chance: 0.18, min: 1, max: 2, isCurrency: true },
         { gearPool: COMMON_GEAR_POOL, chance: 0.04, isGear: true }
@@ -653,6 +783,7 @@
       drawScale: 1.0,
       dropTable: [
         { id: 'nguyen-tinh-thuy', chance: 1.0, min: 1, max: 1, isMaterial: true },
+        { id: 'bang-tuy', chance: 1.0, min: 1, max: 1, isMaterial: true },
         { id: 'bang-tuy-ngan-nam', chance: 0.15, min: 1, max: 1, isMaterial: true },
         { id: 'linh-thach', chance: 1.0, min: 60, max: 110, isCurrency: true }
       ],
@@ -694,6 +825,7 @@
       drawScale: 1.0,
       dropTable: [
         { id: 'nguyen-tinh-hoa', chance: 1.0, min: 1, max: 1, isMaterial: true },
+        { id: 'hoa-tinh-tho', chance: 1.0, min: 1, max: 1, isMaterial: true },
         { id: 'loi-viem-quan', chance: 0.15, min: 1, max: 1, isMaterial: true },
         { id: 'linh-thach', chance: 1.0, min: 90, max: 160, isCurrency: true }
       ],
@@ -785,6 +917,11 @@
       }
     }
   };
+
+  // Bí danh tương thích cho nhiệm vụ và sự kiện
+  SPECIES.bang_xa = SPECIES.han_xa;
+  SPECIES.boss_bang_xa = SPECIES.boss_han_kinh_giao_vuong;
+  SPECIES.boss_co_thu = SPECIES.boss_moc_linh_co_vuong;
 
   /**
    * Tính toán rớt đồ từ bảng rớt của quái có áp dụng thưởng Chuỗi Săn (Brief §6)

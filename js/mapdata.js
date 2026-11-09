@@ -736,13 +736,13 @@
       originalH: 560,
       w: 72,
       h: 120,
-      x: 1094,
-      y: 100,
-      feetX: 1130,
-      feetY: 220,
-      baseY: 220,
+      x: 1144,
+      y: 350,
+      feetX: 1180,
+      feetY: 470,
+      baseY: 470,
       collisionRadius: 14,
-      standTile: { x: 1130, y: 240 },
+      standTile: { x: 1180, y: 498 },
       questGate: null,
       dialogueDefault: [
         'Đứng trên đỉnh Tiên Môn ngắm biển mây, lòng người tự khắc tĩnh lặng. Nghe nói phía bắc Rừng Trúc có một vị ẩn sĩ lánh đời...'
@@ -924,6 +924,23 @@
     { rect: { x: 0, y: 950, w: 60, h: 330 } }
   ];
 
+  // Đợt 6 (Việc 3): va chạm luống Vườn Linh Dược — luống tương tác (co 14px mỗi phía so với hình vẽ 124x88)
+  // cộng các khối luống vẽ sẵn trên tranh nền (đo từ PNG nền, nới ra viền đá ~10px, chừa lối đi giữa vườn)
+  var GARDEN_BED_OBSTACLES_TONG_MON = [
+    { rect: { x: 512, y: 360, w: 96, h: 60 } },
+    { rect: { x: 637, y: 420, w: 96, h: 60 } },
+    { rect: { x: 567, y: 810, w: 96, h: 60 } },
+    { rect: { x: 722, y: 810, w: 96, h: 60 } },
+    { rect: { x: 482, y: 353, w: 140, h: 50 } },
+    { rect: { x: 529, y: 442, w: 94, h: 144 } },
+    { rect: { x: 573, y: 672, w: 125, h: 80 } },
+    { rect: { x: 536, y: 776, w: 148, h: 48 } },
+    { rect: { x: 693, y: 877, w: 64, h: 159 } },
+    { rect: { x: 756, y: 881, w: 88, h: 168 } },
+    { rect: { x: 537, y: 881, w: 152, h: 53 } },
+    { rect: { x: 560, y: 919, w: 127, h: 52 } }
+  ];
+
   function isWalkableTongMon(x, y) {
     if (x < 10 || x > 1920 - 10 || y < 10 || y > 1280 - 10) {
       var inExit = false;
@@ -979,6 +996,14 @@
         var ox = x - obs.x;
         var oy = y - obs.y;
         if (ox * ox + oy * oy <= obs.r * obs.r) return false;
+      }
+    }
+
+    // Va chạm luống Vườn Linh Dược (Đợt 6 - Việc 3)
+    for (var g = 0; g < GARDEN_BED_OBSTACLES_TONG_MON.length; g++) {
+      var gr = GARDEN_BED_OBSTACLES_TONG_MON[g].rect;
+      if (x >= gr.x && x <= gr.x + gr.w && y >= gr.y && y <= gr.y + gr.h) {
+        return false;
       }
     }
 
@@ -1108,6 +1133,9 @@
   var SCENERY_OBSTACLES_DAI_DIEN = [
     // Bệ ngồi chưởng môn (dais)
     { rect: { x: 430, y: 175, w: 340, h: 70 } },
+    // Đợt 6 (Việc 4c): bàn lớn trước bệ và lư hương bên phải vẽ trên tranh nền — phải chặn đường
+    { rect: { x: 470, y: 245, w: 260, h: 60 } },
+    { x: 1085, y: 430, r: 22 },
     // 4 cột trụ
     { x: 300, y: 300, r: 16 },
     { x: 900, y: 300, r: 16 },
@@ -1410,6 +1438,8 @@
   ];
 
   var SCENERY_OBSTACLES_DAI_TRUYEN_TONG = [
+    // Đợt 6 (Việc 4d): lõi đá của đài truyền tống phải chặn — người chơi đứng ở vành đài để kích hoạt (bán kính tương tác 64)
+    { rect: { x: 450, y: 290, w: 60, h: 60 } },
     // Viền chừa cửa nam x: 450..510
     { rect: { x: 0, y: 0, w: 960, h: 40 } },
     { rect: { x: 0, y: 0, w: 40, h: 672 } },

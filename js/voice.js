@@ -55,8 +55,28 @@
     if (!audioEl && typeof Audio !== 'undefined') {
       audioEl = new Audio();
       audioEl.preload = 'auto';
+      // Đợt 6: hết câu thoại thì trả nhạc nền về mức cũ
+      audioEl.addEventListener('ended', function () { unduckMusic(); });
     }
     return audioEl;
+  }
+
+  var ducked = false;
+  function duckMusic() {
+    try {
+      if (typeof window === 'undefined' || !window.GameMusic || !window.GameMusic.setDucked) return;
+      var st = window.GameState ? window.GameState.loadSettings() : null;
+      if (st && st.duckMusic === false) return;
+      window.GameMusic.setDucked(true);
+      ducked = true;
+    } catch (e) {}
+  }
+  function unduckMusic() {
+    if (!ducked) return;
+    ducked = false;
+    try {
+      if (typeof window !== 'undefined' && window.GameMusic && window.GameMusic.setDucked) window.GameMusic.setDucked(false);
+    } catch (e) {}
   }
 
   /**
@@ -81,12 +101,14 @@
     try {
       el.src = 'assets/voice/' + entry.file;
       el.volume = Math.max(0, Math.min(1, volume));
+      duckMusic();
       var p = el.play();
-      if (p && p.catch) p.catch(function () { /* trình duyệt chặn -> bỏ qua */ });
-    } catch (e) { /* bỏ qua lỗi phát */ }
+      if (p && p.catch) p.catch(function () { unduckMusic(); });
+    } catch (e) { unduckMusic(); }
   }
 
   function stop() {
+    unduckMusic();
     if (audioEl) {
       try { audioEl.pause(); audioEl.currentTime = 0; } catch (e) {}
     }

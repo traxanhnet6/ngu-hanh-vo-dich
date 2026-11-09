@@ -100,9 +100,38 @@
       </div>
 
       <!-- Bản đồ nhỏ Minimap góc trên bên phải (~150px) -->
-      <div id="minimap-wrap" class="panel hud-panel" style="cursor: pointer;" title="Xem danh sách khu vực">
+      <div id="minimap-wrap" class="panel hud-panel" style="cursor: pointer;" title="Xem bản đồ tổng quan (chạm để đi)">
         <canvas id="minimap-canvas" width="150" height="100"></canvas>
         <div id="minimap-label" class="minimap-label">Miếu Hoang</div>
+      </div>
+
+      <!-- Cột công cụ góc phải: Zoom + Túi + Cài Đặt (dưới Minimap) -->
+      <div id="hud-right-controls" class="hud-right-controls">
+        <div class="hud-zoom-row">
+          <button id="btn-zoom-in" class="btn wood hud-mini-btn" type="button" aria-label="Phóng to camera (+)" title="Phóng to camera (+)">
+            <span>+</span>
+          </button>
+          <button id="btn-zoom-out" class="btn wood hud-mini-btn" type="button" aria-label="Thu nhỏ camera (−)" title="Thu nhỏ camera (−)">
+            <span>−</span>
+          </button>
+        </div>
+        <div class="hud-tools-row">
+          <button id="btn-bag" class="btn wood hud-tool-btn" type="button" aria-label="Túi Đồ (B)" title="Túi Trữ Vật (B)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <path d="M16 10a4 4 0 0 1-8 0"></path>
+            </svg>
+            <span class="hud-tool-label">Túi [B]</span>
+          </button>
+          <button id="btn-settings" class="btn wood hud-tool-btn" type="button" aria-label="Cài đặt" title="Cài Đặt">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3.2"></circle>
+              <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5 5l2.1 2.1M16.9 16.9L19 19M19 5l-2.1 2.1M7.1 16.9L5 19"></path>
+            </svg>
+            <span class="hud-tool-label">Cài Đặt</span>
+          </button>
+        </div>
       </div>
 
       <!-- Chip Tên Khu Vực khi bước vào zone mới (Brief §7) -->
@@ -111,6 +140,11 @@
         <div id="zone-title-desc" class="zone-title-desc"></div>
       </div>
 
+      <!-- Chip đồng hồ trong game + hẹn giờ cá nhân (Hồ sơ 27F/29) -->
+      <div id="hud-clock" class="hud-clock-chip hidden">--:--</div>
+      <div id="hud-timer" class="hud-clock-chip hud-timer-chip hidden">--:--</div>
+      <button id="btn-toggle-quest" class="btn wood hud-mini-btn quest-toggle-btn" type="button" aria-label="Thu gọn / mở bảng nhiệm vụ" title="Thu gọn / mở bảng nhiệm vụ">NV</button>
+
       <!-- Chip Chuỗi Săn (Brief §6) -->
       <div id="hud-hunt-chain" class="hunt-chain-chip hidden">
         <span class="chain-title">Chuỗi Săn:</span>
@@ -118,14 +152,17 @@
         <span id="chain-bonus" class="chain-bonus">(+0% rơi đồ)</span>
       </div>
 
+      <!-- Cần điều khiển ảo góc dưới bên trái -->
+      <div id="joystick-zone" class="joystick-zone">
+        <div id="joystick-base" class="joystick-base">
+          <div id="joystick-stick" class="joystick-stick"></div>
+        </div>
+      </div>
+
       <!-- Thanh kỹ năng chiến đấu (Brief §5) -->
       <div id="skill-bar" class="skill-bar">
         <button id="btn-action" class="skill-slot action-slot action-mode-attack" type="button" aria-label="Đánh" title="Nút hành động (Space/E): đổi theo ngữ cảnh — đánh, nói chuyện, nhặt đồ, tương tác">
-          <svg class="action-icon action-icon-attack" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M4 20L14.5 9.5"></path>
-            <path d="M13 4l7 7-2.5 1L19 10.5 13 4z"></path>
-            <path d="M4 20l-1.5 1.5M4 20l3 .5L6.5 23"></path>
-          </svg>
+          <div class="action-icon action-icon-attack"></div>
           <svg class="action-icon action-icon-talk" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M21 12a8 8 0 0 1-8 8H4l2.3-2.9A8 8 0 1 1 21 12z"></path>
             <path d="M8.5 11h7M8.5 14h4"></path>
@@ -156,26 +193,13 @@
         </button>
       </div>
 
-      <!-- Cụm nút công cụ góc dưới bên phải -->
-      <div class="hud-bottom-right-btns">
-        <button id="btn-bag" class="btn wood hud-btn" type="button" aria-label="Túi Đồ (B)">
-          <span>Túi [B]</span>
-        </button>
-        <button id="btn-settings" class="btn wood hud-btn" type="button" aria-label="Cài đặt">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="3.2"></circle>
-            <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5 5l2.1 2.1M16.9 16.9L19 19M19 5l-2.1 2.1M7.1 16.9L5 19"></path>
-          </svg>
-          <span>Cài Đặt</span>
-        </button>
-      </div>
-
       <!-- Hộp thoại NPC dưới đáy màn hình -->
       <div id="dialogue-box" class="panel hidden">
         <div id="dialogue-portrait" class="dialogue-portrait"></div>
         <div class="dialogue-content">
           <div id="dialogue-npc-name" class="dialogue-name">Linh Nhi</div>
           <div id="dialogue-text" class="dialogue-text">...</div>
+          <div id="dialogue-choices" class="dialogue-choices hidden" style="margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap;"></div>
           <div class="dialogue-hint">Bấm hoặc nhấn Space để tiếp tục...</div>
         </div>
       </div>
@@ -268,6 +292,8 @@
       </div>
 
       <div class="settings-body">
+        <div class="settings-section-title">ÂM THANH</div>
+
         <div class="setting-item">
           <label for="setting-music-vol">Âm lượng Nhạc Nền</label>
           <input id="setting-music-vol" type="range" min="0" max="100" value="70">
@@ -304,36 +330,19 @@
           </label>
         </div>
 
-        <div class="setting-item toggle-item">
-          <span>Mũi tên chỉ đường nhiệm vụ</span>
-          <label class="switch">
-            <input id="setting-arrow-toggle" type="checkbox" checked>
-            <span class="slider"></span>
-          </label>
-        </div>
-
-        <div class="setting-item toggle-item">
-          <span>Hiệu ứng hoa mỹ (Flourishes)</span>
-          <label class="switch">
-            <input id="setting-flourish-toggle" type="checkbox" checked>
-            <span class="slider"></span>
-          </label>
-        </div>
-
         <div class="settings-section-title">HIỂN THỊ</div>
+
+        <div class="setting-item zoom-setting-item">
+          <label>Thu phóng Camera: <b id="setting-zoom-val" class="gold-text">100%</b></label>
+          <div class="setting-zoom-control">
+            <button id="setting-btn-zoom-out" class="btn wood zoom-step-btn" type="button" aria-label="Thu nhỏ camera (−)">−</button>
+            <button id="setting-btn-zoom-in" class="btn wood zoom-step-btn" type="button" aria-label="Phóng to camera (+)">+</button>
+          </div>
+        </div>
 
         <div class="setting-item">
           <label for="setting-ui-scale">Kích thước giao diện (HUD): <b id="setting-ui-scale-val">100%</b></label>
           <input id="setting-ui-scale" type="range" min="85" max="120" value="100">
-        </div>
-
-        <div class="setting-item">
-          <label for="setting-joy-size">Kích thước nút chạm (nút hành động &amp; kỹ năng)</label>
-          <select id="setting-joy-size" class="setting-select">
-            <option value="nho">Nhỏ</option>
-            <option value="vua" selected>Vừa</option>
-            <option value="lon">Lớn</option>
-          </select>
         </div>
 
         <div class="setting-item">
@@ -345,14 +354,278 @@
           </select>
         </div>
 
+        <div class="setting-item toggle-item">
+          <span>Hiệu ứng hoa mỹ (Flourishes)</span>
+          <label class="switch">
+            <input id="setting-flourish-toggle" type="checkbox" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-item toggle-item">
+          <span>Rung màn hình khi trúng đòn nặng</span>
+          <label class="switch">
+            <input id="setting-shake-toggle" type="checkbox" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-item toggle-item">
+          <span>Hiện số sát thương nổi</span>
+          <label class="switch">
+            <input id="setting-damage-toggle" type="checkbox" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
         <div class="setting-item">
           <label>Toàn màn hình</label>
           <button id="btn-fullscreen-toggle" class="btn wood" type="button">Bật toàn màn hình</button>
         </div>
 
+        <div class="settings-section-title">ĐIỀU KHIỂN</div>
+
+        <div class="setting-item">
+          <label for="setting-joy-size">Kích thước nút chạm (nút hành động &amp; kỹ năng)</label>
+          <select id="setting-joy-size" class="setting-select">
+            <option value="nho">Nhỏ</option>
+            <option value="vua" selected>Vừa</option>
+            <option value="lon">Lớn</option>
+          </select>
+        </div>
+
+        <div class="setting-item">
+          <label for="setting-joy-mode">Chế độ cần điều khiển</label>
+          <select id="setting-joy-mode" class="setting-select">
+            <option value="co_dinh" selected>Cố định ở góc dưới-trái</option>
+            <option value="linh_hoat">Linh hoạt (xuất hiện tại điểm chạm)</option>
+          </select>
+        </div>
+
+        <div class="settings-section-title">TRÒ CHƠI &amp; CHỈ ĐƯỜNG</div>
+
+        <div class="setting-item toggle-item">
+          <span>Mũi tên chỉ đường nhiệm vụ</span>
+          <label class="switch">
+            <input id="setting-arrow-toggle" type="checkbox" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-item toggle-item">
+          <span>Tự động nhặt vật phẩm rơi gần</span>
+          <label class="switch">
+            <input id="setting-autopickup-toggle" type="checkbox">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-item">
+          <label>Hướng dẫn tân thủ</label>
+          <button id="btn-restart-tutorial" class="btn wood" type="button">Chạy lại hướng dẫn tân thủ</button>
+        </div>
+
+        <div class="settings-section-title">HIỂN THỊ &amp; ĐIỀU KHIỂN (BỔ SUNG)</div>
+
+        <div class="setting-item">
+          <label for="setting-opacity">Độ mờ cụm nút điều khiển: <b id="setting-opacity-val">100%</b></label>
+          <input id="setting-opacity" type="range" min="40" max="100" value="100">
+        </div>
+
+        <div class="setting-item">
+          <label for="setting-brightness">Độ sáng màn hình game: <b id="setting-brightness-val">100%</b></label>
+          <input id="setting-brightness" type="range" min="80" max="120" value="100">
+        </div>
+
+        <div class="setting-item">
+          <label for="setting-camera-dist">Độ xa camera</label>
+          <select id="setting-camera-dist" class="setting-select">
+            <option value="gan">Gần</option>
+            <option value="vua" selected>Vừa</option>
+            <option value="xa">Xa</option>
+          </select>
+        </div>
+
+        <div class="setting-item">
+          <label for="setting-dialog-size">Cỡ chữ hộp thoại</label>
+          <select id="setting-dialog-size" class="setting-select">
+            <option value="nho">Nhỏ</option>
+            <option value="vua" selected>Vừa</option>
+            <option value="lon">Lớn</option>
+          </select>
+        </div>
+
+        <div class="setting-item">
+          <label for="setting-joy-deadzone">Vùng chết cần gậy: <b id="setting-joy-deadzone-val">15%</b></label>
+          <input id="setting-joy-deadzone" type="range" min="5" max="35" value="15">
+        </div>
+
+        <div class="setting-item">
+          <label for="setting-fps">Giới hạn khung hình</label>
+          <select id="setting-fps" class="setting-select">
+            <option value="30">30 FPS (tiết kiệm pin)</option>
+            <option value="60" selected>60 FPS</option>
+          </select>
+        </div>
+
+        <div class="setting-item toggle-item">
+          <span>Ẩn hình nón lá khi đang đội (giữ nguyên chỉ số)</span>
+          <label class="switch">
+            <input id="setting-hide-hat" type="checkbox">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-item toggle-item">
+          <span>Lật điều khiển cho người thuận tay trái</span>
+          <label class="switch">
+            <input id="setting-lefty" type="checkbox">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-item toggle-item">
+          <span>Hiện đồng hồ trong game</span>
+          <label class="switch">
+            <input id="setting-clock-toggle" type="checkbox">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-item toggle-item">
+          <span>Tự nhỏ nhạc nền khi có lồng tiếng</span>
+          <label class="switch">
+            <input id="setting-duck-toggle" type="checkbox" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-item toggle-item">
+          <span>Im lặng khi treo máy quá 5 phút</span>
+          <label class="switch">
+            <input id="setting-idle-mute" type="checkbox">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="settings-section-title">CHIẾN ĐẤU &amp; BẢN ĐỒ</div>
+
+        <div class="setting-item toggle-item">
+          <span>Vòng báo đòn của boss (vùng nguy hiểm)</span>
+          <label class="switch">
+            <input id="setting-telegraph-toggle" type="checkbox" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-item toggle-item">
+          <span>Hiện số máu chính xác của quái</span>
+          <label class="switch">
+            <input id="setting-monster-hp-toggle" type="checkbox">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-item toggle-item">
+          <span>Vòng tầm phát hiện của quái tinh anh/boss</span>
+          <label class="switch">
+            <input id="setting-ring-toggle" type="checkbox">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-item toggle-item">
+          <span>Chấm đích nhiệm vụ trên bản đồ nhỏ</span>
+          <label class="switch">
+            <input id="setting-dest-dot-toggle" type="checkbox" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-item">
+          <label for="setting-autopickup-rank">Tự nhặt đồ từ phẩm</label>
+          <select id="setting-autopickup-rank" class="setting-select">
+            <option value="1" selected>Phổ thông trở lên</option>
+            <option value="2">Tốt trở lên</option>
+            <option value="3">Hiếm trở lên</option>
+          </select>
+        </div>
+
+        <div class="settings-section-title">CÔNG CỤ &amp; HỖ TRỢ</div>
+
+        <div class="setting-item">
+          <label for="giftcode-input">Mã quà tặng</label>
+          <div style="display:flex; gap:8px;">
+            <input id="giftcode-input" type="text" placeholder="Nhập mã quà tặng" style="flex:1; min-height:44px;">
+            <button id="btn-giftcode" class="btn wood" type="button">Đổi quà</button>
+          </div>
+        </div>
+
+        <div class="setting-item">
+          <label>Thống kê cá nhân</label>
+          <button id="btn-open-stats" class="btn wood" type="button">Xem thống kê của tôi</button>
+        </div>
+
+        <div class="setting-item">
+          <label>Hẹn giờ cá nhân (phút)</label>
+          <div style="display:flex; gap:8px;">
+            <input id="timer-minutes" type="number" min="1" max="600" value="25" style="flex:1; min-height:44px;">
+            <button id="btn-set-timer" class="btn wood" type="button">Đặt hẹn giờ</button>
+          </div>
+        </div>
+
+        <div class="setting-item">
+          <label>Chế độ chụp hình (ẩn toàn bộ giao diện)</label>
+          <button id="btn-photo-mode" class="btn wood" type="button">Bật chế độ chụp hình</button>
+        </div>
+
+        <div class="setting-item">
+          <label>Cấu hình cài đặt (mã mang theo)</label>
+          <div style="display:flex; gap:8px;">
+            <button id="btn-export-settings" class="btn wood" type="button">Xuất mã cấu hình</button>
+            <button id="btn-import-settings" class="btn wood" type="button">Nhập mã cấu hình</button>
+          </div>
+          <textarea id="settings-code" rows="3" placeholder="Mã cấu hình xuất hiện ở đây; dán mã vào đây rồi bấm Nhập" style="width:100%; margin-top:8px;"></textarea>
+        </div>
+
+        <div class="setting-item">
+          <label>Khôi phục cài đặt mặc định</label>
+          <button id="btn-reset-settings" class="btn wood" type="button">Khôi phục mặc định</button>
+        </div>
+
+        <div class="setting-item">
+          <label>Đổi nhân vật (về màn hình chọn nhân vật)</label>
+          <button id="btn-switch-char" class="btn wood" type="button">Đổi nhân vật</button>
+        </div>
+
+        <div class="setting-item">
+          <label>Phiên bản</label>
+          <div id="game-version-info" style="font-size:13px; color:#cbd5e1;">Ngũ Hành Vô Địch — Đợt 6 (bản chơi thử)</div>
+        </div>
+
         <div class="danger-zone">
           <div class="danger-title">Vùng nguy hiểm</div>
           <button id="btn-delete-char" class="btn btn-danger" type="button">Xóa Nhân Vật Hiện Tại</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Thống Kê Cá Nhân (Hồ sơ 29 mục 5) -->
+  <div id="stats-modal" class="modal-overlay hidden">
+    <div class="panel modal-box" style="max-width: 420px; width: 92%;">
+      <div class="modal-header">
+        <h2 class="modal-title">THỐNG KÊ CÁ NHÂN</h2>
+        <button id="close-stats-modal" class="btn-close" type="button" aria-label="Đóng">×</button>
+      </div>
+      <div style="padding: 14px;">
+        <div class="summary-row"><span>Tổng thời gian tu luyện:</span> <b id="stats-playtime">0 phút</b></div>
+        <div class="summary-row"><span>Tổng quái đã hạ:</span> <b id="stats-kills">0</b></div>
+        <div class="summary-row"><span>Boss đã hạ:</span> <b id="stats-bosses">0</b></div>
+        <div class="summary-row"><span>Lượt thu hoạch linh dược:</span> <b id="stats-harvests">0</b></div>
+        <div class="summary-row"><span>Đan đã luyện thành:</span> <b id="stats-refines">0</b></div>
+        <div class="modal-actions" style="margin-top: 14px;">
+          <button id="btn-close-stats" class="btn wood" type="button">Đóng</button>
         </div>
       </div>
     </div>
@@ -377,14 +650,74 @@
         <h2 class="modal-title">TÚI TRỮ VẬT</h2>
         <div class="bag-header-currency">
           <span>Linh Thạch: <b id="bag-linh-thach-val" class="gold-text">0</b></span>
+          <button id="btn-sort-bag" class="btn wood hud-mini-btn" type="button" title="Gộp chồng và xếp theo phẩm">Sắp xếp</button>
         </div>
         <button id="close-bag-modal" class="btn-close" type="button">×</button>
       </div>
       <div class="bag-body">
+        <div class="bag-equipment-section">
+          <div class="equip-section-title">TRANG BỊ ĐANG MẶC</div>
+          <div class="bag-equipment-row">
+            <div class="equip-slot-item" id="equip-slot-head" data-slot="head">
+              <span class="equip-slot-label">ĐẦU</span>
+              <div class="equip-slot-box">
+                <div class="equip-slot-icon"></div>
+                <span class="equip-slot-badge hidden">Đang mặc</span>
+              </div>
+            </div>
+            <div class="equip-slot-item" id="equip-slot-weapon" data-slot="weapon">
+              <span class="equip-slot-label">VŨ KHÍ</span>
+              <div class="equip-slot-box">
+                <div class="equip-slot-icon"></div>
+                <span class="equip-slot-badge hidden">Đang mặc</span>
+              </div>
+            </div>
+            <div class="equip-slot-item" id="equip-slot-armor" data-slot="armor">
+              <span class="equip-slot-label">GIÁP</span>
+              <div class="equip-slot-box">
+                <div class="equip-slot-icon"></div>
+                <span class="equip-slot-badge hidden">Đang mặc</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div id="bag-grid" class="bag-grid"></div>
+
         <div id="bag-item-info" class="bag-item-info">
-          <div id="bag-info-name" class="info-name">Chọn vật phẩm để xem chi tiết</div>
-          <div id="bag-info-desc" class="info-desc"></div>
+          <!-- Legacy IDs for backwards compatibility -->
+          <div id="bag-info-name" class="info-name" style="display:none;">Chọn vật phẩm để xem chi tiết</div>
+          <div id="bag-info-desc" class="info-desc" style="display:none;"></div>
+
+          <div id="detail-card-empty" class="detail-empty">Chạm vào một vật phẩm trong túi hoặc trang bị để xem chi tiết</div>
+          <div id="detail-card-content" class="detail-card-content hidden">
+            <div class="detail-top-row">
+              <div class="detail-icon-frame">
+                <div id="detail-card-icon" class="detail-card-icon"></div>
+              </div>
+              <div class="detail-meta">
+                <div class="detail-title-line">
+                  <span id="detail-card-name" class="detail-card-name">Tên vật phẩm</span>
+                  <span id="detail-card-badge" class="detail-card-badge hidden">Đang mặc</span>
+                </div>
+                <div class="detail-sub-line">
+                  <span id="detail-card-type" class="detail-card-type">Loại</span>
+                  <span class="detail-dot">•</span>
+                  <span id="detail-card-quality" class="detail-card-quality">Phổ thông</span>
+                </div>
+                <div id="detail-card-count" class="detail-card-count">Số lượng: 1</div>
+              </div>
+            </div>
+            <div id="detail-card-stats" class="detail-card-stats"></div>
+            <div id="detail-card-desc" class="detail-card-desc"></div>
+            <div class="detail-card-actions">
+              <button id="btn-card-use" class="btn wood detail-action-btn hidden" type="button">Dùng</button>
+              <button id="btn-card-equip" class="btn wood detail-action-btn hidden" type="button">Trang bị</button>
+              <button id="btn-card-unequip" class="btn wood detail-action-btn hidden" type="button">Cởi</button>
+              <button id="btn-card-drop" class="btn wood detail-action-btn btn-drop hidden" type="button">Bỏ</button>
+              <button id="btn-card-lock" class="btn wood detail-action-btn hidden" type="button">Khóa</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -426,14 +759,18 @@
     </div>
   </div>
 
-  <!-- Modal Danh Mục Khu Vực (Brief §7) -->
+  <!-- Modal Bản Đồ Tổng Quan (Brief §7 & Đợt 6 Việc 7) -->
   <div id="zone-modal" class="modal-overlay hidden">
-    <div class="panel modal-box zone-box">
+    <div class="panel modal-box zone-box overview-map-box">
       <div class="modal-header">
-        <h2 id="zone-modal-title" class="modal-title">DANH MỤC KHU VỰC</h2>
+        <h2 id="zone-modal-title" class="modal-title">BẢN ĐỒ TỔNG QUAN — CHẠM ĐỂ ĐI</h2>
         <button id="close-zone-modal" class="btn-close" type="button" aria-label="Đóng">×</button>
       </div>
       <div class="zone-body">
+        <div class="overview-section-title">10 BẢN ĐỒ TU CHÂN (CHẠM ĐỂ DI CHUYỂN)</div>
+        <div id="overview-map-grid" class="overview-map-grid"></div>
+
+        <div class="overview-section-title" style="margin-top: 14px;">CÁC KHU VỰC THUỘC BẢN ĐỒ HIỆN TẠI</div>
         <div id="zone-modal-list" class="zone-list"></div>
         <div class="modal-actions" style="margin-top: 16px;">
           <button id="btn-close-zone-modal" class="btn wood" type="button">Đóng</button>
@@ -452,9 +789,9 @@
       <div class="teleport-body">
         <div class="teleport-prompt">Chọn điểm đến trong thiên hạ:</div>
         <div id="teleport-destinations" class="teleport-destinations">
-          <button id="teleport-btn-mieu" class="btn wood teleport-btn" type="button">Miếu Hoang</button>
-          <button id="teleport-btn-rungdoc" class="btn wood teleport-btn" type="button">Rừng Độc Thanh Tụy</button>
-          <button id="teleport-btn-tongmon" class="btn wood teleport-btn" type="button">Sơn Môn — Lối Vào</button>
+          <button id="teleport-btn-mieu" class="btn wood teleport-btn" type="button">Đến Miếu Hoang</button>
+          <button id="teleport-btn-rungdoc" class="btn wood teleport-btn" type="button">Đến Rừng Độc</button>
+          <button id="teleport-btn-tongmon" class="btn wood teleport-btn" type="button">Đến Sơn Môn</button>
           <button id="teleport-btn-hobang" class="btn wood teleport-btn" type="button">Hồ Băng Hàn Kính</button>
           <button id="teleport-btn-molua" class="btn wood teleport-btn" type="button">Mỏ Lửa Xích Diệm</button>
           <button id="teleport-btn-hoangmac" class="btn wood teleport-btn" type="button">Hoang Mạc Hoàng Sa</button>
@@ -463,6 +800,45 @@
         <div class="modal-actions" style="margin-top: 16px;">
           <button id="btn-close-teleport-modal" class="btn wood" type="button">Hủy</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Đổi Tu Luyện Đan (Đợt 6 - Việc 1) -->
+  <div id="pill-exchange-modal" class="modal-overlay hidden">
+    <div class="panel modal-box pill-exchange-box" style="max-width: 420px; width: 90%;">
+      <div class="modal-header">
+        <h2 class="modal-title">ĐỔI TU LUYỆN ĐAN</h2>
+        <button id="close-pill-exchange-modal" class="btn-close" type="button" aria-label="Đóng">×</button>
+      </div>
+      <div class="pill-exchange-body" style="padding: 12px;">
+        <div class="pill-exchange-prompt" style="font-size: 13px; color: #cbd5e1; margin-bottom: 8px;">Chấp Sự: "Mỗi viên Tu Luyện Đan giá 15 Linh Thạch, dùng lập tức tăng 20 tu vi cho đường tương ứng."</div>
+        <div id="pill-exchange-linhthach" style="margin: 8px 0; color: #ffe9a8; font-weight: bold;">Linh Thạch hiện có: 0</div>
+        <div class="pill-exchange-buttons" style="display: flex; flex-direction: column; gap: 8px;">
+          <button id="btn-pill-kim" class="btn wood pill-btn" type="button" data-element="kim">Đan Kim (+20 Kim) — 15 LT</button>
+          <button id="btn-pill-moc" class="btn wood pill-btn" type="button" data-element="moc">Đan Mộc (+20 Mộc) — 15 LT</button>
+          <button id="btn-pill-thuy" class="btn wood pill-btn" type="button" data-element="thuy">Đan Thủy (+20 Thủy) — 15 LT</button>
+          <button id="btn-pill-hoa" class="btn wood pill-btn" type="button" data-element="hoa">Đan Hỏa (+20 Hỏa) — 15 LT</button>
+          <button id="btn-pill-tho" class="btn wood pill-btn" type="button" data-element="tho">Đan Thổ (+20 Thổ) — 15 LT</button>
+        </div>
+        <div class="modal-actions" style="margin-top: 16px; text-align: center;">
+          <button id="btn-close-pill-modal" class="btn wood" type="button">Đóng</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lớp phủ Hướng Dẫn Tân Thủ (Tutorial Overlay) -->
+  <div id="tutorial-overlay" class="tutorial-overlay hidden">
+    <div id="tutorial-spotlight" class="tutorial-spotlight"></div>
+    <div id="tutorial-box" class="panel tutorial-box pos-bottom-center">
+      <div class="tutorial-header">
+        <span class="tutorial-badge">HƯỚNG DẪN</span>
+        <button id="btn-skip-tutorial" class="tutorial-skip-btn" type="button">Bỏ qua</button>
+      </div>
+      <div id="tutorial-text" class="tutorial-text">Chạm vào mặt đất để đi</div>
+      <div class="tutorial-progress">
+        <span id="tutorial-step-text">Bước 1/8</span>
       </div>
     </div>
   </div>
@@ -477,6 +853,7 @@
   <script src="js/mapdata.js"></script>
   <script src="js/pathfind.js"></script>
   <script src="js/engine.js"></script>
+  <script src="js/tutorial.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/main.js"></script>
 </body>

@@ -299,6 +299,578 @@
         }
       });
     }
+
+    // 11. Đợt 6: zoom camera, thẻ chi tiết túi, đổi đan, hướng dẫn, xóa nhân vật, khóa zoom cử chỉ, cần gậy
+    wireZoomControls();
+    wireBagDetailControls();
+    wirePillExchange();
+    wireTutorialAndDelete();
+    lockGestureZoom();
+    initJoystick();
+    wireSettingsExtras();
+    wireQuestToggle();
+    startClockAndIdleWatch();
+  }
+
+  // ---------- ĐỢT 6 (mục 15): CÁC ĐIỀU KHIỂN CÀI ĐẶT BỔ SUNG ----------
+  var GIFTCODES = {
+    'NGUHANH2026': { linhThach: 50, msg: 'Mã quà tặng: nhận 50 Linh Thạch!' },
+    'TANTHU': { itemId: 'dan-moc', count: 2, msg: 'Mã quà tặng: nhận 2 Đan Mộc!' }
+  };
+  var idleState = { lastActive: Date.now(), mutedByIdle: false };
+  var personalTimer = { endAt: 0, interval: null };
+
+  function applyExtraDisplaySettings(s) {
+    if (!s || typeof document === 'undefined') return;
+    var root = document.documentElement;
+    if (root && root.style) {
+      root.style.setProperty('--ctl-opacity', String((typeof s.ctlOpacity === 'number') ? s.ctlOpacity : 1));
+    }
+    var canvas = document.getElementById('game-canvas');
+    if (canvas) canvas.style.filter = 'brightness(' + ((typeof s.brightness === 'number') ? s.brightness : 1) + ')';
+    document.body.classList.toggle('lefty', !!s.lefty);
+    var dlg = document.getElementById('dialogue-box');
+    if (dlg) {
+      dlg.classList.remove('dlg-size-nho', 'dlg-size-vua', 'dlg-size-lon');
+      dlg.classList.add('dlg-size-' + (s.dialogTextSize || 'vua'));
+    }
+    var clock = document.getElementById('hud-clock');
+    if (clock) clock.classList.toggle('hidden', !s.showClock);
+  }
+
+  function wireSettingsExtras() {
+    var st = stateAPI || (typeof window !== 'undefined' ? window.GameState : null);
+    if (!st) return;
+    applyExtraDisplaySettings(st.loadSettings());
+    var bindRange = function (id, key, valId, fmt) {
+      var el = document.getElementById(id);
+      if (!el || el.dataset.wired) return;
+      el.dataset.wired = '1';
+      el.addEventListener('input', function () {
+        var patch = {};
+        patch[key] = Number(el.value) / 100;
+        var merged = st.saveSettings(patch);
+        var v = document.getElementById(valId);
+        if (v) v.textContent = fmt(Number(el.value));
+        applyDisplaySettings(merged);
+        applyExtraDisplaySettings(merged);
+      });
+    };
+    bindRange('setting-opacity', 'ctlOpacity', 'setting-opacity-val', function (v) { return v + '%'; });
+    bindRange('setting-brightness', 'brightness', 'setting-brightness-val', function (v) { return v + '%'; });
+    bindRange('setting-joy-deadzone', 'joyDeadzone', 'setting-joy-deadzone-val', function (v) { return v + '%'; });
+
+    var bindToggle = function (id, key, after) {
+      var el = document.getElementById(id);
+      if (!el || el.dataset.wired) return;
+      el.dataset.wired = '1';
+      el.addEventListener('change', function () {
+        var patch = {};
+        patch[key] = el.checked;
+        var merged = st.saveSettings(patch);
+        applyExtraDisplaySettings(merged);
+        if (after) after(el.checked);
+      });
+    };
+    bindToggle('setting-hide-hat', 'hideHat');
+    bindToggle('setting-lefty', 'lefty');
+    bindToggle('setting-clock-toggle', 'showClock');
+    bindToggle('setting-duck-toggle', 'duckMusic');
+    bindToggle('setting-idle-mute', 'idleMute');
+    bindToggle('setting-telegraph-toggle', 'showBossTelegraph');
+    bindToggle('setting-monster-hp-toggle', 'showMonsterHpText');
+    bindToggle('setting-ring-toggle', 'showAggroRing');
+    bindToggle('setting-dest-dot-toggle', 'minimapDestDot');
+
+    var bindSel = function (id, key, after) {
+      var el = document.getElementById(id);
+      if (!el || el.dataset.wired) return;
+      el.dataset.wired = '1';
+      el.addEventListener('change', function () {
+        var patch = {};
+        patch[key] = el.value;
+        var merged = st.saveSettings(patch);
+        if (after) after(el.value, merged);
+      });
+    };
+    bindSel('setting-dialog-size', 'dialogTextSize', function () { applyExtraDisplaySettings(st.loadSettings()); });
+    bindSel('setting-autopickup-rank', 'autoPickupRank');
+    bindSel('setting-fps', 'fpsLimit', function (v) { showToast('Giới hạn khung hình: ' + v + ' FPS'); });
+    var camSel = document.getElementById('setting-camera-dist');
+    if (camSel && !camSel.dataset.wired) {
+      camSel.dataset.wired = '1';
+      camSel.addEventListener('change', function () {
+        var z = camSel.value === 'gan' ? 1.25 : (camSel.value === 'xa' ? 0.8 : 1.0);
+        applyZoom(z);
+      });
+    }
+
+    var btnGift = document.getElementById('btn-giftcode');
+    if (btnGift && !btnGift.dataset.wired) {
+      btnGift.dataset.wired = '1';
+      btnGift.addEventListener('click', function () {
+        var input = document.getElementById('giftcode-input');
+        var code = input ? input.value.trim().toUpperCase() : '';
+        var gift = GIFTCODES[code];
+        if (!gift) { showToast('Mã quà tặng không đúng hoặc đã hết hạn.'); return; }
+        if (!player) { showToast('Hãy vào game trước khi đổi quà.'); return; }
+        player.usedGiftcodes = player.usedGiftcodes || {};
+        if (player.usedGiftcodes[code]) { showToast('Mã này đã được đổi rồi.'); return; }
+        player.usedGiftcodes[code] = true;
+        if (gift.linhThach) player.linhThach = (player.linhThach || 0) + gift.linhThach;
+        if (gift.itemId && stateAPI && stateAPI.addItemToBag) stateAPI.addItemToBag(player, gift.itemId, gift.count || 1);
+        if (stateAPI) stateAPI.savePlayer(player);
+        if (input) input.value = '';
+        showToast(gift.msg);
+        refreshHUD();
+      });
+    }
+
+    var btnStats = document.getElementById('btn-open-stats');
+    if (btnStats && !btnStats.dataset.wired) {
+      btnStats.dataset.wired = '1';
+      btnStats.addEventListener('click', function () {
+        var sm = document.getElementById('settings-modal');
+        if (sm) sm.classList.add('hidden');
+        openStatsModal();
+      });
+    }
+    var closeStats = document.getElementById('close-stats-modal');
+    if (closeStats) closeStats.addEventListener('click', function () { document.getElementById('stats-modal').classList.add('hidden'); });
+    var btnCloseStats = document.getElementById('btn-close-stats');
+    if (btnCloseStats) btnCloseStats.addEventListener('click', function () { document.getElementById('stats-modal').classList.add('hidden'); });
+
+    var btnTimer = document.getElementById('btn-set-timer');
+    if (btnTimer && !btnTimer.dataset.wired) {
+      btnTimer.dataset.wired = '1';
+      btnTimer.addEventListener('click', function () {
+        var inp = document.getElementById('timer-minutes');
+        var mins = Math.max(1, Math.min(600, Number(inp ? inp.value : 25) || 25));
+        startPersonalTimer(mins);
+        showToast('Đã đặt hẹn giờ ' + mins + ' phút');
+      });
+    }
+
+    var btnPhoto = document.getElementById('btn-photo-mode');
+    if (btnPhoto && !btnPhoto.dataset.wired) {
+      btnPhoto.dataset.wired = '1';
+      btnPhoto.addEventListener('click', function () {
+        var sm = document.getElementById('settings-modal');
+        if (sm) sm.classList.add('hidden');
+        showToast('Chế độ chụp hình: chạm vào màn hình để hiện lại giao diện');
+        setTimeout(function () { document.body.classList.add('photo-mode'); }, 900);
+        var off = function () {
+          document.body.classList.remove('photo-mode');
+          document.removeEventListener('pointerdown', off, true);
+        };
+        setTimeout(function () { document.addEventListener('pointerdown', off, true); }, 1250);
+      });
+    }
+
+    var btnExport = document.getElementById('btn-export-settings');
+    if (btnExport && !btnExport.dataset.wired) {
+      btnExport.dataset.wired = '1';
+      btnExport.addEventListener('click', function () {
+        var ta = document.getElementById('settings-code');
+        if (ta) ta.value = btoa(unescape(encodeURIComponent(JSON.stringify(st.loadSettings()))));
+        showToast('Đã xuất mã cấu hình — sao chép và giữ lại để mang sang máy khác');
+      });
+    }
+    var btnImport = document.getElementById('btn-import-settings');
+    if (btnImport && !btnImport.dataset.wired) {
+      btnImport.dataset.wired = '1';
+      btnImport.addEventListener('click', function () {
+        var ta = document.getElementById('settings-code');
+        try {
+          var obj = JSON.parse(decodeURIComponent(escape(atob((ta ? ta.value : '').trim()))));
+          var merged = st.saveSettings(obj);
+          applyAudioSettings(merged);
+          applyDisplaySettings(merged);
+          applyExtraDisplaySettings(merged);
+          refreshSettingsControls();
+          showToast('Đã nhập cấu hình cài đặt thành công');
+        } catch (e) {
+          showToast('Mã cấu hình không hợp lệ');
+        }
+      });
+    }
+
+    var btnReset = document.getElementById('btn-reset-settings');
+    if (btnReset && !btnReset.dataset.wired) {
+      btnReset.dataset.wired = '1';
+      btnReset.addEventListener('click', function () {
+        if (!btnReset.dataset.armed) {
+          btnReset.dataset.armed = '1';
+          btnReset.textContent = 'Chắc chắn khôi phục mặc định?';
+          setTimeout(function () { btnReset.dataset.armed = ''; btnReset.textContent = 'Khôi phục mặc định'; }, 3000);
+          return;
+        }
+        btnReset.dataset.armed = '';
+        btnReset.textContent = 'Khôi phục mặc định';
+        var fresh = st.saveSettings(st.defaultSettings ? st.defaultSettings() : {});
+        applyAudioSettings(fresh);
+        applyDisplaySettings(fresh);
+        applyExtraDisplaySettings(fresh);
+        if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.setUserZoom) window.GameEngine.setUserZoom(1.0);
+        refreshSettingsControls();
+        showToast('Đã khôi phục cài đặt mặc định');
+      });
+    }
+
+    var btnSwitch = document.getElementById('btn-switch-char');
+    if (btnSwitch && !btnSwitch.dataset.wired) {
+      btnSwitch.dataset.wired = '1';
+      btnSwitch.addEventListener('click', function () {
+        try {
+          var prefix = (stateAPI && stateAPI.STORAGE_PREFIX) ? stateAPI.STORAGE_PREFIX : 'nguhanh_';
+          if (window.localStorage) window.localStorage.removeItem(prefix + 'active_char');
+        } catch (e) {}
+        window.location.reload();
+      });
+    }
+
+    var btnSort = document.getElementById('btn-sort-bag');
+    if (btnSort && !btnSort.dataset.wired) {
+      btnSort.dataset.wired = '1';
+      btnSort.addEventListener('click', function () { sortBag(); });
+    }
+  }
+
+  function openStatsModal() {
+    var modal = document.getElementById('stats-modal');
+    if (!modal || !player) return;
+    var s = player.stats || {};
+    var set = function (id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
+    var mins = Math.floor((s.playSec || 0) / 60);
+    set('stats-playtime', mins >= 60 ? (Math.floor(mins / 60) + ' giờ ' + (mins % 60) + ' phút') : (mins + ' phút'));
+    set('stats-kills', s.kills || 0);
+    set('stats-bosses', s.bossKills || 0);
+    set('stats-harvests', s.harvests || 0);
+    set('stats-refines', s.refines || 0);
+    modal.classList.remove('hidden');
+  }
+
+  function sortBag() {
+    if (!player || !player.bag) return;
+    var defs = itemDefs();
+    var rank = { legend: 5, epic: 4, rare: 3, good: 2, common: 1 };
+    // Gộp chồng cùng loại trước
+    var merged = {};
+    var order = [];
+    for (var i = 0; i < player.bag.slots.length; i++) {
+      var sd = player.bag.slots[i];
+      if (!sd || !sd.itemId) continue;
+      if (merged[sd.itemId]) merged[sd.itemId].count += (sd.count || 1);
+      else { merged[sd.itemId] = { itemId: sd.itemId, count: sd.count || 1 }; order.push(sd.itemId); }
+    }
+    var arr = order.map(function (id) { return merged[id]; });
+    arr.sort(function (a, b) {
+      var da = defs[a.itemId] || {};
+      var db = defs[b.itemId] || {};
+      var ra = rank[da.quality] || 0;
+      var rb = rank[db.quality] || 0;
+      if (rb !== ra) return rb - ra;
+      return String(da.type || '').localeCompare(String(db.type || ''));
+    });
+    for (var j = 0; j < player.bag.slots.length; j++) {
+      player.bag.slots[j] = arr[j] || null;
+    }
+    player.bagLocks = {};
+    selectedBagSlot = null;
+    if (stateAPI) stateAPI.savePlayer(player);
+    renderBagGrid();
+    showToast('Đã sắp xếp túi đồ');
+  }
+
+  function startPersonalTimer(mins) {
+    var chip = document.getElementById('hud-timer');
+    personalTimer.endAt = Date.now() + mins * 60000;
+    if (personalTimer.interval) clearInterval(personalTimer.interval);
+    var tick = function () {
+      var left = Math.max(0, Math.round((personalTimer.endAt - Date.now()) / 1000));
+      if (chip) {
+        chip.classList.remove('hidden');
+        var mm = Math.floor(left / 60);
+        var ss = left % 60;
+        chip.textContent = 'Hẹn giờ: ' + mm + ':' + (ss < 10 ? '0' : '') + ss;
+      }
+      if (left <= 0) {
+        clearInterval(personalTimer.interval);
+        personalTimer.interval = null;
+        if (chip) chip.classList.add('hidden');
+        showToast('Hẹn giờ cá nhân đã tới!');
+        if (audioAPI) audioAPI.playChime();
+      }
+    };
+    tick();
+    personalTimer.interval = setInterval(tick, 1000);
+  }
+
+  function wireQuestToggle() {
+    var btn = document.getElementById('btn-toggle-quest');
+    var panel = document.getElementById('quest-panel');
+    if (!btn || !panel || btn.dataset.wired) return;
+    btn.dataset.wired = '1';
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      panel.classList.toggle('collapsed');
+    });
+  }
+
+  function startClockAndIdleWatch() {
+    var bump = function () {
+      idleState.lastActive = Date.now();
+      if (idleState.mutedByIdle) {
+        idleState.mutedByIdle = false;
+        var st = stateAPI || (typeof window !== 'undefined' ? window.GameState : null);
+        if (st) applyAudioSettings(st.loadSettings());
+      }
+    };
+    window.addEventListener('pointerdown', bump, { passive: true });
+    window.addEventListener('keydown', bump);
+    setInterval(function () {
+      var clock = document.getElementById('hud-clock');
+      var st = stateAPI || (typeof window !== 'undefined' ? window.GameState : null);
+      var s = st ? st.loadSettings() : null;
+      if (clock && s && s.showClock) {
+        var d = new Date();
+        var hh = d.getHours();
+        var mm = d.getMinutes();
+        clock.textContent = (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm;
+      }
+      if (s && s.idleMute && !idleState.mutedByIdle && Date.now() - idleState.lastActive > 5 * 60000) {
+        idleState.mutedByIdle = true;
+        if (audioAPI) { audioAPI.setMusicVolume(0); audioAPI.setSfxVolume(0); }
+        if (typeof window !== 'undefined' && window.GameMusic) window.GameMusic.setMuted(true);
+        if (typeof window !== 'undefined' && window.GameVoice) window.GameVoice.setMuted(true);
+      }
+    }, 5000);
+  }
+
+  // ---------- ĐỢT 6: ZOOM CAMERA BẰNG NÚT (mục 10) ----------
+  function currentZoom() {
+    if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.getUserZoom) {
+      return window.GameEngine.getUserZoom();
+    }
+    var st = stateAPI || (typeof window !== 'undefined' ? window.GameState : null);
+    var s = st ? st.loadSettings() : null;
+    return (s && typeof s.zoom === 'number') ? s.zoom : 1.0;
+  }
+
+  function applyZoom(z) {
+    var nz = Math.max(0.75, Math.min(1.5, Math.round(z * 100) / 100));
+    if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.setUserZoom) {
+      nz = window.GameEngine.setUserZoom(nz);
+    }
+    var st = stateAPI || (typeof window !== 'undefined' ? window.GameState : null);
+    if (st) st.saveSettings({ zoom: nz, display: { zoom: nz } });
+    var valEl = document.getElementById('setting-zoom-val');
+    if (valEl) valEl.textContent = Math.round(nz * 100) + '%';
+    return nz;
+  }
+
+  function stepZoom(dir) {
+    var z = applyZoom(currentZoom() + (dir > 0 ? 0.15 : -0.15));
+    showToast('Thu phóng camera: ' + Math.round(z * 100) + '%');
+  }
+
+  function wireZoomControls() {
+    var bindStep = function (id, dir) {
+      var el = document.getElementById(id);
+      if (!el || el.dataset.wired) return;
+      el.dataset.wired = '1';
+      el.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (audioAPI) audioAPI.playClick();
+        stepZoom(dir);
+      });
+    };
+    bindStep('btn-zoom-in', 1);
+    bindStep('btn-zoom-out', -1);
+    bindStep('setting-btn-zoom-in', 1);
+    bindStep('setting-btn-zoom-out', -1);
+    var valEl = document.getElementById('setting-zoom-val');
+    if (valEl) valEl.textContent = Math.round(currentZoom() * 100) + '%';
+  }
+
+  // ---------- ĐỢT 6: KHÓA ZOOM BẰNG CỬ CHỈ (mục 10a) ----------
+  function lockGestureZoom() {
+    var gc = document.getElementById('game-container') || document.body;
+    if (!gc || gc.dataset.zoomLocked) return;
+    gc.dataset.zoomLocked = '1';
+    var prevent = function (e) { e.preventDefault(); };
+    gc.addEventListener('gesturestart', prevent, { passive: false });
+    gc.addEventListener('gesturechange', prevent, { passive: false });
+    gc.addEventListener('gestureend', prevent, { passive: false });
+    gc.addEventListener('dblclick', prevent, { passive: false });
+    gc.addEventListener('wheel', function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  }
+
+  // ---------- ĐỢT 6: CẦN GẬY ĐIỀU KHIỂN THẬT + 2 CHẾ ĐỘ (mục 15/16) ----------
+  var joyRuntime = { active: false, pointerId: null, cx: 0, cy: 0, floating: false };
+
+  function joystickMode() {
+    var st = stateAPI || (typeof window !== 'undefined' ? window.GameState : null);
+    var s = st ? st.loadSettings() : null;
+    return (s && s.joystickMode === 'linh_hoat') ? 'linh_hoat' : 'co_dinh';
+  }
+
+  function joySetVector(dx, dy) {
+    var mag = Math.hypot(dx, dy);
+    var dzNow = 0.15;
+    try {
+      var stDz = stateAPI ? stateAPI.loadSettings() : null;
+      if (stDz && typeof stDz.joyDeadzone === 'number') dzNow = stDz.joyDeadzone;
+    } catch (e) {}
+    if (mag < dzNow) { dx = 0; dy = 0; }
+    else if (mag > 1) { dx /= mag; dy /= mag; }
+    if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.setJoystickVector) {
+      window.GameEngine.setJoystickVector(dx, dy);
+    }
+  }
+
+  function joyMoveStick(dxPx, dyPx) {
+    var stick = document.getElementById('joystick-stick');
+    if (stick) stick.style.transform = 'translate(' + dxPx + 'px, ' + dyPx + 'px)';
+  }
+
+  function joyStart(cx, cy, pointerId, floating) {
+    joyRuntime.active = true;
+    joyRuntime.pointerId = pointerId;
+    joyRuntime.cx = cx;
+    joyRuntime.cy = cy;
+    joyRuntime.floating = !!floating;
+    if (typeof window !== 'undefined' && window.GameEngine) {
+      if (window.GameEngine.cancelAutoPath) window.GameEngine.cancelAutoPath();
+      if (window.GameEngine.cancelTravel) window.GameEngine.cancelTravel();
+    }
+  }
+
+  function joyDrag(clientX, clientY) {
+    if (!joyRuntime.active) return;
+    var maxR = 42;
+    var dx = clientX - joyRuntime.cx;
+    var dy = clientY - joyRuntime.cy;
+    var d = Math.hypot(dx, dy);
+    var sx = dx, sy = dy;
+    if (d > maxR) { sx = dx / d * maxR; sy = dy / d * maxR; }
+    joyMoveStick(sx, sy);
+    joySetVector(dx / maxR, dy / maxR);
+  }
+
+  function joyEnd() {
+    if (!joyRuntime.active) return;
+    joyRuntime.active = false;
+    joyRuntime.pointerId = null;
+    joyMoveStick(0, 0);
+    joySetVector(0, 0);
+    if (joyRuntime.floating) {
+      var zone = document.getElementById('joystick-zone');
+      if (zone) { zone.style.left = ''; zone.style.top = ''; zone.style.bottom = ''; zone.style.right = ''; }
+      joyRuntime.floating = false;
+    }
+  }
+
+  function initJoystick() {
+    var zone = document.getElementById('joystick-zone');
+    var base = document.getElementById('joystick-base');
+    if (!zone || zone.dataset.joyWired) return;
+    zone.dataset.joyWired = '1';
+
+    zone.addEventListener('pointerdown', function (e) {
+      if (joyRuntime.active) return;
+      e.preventDefault();
+      e.stopPropagation();
+      var rect = (base || zone).getBoundingClientRect();
+      joyStart(rect.left + rect.width / 2, rect.top + rect.height / 2, e.pointerId, false);
+      try { zone.setPointerCapture(e.pointerId); } catch (err) {}
+      joyDrag(e.clientX, e.clientY);
+    });
+    zone.addEventListener('pointermove', function (e) {
+      if (joyRuntime.active && e.pointerId === joyRuntime.pointerId && !joyRuntime.floating) joyDrag(e.clientX, e.clientY);
+    });
+    var endH = function (e) {
+      if (e.pointerId === joyRuntime.pointerId && !joyRuntime.floating) joyEnd();
+    };
+    zone.addEventListener('pointerup', endH);
+    zone.addEventListener('pointercancel', endH);
+
+    // Chế độ linh hoạt: chạm nửa dưới-trái vùng chơi (lên canvas) thì cần gậy xuất hiện tại điểm chạm
+    var gc = document.getElementById('game-container');
+    var canvas = document.getElementById('game-canvas');
+    if (gc && canvas) {
+      gc.addEventListener('pointerdown', function (e) {
+        if (joystickMode() !== 'linh_hoat') return;
+        if (e.target !== canvas) return;
+        if (joyRuntime.active) return;
+        var w = window.innerWidth || 1;
+        var h = window.innerHeight || 1;
+        if (e.clientX > w * 0.45 || e.clientY < h * 0.45) return;
+        zone.style.left = (e.clientX - 65) + 'px';
+        zone.style.top = (e.clientY - 65) + 'px';
+        zone.style.bottom = 'auto';
+        zone.style.right = 'auto';
+        joyStart(e.clientX, e.clientY, e.pointerId, true);
+        joyDrag(e.clientX, e.clientY);
+      });
+      window.addEventListener('pointermove', function (e) {
+        if (joyRuntime.active && joyRuntime.floating && e.pointerId === joyRuntime.pointerId) joyDrag(e.clientX, e.clientY);
+      });
+      window.addEventListener('pointerup', function (e) {
+        if (joyRuntime.floating && e.pointerId === joyRuntime.pointerId) joyEnd();
+      });
+      window.addEventListener('pointercancel', function (e) {
+        if (joyRuntime.floating && e.pointerId === joyRuntime.pointerId) joyEnd();
+      });
+    }
+  }
+
+  // ---------- ĐỢT 6: MỞ LẠI HƯỚNG DẪN + XÓA NHÂN VẬT (mục 15/16) ----------
+  function wireTutorialAndDelete() {
+    var btnTut = document.getElementById('btn-restart-tutorial');
+    if (btnTut && !btnTut.dataset.wired) {
+      btnTut.dataset.wired = '1';
+      btnTut.addEventListener('click', function () {
+        var sm = document.getElementById('settings-modal');
+        if (sm) sm.classList.add('hidden');
+        if (typeof window !== 'undefined' && window.GameTutorial && window.GameTutorial.restartTutorial) {
+          window.GameTutorial.restartTutorial();
+          showToast('Đã mở lại hướng dẫn tân thủ');
+        }
+      });
+    }
+    var btnDel = document.getElementById('btn-delete-char');
+    var confirmModal = document.getElementById('confirm-delete-modal');
+    if (btnDel && confirmModal && !btnDel.dataset.wired) {
+      btnDel.dataset.wired = '1';
+      btnDel.addEventListener('click', function () { confirmModal.classList.remove('hidden'); });
+      var btnCancel = document.getElementById('btn-cancel-delete');
+      if (btnCancel) btnCancel.addEventListener('click', function () { confirmModal.classList.add('hidden'); });
+      var btnConfirm = document.getElementById('btn-confirm-delete');
+      if (btnConfirm) {
+        btnConfirm.addEventListener('click', function () {
+          try {
+            var prefix = (stateAPI && stateAPI.STORAGE_PREFIX) ? stateAPI.STORAGE_PREFIX : 'nguhanh_';
+            var name = player ? player.name : null;
+            if (name && window.localStorage) {
+              window.localStorage.removeItem(prefix + 'char_' + name);
+              var listRaw = window.localStorage.getItem(prefix + 'chars');
+              if (listRaw) {
+                var list = JSON.parse(listRaw);
+                if (Array.isArray(list)) {
+                  list = list.filter(function (n) { return n !== name; });
+                  window.localStorage.setItem(prefix + 'chars', JSON.stringify(list));
+                }
+              }
+              if (window.localStorage.getItem(prefix + 'active_char') === name) {
+                window.localStorage.removeItem(prefix + 'active_char');
+              }
+            }
+          } catch (err) {}
+          window.location.reload();
+        });
+      }
+    }
   }
 
   function openBagModal() {
@@ -352,16 +924,305 @@
             countSpan.textContent = slotData.count;
             slotDiv.appendChild(countSpan);
           }
+
+          if (player.bagLocks && player.bagLocks[slotIndex]) {
+            var lockSpan = document.createElement('span');
+            lockSpan.className = 'bag-slot-lock';
+            lockSpan.textContent = 'KHÓA';
+            slotDiv.appendChild(lockSpan);
+          }
         }
 
         slotDiv.addEventListener('click', function () {
           selectedBagSlot = slotIndex;
+          selectedEquipSlot = null;
           renderBagGrid();
           updateItemInfo(slotData, defs);
         });
 
         gridEl.appendChild(slotDiv);
       })(i);
+    }
+    renderEquipSlots();
+    refreshDetailCard();
+  }
+
+  // ---------- ĐỢT 6: THẺ CHI TIẾT VẬT PHẨM + TRANG BỊ (mục 2 + mục 18) ----------
+  var selectedEquipSlot = null;
+  var dropArmTimer = null;
+
+  var ITEM_TYPE_LABELS = { currency: 'Tiền tệ', material: 'Nguyên liệu', gear: 'Trang bị', consumable: 'Đan dược / Tiêu hao' };
+  var ITEM_QUALITY_LABELS = { common: 'Phổ thông', good: 'Tốt', rare: 'Hiếm', epic: 'Sử thi', legend: 'Truyền thuyết' };
+  var ITEM_QUALITY_COLORS = { common: '#cfd8dc', good: '#7ed491', rare: '#b78bfa', epic: '#ffb74d', legend: '#ff8a65' };
+  var ELEM_NAMES = { kim: 'Kim', moc: 'Mộc', thuy: 'Thủy', hoa: 'Hỏa', tho: 'Thổ' };
+
+  function itemDefs() {
+    return (monstersAPI && monstersAPI.ITEM_DEFS) ? monstersAPI.ITEM_DEFS : {};
+  }
+
+  function setIconSprite(el, def, cellPx) {
+    if (!el || !def) return;
+    var scale = cellPx / 32; // sheet hiển thị gốc: 4x2 ô 32px (nền 128x64)
+    el.style.backgroundImage = "url('assets/art/icons-sheet.png')";
+    el.style.backgroundSize = (128 * scale) + 'px ' + (64 * scale) + 'px';
+    el.style.backgroundPosition = (-(def.iconCol || 0) * cellPx) + 'px ' + (-(def.iconRow || 0) * cellPx) + 'px';
+    el.style.backgroundRepeat = 'no-repeat';
+    el.style.width = cellPx + 'px';
+    el.style.height = cellPx + 'px';
+  }
+
+  function renderEquipSlots() {
+    if (!player) return;
+    if (!player.equipment) player.equipment = { weapon: null, armor: null, head: null };
+    var defs = itemDefs();
+    var slots = ['head', 'weapon', 'armor'];
+    for (var i = 0; i < slots.length; i++) {
+      (function (slotName) {
+        var wrap = document.getElementById('equip-slot-' + slotName);
+        if (!wrap) return;
+        var iconEl = wrap.querySelector('.equip-slot-icon');
+        var badgeEl = wrap.querySelector('.equip-slot-badge');
+        var itemId = player.equipment[slotName];
+        var def = itemId ? defs[itemId] : null;
+        if (iconEl) {
+          if (def) setIconSprite(iconEl, def, 32);
+          else { iconEl.style.backgroundImage = 'none'; }
+        }
+        if (badgeEl) badgeEl.classList.toggle('hidden', !def);
+        wrap.classList.toggle('selected', selectedEquipSlot === slotName);
+        if (!wrap.dataset.wired) {
+          wrap.dataset.wired = '1';
+          wrap.addEventListener('click', function () {
+            if (!player.equipment[slotName]) return;
+            selectedEquipSlot = slotName;
+            selectedBagSlot = null;
+            renderBagGrid();
+          });
+        }
+      })(slots[i]);
+    }
+  }
+
+  function detailStatsHtml(def, itemId) {
+    if (!def) return '';
+    var lines = [];
+    if (def.type === 'gear') {
+      if (def.atk) lines.push('<div class="detail-stat-line">Công kích <b>+' + def.atk + '</b></div>');
+      if (def.def) lines.push('<div class="detail-stat-line">Phòng thủ <b>+' + def.def + '</b></div>');
+      if (!lines.length) lines.push('<div class="detail-stat-line">Trang bị vào người để nhận chỉ số.</div>');
+    } else if (itemId && itemId.indexOf('dan-') === 0) {
+      var elem = itemId.slice(4);
+      lines.push('<div class="detail-stat-line">Dùng: <b>+20 tu vi đường ' + (ELEM_NAMES[elem] || elem) + '</b></div>');
+    } else if (itemId === 'truc-co-dan') {
+      lines.push('<div class="detail-stat-line">Dùng: <b>Đột phá Trúc Cơ</b> khi cả 5 đường đạt 900 tu vi</div>');
+    } else if (itemId && itemId.indexOf('nguyen-tinh-') === 0) {
+      lines.push('<div class="detail-stat-line">Nguyên liệu then chốt cho luyện đan và đột phá</div>');
+    } else if (def.type === 'material') {
+      lines.push('<div class="detail-stat-line">Nguyên liệu tu luyện / luyện chế</div>');
+    } else if (def.type === 'consumable') {
+      lines.push('<div class="detail-stat-line">Có thể dùng trực tiếp từ túi đồ</div>');
+    }
+    return lines.join('');
+  }
+
+  function refreshDetailCard() {
+    var emptyEl = document.getElementById('detail-card-empty');
+    var contentEl = document.getElementById('detail-card-content');
+    if (!emptyEl || !contentEl || !player) return;
+
+    var itemId = null;
+    var count = null;
+    var equipped = false;
+    if (selectedEquipSlot && player.equipment && player.equipment[selectedEquipSlot]) {
+      itemId = player.equipment[selectedEquipSlot];
+      equipped = true;
+    } else if (selectedBagSlot !== null && selectedBagSlot !== undefined && player.bag && player.bag.slots[selectedBagSlot]) {
+      itemId = player.bag.slots[selectedBagSlot].itemId;
+      count = player.bag.slots[selectedBagSlot].count || 1;
+    }
+
+    var btnUse = document.getElementById('btn-card-use');
+    var btnEquip = document.getElementById('btn-card-equip');
+    var btnUnequip = document.getElementById('btn-card-unequip');
+    var btnDrop = document.getElementById('btn-card-drop');
+    var disarmDrop = function () {
+      if (btnDrop) { btnDrop.textContent = 'Bỏ'; btnDrop.classList.remove('armed'); }
+      if (dropArmTimer) { clearTimeout(dropArmTimer); dropArmTimer = null; }
+    };
+
+    if (!itemId) {
+      emptyEl.classList.remove('hidden');
+      contentEl.classList.add('hidden');
+      disarmDrop();
+      return;
+    }
+    var def = itemDefs()[itemId] || { name: itemId, type: 'material', desc: '' };
+    emptyEl.classList.add('hidden');
+    contentEl.classList.remove('hidden');
+
+    setIconSprite(document.getElementById('detail-card-icon'), def, 64);
+    var nameEl = document.getElementById('detail-card-name');
+    if (nameEl) nameEl.textContent = def.name || itemId;
+    var badgeEl = document.getElementById('detail-card-badge');
+    if (badgeEl) badgeEl.classList.toggle('hidden', !equipped);
+    var typeEl = document.getElementById('detail-card-type');
+    if (typeEl) typeEl.textContent = ITEM_TYPE_LABELS[def.type] || def.type || 'Vật phẩm';
+    var qualEl = document.getElementById('detail-card-quality');
+    if (qualEl) {
+      qualEl.textContent = ITEM_QUALITY_LABELS[def.quality] || 'Phổ thông';
+      qualEl.style.color = ITEM_QUALITY_COLORS[def.quality] || ITEM_QUALITY_COLORS.common;
+    }
+    var countEl = document.getElementById('detail-card-count');
+    if (countEl) countEl.textContent = equipped ? 'Đang trang bị' : ('Số lượng: ' + (count || 1));
+    var statsEl = document.getElementById('detail-card-stats');
+    if (statsEl) statsEl.innerHTML = detailStatsHtml(def, itemId);
+    var descEl = document.getElementById('detail-card-desc');
+    if (descEl) descEl.textContent = def.desc || '';
+
+    if (btnUse) btnUse.classList.toggle('hidden', !(def.type === 'consumable' && !equipped));
+    if (btnEquip) btnEquip.classList.toggle('hidden', !(def.type === 'gear' && !equipped));
+    if (btnUnequip) btnUnequip.classList.toggle('hidden', !equipped);
+    // Đợt 6 (mục 15, hồ sơ 25): vật phẩm đã khóa thì không bỏ được
+    var isLocked = !equipped && selectedBagSlot !== null && selectedBagSlot !== undefined &&
+      !!(player.bagLocks && player.bagLocks[selectedBagSlot]);
+    if (btnDrop) {
+      btnDrop.classList.toggle('hidden', !!equipped || def.type === 'currency');
+      btnDrop.disabled = isLocked;
+      btnDrop.title = isLocked ? 'Vật phẩm đang khóa — mở khóa trước khi bỏ' : '';
+    }
+    var btnLock = document.getElementById('btn-card-lock');
+    if (btnLock) {
+      btnLock.classList.toggle('hidden', !!equipped || selectedBagSlot === null || selectedBagSlot === undefined);
+      btnLock.textContent = isLocked ? 'Mở khóa' : 'Khóa';
+    }
+    disarmDrop();
+  }
+
+  function afterBagAction() {
+    if (stateAPI && player) stateAPI.savePlayer(player);
+    renderBagGrid();
+    refreshHUD();
+  }
+
+  function wireBagDetailControls() {
+    var btnUse = document.getElementById('btn-card-use');
+    if (btnUse && !btnUse.dataset.wired) {
+      btnUse.dataset.wired = '1';
+      btnUse.addEventListener('click', function () {
+        if (selectedBagSlot === null || !player.bag.slots[selectedBagSlot]) return;
+        var itemId = player.bag.slots[selectedBagSlot].itemId;
+        if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.useItem) {
+          var res = window.GameEngine.useItem(itemId);
+          if (res && !res.ok && res.msg) showToast(res.msg);
+        }
+        afterBagAction();
+      });
+    }
+    var btnEquip = document.getElementById('btn-card-equip');
+    if (btnEquip && !btnEquip.dataset.wired) {
+      btnEquip.dataset.wired = '1';
+      btnEquip.addEventListener('click', function () {
+        if (selectedBagSlot === null) return;
+        if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.equipItem) {
+          var res = window.GameEngine.equipItem(selectedBagSlot);
+          if (res && !res.ok && res.msg) showToast(res.msg);
+          if (res && res.ok && res.slot) selectedEquipSlot = res.slot;
+        }
+        afterBagAction();
+      });
+    }
+    var btnUnequip = document.getElementById('btn-card-unequip');
+    if (btnUnequip && !btnUnequip.dataset.wired) {
+      btnUnequip.dataset.wired = '1';
+      btnUnequip.addEventListener('click', function () {
+        if (!selectedEquipSlot) return;
+        if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.unequipItem) {
+          var res = window.GameEngine.unequipItem(selectedEquipSlot);
+          if (res && !res.ok && res.msg) showToast(res.msg);
+        }
+        selectedEquipSlot = null;
+        afterBagAction();
+      });
+    }
+    var btnLock = document.getElementById('btn-card-lock');
+    if (btnLock && !btnLock.dataset.wired) {
+      btnLock.dataset.wired = '1';
+      btnLock.addEventListener('click', function () {
+        if (selectedBagSlot === null || !player.bag.slots[selectedBagSlot]) return;
+        player.bagLocks = player.bagLocks || {};
+        if (player.bagLocks[selectedBagSlot]) delete player.bagLocks[selectedBagSlot];
+        else player.bagLocks[selectedBagSlot] = true;
+        showToast(player.bagLocks[selectedBagSlot] ? 'Đã khóa vật phẩm — không thể bỏ nhầm' : 'Đã mở khóa vật phẩm');
+        afterBagAction();
+      });
+    }
+    var btnDrop = document.getElementById('btn-card-drop');
+    if (btnDrop && !btnDrop.dataset.wired) {
+      btnDrop.dataset.wired = '1';
+      btnDrop.addEventListener('click', function () {
+        if (selectedBagSlot === null || !player.bag.slots[selectedBagSlot]) return;
+        if (player.bagLocks && player.bagLocks[selectedBagSlot]) {
+          showToast('Vật phẩm đang khóa — mở khóa trước khi bỏ');
+          return;
+        }
+        if (!btnDrop.classList.contains('armed')) {
+          btnDrop.classList.add('armed');
+          btnDrop.textContent = 'Chắc chắn bỏ?';
+          if (dropArmTimer) clearTimeout(dropArmTimer);
+          dropArmTimer = setTimeout(function () {
+            btnDrop.classList.remove('armed');
+            btnDrop.textContent = 'Bỏ';
+          }, 3000);
+          return;
+        }
+        var slotData = player.bag.slots[selectedBagSlot];
+        var def = itemDefs()[slotData.itemId];
+        if (stateAPI && stateAPI.removeItemFromBag) {
+          stateAPI.removeItemFromBag(player, slotData.itemId, 1);
+        }
+        showToast('Đã bỏ 1 ' + (def ? def.name : slotData.itemId));
+        if (!player.bag.slots[selectedBagSlot]) selectedBagSlot = null;
+        afterBagAction();
+      });
+    }
+  }
+
+  // ---------- ĐỢT 6: MODAL ĐỔI TU LUYỆN ĐAN Ở CHẤP SỰ (mục 1) ----------
+  function openPillExchangeModal() {
+    var modal = document.getElementById('pill-exchange-modal');
+    if (!modal) return;
+    var ltEl = document.getElementById('pill-exchange-linhthach');
+    if (ltEl && player) ltEl.textContent = 'Linh Thạch hiện có: ' + (player.linhThach || 0);
+    modal.classList.remove('hidden');
+  }
+
+  function closePillExchangeModal() {
+    var modal = document.getElementById('pill-exchange-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  function wirePillExchange() {
+    var closeX = document.getElementById('close-pill-exchange-modal');
+    if (closeX && !closeX.dataset.wired) { closeX.dataset.wired = '1'; closeX.addEventListener('click', closePillExchangeModal); }
+    var closeBtn = document.getElementById('btn-close-pill-modal');
+    if (closeBtn && !closeBtn.dataset.wired) { closeBtn.dataset.wired = '1'; closeBtn.addEventListener('click', closePillExchangeModal); }
+    var ids = ['btn-pill-kim', 'btn-pill-moc', 'btn-pill-thuy', 'btn-pill-hoa', 'btn-pill-tho'];
+    for (var i = 0; i < ids.length; i++) {
+      (function (id) {
+        var btn = document.getElementById(id);
+        if (!btn || btn.dataset.wired) return;
+        btn.dataset.wired = '1';
+        btn.addEventListener('click', function () {
+          var elem = btn.getAttribute('data-element');
+          if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.exchangePill) {
+            var res = window.GameEngine.exchangePill(elem);
+            if (res && res.msg) showToast(res.msg);
+          }
+          var ltEl = document.getElementById('pill-exchange-linhthach');
+          if (ltEl && player) ltEl.textContent = 'Linh Thạch hiện có: ' + (player.linhThach || 0);
+          refreshHUD();
+        });
+      })(ids[i]);
     }
   }
 
@@ -522,8 +1383,31 @@
   /**
    * Cập nhật thông số HUD
    */
+  var hatFaceProbe = null; // null | 'loading' | 'ok' | 'fail'
+  function refreshPortraitHat() {
+    var el = document.getElementById('hud-portrait');
+    if (!el || !player) return;
+    var s = stateAPI ? stateAPI.loadSettings() : null;
+    var wearing = player.equipment && player.equipment.head === 'non-la' && !(s && s.hideHat);
+    if (wearing) {
+      if (hatFaceProbe === null) {
+        hatFaceProbe = 'loading';
+        var img = new Image();
+        img.onload = function () { hatFaceProbe = 'ok'; refreshPortraitHat(); };
+        img.onerror = function () { hatFaceProbe = 'fail'; };
+        img.src = 'assets/chars/hanhan-face-hat.png';
+      }
+      if (hatFaceProbe === 'ok') {
+        el.style.backgroundImage = "url('assets/chars/hanhan-face-hat.png')";
+        return;
+      }
+    }
+    el.style.backgroundImage = '';
+  }
+
   function refreshHUD() {
     if (!player) return;
+    refreshPortraitHat();
 
     var nameEl = document.getElementById('hud-player-name');
     var realmEl = document.getElementById('hud-player-realm');
@@ -621,6 +1505,42 @@
     if (rvEl) rvEl.textContent = revival + ' / 5';
   }
 
+  // Đợt 6: tiến độ dạng x/y cho từng bước chuỗi chính (đọc thẳng trạng thái người chơi)
+  function weakestTuViOf() {
+    if (!player || !player.paths) return 0;
+    var keys = ['kim', 'moc', 'thuy', 'hoa', 'tho'];
+    var min = Infinity;
+    for (var i = 0; i < keys.length; i++) {
+      var v = (player.paths[keys[i]] && player.paths[keys[i]].tuVi) || 0;
+      if (v < min) min = v;
+    }
+    return isFinite(min) ? min : 0;
+  }
+
+  function mainStageProgressText(info) {
+    if (!info || !player) return '';
+    var q = player.quests || {};
+    switch (info.mainStage) {
+      case 1: return 'đường yếu nhất ' + weakestTuViOf() + '/30 tu vi';
+      case 2: return (q.nhenKills || 0) + '/3';
+      case 3: return (stateAPI && stateAPI.hasItemInBag(player, 'nguyen-tinh-moc', 1)) ? 'đã có Nguyên Tinh Mộc' : 'chưa có Nguyên Tinh Mộc';
+      case 4: return 'đường yếu nhất ' + weakestTuViOf() + '/300 tu vi';
+      case 5: return (q.bangXaKills || 0) + '/4';
+      case 6: {
+        var hasNT = stateAPI && stateAPI.hasItemInBag(player, 'nguyen-tinh-thuy', 1);
+        var hasBT = stateAPI && stateAPI.hasItemInBag(player, 'bang-tuy', 1);
+        return 'Nguyên Tinh Thủy ' + (hasNT ? 'đủ' : 'thiếu') + ' · Băng Tủy ' + (hasBT ? 'đủ' : 'thiếu');
+      }
+      case 7: return 'đường yếu nhất ' + weakestTuViOf() + '/600 tu vi';
+      case 8: {
+        if (!stateAPI || !stateAPI.countItemInBag) return '';
+        return 'Linh Chi ' + stateAPI.countItemInBag(player, 'linh-chi-rung') + '/3 · Băng Tủy ' + stateAPI.countItemInBag(player, 'bang-tuy') + '/1 · Hỏa Tinh ' + stateAPI.countItemInBag(player, 'hoa-tinh-tho') + '/2 · Linh Thạch ' + (player.linhThach || 0) + '/200';
+      }
+      case 9: return 'đường yếu nhất ' + weakestTuViOf() + '/900 tu vi';
+      default: return '';
+    }
+  }
+
   /**
    * Cập nhật Bảng theo dõi nhiệm vụ
    */
@@ -641,7 +1561,11 @@
       'tong-mon': 'Tông Môn',
       'dai-dien': 'Đại Điện',
       'son-coc': 'Sơn Cốc',
-      'dai-truyen-tong': 'Đài Truyền Tống'
+      'dai-truyen-tong': 'Đài Truyền Tống',
+      'ho-bang': 'Hồ Băng Hàn Kính',
+      'mo-lua': 'Mỏ Lửa Xích Diệm',
+      'hoang-mac': 'Hoang Mạc Hoàng Sa',
+      'kiem-trung': 'Kiếm Trủng Huyền Thiết'
     };
 
     var targetInfo = (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.getQuestTargetInfo) ? window.GameEngine.getQuestTargetInfo() : null;
@@ -687,6 +1611,14 @@
         descEl.textContent = 'Chấp Sự ở Quảng Trường sẽ cấp phòng ở và sổ tay đệ tử.';
         descEl.classList.remove('greyed');
       }
+    } else if (targetInfo && targetInfo.title) {
+      // Đợt 6: chuỗi nhiệm vụ chính mainStage — panel KHÔNG BAO GIỜ trống hướng
+      var prog = mainStageProgressText(targetInfo);
+      if (titleEl) titleEl.textContent = targetInfo.title + (prog ? ' (' + prog + ')' : '');
+      if (descEl) {
+        descEl.textContent = targetInfo.desc || '';
+        descEl.classList.remove('greyed');
+      }
     } else {
       if (titleEl) titleEl.textContent = 'Khám phá Tông Môn';
       if (descEl) {
@@ -696,7 +1628,19 @@
     }
 
     if (distEl) {
-      if (sectStage >= 4) {
+      if (sectStage >= 4 && targetInfo && targetInfo.mapId) {
+        if (targetInfo.mapId === mapData.id) {
+          var destM = (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.resolveQuestDestination) ? window.GameEngine.resolveQuestDestination(targetInfo) : null;
+          if (destM) {
+            var stepDistM = Math.round(Math.hypot(player.x - destM.x, player.y - destM.y) / 24);
+            distEl.textContent = 'Khoảng cách: ~' + stepDistM + ' bước';
+          } else {
+            distEl.textContent = 'Trong khu vực';
+          }
+        } else {
+          distEl.textContent = 'Đích ở ' + (mapNames[targetInfo.mapId] || targetInfo.mapId);
+        }
+      } else if (sectStage >= 4) {
         distEl.textContent = 'Tự do rèn luyện';
       } else if (targetInfo) {
         if (targetInfo.mapId === mapData.id) {
@@ -780,6 +1724,28 @@
         }
         minimapCtx.restore();
       }
+    }
+
+    // Đợt 6 (mục 15, hồ sơ 10D): chấm vàng tại đích nhiệm vụ khi cùng bản đồ
+    var mmSet = stateAPI ? stateAPI.loadSettings() : null;
+    if (!mmSet || mmSet.minimapDestDot !== false) {
+      try {
+        var engMM = (typeof window !== 'undefined' && window.GameEngine) ? window.GameEngine : null;
+        var tInfoMM = (engMM && engMM.getQuestTargetInfo) ? engMM.getQuestTargetInfo() : null;
+        var destMM = (tInfoMM && engMM.resolveQuestDestination) ? engMM.resolveQuestDestination(tInfoMM) : null;
+        if (destMM && (!destMM.mapId || destMM.mapId === mapData.id)) {
+          var dxMM = destMM.x * scaleX;
+          var dyMM = destMM.y * scaleY;
+          minimapCtx.save();
+          minimapCtx.shadowColor = '#ffd94d';
+          minimapCtx.shadowBlur = 7;
+          minimapCtx.fillStyle = '#ffd94d';
+          minimapCtx.beginPath();
+          minimapCtx.arc(dxMM, dyMM, 3.4, 0, Math.PI * 2);
+          minimapCtx.fill();
+          minimapCtx.restore();
+        }
+      } catch (e) { /* bản đồ nhỏ vẫn vẽ bình thường nếu đích không xác định được */ }
     }
 
     // Chấm người chơi Hà Nhân (trắng sáng)
@@ -867,6 +1833,14 @@
     dialogueState.npc = npc;
     dialogueState.step = 0;
     dialogueState.lines = npc.dialogue;
+    dialogueState.choiceShown = false;
+    dialogueState.prevStepId = null;
+    if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.getQuestTargetInfo) {
+      var curInfo = window.GameEngine.getQuestTargetInfo();
+      dialogueState.prevStepId = curInfo ? curInfo.stepId : null;
+    }
+    var choicesEl = document.getElementById('dialogue-choices');
+    if (choicesEl) { choicesEl.innerHTML = ''; choicesEl.classList.add('hidden'); }
 
     var dialogueBox = document.getElementById('dialogue-box');
     var nameEl = document.getElementById('dialogue-npc-name');
@@ -899,9 +1873,42 @@
     dialogueState.step++;
     if (dialogueState.step < dialogueState.lines.length) {
       renderDialogueLine();
+    } else if (dialogueState.npc && dialogueState.npc.id === 'npc_chapsu' && !dialogueState.choiceShown) {
+      showChapsuChoices();
     } else {
       closeDialogue();
     }
+  }
+
+  // Đợt 6: lựa chọn dịch vụ của Chấp Sự hiện ở cuối thoại (đổi đan / luyện Trúc Cơ Đan)
+  function showChapsuChoices() {
+    dialogueState.choiceShown = true;
+    var box = document.getElementById('dialogue-choices');
+    if (!box) { closeDialogue(); return; }
+    box.innerHTML = '';
+    box.classList.remove('hidden');
+    var mkBtn = function (label, fn) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn wood dialogue-choice-btn';
+      b.textContent = label;
+      b.addEventListener('click', function (e) {
+        e.stopPropagation();
+        fn();
+      });
+      box.appendChild(b);
+    };
+    mkBtn('Đổi Tu Luyện Đan (15 LT/viên)', function () {
+      closeDialogue();
+      openPillExchangeModal();
+    });
+    mkBtn('Luyện Trúc Cơ Đan', function () {
+      if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.refineTrucCoDan) {
+        window.GameEngine.refineTrucCoDan();
+      }
+      closeDialogue();
+    });
+    mkBtn('Rời đi', function () { closeDialogue(); });
   }
 
   function closeDialogue() {
@@ -909,6 +1916,9 @@
     dialogueState.active = false;
     var dialogueBox = document.getElementById('dialogue-box');
     if (dialogueBox) dialogueBox.classList.add('hidden');
+    var choicesEl = document.getElementById('dialogue-choices');
+    if (choicesEl) { choicesEl.innerHTML = ''; choicesEl.classList.add('hidden'); }
+    var prevStepId = dialogueState.prevStepId;
 
     if (dialogueState.npc) {
       if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.handleNpcTalked) {
@@ -928,6 +1938,21 @@
         }
       }
     }
+
+    // Đợt 6 (mục 17): bước nhiệm vụ vừa thăng bậc trong chuỗi mở đầu -> tự dẫn đường sau 400ms
+    if (prevStepId && typeof window !== 'undefined' && window.GameEngine && window.GameEngine.getQuestTargetInfo) {
+      var newInfo = window.GameEngine.getQuestTargetInfo();
+      var newStepId = newInfo ? newInfo.stepId : null;
+      var qq = (player && player.quests) || {};
+      if (newStepId && newStepId !== prevStepId && ((qq.sectStage || 0) <= 4)) {
+        setTimeout(function () {
+          if (!dialogueState.active && window.GameEngine && window.GameEngine.startAutoQuestPath) {
+            window.GameEngine.startAutoQuestPath(true);
+          }
+        }, 400);
+      }
+    }
+    dialogueState.prevStepId = null;
   }
 
   var toastTimer = null;
@@ -969,8 +1994,10 @@
     if (!modal) return;
 
     if (titleEl) {
-      titleEl.textContent = (mapData && mapData.name) ? mapData.name.toUpperCase() : 'DANH MỤC KHU VỰC';
+      titleEl.textContent = 'BẢN ĐỒ TỔNG QUAN — CHẠM ĐỂ ĐI';
     }
+
+    renderOverviewGrid();
 
     if (listEl) {
       listEl.innerHTML = '';
@@ -1001,6 +2028,15 @@
           descDiv.className = 'zone-item-desc';
           descDiv.textContent = z.desc || '';
           itemDiv.appendChild(descDiv);
+          // Đợt 6 (mục 11): chạm vào khu -> tự tìm đường tới tâm khu
+          (function (zone) {
+            itemDiv.addEventListener('click', function () {
+              closeZoneModal();
+              if (zone.rect && typeof window !== 'undefined' && window.GameEngine && window.GameEngine.pathToPoint) {
+                window.GameEngine.pathToPoint(zone.rect.x + zone.rect.w / 2, zone.rect.y + zone.rect.h / 2);
+              }
+            });
+          })(z);
           listEl.appendChild(itemDiv);
         }
       }
@@ -1013,6 +2049,51 @@
     if (audioAPI) audioAPI.playClick();
     var modal = document.getElementById('zone-modal');
     if (modal) modal.classList.add('hidden');
+  }
+
+  // Đợt 6 (mục 11): lưới 10 bản đồ trong bản đồ tổng quan — chạm để di chuyển qua mạng cổng/Đài Truyền Tống
+  var OVERVIEW_MAP_IDS = ['mieu_hoang', 'rung-doc', 'tong-mon', 'dai-dien', 'dai-truyen-tong', 'son-coc', 'ho-bang', 'mo-lua', 'hoang-mac', 'kiem-trung'];
+
+  function renderOverviewGrid() {
+    var grid = document.getElementById('overview-map-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    var holder = (typeof window !== 'undefined' && window.GameMapData) ? window.GameMapData : null;
+    var st = stateAPI || (typeof window !== 'undefined' ? window.GameState : null);
+    var rank = (st && st.getRealmRank && player) ? st.getRealmRank(player) : 0;
+    var curId = mapData ? mapData.id : null;
+    for (var i = 0; i < OVERVIEW_MAP_IDS.length; i++) {
+      (function (mid) {
+        var def = null;
+        if (holder && holder.getMap) {
+          def = holder.getMap(mid);
+          if (!def && mid.indexOf('_') >= 0) def = holder.getMap(mid.replace('_', '-'));
+          if (!def && mid.indexOf('-') >= 0) def = holder.getMap(mid.replace('-', '_'));
+        }
+        var realId = def ? def.id : mid;
+        var isCurrent = curId === realId;
+        var locked = !!(def && def.minRealmRank && rank < def.minRealmRank);
+        var card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'overview-map-card' + (isCurrent ? ' is-current' : '') + (locked ? ' is-locked' : '');
+        var nameSpan = document.createElement('span');
+        nameSpan.className = 'overview-map-name';
+        nameSpan.textContent = def ? def.name : mid;
+        card.appendChild(nameSpan);
+        var subSpan = document.createElement('span');
+        subSpan.className = 'overview-map-sub';
+        subSpan.textContent = isCurrent ? 'Đang ở đây' : (locked ? ('Cần ' + (def.minRealmLabel || '')) : 'Chạm để đi');
+        card.appendChild(subSpan);
+        card.addEventListener('click', function () {
+          if (isCurrent) { showToast('Bạn đang ở ' + (def ? def.name : mid)); return; }
+          closeZoneModal();
+          if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.travelToMap) {
+            window.GameEngine.travelToMap(realId);
+          }
+        });
+        grid.appendChild(card);
+      })(OVERVIEW_MAP_IDS[i]);
+    }
   }
 
   var TELEPORT_ZONE_BTNS = [
@@ -1073,7 +2154,11 @@
     if (!btn || !player) return;
     var q = player.quests || {};
     var sectStage = (q.sectStage !== undefined) ? q.sectStage : 0;
-    var hasTarget = !q.talked_linhnhi || !q.huntCompleted || sectStage < 4;
+    // Đợt 6: chuỗi chính + bước dự phòng luôn có mục tiêu — nút chỉ ẩn khi engine báo không còn mục tiêu nào
+    var hasTarget = !q.talked_linhnhi || !q.huntCompleted || sectStage < 4 || (q.mainStage || 0) >= 1;
+    if (!hasTarget && typeof window !== 'undefined' && window.GameEngine && window.GameEngine.hasQuestTarget) {
+      hasTarget = window.GameEngine.hasQuestTarget();
+    }
     var active = !!(typeof window !== 'undefined' && window.GameEngine && window.GameEngine.isAutoPathActive && window.GameEngine.isAutoPathActive());
     var stateKey = (hasTarget ? '1' : '0') + (active ? '1' : '0');
     if (stateKey === lastAutoBtnState) return;
@@ -1222,6 +2307,44 @@
     setChk('setting-mute-toggle', !!s.muted);
     setChk('setting-arrow-toggle', s.arrowGuidance !== false);
     setChk('setting-flourish-toggle', s.flourishEffects !== false);
+    // Đợt 6 (mục 15): các hàng bổ sung phải khôi phục đúng giá trị đã lưu
+    setChk('setting-shake-toggle', s.screenShake !== false);
+    setChk('setting-damage-toggle', s.showDamageNumbers !== false);
+    setChk('setting-autopickup-toggle', !!s.autoPickup);
+    var joyModeEl = document.getElementById('setting-joy-mode');
+    if (joyModeEl) joyModeEl.value = (s.joystickMode === 'linh_hoat') ? 'linh_hoat' : 'co_dinh';
+    var zoomValEl = document.getElementById('setting-zoom-val');
+    if (zoomValEl) zoomValEl.textContent = Math.round(((typeof s.zoom === 'number') ? s.zoom : 1) * 100) + '%';
+    // Đợt 6 (mục 15): khôi phục trạng thái các điều khiển bổ sung
+    var setRange = function (id, valId, val, suffix) {
+      var el = document.getElementById(id);
+      if (el) el.value = String(Math.round(val * 100));
+      var v = document.getElementById(valId);
+      if (v) v.textContent = Math.round(val * 100) + suffix;
+    };
+    setRange('setting-opacity', 'setting-opacity-val', (typeof s.ctlOpacity === 'number') ? s.ctlOpacity : 1, '%');
+    setRange('setting-brightness', 'setting-brightness-val', (typeof s.brightness === 'number') ? s.brightness : 1, '%');
+    setRange('setting-joy-deadzone', 'setting-joy-deadzone-val', (typeof s.joyDeadzone === 'number') ? s.joyDeadzone : 0.15, '%');
+    setChk('setting-hide-hat', !!s.hideHat);
+    setChk('setting-lefty', !!s.lefty);
+    setChk('setting-clock-toggle', !!s.showClock);
+    setChk('setting-duck-toggle', s.duckMusic !== false);
+    setChk('setting-idle-mute', !!s.idleMute);
+    setChk('setting-telegraph-toggle', s.showBossTelegraph !== false);
+    setChk('setting-monster-hp-toggle', !!s.showMonsterHpText);
+    setChk('setting-ring-toggle', !!s.showAggroRing);
+    setChk('setting-dest-dot-toggle', s.minimapDestDot !== false);
+    var dlgSel = document.getElementById('setting-dialog-size');
+    if (dlgSel) dlgSel.value = s.dialogTextSize || 'vua';
+    var rankSel = document.getElementById('setting-autopickup-rank');
+    if (rankSel) rankSel.value = String(s.autoPickupRank || 1);
+    var fpsSel = document.getElementById('setting-fps');
+    if (fpsSel) fpsSel.value = String(s.fpsLimit || 60);
+    var camSel2 = document.getElementById('setting-camera-dist');
+    if (camSel2) {
+      var zv = (typeof s.zoom === 'number') ? s.zoom : 1;
+      camSel2.value = zv >= 1.15 ? 'gan' : (zv <= 0.9 ? 'xa' : 'vua');
+    }
     refreshDisplayControls();
   }
 
@@ -1248,6 +2371,18 @@
     bind('setting-mute-toggle', 'muted', true);
     bind('setting-arrow-toggle', 'arrowGuidance', true);
     bind('setting-flourish-toggle', 'flourishEffects', true);
+    // Đợt 6 (mục 15): rung màn hình / số sát thương / tự nhặt đồ — engine đọc trực tiếp các khóa này mỗi khung hình
+    bind('setting-shake-toggle', 'screenShake', true);
+    bind('setting-damage-toggle', 'showDamageNumbers', true);
+    bind('setting-autopickup-toggle', 'autoPickup', true);
+    var joyModeEl = document.getElementById('setting-joy-mode');
+    if (joyModeEl && !joyModeEl.dataset.wired) {
+      joyModeEl.dataset.wired = '1';
+      joyModeEl.addEventListener('change', function () {
+        st.saveSettings({ joystickMode: joyModeEl.value });
+        showToast(joyModeEl.value === 'linh_hoat' ? 'Cần gậy: Linh hoạt (hiện tại điểm chạm)' : 'Cần gậy: Cố định');
+      });
+    }
     wireDisplayControls();
   }
 

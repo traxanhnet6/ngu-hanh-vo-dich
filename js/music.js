@@ -242,6 +242,7 @@
   var started = false;          // đã unlock() và dựng xong đồ thị âm thanh
   var muted = false;
   var musicVol = 0.7;           // khớp mặc định settings.musicVol của game
+  var duckFactor = 1;           // đợt 6: hệ số nhỏ nhạc khi có lồng tiếng (1 = không nhỏ)
   var ambienceVol = 0.6;
 
   var masterGain = null;        // -> compressor -> destination (mute ở đây)
@@ -1026,7 +1027,15 @@
   function setMusicVolume(v) {
     musicVol = clamp01(v);
     if (ctx && musicBus) {
-      try { musicBus.gain.setTargetAtTime(musicVol * 0.85, ctx.currentTime, 0.05); } catch (e) {}
+      try { musicBus.gain.setTargetAtTime(musicVol * duckFactor * 0.85, ctx.currentTime, 0.05); } catch (e) {}
+    }
+  }
+
+  // Đợt 6 (mục 15, hồ sơ 25): tự nhỏ nhạc nền trong lúc phát lồng tiếng
+  function setDucked(on) {
+    duckFactor = on ? 0.35 : 1;
+    if (ctx && musicBus) {
+      try { musicBus.gain.setTargetAtTime(musicVol * duckFactor * 0.85, ctx.currentTime, 0.08); } catch (e) {}
     }
   }
 
@@ -1053,6 +1062,7 @@
     setMap: setMap,
     setCombat: setCombat,
     setMusicVolume: setMusicVolume,
+    setDucked: setDucked,
     setAmbienceVolume: setAmbienceVolume,
     setMuted: setMuted,
     isStarted: isStarted

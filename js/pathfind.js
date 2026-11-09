@@ -144,10 +144,17 @@
         }
         path.reverse();
 
-        // Thay điểm đầu bằng vị trí thật của người chơi, điểm cuối bằng vị trí đích thật
+        // Thay điểm đầu bằng vị trí thật của người chơi, điểm cuối bằng vị trí đích thật nếu ô đích đi được,
+        // hoặc giữ tâm ô đi được gần nhất nếu đích ban đầu bị cản (Đợt 6 - Việc 3)
         if (path.length > 0) {
           path[0] = { x: startX, y: startY };
-          path[path.length - 1] = { x: targetX, y: targetY };
+          var origTgx = Math.max(0, Math.min(cols - 1, Math.floor(targetX / gridSize)));
+          var origTgy = Math.max(0, Math.min(rows - 1, Math.floor(targetY / gridSize)));
+          if (grid[origTgy][origTgx] === 0) {
+            path[path.length - 1] = { x: targetX, y: targetY };
+          } else {
+            path[path.length - 1] = { x: (tgx + 0.5) * gridSize, y: (tgy + 0.5) * gridSize };
+          }
         }
         return path;
       }

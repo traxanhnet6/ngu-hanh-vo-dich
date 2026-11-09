@@ -75,14 +75,31 @@ html, body {
 }
 
 .btn.wood {
-  background: linear-gradient(180deg, rgba(82, 60, 36, 0.92), rgba(52, 36, 20, 0.92));
+  background: linear-gradient(180deg, #5c4328 0%, #3e2b17 50%, #2a1c0d 100%);
   border: 1px solid #c9a227;
   color: #f7ead0;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 235, 175, 0.45), inset 0 -1px 0 rgba(0, 0, 0, 0.5);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.15s;
 }
 
 .btn.wood:hover {
-  background: linear-gradient(180deg, rgba(104, 76, 44, 0.95), rgba(66, 44, 24, 0.95));
+  background: linear-gradient(180deg, #6e5132 0%, #4a341d 50%, #342312 100%);
+  border-color: #ffd978;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 245, 205, 0.6);
+}
+
+.btn.wood:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.8), inset 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.btn[disabled],
+.btn.disabled {
+  filter: grayscale(0.85) contrast(0.8);
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 .btn-danger {
@@ -572,12 +589,16 @@ html, body {
 .modal-box {
   width: 520px;
   max-width: 94vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
   padding: 18px 20px;
   border-color: #a8893a;
   background: rgba(22, 28, 22, 0.96);
 }
 
 .modal-header {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -695,6 +716,9 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  overflow-y: auto;
+  max-height: 70vh;
+  padding-right: 4px;
 }
 
 .setting-item {
@@ -745,6 +769,10 @@ html, body {
 :root {
   --ui-scale: 1;
   --ctl-scale: 1;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
 }
 
 #char-frame,
@@ -758,9 +786,19 @@ html, body {
   scale: var(--ui-scale);
 }
 
+#hud-right-controls {
+  transform-origin: top right;
+  scale: var(--ui-scale);
+}
+
+#joystick-zone {
+  transform-origin: bottom left;
+  scale: calc(var(--ui-scale) * var(--ctl-scale));
+}
+
 #zone-title,
 #hud-hunt-chain {
-  transform-origin: top center;
+  transform-origin: top left;
   scale: var(--ui-scale);
 }
 
@@ -775,7 +813,7 @@ html, body {
 }
 
 #skill-bar {
-  transform-origin: bottom center;
+  transform-origin: bottom right;
   scale: calc(var(--ui-scale) * var(--ctl-scale));
 }
 
@@ -918,14 +956,100 @@ input:checked + .slider:before {
   z-index: 30;
 }
 
+/* Cụm điều khiển phải: Zoom, Túi, Cài Đặt (Dưới minimap) */
+#hud-right-controls {
+  position: absolute;
+  top: 135px;
+  right: calc(10px + var(--safe-right));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 25;
+  align-items: flex-end;
+  pointer-events: auto;
+}
+
+.hud-zoom-row {
+  display: flex;
+  gap: 6px;
+}
+
+.hud-zoom-btn {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  font-size: 20px;
+  font-weight: bold;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+}
+
+#hud-right-controls .hud-btn {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 8px 12px;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Vùng cần điều khiển Joystick ảo góc dưới bên trái */
+#joystick-zone {
+  position: absolute;
+  bottom: calc(20px + var(--safe-bottom));
+  left: calc(16px + var(--safe-left));
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  pointer-events: auto;
+  touch-action: none;
+  z-index: 25;
+}
+
+.joystick-base {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  top: 5px;
+  left: 5px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(20, 28, 20, 0.4) 0%, rgba(20, 28, 20, 0.7) 100%);
+  border: 2px solid rgba(201, 162, 39, 0.4);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.joystick-stick {
+  position: absolute;
+  width: 46px;
+  height: 46px;
+  top: 37px;
+  left: 37px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #e6c86e 0%, #a67c1e 100%);
+  border: 2px solid #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  transition: transform 0.05s ease-out;
+}
+
 /* Thanh kỹ năng chiến đấu (Brief §5) */
 .skill-bar {
   position: absolute;
-  bottom: 16px;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: calc(16px + var(--safe-bottom));
+  right: calc(16px + var(--safe-right));
+  left: auto;
+  transform: none;
   display: flex;
-  gap: 16px;
+  align-items: flex-end;
+  gap: 12px;
   z-index: 40;
   pointer-events: auto;
 }
@@ -981,15 +1105,19 @@ input:checked + .slider:before {
 }
 
 .skill-phi-diep {
-  background-image: radial-gradient(circle, #55d882 25%, #18522b 75%);
-  border-radius: 50%;
-  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  background-image: url('../assets/ui/icon-skill-phi-diep.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  border-radius: 4px;
 }
 
 .skill-day-leo {
-  background-image: radial-gradient(circle, #8cd96a 30%, #2f6b1b 80%);
+  background-image: url('../assets/ui/icon-skill-day-leo.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
   border-radius: 4px;
-  border: 1px dashed #ffe9a8;
 }
 
 .skill-name-tag {
@@ -1265,7 +1393,16 @@ input:checked + .slider:before {
 .action-icon {
   display: none;
 }
-.action-mode-attack .action-icon-attack { display: block; }
+.action-mode-attack .action-icon-attack {
+  display: block;
+  width: 34px;
+  height: 34px;
+  background-image: url('../assets/ui/icon-skill-danh.png');
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  margin-top: 2px;
+}
 .action-mode-talk .action-icon-talk { display: block; }
 .action-mode-pickup .action-icon-pickup { display: block; }
 .action-mode-interact .action-icon-interact { display: block; }
@@ -1381,24 +1518,36 @@ button, .btn, .skill-slot, .char-select-btn {
 /* Chip Tên Khu Vực (Brief §7) */
 .zone-title-chip {
   position: absolute;
-  top: 24px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 86px;
+  left: 10px;
+  transform: none;
   background: rgba(18, 24, 18, 0.92);
   border: 1px solid #d4af37;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6), 0 0 12px rgba(212, 175, 55, 0.35);
   border-radius: 8px;
-  padding: 8px 24px;
-  text-align: center;
+  padding: 6px 14px;
+  text-align: left;
   pointer-events: none;
   z-index: 85;
   transition: opacity 0.4s ease, transform 0.4s ease;
 }
 .zone-title-chip.hidden {
   opacity: 0;
-  transform: translateX(-50%) translateY(-10px);
+  transform: translateY(-6px);
   pointer-events: none;
   display: none;
+}
+@media (min-width: 768px) {
+  .zone-title-chip {
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    padding: 8px 24px;
+  }
+  .zone-title-chip.hidden {
+    transform: translateX(-50%) translateY(-10px);
+  }
 }
 .zone-title-name {
   font-family: 'Cinzel', 'Noto Serif', serif;
@@ -1517,13 +1666,565 @@ button, .btn, .skill-slot, .char-select-btn {
   filter: grayscale(0.7);
 }
 
-/* Điện thoại dọc hẹp: panel nhiệm vụ gọn hơn, thanh kỹ năng không tràn */
+/* Điện thoại dọc hẹp: panel nhiệm vụ gọn hơn, thanh kỹ năng không tràn.
+   Bề rộng 150px: mép phải của bảng (x=160) không còn lấn sang nút Túi (x=164)
+   như số đo 168px trước đây (chồng 14x44 ở mọi trạng thái). */
 @media (max-width: 420px) {
   #quest-panel {
-    width: 168px;
+    width: 150px;
   }
   .skill-bar {
     gap: 10px;
   }
 }
 
+/* Khóa phóng to trình duyệt trên game */
+#game-container, canvas {
+  touch-action: none;
+}
+.modal-box, .bag-grid-wrap, .settings-box, .char-panel-box, .overview-map-grid, .settings-body {
+  touch-action: pan-y;
+}
+
+/* Khu vực Trang Bị Nhân Vật trong Túi */
+.bag-equipment-section {
+  margin-bottom: 12px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid #5a4b27;
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+.bag-equipment-title {
+  font-size: 11px;
+  font-weight: bold;
+  color: #ffd978;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.bag-equipment-row {
+  display: flex;
+  gap: 12px;
+}
+.equip-slot-box {
+  width: 52px;
+  height: 52px;
+  background: rgba(18, 24, 18, 0.9);
+  border: 2px dashed #6f5f30;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.equip-slot-box:hover, .equip-slot-box.selected {
+  border-color: #ffd978;
+  box-shadow: 0 0 8px rgba(255, 217, 120, 0.4);
+}
+.equip-slot-box.equipped {
+  border-style: solid;
+  border-color: #e6c86e;
+  background: rgba(28, 40, 24, 0.95);
+}
+.equip-slot-title {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  font-size: 9px;
+  color: #9d927d;
+  pointer-events: none;
+}
+.equip-slot-placeholder {
+  font-size: 10px;
+  color: #6a604c;
+  margin-top: 8px;
+  text-align: center;
+  pointer-events: none;
+}
+.equip-slot-icon {
+  width: 32px;
+  height: 32px;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  margin-top: 8px;
+}
+.equip-badge {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  background: #2e7d48;
+  color: #fff;
+  font-size: 8px;
+  font-weight: bold;
+  padding: 1px 3px;
+  border-radius: 2px;
+}
+
+/* Thẻ Chi Tiết Vật Phẩm trong Túi */
+.bag-item-detail-card {
+  margin-top: 10px;
+  background: rgba(15, 20, 15, 0.9);
+  border: 1px solid #5a4b27;
+  border-radius: 6px;
+  padding: 10px;
+  min-height: 80px;
+}
+.detail-card-content {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.detail-icon-frame {
+  width: 48px;
+  height: 48px;
+  border: 2px solid #77683c;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.detail-icon-large {
+  width: 40px;
+  height: 40px;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.detail-card-info {
+  flex: 1;
+  min-width: 0;
+}
+.detail-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+.detail-item-name {
+  font-size: 13.5px;
+  font-weight: bold;
+  color: #f7ead0;
+}
+.detail-item-type {
+  font-size: 11px;
+  color: #aebfb0;
+}
+.detail-item-desc {
+  font-size: 12px;
+  color: #c7d2c3;
+  line-height: 1.35;
+  margin-bottom: 4px;
+}
+.detail-item-stats {
+  font-size: 11.5px;
+  font-weight: bold;
+  color: #ffd978;
+  margin-bottom: 4px;
+}
+.detail-item-count {
+  font-size: 11px;
+  color: #9d927d;
+}
+.detail-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.detail-btn {
+  min-height: 36px;
+  padding: 6px 14px;
+  font-size: 12px;
+}
+.detail-btn.btn-discard-warn {
+  border-color: #e55353;
+  color: #ff9999;
+}
+
+/* Lưới 10 Bản Đồ Tổng Quan */
+.overview-map-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 4px;
+  margin-bottom: 12px;
+}
+.overview-map-card {
+  background: rgba(18, 24, 18, 0.85);
+  border: 1px solid #5a4b27;
+  border-radius: 6px;
+  padding: 8px 6px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.overview-map-card:hover {
+  border-color: #ffd978;
+  background: rgba(30, 40, 25, 0.95);
+}
+.overview-map-card.current {
+  border-color: #6ce676;
+  background: rgba(20, 45, 20, 0.95);
+  box-shadow: 0 0 8px rgba(108, 230, 118, 0.4);
+}
+.overview-map-card.locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(0.8);
+}
+.overview-map-name {
+  font-size: 12px;
+  font-weight: bold;
+  color: #f7ead0;
+  margin-bottom: 3px;
+}
+.overview-map-badge {
+  font-size: 10px;
+  padding: 2px 5px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.4);
+  color: #aebfb0;
+  display: inline-block;
+}
+
+/* Hệ thống hướng dẫn tân thủ */
+.tutorial-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 90;
+  pointer-events: none;
+}
+.tutorial-spotlight {
+  position: absolute;
+  border-radius: 8px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.65);
+  border: 2px solid #ffd978;
+  transition: all 0.3s ease;
+  pointer-events: none;
+}
+.tutorial-box {
+  position: absolute;
+  width: 280px;
+  max-width: 85vw;
+  padding: 12px 14px;
+  z-index: 95;
+  pointer-events: auto;
+  border: 2px solid #ffd978;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+  animation: tutPulse 2s infinite ease-in-out;
+}
+@keyframes tutPulse {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+.tutorial-box.pos-bottom-center {
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.tutorial-box.pos-top-left {
+  top: 90px;
+  left: 20px;
+}
+.tutorial-box.pos-bottom-left {
+  bottom: 160px;
+  left: 20px;
+}
+.tutorial-box.pos-bottom-right {
+  bottom: 140px;
+  right: 20px;
+}
+.tutorial-box.pos-top-right {
+  top: 140px;
+  right: 20px;
+}
+.tutorial-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.tutorial-badge {
+  background: #a67c1e;
+  color: #fff;
+  font-size: 10px;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 3px;
+  letter-spacing: 0.5px;
+}
+.tutorial-skip-btn {
+  background: none;
+  border: none;
+  color: #aebfb0;
+  font-size: 11px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.tutorial-text {
+  font-size: 13px;
+  color: #f7ead0;
+  line-height: 1.4;
+  margin-bottom: 8px;
+}
+.tutorial-progress {
+  display: flex;
+  justify-content: flex-end;
+  font-size: 10.5px;
+  color: #ffd978;
+}
+
+/* Nón lá overlay trên sprite */
+.hat-overlay {
+  pointer-events: none;
+}
+
+
+/* Đợt 6 — bổ sung lớp cho thẻ chi tiết / lựa chọn thoại / trạng thái nút Bỏ */
+.detail-stat-line { font-size: 13px; color: #ffe9a8; margin: 2px 0; }
+.detail-stat-line b { color: #fff; }
+#btn-card-drop.armed { background: linear-gradient(180deg, #a33b2e, #6e2318); color: #fff; }
+.dialogue-choice-btn { min-height: 44px; padding: 8px 14px; font-size: 14px; }
+.equip-slot-item { cursor: pointer; }
+.equip-slot-item.selected .equip-slot-box { outline: 2px solid #ffe9a8; outline-offset: 2px; }
+.bag-slot { position: relative; }
+
+/* ===== ĐỢT 6 (mục 15): CSS cho các cài đặt bổ sung ===== */
+:root { --ctl-opacity: 1; }
+#joystick-zone, #skill-bar { opacity: var(--ctl-opacity); }
+
+.hud-clock-chip {
+  position: absolute;
+  /* Trước đây ở top 8px giữa màn hình: đè lên khung nhân vật 47x24 (đo thật).
+     Nay nằm ở dải trống ngay dưới hàng trên: khung nhân vật kết thúc ở y=119,
+     bảng nhiệm vụ chỉ rộng tới x=160 nên chip giữa (x từ 163) không chạm gì. */
+  top: 122px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 26;
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: rgba(16, 22, 16, 0.72);
+  border: 1px solid rgba(255, 233, 168, 0.5);
+  color: #ffe9a8;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  pointer-events: none;
+}
+.hud-timer-chip { top: 156px; color: #bfe9ff; border-color: rgba(127, 212, 255, 0.55); }
+
+.quest-toggle-btn {
+  position: absolute;
+  left: 10px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 196px);
+  z-index: 26;
+  min-width: 44px;
+  min-height: 44px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.bag-slot-lock {
+  position: absolute;
+  left: 2px;
+  bottom: 2px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: rgba(20, 16, 8, 0.85);
+  color: #ffd94d;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  pointer-events: none;
+}
+
+#dialogue-box.dlg-size-nho .dialogue-text { font-size: 13px; }
+#dialogue-box.dlg-size-vua .dialogue-text { font-size: 15px; }
+#dialogue-box.dlg-size-lon .dialogue-text { font-size: 18px; }
+
+/* Lật điều khiển cho người thuận tay trái (hồ sơ 27F) */
+body.lefty #joystick-zone { left: auto; right: 14px; }
+body.lefty #skill-bar { right: auto; left: 14px; }
+body.lefty .quest-toggle-btn { left: auto; right: 10px; }
+
+/* ===== ĐỢT 6 (mục 14 + 16): sửa chồng lấp HUD và tràn hộp hướng dẫn ===== */
+/* Chip tên khu vực: trước đây nằm ở top 86px, tràn gần hết bề ngang, che mất số máu
+   và đầu bảng nhiệm vụ. Nay neo ở khoảng trống giữa màn hình, phía trên cụm điều khiển. */
+.zone-title-chip {
+  top: auto;
+  bottom: 188px;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  max-width: 68%;
+  text-align: center;
+}
+/* Nhãn bản đồ nhỏ: tên dài ("Tông Môn — Núi Chính") tràn khỏi mép phải — cắt ellipsis */
+.minimap-label {
+  max-width: 150px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Hoạt ảnh nhịp của hộp hướng dẫn từng ghi đè transform căn giữa (translateX(-50%))
+   khiến hộp tràn khỏi mép phải ở 390px — đổi sang nhịp phát sáng, không đụng transform */
+@keyframes tutPulse {
+  0%, 100% { box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8), 0 0 0 rgba(255, 217, 120, 0); }
+  50% { box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8), 0 0 18px rgba(255, 217, 120, 0.55); }
+}
+
+/* Thẻ chi tiết vật phẩm: bản cũ ép nội dung thành hàng ngang 4 cột (tên bị bóp còn ~70px,
+   chữ rụng từng từ). Nay xếp dọc đúng cấu trúc: hàng biểu tượng + tên, chỉ số, mô tả, nút. */
+#detail-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.detail-top-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.detail-icon-frame {
+  width: 72px;
+  height: 72px;
+  flex: none;
+}
+.detail-card-icon {
+  width: 64px;
+  height: 64px;
+  margin: 2px auto;
+}
+.detail-meta { flex: 1; min-width: 0; }
+.detail-card-name {
+  font-size: 17px;
+  font-weight: 800;
+  color: #f7ead0;
+}
+.detail-card-badge {
+  background: #2f9e57;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-left: 8px;
+  vertical-align: 2px;
+}
+.detail-sub-line {
+  font-size: 12.5px;
+  color: #aebfb0;
+  margin-top: 2px;
+}
+.detail-card-count {
+  font-size: 12.5px;
+  color: #c9bfa8;
+  margin-top: 2px;
+}
+.detail-card-stats {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #ffd978;
+}
+.detail-card-desc {
+  font-size: 13.5px;
+  color: #d8e2d2;
+  line-height: 1.45;
+}
+.detail-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+.detail-action-btn {
+  min-height: 44px;
+  padding: 8px 18px;
+  font-size: 14px;
+}
+/* Chip chuỗi săn: trước ở top 76px giữa màn hình, đè lên số máu khung nhân vật.
+   Nay nằm trong cột phải, ngay dưới cụm công cụ — không tranh chỗ với chip nào khác. */
+.hunt-chain-chip {
+  top: 248px;
+  bottom: auto;
+  left: auto;
+  right: 10px;
+  transform: none;
+}
+/* Màn hình hẹp (≤420px): hàng trên (khung nhân vật + bản đồ nhỏ) đã gần kín bề ngang
+   ngay ở tỉ lệ 100%, hễ phóng thêm là hai cụm góc đâm vào nhau và vào bảng nhiệm vụ
+   (đo thật ở 120%: chồng 180x16, 24x117, 69x53, 40x75). Vì vậy trên điện thoại hẹp:
+   các cụm góc trên giữ nguyên cỡ khi tăng tỉ lệ (thu nhỏ vẫn áp dụng đầy đủ),
+   hai cụm điều khiển dưới phóng tối đa 112% — đủ để không chạm nhau ở 390px. */
+@media (max-width: 420px) {
+  #char-frame, #quest-panel, #minimap-wrap, #hud-right-controls, #zone-title, #hud-hunt-chain {
+    scale: min(var(--ui-scale), 1);
+  }
+  #joystick-zone, #skill-bar {
+    scale: min(calc(var(--ui-scale) * var(--ctl-scale)), 1.06);
+  }
+  #dialogue-box, .hud-bottom-right-btns {
+    scale: min(var(--ui-scale), 1.12);
+  }
+}
+
+/* Huy hiệu "Đang mặc" ở ô trang bị: trước đây không có CSS (tràn chữ che mất biểu tượng).
+   Nay là nhãn nhỏ ở góc ô, biểu tượng vật phẩm nằm giữa ô. */
+.equip-slot-badge {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  background: #2e7d48;
+  color: #fff;
+  font-size: 8px;
+  font-weight: bold;
+  padding: 1px 4px;
+  border-radius: 3px;
+  pointer-events: none;
+}
+.equip-slot-icon {
+  margin-top: 0;
+}
+/* Lớp phủ modal phải nằm trên cụm nút kỹ năng (trước đây z-index 30 thấp hơn,
+   khiến nút hành động nổi lên trên đáy modal túi ở màn hình 390px) */
+.modal-overlay {
+  z-index: 60;
+}
+/* Hộp túi: giới hạn chiều cao theo màn hình, phần thân cuộn trong — thẻ chi tiết
+   và hàng nút không còn tràn khỏi mép dưới điện thoại */
+#bag-modal .modal-box {
+  max-height: 94vh;
+  display: flex;
+  flex-direction: column;
+}
+#bag-modal .bag-body {
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* Chế độ chụp hình (hồ sơ 28A): ẩn toàn bộ lớp giao diện */
+body.photo-mode #joystick-zone,
+body.photo-mode #skill-bar,
+body.photo-mode .hud-panel,
+body.photo-mode #hud-right-controls,
+body.photo-mode #quest-panel,
+body.photo-mode #hud-clock,
+body.photo-mode #hud-timer,
+body.photo-mode #hud-hunt-chain,
+body.photo-mode #zone-title,
+body.photo-mode .quest-toggle-btn,
+body.photo-mode #minimap-wrap,
+body.photo-mode .modal-overlay,
+body.photo-mode #toast-container { visibility: hidden; }

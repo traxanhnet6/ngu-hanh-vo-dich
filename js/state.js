@@ -52,7 +52,7 @@
    * @param {Object} paths 5 đường tu
    * @returns {Object} Các chỉ số phái sinh
    */
-  function deriveStats(paths) {
+  function deriveStats(paths, equipment) {
     var k = (paths && paths.kim && paths.kim.tuVi) || 0;
     var m = (paths && paths.moc && paths.moc.tuVi) || 0;
     var t = (paths && paths.thuy && paths.thuy.tuVi) || 0;
@@ -68,6 +68,29 @@
     var defense = Math.round(5 + (th * 1.2));
     var critRate = +(5.0 + (h * 0.2)).toFixed(1);
     var regenRate = +(1.0 + (m * 0.15)).toFixed(1);
+
+    if (equipment) {
+      var defs = null;
+      if (typeof global !== 'undefined' && global.GameMonsters && global.GameMonsters.ITEM_DEFS) {
+        defs = global.GameMonsters.ITEM_DEFS;
+      } else if (typeof window !== 'undefined' && window.GameMonsters && window.GameMonsters.ITEM_DEFS) {
+        defs = window.GameMonsters.ITEM_DEFS;
+      } else if (typeof require === 'function') {
+        try { defs = require('./monsters.js').ITEM_DEFS; } catch (e) {}
+      }
+      var eqSlots = ['weapon', 'armor', 'head'];
+      for (var sIdx = 0; sIdx < eqSlots.length; sIdx++) {
+        var sKey = eqSlots[sIdx];
+        var itemVal = equipment[sKey];
+        if (itemVal) {
+          var itemDef = (typeof itemVal === 'string' && defs) ? defs[itemVal] : (typeof itemVal === 'object' ? itemVal : null);
+          if (itemDef) {
+            if (typeof itemDef.atk === 'number') attack += itemDef.atk;
+            if (typeof itemDef.def === 'number') defense += itemDef.def;
+          }
+        }
+      }
+    }
 
     return {
       hpMax: hpMax,
@@ -94,6 +117,9 @@
     };
     var stats = deriveStats(starterPaths);
 
+    var initialSlots = new Array(48).fill(null);
+    initialSlots[0] = { itemId: 'non-la', count: 1 };
+
     return {
       name: charName,
       x: options.x !== undefined ? options.x : 560,
@@ -104,21 +130,34 @@
       linhLuc: stats.linhLucMax,
       linhLucMax: stats.linhLucMax,
       paths: starterPaths,
+      path: [],
       realm: 'Phàm Nhân',
+      equipment: {
+        weapon: null,
+        armor: null,
+        head: null
+      },
       quests: {
         talked_linhnhi: false,
         current: 'talk_linhnhi',
         thaotinhKills: 0,
         huntCompleted: false,
-        sectStage: 0
+        sectStage: 0,
+        mainStage: 0,
+        nhenKills: 0,
+        bangXaKills: 0,
+        hatClaimed: false
       },
       face: options.face || 'Quyết tâm',
       linhThach: options.linhThach || 0,
+      stats: { playSec: 0, kills: 0, bossKills: 0, harvests: 0, refines: 0 },
+      usedGiftcodes: {},
+      bagLocks: {},
       revivalPool: 5,
       revivalLastRegen: Date.now(),
       lastSpringUse: 0,
       bag: {
-        slots: new Array(48).fill(null)
+        slots: initialSlots
       },
       daily: {},
       huntChain: {
@@ -144,10 +183,34 @@
       muted: false,
       arrowGuidance: true,
       flourishEffects: true,
-      // Hiển thị (Đợt 3, Note 8)
+      screenShake: true,
+      showDamageNumbers: true,
+      autoPickup: false,
+      autoPickupRank: 1,
+      joystickMode: 'co_dinh',
+      // Đợt 6 bổ sung theo hồ sơ 10/25/27/28 (mục 15)
+      ctlOpacity: 1,
+      brightness: 1,
+      dialogTextSize: 'vua',
+      hideHat: false,
+      showClock: false,
+      lefty: false,
+      idleMute: false,
+      duckMusic: true,
+      joyDeadzone: 0.15,
+      showBossTelegraph: true,
+      showAggroRing: false,
+      showMonsterHpText: false,
+      minimapDestDot: true,
+      fpsLimit: 60,
+      // Hiển thị (Đợt 3, Note 8 & Đợt 6 Stage 2)
       uiScale: 1,
       joySize: 'vua',
-      quality: 'cao'
+      quality: 'cao',
+      zoom: 1.0,
+      display: { zoom: 1.0 },
+      tutorialStep: 1,
+      tutorialDone: false
     };
   }
 
@@ -160,7 +223,7 @@
     player.lastSaved = Date.now();
 
     // Đồng bộ lại chỉ số phái sinh
-    var stats = deriveStats(player.paths);
+    var stats = deriveStats(player.paths, player.equipment);
     player.hpMax = stats.hpMax;
     player.linhLucMax = stats.linhLucMax;
     if (player.hp > player.hpMax) player.hp = player.hpMax;
@@ -195,15 +258,55 @@
       if (!data.paths) {
         data.paths = { kim: { tuVi: 0 }, moc: { tuVi: 0 }, thuy: { tuVi: 0 }, hoa: { tuVi: 0 }, tho: { tuVi: 0 } };
       }
+      if (!data.equipment) {
+        data.equipment = { weapon: null, armor: null, head: null };
+      } else {
+        if (data.equipment.weapon === undefined) data.equipment.weapon = null;
+        if (data.equipment.armor === undefined) data.equipment.armor = null;
+        if (data.equipment.head === undefined) data.equipment.head = null;
+      }
       if (!data.quests) {
-        data.quests = { talked_linhnhi: false, current: 'talk_linhnhi', thaotinhKills: 0, huntCompleted: false, sectStage: 0 };
-      } else if (data.quests.sectStage === undefined) {
-        data.quests.sectStage = 0;
+        data.quests = {
+          talked_linhnhi: false,
+          current: 'talk_linhnhi',
+          thaotinhKills: 0,
+          huntCompleted: false,
+          sectStage: 0,
+          mainStage: 0,
+          nhenKills: 0,
+          bangXaKills: 0,
+          hatClaimed: false
+        };
+      } else {
+        if (data.quests.sectStage === undefined) {
+          data.quests.sectStage = 0;
+        }
+        if (data.quests.mainStage === undefined) {
+          data.quests.mainStage = (data.quests.sectStage >= 4) ? 1 : 0;
+        }
+        if (data.quests.nhenKills === undefined) {
+          data.quests.nhenKills = 0;
+        }
+        if (data.quests.bangXaKills === undefined) {
+          data.quests.bangXaKills = 0;
+        }
+        if (data.quests.hatClaimed === undefined) {
+          data.quests.hatClaimed = false;
+        }
       }
       if (data.lastSpringUse === undefined) {
         data.lastSpringUse = 0;
       }
-      var stats = deriveStats(data.paths);
+      if (!data.stats || typeof data.stats !== 'object') {
+        data.stats = { playSec: 0, kills: 0, bossKills: 0, harvests: 0, refines: 0 };
+      }
+      if (!data.usedGiftcodes || typeof data.usedGiftcodes !== 'object') {
+        data.usedGiftcodes = {};
+      }
+      if (!data.bagLocks || typeof data.bagLocks !== 'object') {
+        data.bagLocks = {};
+      }
+      var stats = deriveStats(data.paths, data.equipment);
       data.hpMax = stats.hpMax;
       data.linhLucMax = stats.linhLucMax;
       return data;
@@ -313,7 +416,16 @@
     if (!raw) return defaultSettings();
     try {
       var parsed = JSON.parse(raw);
-      return Object.assign(defaultSettings(), parsed);
+      var def = defaultSettings();
+      var merged = Object.assign(def, parsed);
+      if (!merged.display) merged.display = {};
+      if (merged.zoom !== undefined && merged.display.zoom === undefined) {
+        merged.display.zoom = merged.zoom;
+      }
+      if (merged.display.zoom !== undefined && merged.zoom === undefined) {
+        merged.zoom = merged.display.zoom;
+      }
+      return merged;
     } catch (e) {
       return defaultSettings();
     }
@@ -326,8 +438,105 @@
     var storage = getStorage(customStorage);
     var current = loadSettings(storage);
     var merged = Object.assign(current, settings || {});
+    if (merged.zoom !== undefined) {
+      if (!merged.display) merged.display = {};
+      merged.display.zoom = merged.zoom;
+    } else if (merged.display && merged.display.zoom !== undefined) {
+      merged.zoom = merged.display.zoom;
+    }
     storage.setItem(STORAGE_PREFIX + 'settings', JSON.stringify(merged));
     return merged;
+  }
+
+  /**
+   * Trang bị vật phẩm từ ô túi đồ
+   */
+  function equipItem(player, slotIndex) {
+    if (!player || !player.bag || !player.bag.slots) return { ok: false, msg: 'Dữ liệu không hợp lệ' };
+    var slotData = player.bag.slots[slotIndex];
+    if (!slotData || !slotData.itemId) return { ok: false, msg: 'Ô trống' };
+
+    var defs = null;
+    if (typeof global !== 'undefined' && global.GameMonsters && global.GameMonsters.ITEM_DEFS) {
+      defs = global.GameMonsters.ITEM_DEFS;
+    } else if (typeof window !== 'undefined' && window.GameMonsters && window.GameMonsters.ITEM_DEFS) {
+      defs = window.GameMonsters.ITEM_DEFS;
+    } else if (typeof require === 'function') {
+      try { defs = require('./monsters.js').ITEM_DEFS; } catch (e) {}
+    }
+    var def = defs ? defs[slotData.itemId] : null;
+    if (!def || def.type !== 'gear' || !def.slot) {
+      return { ok: false, msg: 'Vật phẩm không thể trang bị' };
+    }
+
+    if (!player.equipment) player.equipment = { weapon: null, armor: null, head: null };
+    var targetSlot = def.slot;
+    var oldItemId = player.equipment[targetSlot];
+
+    player.equipment[targetSlot] = slotData.itemId;
+    if (oldItemId) {
+      player.bag.slots[slotIndex] = { itemId: oldItemId, count: 1 };
+    } else {
+      player.bag.slots[slotIndex] = null;
+    }
+
+    var stats = deriveStats(player.paths, player.equipment);
+    player.hpMax = stats.hpMax;
+    player.linhLucMax = stats.linhLucMax;
+    savePlayer(player);
+
+    return {
+      ok: true,
+      msg: 'Đã trang bị ' + def.name,
+      slot: targetSlot,
+      equippedId: player.equipment[targetSlot],
+      swappedId: oldItemId
+    };
+  }
+
+  /**
+   * Cởi trang bị đưa về túi
+   */
+  function unequipItem(player, slotName) {
+    if (!player || !player.equipment || !player.equipment[slotName]) {
+      return { ok: false, msg: 'Không có trang bị ở ô này' };
+    }
+    if (!player.bag) player.bag = { slots: new Array(BAG_TOTAL_SLOTS).fill(null) };
+    while (player.bag.slots.length < BAG_TOTAL_SLOTS) player.bag.slots.push(null);
+
+    var emptyIdx = -1;
+    for (var i = 0; i < player.bag.slots.length; i++) {
+      if (!player.bag.slots[i]) { emptyIdx = i; break; }
+    }
+    if (emptyIdx === -1) {
+      return { ok: false, msg: 'Túi đồ đã đầy, không thể cởi trang bị!' };
+    }
+
+    var itemId = player.equipment[slotName];
+    player.bag.slots[emptyIdx] = { itemId: itemId, count: 1 };
+    player.equipment[slotName] = null;
+
+    var defs = null;
+    if (typeof global !== 'undefined' && global.GameMonsters && global.GameMonsters.ITEM_DEFS) {
+      defs = global.GameMonsters.ITEM_DEFS;
+    } else if (typeof window !== 'undefined' && window.GameMonsters && window.GameMonsters.ITEM_DEFS) {
+      defs = window.GameMonsters.ITEM_DEFS;
+    } else if (typeof require === 'function') {
+      try { defs = require('./monsters.js').ITEM_DEFS; } catch (e) {}
+    }
+    var def = defs ? defs[itemId] : null;
+
+    var stats = deriveStats(player.paths, player.equipment);
+    player.hpMax = stats.hpMax;
+    player.linhLucMax = stats.linhLucMax;
+    savePlayer(player);
+
+    return {
+      ok: true,
+      msg: 'Đã cởi ' + (def ? def.name : itemId),
+      slot: slotName,
+      bagSlot: emptyIdx
+    };
   }
 
   /**
@@ -501,6 +710,50 @@
     return { success: false, reason: 'full' };
   }
 
+  function countItemInBag(player, itemId) {
+    if (!player) return 0;
+    if (itemId === 'linh-thach') return player.linhThach || 0;
+    if (!player.bag || !player.bag.slots) return 0;
+    var total = 0;
+    for (var i = 0; i < player.bag.slots.length; i++) {
+      var s = player.bag.slots[i];
+      if (s && s.itemId === itemId) {
+        total += (s.count || 1);
+      }
+    }
+    return total;
+  }
+
+  function hasItemInBag(player, itemId, count) {
+    var cnt = (count !== undefined && count !== null) ? count : 1;
+    return countItemInBag(player, itemId) >= cnt;
+  }
+
+  function removeItemFromBag(player, itemId, count) {
+    var cnt = (count !== undefined && count !== null) ? count : 1;
+    if (itemId === 'linh-thach') {
+      if ((player.linhThach || 0) < cnt) return false;
+      player.linhThach -= cnt;
+      return true;
+    }
+    if (!player || !player.bag || !player.bag.slots) return false;
+    if (countItemInBag(player, itemId) < cnt) return false;
+    var remainingToRemove = cnt;
+    for (var i = 0; i < player.bag.slots.length && remainingToRemove > 0; i++) {
+      var s = player.bag.slots[i];
+      if (s && s.itemId === itemId) {
+        if (s.count <= remainingToRemove) {
+          remainingToRemove -= s.count;
+          player.bag.slots[i] = null;
+        } else {
+          s.count -= remainingToRemove;
+          remainingToRemove = 0;
+        }
+      }
+    }
+    return true;
+  }
+
   var StateAPI = {
     STORAGE_PREFIX: STORAGE_PREFIX,
     harmonyOf: harmonyOf,
@@ -532,7 +785,12 @@
     consumeRevivalCharge: consumeRevivalCharge,
     revivePlayer: revivePlayer,
     BAG_TOTAL_SLOTS: BAG_TOTAL_SLOTS,
-    addItemToBag: addItemToBag
+    addItemToBag: addItemToBag,
+    countItemInBag: countItemInBag,
+    hasItemInBag: hasItemInBag,
+    removeItemFromBag: removeItemFromBag,
+    equipItem: equipItem,
+    unequipItem: unequipItem
   };
 
   if (typeof module !== 'undefined' && module.exports) {
