@@ -463,10 +463,30 @@
    * nên nhãn đồng bộ chỉ GIỮ NGUYÊN hoặc NÂNG lên — không bao giờ hạ một
    * cảnh giới đã đạt. Gọi tại: savePlayer, loadPlayer (chuẩn hóa bản lưu
    * cũ) và điểm cộng tu vi khi hạ quái trong engine.
+   *
+   * DOTPHA-LABEL (2026-11-09, lệnh trực tiếp của Bui): nhãn suy từ TU VI bị
+   * chặn ở "Luyện Khí tầng 9" chừng nào nhân vật CHƯA đột phá thật — hạng
+   * tu vi chạm 10 (min 900) vẫn chỉ là Luyện Khí tầng 9 chờ đột phá; nhãn
+   * "Trúc Cơ ..." chỉ xuất hiện sau khi tryBreakthrough thành công (nơi duy
+   * nhất ghi chuỗi Trúc Cơ vào player.realm). Dấu hiệu "đã đột phá" là hạng
+   * suy từ CHUỖI hiện tại >= 10: khi đó giữ nguyên luật đơn điệu của
+   * REALMFIX (max của hạng chuỗi và hạng tu vi — đã Trúc Cơ/Kim Đan thì
+   * không bao giờ bị kéo xuống). getRealmRank và mọi cổng khóa dùng hạng
+   * KHÔNG đổi — chỉ nhãn lưu trong player.realm bị chặn.
    */
   function syncRealmLabel(player) {
     if (!player) return player;
-    player.realm = realmRankLabel(getRealmRank(player));
+    var byString = realmRankFromString(player.realm);
+    var byPaths = realmRankFromPaths(player.paths);
+    var rank;
+    if (byString >= 10) {
+      // Đã từng đột phá thật (chuỗi do tryBreakthrough ghi): luật đơn điệu cũ.
+      rank = Math.max(byString, byPaths);
+    } else {
+      // Chưa đột phá: phần tu vi không được đẩy nhãn qua khỏi Luyện Khí tầng 9.
+      rank = Math.max(byString >= 0 ? byString : 0, Math.min(byPaths, 9));
+    }
+    player.realm = realmRankLabel(rank);
     return player;
   }
 
