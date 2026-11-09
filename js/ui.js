@@ -49,6 +49,9 @@
     bindEvents();
     renderRingWidget();
     refreshHUD();
+    if (typeof window !== 'undefined' && window.GameLinhDien && window.GameLinhDien.attach) {
+      window.GameLinhDien.attach(playerObj);
+    }
   }
 
   function updateMinimapBackground() {

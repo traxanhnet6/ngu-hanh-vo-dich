@@ -2272,3 +2272,378 @@ body.photo-mode #toast-container { visibility: hidden; }
 .skill-elem-tho { background: radial-gradient(circle at 35% 35%, #fff6d8, #e8c56b 55%, #6d5320); }
 .skill-elem-nguhanh { background: conic-gradient(#c8d2e0, #5cc8ff, #8be26b, #ffb35c, #e8c56b, #c8d2e0); }
 .skill-elem-amduong { background: linear-gradient(90deg, #f5f5f5 50%, #2b2b33 50%); }
+
+
+/* ===== LINH ĐIỀN (đợt agy-linhdien) ===== */
+.linhdien-box {
+  width: 580px;
+  max-width: 95vw;
+  max-height: 92vh;
+  position: relative;
+  background: rgba(20, 24, 20, 0.96);
+  border: 2px solid #a8893a;
+  display: flex;
+  flex-direction: column;
+}
+
+.linhdien-header-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.linhdien-soil-badge {
+  display: inline-block;
+  background: #3e2e1a;
+  border: 1px solid #a8893a;
+  color: #ffd978;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.linhdien-intro {
+  font-size: 12px;
+  color: #b7b09d;
+  font-style: italic;
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.linhdien-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+@media (max-width: 480px) {
+  .linhdien-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+}
+
+.linhdien-plot-card {
+  background: linear-gradient(180deg, #282015, #16110a);
+  border: 1.5px solid #6b5329;
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 165px;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+  user-select: none;
+}
+
+.linhdien-plot-card:hover {
+  border-color: #ffd978;
+  box-shadow: 0 0 10px rgba(212, 163, 62, 0.25);
+}
+
+.plot-card-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.plot-card-title {
+  font-weight: 700;
+  font-size: 11px;
+  color: #d6caa8;
+}
+
+.plot-card-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-weight: 700;
+}
+
+.badge-empty {
+  background: rgba(255, 255, 255, 0.06);
+  color: #8a8475;
+}
+
+.badge-growing {
+  background: #1e3a1e;
+  color: #7ed491;
+  border: 1px solid #2e5a2e;
+}
+
+.badge-ready {
+  background: #543a14;
+  color: #ffd700;
+  border: 1px solid #b98a2f;
+}
+
+.plot-card-body {
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.plot-empty-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 0;
+}
+
+.empty-soil-mound {
+  width: 48px;
+  height: 28px;
+  background: radial-gradient(ellipse at 50% 65%, #5a4228, #261b0e);
+  border-radius: 50% 50% 30% 30% / 60% 60% 40% 40%;
+  border: 1px solid #4a361f;
+  box-shadow: inset 0 -2px 4px rgba(0, 0, 0, 0.6);
+}
+
+.empty-hint {
+  font-size: 11px;
+  color: #a4987f;
+  text-align: center;
+}
+
+.plot-herb-visual-wrap {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.plot-herb-img {
+  max-width: 64px;
+  max-height: 64px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 6px rgba(0, 255, 136, 0.25));
+  transition: transform 0.3s ease;
+}
+
+.plot-herb-sprite {
+  display: inline-block;
+  filter: drop-shadow(0 2px 6px rgba(0, 255, 136, 0.25));
+  transition: transform 0.3s ease;
+}
+
+.stage-0 {
+  transform: scale(0.55);
+  opacity: 0.8;
+}
+
+.stage-1 {
+  transform: scale(0.78);
+  opacity: 0.92;
+}
+
+.stage-2 {
+  transform: scale(1.0);
+  opacity: 1.0;
+}
+
+.ready-glow {
+  filter: drop-shadow(0 0 12px rgba(255, 217, 120, 0.75));
+}
+
+.ready-pulse {
+  animation: linhdien-pulse 1.8s infinite alternate ease-in-out;
+}
+
+@keyframes linhdien-pulse {
+  0% { transform: scale(0.96); }
+  100% { transform: scale(1.06); }
+}
+
+.plot-herb-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #7ed491;
+  margin-bottom: 4px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.plot-herb-name.ready-gold {
+  color: #ffe9a8;
+}
+
+.plot-progress-bar-wrap {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.plot-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: #12100d;
+  border-radius: 3px;
+  border: 1px solid #4a3a20;
+  overflow: hidden;
+}
+
+.plot-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2e7d32, #66bb6a);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.plot-remain-time {
+  font-size: 10px;
+  color: #a4987f;
+}
+
+.btn-harvest-plot {
+  width: 100%;
+  padding: 4px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffe9a8;
+  border-color: #ffd978;
+  background: linear-gradient(180deg, #6d5320, #422d10);
+  border-radius: 4px;
+  margin-top: 4px;
+}
+
+.btn-harvest-plot:hover {
+  background: linear-gradient(180deg, #876728, #553a15);
+  box-shadow: 0 0 8px rgba(255, 217, 120, 0.4);
+}
+
+.linhdien-seed-selector {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(16, 20, 16, 0.97);
+  border-radius: 6px;
+  z-index: 10;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.seed-selector-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #6b5329;
+  padding-bottom: 8px;
+  margin-bottom: 6px;
+}
+
+.seed-selector-title {
+  font-weight: 700;
+  font-size: 13px;
+  color: #ffd978;
+  letter-spacing: 0.5px;
+}
+
+.seed-selector-tip {
+  font-size: 11px;
+  color: #b7b09d;
+  margin-bottom: 12px;
+}
+
+.seed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  max-height: 280px;
+}
+
+.seed-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid #6b5329;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.seed-card:not(.disabled):hover {
+  border-color: #ffd978;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.seed-card.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.seed-card-icon {
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+}
+
+.seed-card-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.seed-card-name-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.seed-card-name {
+  font-weight: 700;
+  font-size: 13px;
+  color: #7ed491;
+}
+
+.seed-card-bag-count.has-stock {
+  font-size: 11px;
+  color: #ffd978;
+  font-weight: 600;
+}
+
+.seed-card-bag-count.out-of-stock {
+  font-size: 11px;
+  color: #ff8a65;
+}
+
+.seed-card-details {
+  font-size: 11px;
+  color: #b7b09d;
+}
+
+.seed-plant-btn {
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.seed-plant-btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

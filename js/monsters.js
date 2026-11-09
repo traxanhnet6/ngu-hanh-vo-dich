@@ -22,7 +22,7 @@
       type: 'material',
       stackable: true,
       iconCol: 1,
-      iconRow: 0,
+      iconRow: 5,
       desc: 'Lá cây sáng linh quang thu hái từ Rừng Độc Thanh Tụy, dùng luyện Mộc Linh Đan.'
     },
     'to-nhen-xanh': {
