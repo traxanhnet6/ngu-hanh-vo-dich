@@ -78,6 +78,65 @@
   // Chiến đấu người chơi
   var targetMonster = null;
   var basicAttackCd = 0;
+  // Đợt SWINGFIX 2026-11-09: nhịp VUNG KIẾM của đòn thường. Người chơi báo
+  // "đã cầm kiếm nhưng khi đánh quái không thấy vung kiếm": chẩn đoán đo
+  // trong Chrome thật cho thấy lớp kiếm của GRIPFIX quay một góc TĨNH theo
+  // hướng mặt (biên độ quay 0,0° ở cả 8 hướng trong suốt cửa sổ đánh) và
+  // sát thương áp ngay trong cùng một lời gọi — thân không có khung đánh,
+  // kiếm không có chuyển động, đòn không có khoảnh khắc ra đòn. Đợt này
+  // diễn hoạt LỚP KIẾM quanh đúng điểm nắm đo của GRIPFIX (lên gối → ra
+  // đòn → thu kiếm) và dời khoảnh khắc áp sát thương về đúng pha ra đòn;
+  // mọi con số sát thương/hồi chiêu giữ nguyên bản live.
+  var basicSwing = null; // { timer, duration, target, struck, whiff, whiffDir, armed }
+  var SWING_DURATION = 0.26;
+  var SWING_STRIKE_P = 0.50; // tiến độ mà lưỡi kiếm quét qua đường hướng mặt
+  // Hình học vung theo hướng mặt (độ, 0 = đông, tăng theo chiều kim đồng
+  // hồ như HH_WEAPON_BLADE): lưỡi quét 140° qua đúng đường hướng mặt —
+  // điểm lên gối W = face − 95·dir, điểm qua đòn F = face + 45·dir.
+  var HH_SWING = {
+    south: { face: 90, dir: 1 }, southeast: { face: 45, dir: 1 },
+    east: { face: 0, dir: 1 }, northeast: { face: -45, dir: -1 },
+    north: { face: -90, dir: -1 }, northwest: { face: -135, dir: 1 },
+    west: { face: 180, dir: -1 }, southwest: { face: 135, dir: -1 }
+  };
+  var lastGripWorld = null; // điểm nắm trên thế giới của khung vẽ gần nhất (SWINGFIX: tâm vệt chém)
+
+  function swingShortestDelta(from, to) {
+    var d = (to - from) % 360;
+    if (d > 180) d -= 360;
+    if (d < -180) d += 360;
+    return d;
+  }
+
+  /** Góc lưỡi kiếm (độ, cùng quy ước HH_WEAPON_BLADE) tại tiến độ vung hiện tại. */
+  function swingBladeAngle(dirName, restBlade) {
+    if (!basicSwing) return restBlade;
+    var sw = HH_SWING[dirName];
+    if (!sw) return restBlade;
+    var p = 1 - (basicSwing.timer / basicSwing.duration);
+    var W = sw.face - 95 * sw.dir;
+    var F = sw.face + 45 * sw.dir;
+    var windDelta = swingShortestDelta(restBlade, W);
+    if (p < 0.32) {
+      // Lên gối: lưỡi đi từ tư thế treo về điểm W theo cung ngắn nhất
+      var t = p / 0.32;
+      var e = 1 - Math.pow(1 - t, 3);
+      return restBlade + windDelta * e;
+    }
+    if (p < 0.54) {
+      // Ra đòn: quét 140° qua đường hướng mặt, tăng tốc dần
+      var t2 = (p - 0.32) / 0.22;
+      return W + 140 * sw.dir * (t2 * t2);
+    }
+    // Thu kiếm: đi NGƯỢC LẠI đúng đường vừa vung ra (F -> W -> treo).
+    // Cung ngắn nhất từ F về treo có hướng bắc chạy tiếp 141° theo chiều
+    // ra đòn, cộng thành một vòng quay 360° quét qua cả sau lưng — đã đo
+    // trong cổng swing-check và loại; thu theo vết vung đọc như một nhát
+    // chém có đi có về, không vòng quay, không quét qua thân.
+    var t3 = (p - 0.54) / 0.46;
+    var e3 = t3 * t3 * (3 - 2 * t3);
+    return F + (-140 * sw.dir - windDelta) * e3;
+  }
   // Tự tìm đường theo nhiệm vụ + nút hành động theo ngữ cảnh (Đợt 2, lệnh Bui)
   var autoPath = { active: false, lastLegAt: 0, combatStamp: 0 };
   var currentActionMode = 'attack';
@@ -267,6 +326,10 @@
     var icon = HH_WEAPON_ICON[player.equipment.weapon] || HH_WEAPON_ICON_DEFAULT;
     var blade = HH_WEAPON_BLADE[dirName];
     if (typeof blade !== 'number') return;
+    // Đợt SWINGFIX: đang trong nhịp vung đòn thường thì góc lưỡi đi theo
+    // đường vung (lên gối → ra đòn → thu) quanh ĐÚNG điểm nắm của khung —
+    // cổ tay, chuôi, lưỡi vẫn một đường thẳng, vá nắm tay vẫn phủ chuôi.
+    if (basicSwing) blade = swingBladeAngle(dirName, blade);
     var rot = (blade - icon.axis) * Math.PI / 180;
     var s = HH_WEAPON_SCALE;
 
@@ -277,13 +340,18 @@
       if (per && per.length) entry = per[gripCtx.frameIdx % per.length];
     }
     if (entry) {
-      if (entry.hidden) return; // tay bị che hẳn trong khung này -> kiếm cũng khuất
+      // Tay bị che hẳn trong khung này -> kiếm cũng khuất; NGOẠI LỆ duy
+      // nhất của SWINGFIX: đang giữa nhịp vung thì cánh tay đã đưa ra
+      // khỏi áo choàng để ra đòn nên kiếm vẫn hiện (chỉ trong 0,26 giây
+      // của nhịp vung; lúc nghỉ luật ẩn của GRIPFIX giữ nguyên tuyệt đối).
+      if (entry.hidden && !basicSwing) return;
       if (!(entry.cx > 0) || !(gripCtx.f.w > 0)) entry = null;
     }
     if (entry) {
       var k = dest.w / gripCtx.f.w;
       var hx = dest.x + entry.cx * k;
       var hy = dest.y + entry.cy * k;
+      lastGripWorld = { x: hx, y: hy, dirName: dirName };
       ctx.save();
       ctx.translate(hx, hy);
       ctx.rotate(rot);
@@ -312,6 +380,7 @@
     if (!anchor) return;
     var ax = dest.x + anchor[0] * dest.w;
     var ay = dest.y + anchor[1] * dest.h;
+    lastGripWorld = { x: ax, y: ay, dirName: dirName };
     ctx.save();
     ctx.translate(ax, ay);
     ctx.rotate(rot);
@@ -1295,17 +1364,14 @@
       player.dir = getDirFromVelocity(m.x - player.x, m.y - player.y);
       executePlayerBasicAttack(m);
     } else {
-      var v = DIR_VECTORS[player.dir] || DIR_VECTORS[0];
-      if (audioAPI) audioAPI.playSlash();
-      visualEffects.push({
-        type: 'slash_crescent',
-        x: player.x,
-        y: player.y - 25,
-        targetX: player.x + v.x * 46,
-        targetY: player.y - 20 + v.y * 46,
-        timer: 0.22,
-        duration: 0.22
-      });
+      // Đợt SWINGFIX: vung hụt cũng đi qua nhịp vung như đòn trúng — kiếm
+      // vung thật theo hướng mặt, tiếng vút + vệt chém phát tại pha ra đòn
+      // trong updateBasicSwing (trước đây phát ngay lúc bấm, kiếm đứng yên).
+      basicSwing = {
+        timer: SWING_DURATION, duration: SWING_DURATION,
+        target: null, struck: false, whiff: true, whiffDir: player.dir,
+        armed: !!(player.equipment && player.equipment.weapon)
+      };
       lastCombatTime = performance.now();
     }
     if (typeof window !== 'undefined') {
@@ -1925,6 +1991,7 @@
       targetMonster = null;
       castState = null; // đổi map = ngắt chiêu đang vận
       skillCastAnim = null; // Đợt K2: khung tung chiêu + chuỗi Liên Hoàn cũng gãy khi đổi map
+      basicSwing = null; // Đợt SWINGFIX: đổi map = nhịp vung gãy theo cùng luật
       lienHoanState = { elem: null, stacks: 0 };
       groundDrops = [];
       visualEffects = [];
@@ -2720,6 +2787,28 @@
   }
 
   /**
+   * Đợt SWINGFIX: vệt kiếm của đòn thường — dải cung chạy dọc ĐÚNG quỹ đạo
+   * lưỡi kiếm vừa quét trong nhịp vung (từ điểm lên gối W qua đường hướng
+   * mặt tới điểm qua đòn F, tổng 140°), tâm tại điểm nắm đo thật của khung
+   * gần nhất, bán kính bằng tầm với của lưỡi (~26px). Sinh tại pha ra đòn
+   * cùng khoảnh khắc áp sát thương. Đang diễn khung chiêu riêng (Thái Cực)
+   * thì không sinh — lúc đó thân không cầm kiếm theo lớp này.
+   */
+  function spawnSwordArc(elem) {
+    if (skillCastAnim) return;
+    var dirName = (lastGripWorld && lastGripWorld.dirName) || HH_GEN_DIRS[(player.dir || 0) % 8];
+    var sw = HH_SWING[dirName];
+    if (!sw) return;
+    visualEffects.push({
+      kind: 'sword_arc', elem: elem, lang: fxLang(elem),
+      x: lastGripWorld ? lastGripWorld.x : player.x,
+      y: lastGripWorld ? lastGripWorld.y : player.y - 40,
+      a0: sw.face - 95 * sw.dir, sweep: 140 * sw.dir,
+      timer: 0.17, duration: 0.17
+    });
+  }
+
+  /**
    * Móc kiểm thử/trình diễn: sinh một nguyên thủy VFX bất kỳ tại một điểm.
    * Dùng bởi test/k1-playtest.js để nghiệm thu renderer; không gắn nội dung.
    */
@@ -2915,6 +3004,7 @@
       targetMonster = null;
       castState = null; // gục ngã = ngắt chiêu đang vận (K1: ngắt khi gục/đổi map)
       skillCastAnim = null; // Đợt K2: khung tung chiêu + chuỗi Liên Hoàn cũng gãy khi gục
+      basicSwing = null; // Đợt SWINGFIX: gục ngã = nhịp vung gãy, đòn chưa phát thì mất
       lienHoanState = { elem: null, stacks: 0 };
       return;
     }
@@ -2926,6 +3016,8 @@
     }
     // Cập nhật chiêu đang vận (hết giờ vận -> phát chiêu tại điểm phát)
     updateCast(dt);
+    // Cập nhật nhịp vung đòn thường (tới pha ra đòn -> phát đúng một đòn)
+    updateBasicSwing(dt);
 
     // Cập nhật hiệu ứng khống chế lên người chơi (Trói chân / Làm chậm)
     var canMove = true;
@@ -3155,8 +3247,60 @@
     }
   }
 
+  /**
+   * Đợt SWINGFIX: điểm vào của đòn thường (cả nút đánh lẫn tự đánh) — chỉ
+   * BẮT ĐẦU nhịp vung kiếm; sát thương áp tại pha ra đòn trong
+   * updateBasicSwing (lưỡi quét qua mục tiêu mới tính đòn), để số sát
+   * thương không bao giờ hiện trước khi lưỡi kiếm tới nơi. Mọi con số
+   * (công thức, bạo kích, Liên Hoàn, hồi chiêu 0,45s) giữ nguyên bản live.
+   */
   function executePlayerBasicAttack(m) {
     lastCombatTime = performance.now();
+    basicSwing = {
+      timer: SWING_DURATION, duration: SWING_DURATION,
+      target: m, struck: false, whiff: false,
+      armed: !!(player && player.equipment && player.equipment.weapon)
+    };
+  }
+
+  /** Cập nhật nhịp vung mỗi khung; tới pha ra đòn thì phát đúng một đòn. */
+  function updateBasicSwing(dt) {
+    if (!basicSwing) return;
+    basicSwing.timer -= dt;
+    var p = 1 - (basicSwing.timer / basicSwing.duration);
+    if (!basicSwing.struck && p >= SWING_STRIKE_P) {
+      basicSwing.struck = true;
+      if (basicSwing.whiff) {
+        // Vung vào không khí (bấm đánh khi không có mục tiêu): tiếng vút +
+        // vệt chém cũ + vệt kiếm mới tại pha ra đòn như đòn trúng.
+        var v = DIR_VECTORS[basicSwing.whiffDir] || DIR_VECTORS[0];
+        if (audioAPI) audioAPI.playSlash();
+        visualEffects.push({
+          type: 'slash_crescent',
+          x: player.x,
+          y: player.y - 25,
+          targetX: player.x + v.x * 46,
+          targetY: player.y - 20 + v.y * 46,
+          timer: 0.22,
+          duration: 0.22
+        });
+        if (basicSwing.armed) spawnSwordArc('neutral');
+        lastCombatTime = performance.now();
+      } else {
+        executeBasicHit(basicSwing.target);
+      }
+    }
+    if (basicSwing.timer <= 0) basicSwing = null;
+  }
+
+  /**
+   * Thân đòn thường nguyên bản (toàn bộ số học của bản live) — SWINGFIX
+   * chỉ đổi THỜI ĐIỂM chạy: tại pha ra đòn của nhịp vung thay vì ngay lúc
+   * bấm. Quái đã gục trong 0,13 giây lên gối (đốt cháy/chất độc/đồng đội)
+   * thì đòn bỏ qua lặng lẽ như một nhát chém hụt — không đòn ma.
+   */
+  function executeBasicHit(m) {
+    if (!m || m.state === 'dead' || m.hp <= 0) return;
     // Đợt K1: thông số đòn thường đọc từ registry (id 'basic'); ratio 1.0 nên
     // số học giữ nguyên bản live từng ly.
     var basicDef = skillsAPI ? skillsAPI.getSkill('basic') : null;
@@ -3180,6 +3324,8 @@
 
     // Vệt chém cong thon hai đầu hướng về phía quái (nguyên thủy crescent của K1)
     spawnSlashCrescent(player.x, player.y - 25, m.x, m.y - 20, conv ? conv.elem : 'neutral', basicDef ? basicDef.tier : 1);
+    // Đợt SWINGFIX: vệt kiếm dọc đúng đường lưỡi vừa quét, tâm tại điểm nắm
+    if (basicSwing && basicSwing.armed) spawnSwordArc(conv ? conv.elem : 'neutral');
 
     monstersAPI.damageMonster(m, dealt, player);
     spawnDamageNumber(m.x, m.y - 35, Math.round(dealt), conv ? conv.elem : 'moc', isCrit);
@@ -4801,6 +4947,37 @@
           ctx.fill();
         }
         ctx.restore();
+      } else if (vfx.kind === 'sword_arc') {
+        // Vệt kiếm đòn thường (SWINGFIX): dải cung thon hai đầu chạy dọc
+        // quỹ đạo lưỡi vừa quét — từng đoạn cung có bề dày phình ở giữa
+        // dải và thon về hai đầu, sáng mạnh nhất ở nửa cuối (nơi lưỡi vừa
+        // đi qua), lõi trắng nóng trong hào quang màu hệ; mờ dần 0,17s.
+        var saProg = 1.0 - (vfx.timer / vfx.duration);
+        var saFade = Math.pow(1 - saProg, 0.75) * Math.min(1, saProg / 0.12 + 0.25);
+        var saR = 26;
+        var saA0 = vfx.a0 * Math.PI / 180;
+        var saSweep = vfx.sweep * Math.PI / 180;
+        ctx.save();
+        ctx.lineCap = 'round';
+        for (var saPass = 0; saPass < 2; saPass++) {
+          var SEG2 = 12;
+          for (var si = 0; si < SEG2; si++) {
+            var st = si / SEG2;
+            var segA0 = saA0 + saSweep * st;
+            var segA1 = saA0 + saSweep * ((si + 1) / SEG2);
+            var taper = Math.sin((st + 0.5 / SEG2) * Math.PI);
+            var headW = 0.35 + 0.65 * st;
+            ctx.beginPath();
+            ctx.arc(vfx.x, vfx.y, saR, segA0, segA1, vfx.sweep < 0);
+            ctx.strokeStyle = saPass === 0 ? vfx.lang.glow : vfx.lang.core;
+            ctx.globalAlpha = saFade * headW * (saPass === 0 ? 0.38 : 0.92);
+            ctx.lineWidth = (saPass === 0 ? 9.5 : 4.6) * taper + 0.6;
+            ctx.shadowColor = vfx.lang.glow;
+            ctx.shadowBlur = qualityShadow(saPass === 0 ? 9 : 3);
+            ctx.stroke();
+          }
+        }
+        ctx.restore();
       }
     }
 
@@ -5256,6 +5433,10 @@
     },
     getSkillCastAnim: function () {
       return skillCastAnim ? { skillId: skillCastAnim.def.id, row: skillCastAnim.row, timer: skillCastAnim.timer, duration: skillCastAnim.duration } : null;
+    },
+    // Đợt SWINGFIX: móc kiểm thử nhịp vung đòn thường (cùng mẫu getSkillCastAnim)
+    getBasicSwing: function () {
+      return basicSwing ? { timer: basicSwing.timer, duration: basicSwing.duration, struck: basicSwing.struck } : null;
     },
     getHarmonyRatio: function () {
       return (stateAPI && player) ? stateAPI.harmonyRatio(player.paths) : null;
