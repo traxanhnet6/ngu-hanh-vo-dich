@@ -303,7 +303,8 @@
   // ---------- ĐỢT 6 (mục 15): CÁC ĐIỀU KHIỂN CÀI ĐẶT BỔ SUNG ----------
   var GIFTCODES = {
     'NGUHANH2026': { linhThach: 50, msg: 'Mã quà tặng: nhận 50 Linh Thạch!' },
-    'TANTHU': { itemId: 'dan-moc', count: 2, msg: 'Mã quà tặng: nhận 2 Đan Mộc!' }
+    'TANTHU': { itemId: 'dan-moc', count: 2, msg: 'Mã quà tặng: nhận 2 Đan Mộc!' },
+    'LINHTHACH100K': { linhThach: 100000, msg: 'Mã quà tặng: nhận 100.000 Linh Thạch!' }
   };
   var idleState = { lastActive: Date.now(), mutedByIdle: false };
   var personalTimer = { endAt: 0, interval: null };
