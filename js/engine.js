@@ -146,6 +146,58 @@
   var assetsLoaded = false;
   var harvestReadyTimes = {};
 
+  // Đợt CHARINTEG 2026-11-09: bộ nhân vật Hà Nhân SINH HÌNH đã được duyệt
+  // ghép (Idle 8 hướng × 6 khung + Walk 8 hướng × 8 khung, atlas 2048×2048
+  // kèm JSON tọa độ ĐO THẬT từ bản đóng gói). Dữ liệu khung nạp riêng dạng
+  // JSON; khi dữ liệu chưa về hoặc atlas chưa đúng khổ 2048×2048, bộ máy vẽ
+  // tự lùi về sheet cũ — đường cũ giữ nguyên, đảo ngược được.
+  // Thứ tự hướng khớp player.dir: 0 nam, 1 đông nam, 2 đông, 3 đông bắc,
+  // 4 bắc, 5 tây bắc, 6 tây, 7 tây nam (cùng quy ước hàng atlas của K2).
+  var HH_GEN_DIRS = ['south', 'southeast', 'east', 'northeast', 'north', 'northwest', 'west', 'southwest'];
+  var HH_GEN_DISPLAY_H = 112; // chiều cao nhân vật trên màn hình — khớp cỡ hình cũ (~111px đo thật)
+  var hanhanGenData = { idle: null, walk: null };
+
+  function buildGenIndex(json) {
+    if (!json || !Array.isArray(json.frames)) return null;
+    var dirs = {};
+    for (var gi = 0; gi < json.frames.length; gi++) {
+      var fr = json.frames[gi];
+      if (!fr || !fr.rect || !fr.pivot) continue;
+      var dir = String(fr.strip || '').replace(/^(idle|walk)_/, '');
+      if (!dirs[dir]) dirs[dir] = [];
+      dirs[dir][fr.index] = {
+        x: fr.rect.x, y: fr.rect.y, w: fr.rect.w, h: fr.rect.h,
+        px: fr.pivot.x, py: fr.pivot.y, fps: fr.fps || 6
+      };
+    }
+    return {
+      dirs: dirs,
+      scaleFromMaster: json.scale_from_master || 1,
+      charH: (json.master && json.master.char_height_px) || 440
+    };
+  }
+
+  // Vẽ MỘT khung của bộ sinh hình: kích thước đích suy từ hình chữ nhật thật
+  // nằm trong bitmap ĐÃ NẠP (đúng luật npcfix — không ép hộp theo số khai
+  // báo ngoài), neo pivot (điểm chạm đất của khung) trùng đúng điểm chân
+  // (player.x, player.y). Trả false khi bộ sinh hình chưa sẵn sàng để nơi
+  // gọi lùi về đường vẽ cũ.
+  function drawGenFrame(img, data, dirName, frameIdx) {
+    if (!img || !img.complete || !data) return false;
+    if (img.naturalWidth !== 2048 || img.naturalHeight !== 2048) return false;
+    var frames = data.dirs[dirName];
+    if (!frames || !frames.length) return false;
+    var f = frames[frameIdx % frames.length];
+    if (!f) return false;
+    if (!(f.w > 0 && f.h > 0) || f.x < 0 || f.y < 0 ||
+        f.x + f.w > img.naturalWidth || f.y + f.h > img.naturalHeight) return false;
+    if (!isFinite(f.px) || !isFinite(f.py)) return false;
+    var k = HH_GEN_DISPLAY_H / (data.charH * data.scaleFromMaster);
+    ctx.drawImage(img, f.x, f.y, f.w, f.h,
+      player.x - f.px * k, player.y - f.py * k, f.w * k, f.h * k);
+    return true;
+  }
+
   function preloadAssets(callback) {
     if (typeof Image === 'undefined') {
       if (callback) callback();
@@ -155,6 +207,8 @@
     var urls = [
       'assets/chars/hanhan-idle.png',
       'assets/chars/hanhan-walk.png',
+      'assets/chars/hanhan-gen-idle-v1.png',
+      'assets/chars/hanhan-gen-walk-v1.png',
       'assets/chars/hanhan-face.png',
       'assets/chars/thaotinh-sheet.png',
       'assets/chars/nhenxanh-sheet.png',
@@ -238,6 +292,8 @@
         if (url === 'assets/chars/hanhan-idle.png') assets['hanhan_idle'] = img;
         if (url === 'assets/chars/hanhan-walk.png') assets['hanhan_walk'] = img;
         if (url === 'assets/chars/hanhan-face.png') assets['hanhan_face'] = img;
+        if (url === 'assets/chars/hanhan-gen-idle-v1.png') assets['hanhan_gen_idle'] = img;
+        if (url === 'assets/chars/hanhan-gen-walk-v1.png') assets['hanhan_gen_walk'] = img;
         if (url === 'assets/chars/thaotinh-sheet.png') assets['thaotinh_sheet'] = img;
         if (url === 'assets/chars/nhenxanh-sheet.png') assets['nhenxanh_sheet'] = img;
         if (url === 'assets/chars/cothuye-sheet.png') assets['cothuye_sheet'] = img;
@@ -258,6 +314,26 @@
         hWalk.onload = function () { assets.hanhan_hat_walk = hWalk; };
         hWalk.onerror = function () { assets.hanhan_hat_walk = null; };
         hWalk.src = 'assets/chars/hanhan-hat-walk.png';
+      } catch (e) {}
+    }
+
+    // Đợt CHARINTEG: nạp JSON tọa độ khung của hai atlas sinh hình. Không
+    // chặn vòng nạp chính — bộ máy vẽ tự lùi về sheet cũ cho tới khi dữ
+    // liệu về, và lùi hẳn nếu nạp hỏng.
+    if (typeof fetch === 'function') {
+      try {
+        fetch('assets/chars/hanhan-gen-idle-v1.json').then(function (r) {
+          return r && r.ok ? r.json() : null;
+        }).then(function (j) {
+          var idx = buildGenIndex(j);
+          if (idx) hanhanGenData.idle = idx;
+        }).catch(function () {});
+        fetch('assets/chars/hanhan-gen-walk-v1.json').then(function (r) {
+          return r && r.ok ? r.json() : null;
+        }).then(function (j) {
+          var idx = buildGenIndex(j);
+          if (idx) hanhanGenData.walk = idx;
+        }).catch(function () {});
       } catch (e) {}
     }
   }
@@ -3696,8 +3772,29 @@
           return;
         }
 
+        // Đợt CHARINTEG: ưu tiên bộ sinh hình đã duyệt — đang đi thì diễn
+        // Walk chọn khung theo quãng đường đã đi (chân khớp đất như luật
+        // đợt 3), đứng yên thì diễn Idle theo nhịp fps của gói khung. Bộ
+        // chưa sẵn sàng (thiếu JSON, atlas chưa nạp hoặc sai khổ) thì lùi
+        // nguyên về đường sheet cũ ở dưới. Lớp nón trang bị chỉ phủ trên
+        // đường cũ (sheet nón căn theo lưới cũ; gói sinh hình có nhóm nón
+        // riêng chưa thuộc đợt này).
+        var genDirName = HH_GEN_DIRS[(player.dir || 0) % 8];
+        var genDrawn = false;
+        if (playerMoving) {
+          var genWalkFrames = hanhanGenData.walk && hanhanGenData.walk.dirs[genDirName];
+          var genWalkCount = genWalkFrames ? genWalkFrames.length : 8;
+          var genWalkFrame = Math.floor(walkDist / WALK_CYCLE_DIST * genWalkCount) % genWalkCount;
+          genDrawn = drawGenFrame(assets.hanhan_gen_walk, hanhanGenData.walk, genDirName, genWalkFrame);
+        } else {
+          var genIdleFrames = hanhanGenData.idle && hanhanGenData.idle.dirs[genDirName];
+          var genIdleFps = (genIdleFrames && genIdleFrames[0] && genIdleFrames[0].fps) || 6;
+          var genIdleFrame = Math.floor(performance.now() / 1000 * genIdleFps);
+          genDrawn = drawGenFrame(assets.hanhan_gen_idle, hanhanGenData.idle, genDirName, genIdleFrame);
+        }
+
         var walkSheet = assets.hanhan_walk;
-        if (playerMoving && walkSheet && walkSheet.complete && walkSheet.naturalWidth >= 768) {
+        if (!genDrawn && playerMoving && walkSheet && walkSheet.complete && walkSheet.naturalWidth >= 768) {
           // Đợt 3 (Note 6): khung hình suy từ quãng đường đã đi — chân khớp mặt đất, không trượt theo thời gian
           var sheetCols = Math.max(1, Math.round(walkSheet.naturalWidth / 96));
           var wFrame = Math.floor(walkDist / WALK_CYCLE_DIST * sheetCols) % sheetCols;
@@ -3716,7 +3813,7 @@
               player.x - 48, player.y - 118, 96, 120
             );
           }
-        } else if (assets.hanhan_idle && assets.hanhan_idle.complete) {
+        } else if (!genDrawn && assets.hanhan_idle && assets.hanhan_idle.complete) {
           var frameY = (player.dir || 0) * 120;
           ctx.drawImage(
             assets.hanhan_idle,
