@@ -120,6 +120,15 @@
   // "bấm mà không vào được"; bản kiểm thử B6 vấp đúng lỗi này khi tải máy cao).
   var pendingMapSwitch = null;
 
+  // Chống cổng nảy về (hotfix 2026-11-09): sau mỗi lần chuyển map, cổng thoát bị
+  // KHÓA cho tới khi (a) qua 1,6 giây kể từ lúc tới nơi VÀ (b) người chơi đã đứng
+  // NGOÀI mọi vùng cổng của map mới ít nhất một khung hình. Lý do: các điểm xuất
+  // hiện nằm sát vùng cổng quay về (Tông Môn -> Miếu chỉ cách 50px, Đài Truyền
+  // Tống chỉ 32-35px) nên người chơi giữ nguyên hướng đi sau khi qua cổng sẽ
+  // chạm lại vùng cổng quay về trong chưa đầy nửa giây và bị trả về map cũ.
+  var portalsArmed = true;
+  var portalRearmAt = 0;
+
   // Tài nguyên đồ họa
   var assets = {};
   var assetsLoaded = false;
@@ -1563,6 +1572,17 @@
 
       player.x = targetSpawn.x;
       player.y = targetSpawn.y;
+      // Khóa cổng thoát sau khi tới nơi (xem portalsArmed ở trên): chỉ mở lại khi
+      // đã qua thời gian ân hạn và người chơi ra khỏi mọi vùng cổng.
+      portalsArmed = false;
+      portalRearmAt = performance.now() + 1600;
+      // Yêu cầu chuyển map xếp hàng trùng hệt chuyến vừa hoàn thành (do đứng trong
+      // vùng cổng suốt lúc fade-out gọi lại switchMap mỗi khung hình) là dư thừa:
+      // hủy để khỏi fade hai lần vô ích. Yêu cầu khác map/điểm đến vẫn giữ nguyên.
+      if (pendingMapSwitch && pendingMapSwitch.id === targetMapId && pendingMapSwitch.spawn &&
+          pendingMapSwitch.spawn.x === targetSpawn.x && pendingMapSwitch.spawn.y === targetSpawn.y) {
+        pendingMapSwitch = null;
+      }
       currentPath = [];
       targetMonster = null;
       groundDrops = [];
@@ -2330,6 +2350,19 @@
       }
     }
 
+    // Mở khóa cổng sau khi tới nơi: cần qua thời gian ân hạn VÀ đã đứng ngoài
+    // mọi vùng cổng ít nhất một khung hình (đang đứng trong vùng cổng thì giữ khóa,
+    // nên giữ nguyên hướng đi qua cổng không bao giờ bị trả về).
+    if (!portalsArmed) {
+      var insideAnyExit = false;
+      for (var gi = 0; gi < mapData.exits.length; gi++) {
+        var gr = mapData.exits[gi].rect;
+        if (player.x >= gr.x && player.x <= gr.x + gr.w &&
+            player.y >= gr.y && player.y <= gr.y + gr.h) { insideAnyExit = true; break; }
+      }
+      if (!insideAnyExit && performance.now() >= portalRearmAt) portalsArmed = true;
+    }
+
     // Kiểm tra các vùng thoát (Portals)
     for (var i = 0; i < mapData.exits.length; i++) {
       var ex = mapData.exits[i];
@@ -2337,8 +2370,10 @@
       if (player.x >= r.x && player.x <= r.x + r.w &&
           player.y >= r.y && player.y <= r.y + r.h) {
         if (ex.targetMap) {
-          // Lối chuyển map thật
-          switchMap(ex.targetMap, ex.targetSpawn || ex.target);
+          // Lối chuyển map thật (đang khóa sau khi vừa tới nơi thì bỏ qua)
+          if (portalsArmed) {
+            switchMap(ex.targetMap, ex.targetSpawn || ex.target);
+          }
           break;
         } else {
           // Lối thoát stub

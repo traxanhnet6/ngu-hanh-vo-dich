@@ -1849,6 +1849,17 @@
     if (nameEl) nameEl.textContent = npc.name;
     if (portraitEl) {
       portraitEl.style.backgroundImage = 'url(' + npc.asset + ')';
+      // Giữ đúng tỉ lệ gốc của từng NPC (hotfix 2026-11-09): trước đây mọi NPC bị
+      // ép vào khung nền 140x311 chỉnh tay cho Linh Nhi (252x560) — NPC khác bị
+      // bóp ngang tới 34% và cắt lệch mặt. Nay tính bề rộng nền theo tỉ lệ thật
+      // của tệp (originalW/originalH), giữ nguyên chiều cao hiển thị 311px và
+      // căn giữa khuôn mặt; với Linh Nhi kết quả trùng hệt thông số cũ (140px, -36px).
+      var portraitH = 311;
+      var natW = npc.originalW || 252;
+      var natH = npc.originalH || 560;
+      var portraitW = Math.max(68, Math.round(portraitH * natW / natH));
+      portraitEl.style.backgroundSize = portraitW + 'px ' + portraitH + 'px';
+      portraitEl.style.backgroundPosition = Math.round(-(portraitW - 68) / 2) + 'px -12px';
     }
 
     if (dialogueBox) dialogueBox.classList.remove('hidden');
