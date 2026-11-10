@@ -58,6 +58,9 @@
     if (typeof window !== 'undefined' && window.GameTieuMoc && window.GameTieuMoc.attach) {
       window.GameTieuMoc.attach(playerObj);
     }
+    if (typeof window !== 'undefined' && window.GameDotPha && window.GameDotPha.attach) {
+      window.GameDotPha.attach(playerObj);
+    }
   }
 
   function updateMinimapBackground() {
@@ -2081,6 +2084,14 @@
       closeDialogue();
       if (typeof window !== 'undefined' && window.GameTieuMoc && window.GameTieuMoc.openPanel) {
         window.GameTieuMoc.openPanel();
+      }
+    });
+    // Đợt T2: Đột Phá Trúc Cơ — bảng đột phá đại cảnh giới (đủ/thiếu từng
+    // điều kiện + nút Chỉ đường + độ kiếp diễn thật), mở tại Chấp Sự.
+    mkBtn('Đột Phá Trúc Cơ (Độ Kiếp)', function () {
+      closeDialogue();
+      if (typeof window !== 'undefined' && window.GameDotPha && window.GameDotPha.openPanel) {
+        window.GameDotPha.openPanel();
       }
     });
     // Đợt DANPHONG: Bảng Nhiệm Vụ Thu Thập + trả nhiệm vụ ngay tại Chấp Sự

@@ -2945,3 +2945,8 @@ body.photo-mode #toast-container { visibility: hidden; }
 .tieumoc-open-btn {
   min-width: 150px;
 }
+
+/* ===== ĐỘT PHÁ TRÚC CƠ — ĐỘ KIẾP (đợt T2) ===== */
+/* Bảng đột phá dùng chung khuôn .tieumoc-* của bảng Tiểu Mốc; không còn
+   lớp riêng cho tỉ lệ/hậu quả/phụ trợ (đã hủy theo phán của Bui
+   2026-11-10: giữ 100% như hiện tại, chỉ thêm độ kiếp diễn thật). */

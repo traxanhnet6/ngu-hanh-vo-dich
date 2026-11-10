@@ -467,6 +467,94 @@
     } catch (e) {}
   }
 
+  // Đợt T2 (chuẩn diễn độ kiếp — hồ sơ độ kiếp Vô Sắc mục 10): sấm xa khi
+  // mây kiếp tụ + tiếng sét đánh xuống từng tia. Toàn bộ tổng hợp bằng
+  // WebAudio (nhiễu qua lọc thông thấp + tiếng trầm dội), không tệp ngoài.
+  var thunderNoiseBuffer = null;
+  function getThunderNoiseBuffer(seconds) {
+    if (!ctx) return null;
+    if (thunderNoiseBuffer && thunderNoiseBuffer.duration >= seconds) return thunderNoiseBuffer;
+    var len = Math.floor(ctx.sampleRate * seconds);
+    thunderNoiseBuffer = ctx.createBuffer(1, len, ctx.sampleRate);
+    var data = thunderNoiseBuffer.getChannelData(0);
+    var last = 0;
+    for (var i = 0; i < len; i++) {
+      // Nhiễu nâu (brown noise) — nền trầm của tiếng sấm
+      var white = Math.random() * 2 - 1;
+      last = (last + 0.02 * white) / 1.02;
+      data[i] = last * 3.2;
+    }
+    return thunderNoiseBuffer;
+  }
+
+  /** Sấm xa trầm kéo dài — pha tụ mây của độ kiếp. */
+  function playThunderFar() {
+    if (!ctx || !sfxGain) return;
+    try {
+      if (ctx.state === 'suspended') ctx.resume();
+      var now = ctx.currentTime;
+      var buf = getThunderNoiseBuffer(2.2);
+      if (!buf) return;
+      var src = ctx.createBufferSource();
+      src.buffer = buf;
+      var filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(220, now);
+      filter.frequency.exponentialRampToValueAtTime(90, now + 2.0);
+      var gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.22, now + 0.35);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.1);
+      src.connect(filter);
+      filter.connect(gain);
+      gain.connect(sfxGain);
+      src.start(now);
+      src.stop(now + 2.2);
+    } catch (e) {}
+  }
+
+  /** Một tia sét đánh xuống: nhiễu cao tần xé rất ngắn + tiếng trầm dội nối tiếp. */
+  function playBolt() {
+    if (!ctx || !sfxGain) return;
+    try {
+      if (ctx.state === 'suspended') ctx.resume();
+      var now = ctx.currentTime;
+      // Lớp xé cao tần
+      var len = Math.floor(ctx.sampleRate * 0.5);
+      var buf = ctx.createBuffer(1, len, ctx.sampleRate);
+      var data = buf.getChannelData(0);
+      for (var i = 0; i < len; i++) {
+        data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+      }
+      var src = ctx.createBufferSource();
+      src.buffer = buf;
+      var hp = ctx.createBiquadFilter();
+      hp.type = 'highpass';
+      hp.frequency.setValueAtTime(900, now);
+      var g1 = ctx.createGain();
+      g1.gain.setValueAtTime(0.30, now);
+      g1.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+      src.connect(hp);
+      hp.connect(g1);
+      g1.connect(sfxGain);
+      src.start(now);
+      src.stop(now + 0.5);
+      // Lớp trầm dội
+      var osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(120, now);
+      osc.frequency.exponentialRampToValueAtTime(38, now + 0.7);
+      var g2 = ctx.createGain();
+      g2.gain.setValueAtTime(0.0001, now);
+      g2.gain.exponentialRampToValueAtTime(0.34, now + 0.03);
+      g2.gain.exponentialRampToValueAtTime(0.0001, now + 0.75);
+      osc.connect(g2);
+      g2.connect(sfxGain);
+      osc.start(now);
+      osc.stop(now + 0.8);
+    } catch (e) {}
+  }
+
   function setMusicVolume(vol) {
     currentSettings.musicVol = Math.max(0, Math.min(1, vol));
     if (musicGain && ctx) {
@@ -503,6 +591,8 @@
     playPickup: playPickup,
     playDull: playDull,
     playDeathGong: playDeathGong,
+    playThunderFar: playThunderFar,
+    playBolt: playBolt,
     setMusicVolume: setMusicVolume,
     setSfxVolume: setSfxVolume,
     setMasterVolume: setMasterVolume,

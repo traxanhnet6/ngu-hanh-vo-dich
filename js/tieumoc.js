@@ -541,7 +541,7 @@
           p.ok ? null : { type: 'path', key: p.elem }));
       });
       var grandNote = el('div', 'tieumoc-source',
-        'Đủ 900 tu vi cả 5 đường thì luyện Trúc Cơ Đan (Đan Phòng hoặc Chấp Sự Đường) rồi dùng Trúc Cơ Đan trong túi để đột phá Trúc Cơ. Đột phá tiểu mốc không áp dụng cho mốc này.');
+        'Đủ 900 tu vi cả 5 đường thì luyện Trúc Cơ Đan (Đan Phòng hoặc Chấp Sự Đường). Đột phá Trúc Cơ có ĐỘ KIẾP diễn thật 3 tia (đợt T2) — hãy mở Bảng Đột Phá Trúc Cơ để xem đủ/thiếu từng nguyên liệu và bấm đột phá tại đó. Đột phá tiểu mốc không áp dụng cho mốc này.');
       body.appendChild(grandNote);
       var gActions = el('div', 'tieumoc-actions');
       var btnDp = el('button', 'btn wood tieumoc-btn', 'Mở Đan Phòng');
@@ -553,6 +553,17 @@
         }
       });
       gActions.appendChild(btnDp);
+      // Đợt T2: mở thẳng Bảng Đột Phá Trúc Cơ (js/dotpha.js) từ mục đại
+      // cảnh giới của bảng này.
+      var btnGrand = el('button', 'btn wood tieumoc-btn tieumoc-btn-break', 'Mở Bảng Đột Phá Trúc Cơ');
+      btnGrand.type = 'button';
+      btnGrand.addEventListener('click', function () {
+        closePanel();
+        if (typeof window !== 'undefined' && window.GameDotPha && window.GameDotPha.openPanel) {
+          window.GameDotPha.openPanel();
+        }
+      });
+      gActions.appendChild(btnGrand);
       body.appendChild(gActions);
       return;
     }

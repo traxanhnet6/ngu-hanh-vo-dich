@@ -235,7 +235,7 @@
           <div class="detail-row"><span>Tu vi farm hôm nay:</span> <b id="char-panel-farm-tuvi" class="green-text">0 / 65</b></div>
           <div class="detail-row"><span>Linh Thạch farm:</span> <b id="char-panel-farm-lt" class="gold-text">0 / 300</b></div>
           <div class="detail-row"><span>Lượt hồi sinh:</span> <b id="char-panel-revival-pool" class="gold-text">5 / 5</b></div>
-          <div class="detail-row"><span>Đột phá:</span> <button id="btn-tieumoc-open" class="btn wood tieumoc-open-btn" type="button">Đột Phá Tiểu Mốc</button></div>
+          <div class="detail-row"><span>Đột phá:</span> <button id="btn-tieumoc-open" class="btn wood tieumoc-open-btn" type="button">Đột Phá Tiểu Mốc</button> <button id="btn-dotpha-open" class="btn wood tieumoc-open-btn" type="button">Đột Phá Trúc Cơ</button></div>
           
           <h3 class="section-title">Năm Trụ Ngũ Hành (Hồ sơ 49)</h3>
           <div class="pillar-item">
@@ -909,6 +909,22 @@
     </div>
   </div>
 
+  <!-- Modal Đột Phá Trúc Cơ — Độ Kiếp (Đợt T2) -->
+  <div id="dotpha-modal" class="modal-overlay hidden">
+    <div class="panel modal-box tieumoc-box">
+      <div class="modal-header">
+        <div class="danphong-header-title-wrap">
+          <h2 class="modal-title">ĐỘT PHÁ TRÚC CƠ — ĐỘ KIẾP</h2>
+          <span class="danphong-sub-badge">Đầy trần 5 đường + Trúc Cơ Đan — đủ/thiếu từng điều kiện liệt kê rõ trước khi bấm, độ kiếp diễn thật 3 tia</span>
+        </div>
+        <button id="close-dotpha-modal" class="btn-close" type="button" aria-label="Đóng">×</button>
+      </div>
+      <div id="dotpha-body" class="tieumoc-body">
+        <!-- Nội dung render bởi GameDotPha -->
+      </div>
+    </div>
+  </div>
+
   <!-- Lớp phủ Hướng Dẫn Tân Thủ (Tutorial Overlay) -->
   <div id="tutorial-overlay" class="tutorial-overlay hidden">
     <div id="tutorial-spotlight" class="tutorial-spotlight"></div>
@@ -940,6 +956,7 @@
   <script src="js/linhdien.js"></script>
   <script src="js/danphong.js"></script>
   <script src="js/tieumoc.js"></script>
+  <script src="js/dotpha.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

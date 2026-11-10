@@ -1462,6 +1462,17 @@
       if (tmTarget) return tmTarget;
     }
 
+    // Đợt T2: DẪN ĐƯỜNG ĐỘT PHÁ TRÚC CƠ — chỉ hoạt động khi người chơi đã
+    // bấm "Chỉ đường" trong Bảng Đột Phá Trúc Cơ cho một mục còn thiếu
+    // (Trúc Cơ Đan / nguyên liệu gốc): mũi tên chỉ tới nguồn THẬT của mục
+    // đó. Đủ rồi hoặc tắt theo dõi thì móc trả null, dẫn đường quay về
+    // chuỗi chính.
+    var dpqAPI = getDotPhaAPI();
+    if (dpqAPI && dpqAPI.getTrackedTargetInfo) {
+      var dpTarget = dpqAPI.getTrackedTargetInfo(player);
+      if (dpTarget) return dpTarget;
+    }
+
     // Khi sectStage >= 4: Chuỗi nhiệm vụ chính (Đợt 6 - Việc 1)
     var mainStage = q.mainStage;
     if (!mainStage || mainStage === 0) {
@@ -2288,8 +2299,240 @@
     return { ok: false, msg: 'Vật phẩm không thể sử dụng trực tiếp' };
   }
 
-  function tryBreakthrough() {
+  // Đợt T2: module Đột Phá Đại Cảnh Giới (js/dotpha.js) giữ CẤU HÌNH (tỉ lệ
+  // khóa 1.0 theo phán của Bui) + logic thuần của bảng đột phá và dẫn
+  // đường. Engine lấy qua một cửa duy nhất — trình duyệt đọc window, Node
+  // đọc global/require như các module khác.
+  function getDotPhaAPI() {
+    if (typeof window !== 'undefined' && window.GameDotPha) return window.GameDotPha;
+    if (typeof global !== 'undefined' && global.GameDotPha) return global.GameDotPha;
+    if (typeof require !== 'undefined') {
+      try { return require('./dotpha.js'); } catch (e) { return null; }
+    }
+    return null;
+  }
+
+  // =========================================================================
+  // ĐỘ KIẾP TRÚC CƠ — CẢNH DIỄN THẬT 3 TIA (Đợt T2)
+  // Chuẩn diễn theo tài liệu độ kiếp Vô Sắc (docs/realm-prep mục 10): mây
+  // kiếp xoáy tối kéo tới (lớp phủ cục bộ quanh nhân vật, KHÔNG dùng lớp
+  // tối ngày đêm), từng tia sét vẽ bằng đường gấp khúc sáng từ mây xuống
+  // nhân vật + chớp sáng + rung màn hình tăng dần + hạt điện tóe; kết thúc
+  // mây tan THEO VÒNG TRÒN từ nhân vật kèm cột sáng. Theo phán của Bui
+  // 14:12 ngày 2026-11-10 ("Giữ 100% như hiện tại, chỉ thêm độ kiếp diễn
+  // thật"), đột phá đủ điều kiện là CHẮC CHẮN thành công — cảnh chỉ có một
+  // kết cục thành công, không tồn tại nhánh thất bại. Cảnh chỉ là lớp DIỄN
+  // — kết quả đột phá đã áp đồng bộ trong tryBreakthrough (luật nhãn
+  // REALMFIX: nhãn chỉ đổi khi đột phá thành công, áp ngay tại thời điểm bấm).
+  // =========================================================================
+  var tribulation = null;
+
+  function startTribulation() {
+    if (!player) return;
+    tribulation = {
+      t: 0,
+      phase: 'gather',
+      gatherDur: 1.4,
+      boltInterval: 0.85,
+      boltsTotal: 3,
+      boltsHit: 0,
+      nextBoltAt: 1.4,
+      outcome: 'success',
+      outcomeDur: 1.7,
+      outcomeT: 0,
+      bolt: null, // { points: [{x,y}], age }
+      flash: 0,
+      sparks: [],
+      seed: Math.random() * 1000
+    };
+    if (audioAPI && audioAPI.playThunderFar) audioAPI.playThunderFar();
+  }
+
+  function tribulationStrike() {
+    if (!tribulation || !player) return;
+    var topX = player.x + (Math.random() - 0.5) * 70;
+    var topY = player.y - 430;
+    var botX = player.x;
+    var botY = player.y - 14;
+    var pts = [];
+    var segs = 7;
+    for (var i = 0; i <= segs; i++) {
+      var f = i / segs;
+      var jitter = (i === 0 || i === segs) ? 0 : (Math.random() - 0.5) * 34 * (1 - Math.abs(f - 0.5));
+      pts.push({ x: topX + (botX - topX) * f + jitter, y: topY + (botY - topY) * f });
+    }
+    tribulation.bolt = { points: pts, age: 0 };
+    tribulation.flash = 1;
+    tribulation.boltsHit++;
+    // Rung màn hình tăng dần theo tia (thang neo của chuẩn độ kiếp: tia
+    // cuối rung mạnh nhất).
+    triggerScreenShake(0.28 + tribulation.boltsHit * 0.08, 5 + tribulation.boltsHit * 3);
+    if (audioAPI && audioAPI.playBolt) audioAPI.playBolt();
+    for (var s = 0; s < 14; s++) {
+      var ang = Math.random() * Math.PI * 2;
+      var spd = 40 + Math.random() * 130;
+      tribulation.sparks.push({
+        x: botX, y: botY,
+        vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd - 40,
+        t: 0, dur: 0.4 + Math.random() * 0.3
+      });
+    }
+  }
+
+  function updateTribulation(dt) {
+    if (!tribulation) return;
+    var tr = tribulation;
+    tr.t += dt;
+    if (tr.flash > 0) tr.flash = Math.max(0, tr.flash - dt * 5.5);
+    if (tr.bolt) {
+      tr.bolt.age += dt;
+      if (tr.bolt.age > 0.22) tr.bolt = null;
+    }
+    for (var i = tr.sparks.length - 1; i >= 0; i--) {
+      var sp = tr.sparks[i];
+      sp.t += dt;
+      sp.x += sp.vx * dt;
+      sp.y += sp.vy * dt;
+      sp.vy += 260 * dt;
+      if (sp.t >= sp.dur) tr.sparks.splice(i, 1);
+    }
+
+    if (tr.phase === 'gather') {
+      if (tr.t >= tr.gatherDur) {
+        tr.phase = 'bolts';
+      }
+      return;
+    }
+    if (tr.phase === 'bolts') {
+      if (tr.boltsHit < tr.boltsTotal && tr.t >= tr.nextBoltAt) {
+        tribulationStrike();
+        tr.nextBoltAt = tr.t + tr.boltInterval;
+      }
+      if (tr.boltsHit >= tr.boltsTotal && tr.t >= tr.nextBoltAt - tr.boltInterval + 0.55) {
+        tr.phase = 'outcome';
+        tr.outcomeT = 0;
+      }
+      return;
+    }
+    if (tr.phase === 'outcome') {
+      tr.outcomeT += dt;
+      if (tr.outcomeT >= tr.outcomeDur) {
+        tribulation = null;
+      }
+    }
+  }
+
+  function getTribulationState() {
+    if (!tribulation) return null;
+    return {
+      active: true,
+      phase: tribulation.phase,
+      boltsHit: tribulation.boltsHit,
+      boltsTotal: tribulation.boltsTotal,
+      outcome: tribulation.outcome
+    };
+  }
+
+  function renderTribulation() {
+    if (!tribulation || !player || !ctx) return;
+    var tr = tribulation;
+    var px = player.x;
+    var py = player.y;
+
+    // Mức tụ mây theo pha: gather 0->1, bolts giữ 1, outcome tan dần.
+    var gatherP = 0;
+    if (tr.phase === 'gather') gatherP = Math.min(1, tr.t / tr.gatherDur);
+    else if (tr.phase === 'bolts') gatherP = 1;
+    else gatherP = Math.max(0, 1 - (tr.outcomeT / tr.outcomeDur));
+
+    ctx.save();
+
+    // Lớp sẫm cục bộ quanh nhân vật khi mây tụ (không đụng lớp ngày đêm);
+    // pha kết mây đã tan nên không phủ tối nữa.
+    if (tr.phase !== 'outcome') {
+      var darkA = 0.26 * gatherP;
+      ctx.fillStyle = 'rgba(10, 10, 18, ' + darkA.toFixed(3) + ')';
+      ctx.fillRect(camera.x - 60, camera.y - 60, camera.viewportW + 120, camera.viewportH + 120);
+    }
+
+    // Đám mây kiếp: 9 cụm elip tối xoáy quanh phía trên nhân vật, kéo từ
+    // xa vào gần khi tụ; pha kết tản ra xa theo vòng tròn và mờ dần.
+    var cloudR;
+    if (tr.phase === 'gather') cloudR = 430 - 290 * gatherP;
+    else if (tr.phase === 'bolts') cloudR = 140;
+    else cloudR = 140 + 400 * (tr.outcomeT / tr.outcomeDur);
+    var cloudAlpha = tr.phase === 'outcome'
+      ? 0.55 * gatherP
+      : 0.28 + 0.3 * gatherP;
+    for (var ci = 0; ci < 9; ci++) {
+      var ang = (ci / 9) * Math.PI * 2 + tr.seed + tr.t * 0.12;
+      var cxp = px + Math.cos(ang) * cloudR;
+      var cyp = py - 150 + Math.sin(ang) * cloudR * 0.30;
+      var crx = 120 + (ci % 3) * 36;
+      var cry = 34 + (ci % 4) * 7;
+      ctx.fillStyle = 'rgba(24, 22, 38, ' + cloudAlpha.toFixed(3) + ')';
+      ctx.beginPath();
+      ctx.ellipse(cxp, cyp, crx, cry, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Tia sét đang đánh xuống (vẽ gấp khúc sáng, lõi trắng + hào quang).
+    if (tr.bolt) {
+      var boltA = Math.max(0, 1 - tr.bolt.age / 0.22);
+      var pts = tr.bolt.points;
+      ctx.lineJoin = 'round';
+      ctx.shadowColor = 'rgba(170, 200, 255, 0.9)';
+      ctx.shadowBlur = 16;
+      ctx.strokeStyle = 'rgba(140, 175, 255, ' + (0.55 * boltA).toFixed(3) + ')';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (var bi = 1; bi < pts.length; bi++) ctx.lineTo(pts[bi].x, pts[bi].y);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(255, 255, 255, ' + (0.95 * boltA).toFixed(3) + ')';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (var bj = 1; bj < pts.length; bj++) ctx.lineTo(pts[bj].x, pts[bj].y);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+
+    // Hạt điện tóe ở điểm chạm.
+    for (var si = 0; si < tr.sparks.length; si++) {
+      var spark = tr.sparks[si];
+      var sa = Math.max(0, 1 - spark.t / spark.dur);
+      ctx.fillStyle = 'rgba(190, 215, 255, ' + (0.85 * sa).toFixed(3) + ')';
+      ctx.fillRect(spark.x - 1.6, spark.y - 1.6, 3.2, 3.2);
+    }
+
+    // Pha kết: cột sáng + vòng mây tan tròn từ nhân vật.
+    if (tr.phase === 'outcome') {
+      var op = tr.outcomeT / tr.outcomeDur;
+      var grad = ctx.createLinearGradient(0, py - 430, 0, py);
+      grad.addColorStop(0, 'rgba(255, 240, 190, 0)');
+      grad.addColorStop(1, 'rgba(255, 240, 190, ' + (0.5 * (1 - op)).toFixed(3) + ')');
+      ctx.fillStyle = grad;
+      ctx.fillRect(px - 26, py - 430, 52, 430);
+      ctx.strokeStyle = 'rgba(255, 233, 168, ' + (0.8 * (1 - op)).toFixed(3) + ')';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.ellipse(px, py - 8, 30 + op * 520, (30 + op * 520) * 0.36, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // Chớp sáng trắng toàn khung ngay khoảnh khắc tia chạm đất.
+    if (tr.flash > 0) {
+      ctx.fillStyle = 'rgba(255, 255, 255, ' + (0.38 * tr.flash).toFixed(3) + ')';
+      ctx.fillRect(camera.x - 60, camera.y - 60, camera.viewportW + 120, camera.viewportH + 120);
+    }
+
+    ctx.restore();
+  }
+
+  function tryBreakthrough(opts) {
     if (!player) return { ok: false, msg: 'Chưa khởi tạo nhân vật' };
+    opts = opts || {};
 
     var keys = ['kim', 'moc', 'thuy', 'hoa', 'tho'];
     var minTuVi = Infinity;
@@ -2315,11 +2558,24 @@
       return { ok: false, reason: 'missing_pill', msg: msgNoPill };
     }
 
+    // Đợt T2 — PHÁN CỦA BUI 14:12 ngày 2026-11-10: "Giữ 100% như hiện tại,
+    // chỉ thêm độ kiếp diễn thật". Tỉ lệ cấu hình ở js/dotpha.js CONFIG
+    // khóa 1.0: đủ hai điều kiện ở trên là CHẮC CHẮN thành công — hàm này
+    // KHÔNG có nhánh thất bại và KHÔNG có đường mã án phạt nào (bản nháp
+    // tỉ lệ 80% + phạt nửa nguyên liệu + đan phụ trợ đã hủy theo lệnh Bui,
+    // ghi lại trong báo cáo đợt t2-report.md). Viên đan tiêu hao, cảnh độ
+    // kiếp 3 tia diễn kèm, nhãn Trúc Cơ mở tại đây như luật REALMFIX.
+    var dpAPI = getDotPhaAPI();
+    var rate = (dpAPI && dpAPI.CONFIG && typeof dpAPI.CONFIG.successRate === 'number')
+      ? dpAPI.CONFIG.successRate : 1;
+    var roll = dpAPI ? dpAPI.rollOnce(opts) : Math.random();
+
     stateAPI.removeItemFromBag(player, 'truc-co-dan', 1);
+    startTribulation();
+
     player.realm = 'Trúc Cơ Sơ Kỳ';
     // Đợt T1: đột phá ĐẠI cảnh giới thành công -> mốc tiểu đột phá chuyển
-    // sang giai đoạn Trúc Cơ đầu tiên (mốc 10, trần 1.300/đường). Công thức
-    // và điều kiện của tryBreakthrough giữ nguyên 100% như bản live (D.1).
+    // sang giai đoạn Trúc Cơ đầu tiên (mốc 10, trần 1.300/đường).
     if (stateAPI.setMocIndex) stateAPI.setMocIndex(player, 10);
     if (player.quests) {
       player.quests.mainStage = 10;
@@ -2333,7 +2589,7 @@
       window.GameUI.showToast(successMsg);
       window.GameUI.refreshHUD();
     }
-    return { ok: true, realm: 'Trúc Cơ Sơ Kỳ', newRealm: 'Trúc Cơ Sơ Kỳ', msg: successMsg };
+    return { ok: true, realm: 'Trúc Cơ Sơ Kỳ', newRealm: 'Trúc Cơ Sơ Kỳ', msg: successMsg, rate: rate, roll: roll };
   }
 
   function exchangePill(elem) {
@@ -3312,6 +3568,7 @@
 
     // Cập nhật hiệu ứng hình ảnh (VFX & Telegraphs)
     updateVisualEffects(dt);
+    updateTribulation(dt); // Đợt T2: cảnh độ kiếp Trúc Cơ (mây tụ / 3 tia / pha kết)
 
     // Cập nhật chữ sát thương nổi
     updateFloatingTexts(dt);
@@ -4336,6 +4593,7 @@
 
     // 7. Vẽ chữ sát thương nổi (Floating Numbers)
     renderFloatingTexts();
+    renderTribulation(); // Đợt T2: mây kiếp + tia sét độ kiếp vẽ trên cùng lớp thế giới
 
     // 7b. Biển chỉ tên tại các điểm chuyển map (Đợt 3, Note 4)
     drawGateSigns();
@@ -5599,6 +5857,7 @@
     getTravelState: function () { return travelState; },
     useItem: useItem,
     tryBreakthrough: tryBreakthrough,
+    getTribulationState: getTribulationState,
     exchangePill: exchangePill,
     refineTrucCoDan: refineTrucCoDan,
     equipItem: equipItem,
