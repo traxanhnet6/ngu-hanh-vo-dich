@@ -235,6 +235,7 @@
           <div class="detail-row"><span>Tu vi farm hôm nay:</span> <b id="char-panel-farm-tuvi" class="green-text">0 / 65</b></div>
           <div class="detail-row"><span>Linh Thạch farm:</span> <b id="char-panel-farm-lt" class="gold-text">0 / 300</b></div>
           <div class="detail-row"><span>Lượt hồi sinh:</span> <b id="char-panel-revival-pool" class="gold-text">5 / 5</b></div>
+          <div class="detail-row"><span>Đột phá:</span> <button id="btn-tieumoc-open" class="btn wood tieumoc-open-btn" type="button">Đột Phá Tiểu Mốc</button></div>
           
           <h3 class="section-title">Năm Trụ Ngũ Hành (Hồ sơ 49)</h3>
           <div class="pillar-item">
@@ -892,6 +893,22 @@
     </div>
   </div>
 
+  <!-- Modal Đột Phá Tiểu Mốc (Đợt T1) -->
+  <div id="tieumoc-modal" class="modal-overlay hidden">
+    <div class="panel modal-box tieumoc-box">
+      <div class="modal-header">
+        <div class="danphong-header-title-wrap">
+          <h2 class="modal-title">ĐỘT PHÁ TIỂU MỐC</h2>
+          <span class="danphong-sub-badge">Đầy trần 5 đường + Linh Thạch + nguyên liệu vùng — đột phá để mở trần mốc kế</span>
+        </div>
+        <button id="close-tieumoc-modal" class="btn-close" type="button" aria-label="Đóng">×</button>
+      </div>
+      <div id="tieumoc-body" class="tieumoc-body">
+        <!-- Nội dung render bởi GameTieuMoc -->
+      </div>
+    </div>
+  </div>
+
   <!-- Lớp phủ Hướng Dẫn Tân Thủ (Tutorial Overlay) -->
   <div id="tutorial-overlay" class="tutorial-overlay hidden">
     <div id="tutorial-spotlight" class="tutorial-spotlight"></div>
@@ -922,6 +939,7 @@
   <script src="js/ui.js"></script>
   <script src="js/linhdien.js"></script>
   <script src="js/danphong.js"></script>
+  <script src="js/tieumoc.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

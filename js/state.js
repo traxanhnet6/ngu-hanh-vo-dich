@@ -223,6 +223,7 @@
       linhThach: options.linhThach || 0,
       stats: { playSec: 0, kills: 0, bossKills: 0, harvests: 0, refines: 0 },
       usedGiftcodes: {},
+      tieuMoc: { moc: 1, ngoDao: false, thangTinhAnh: false, focus: null },
       bagLocks: {},
       revivalPool: 5,
       revivalLastRegen: Date.now(),
@@ -381,6 +382,9 @@
       if (!data.usedGiftcodes || typeof data.usedGiftcodes !== 'object') {
         data.usedGiftcodes = {};
       }
+      // Đợt T1: save cũ chưa có trạng thái đột phá tiểu mốc -> suy mốc từ
+      // tu vi/nhãn hiện có; tu vi đã có GIỮ NGUYÊN (không cắt theo trần mới).
+      ensureTieuMoc(data);
       if (!data.bagLocks || typeof data.bagLocks !== 'object') {
         data.bagLocks = {};
       }
@@ -680,24 +684,140 @@
   }
 
   /**
-   * Hệ số giảm dần (taper factor) của Linh Thạch farm theo ngày (Hồ sơ 50 & Brief §6 & Check 10)
-   * Luyện Khí: chạm 300 -> x0.25, vượt 600 -> x0.1
+   * Trần Linh Thạch rơi trực tiếp theo ngày, theo ĐẠI CẢNH GIỚI (Hồ sơ 50 §7 —
+   * bảng ĐÃ CHỐT của Bui 2026-11-08 16:42; đợt T1 thay ngưỡng cứng 300/600 cũ
+   * vốn chỉ đúng cho Luyện Khí bằng bảng theo cảnh giới thật):
+   *   Luyện Khí 300 · Trúc Cơ 1.200 · Kim Đan 4.000 · Nguyên Anh 12.000 ·
+   *   Hóa Thần 30.000.
+   * Cảnh giới lấy từ CHUỖI cảnh giới đã đột phá thật (realmRankFromString):
+   * tu vi chạm mốc nhưng CHƯA đột phá thì trần chưa nâng — đúng câu hồ sơ
+   * "đột phá lên đại cảnh giới mới thì trần nâng ngay". Phàm Nhân (chưa vào
+   * Luyện Khí) dùng trần Luyện Khí 300 như bản live trước nay vẫn áp.
+   * Chạm trần: tỉ lệ rơi còn 1/4; vượt 2 lần trần: còn 1/10 (giữ đúng hình
+   * dạng hệ số cũ, chỉ đổi ngưỡng theo cảnh giới).
    */
-  function getLinhThachTaperFactor(totalFarmLinhThachToday) {
+  var LINH_THACH_DAILY_CAPS = [300, 1200, 4000, 12000, 30000];
+
+  function getLinhThachDailyCap(player) {
+    if (!player) return LINH_THACH_DAILY_CAPS[0];
+    var rank = realmRankFromString(player.realm);
+    if (rank >= 22) return LINH_THACH_DAILY_CAPS[4];
+    if (rank >= 18) return LINH_THACH_DAILY_CAPS[3];
+    if (rank >= 14) return LINH_THACH_DAILY_CAPS[2];
+    if (rank >= 10) return LINH_THACH_DAILY_CAPS[1];
+    return LINH_THACH_DAILY_CAPS[0];
+  }
+
+  /**
+   * Hệ số giảm dần (taper factor) của Linh Thạch farm theo ngày (Hồ sơ 50 §7):
+   * chạm trần của cảnh giới hiện tại -> x0.25, vượt 2 lần trần -> x0.1.
+   * Không truyền player thì dùng trần Luyện Khí 300 (khớp hành vi cũ).
+   */
+  function getLinhThachTaperFactor(totalFarmLinhThachToday, player) {
     var total = totalFarmLinhThachToday || 0;
-    if (total >= 600) return 0.1;
-    if (total >= 300) return 0.25;
+    var cap = getLinhThachDailyCap(player);
+    if (total >= cap * 2) return 0.1;
+    if (total >= cap) return 0.25;
     return 1.0;
   }
 
   /**
    * Tính Linh Thạch thực nhận sau khi áp dụng trần giảm dần
    */
-  function calcLinhThachGain(currentFarmLinhThachToday, rawAmount) {
-    var factor = getLinhThachTaperFactor(currentFarmLinhThachToday);
+  function calcLinhThachGain(currentFarmLinhThachToday, rawAmount, player) {
+    var factor = getLinhThachTaperFactor(currentFarmLinhThachToday, player);
     var gained = rawAmount * factor;
     // Làm tròn hoặc tối thiểu 1 nếu rawAmount >= 1 và factor > 0
     return Math.max(1, Math.round(gained));
+  }
+
+  // ==========================================================================
+  // ĐỘT PHÁ TIỂU MỐC — TRẦN TU VI THEO MỐC (Đợt T1, hồ sơ 02 §1/§2/§3.3 + 06)
+  // Mốc (moc): 1..9 = tầng Luyện Khí đang vươn tới trần của nó, 10..13 = các
+  // giai đoạn Trúc Cơ. Trần MỖI ĐƯỜNG tại mốc = mốc tích lũy của mốc kế tiếp
+  // theo đúng thang hạng của realmRankFromPaths: Luyện Khí 100/tầng (mốc m
+  // trần m*100), Trúc Cơ 400/giai đoạn (mốc 10..13 trần 1300/1700/2100/2500).
+  // Tu vi săn/luyện KHÔNG vượt trần của mốc chưa đột phá (cộng tác với bể tu
+  // vi ngày 65 không đổi — D.2): đạt trần mốc thì dừng tăng dù bể ngày còn.
+  // Save cũ chưa có trường tieuMoc: SUY mốc từ tu vi/nhãn hiện có, KHÔNG cắt
+  // bớt tu vi đã có — đường vượt trần được coi là đầy cho điều kiện đột phá
+  // của mốc hiện tại (addTuViCapped chỉ không cộng thêm, không bao giờ trừ).
+  // ==========================================================================
+  var PATH_KEYS = ['kim', 'moc', 'thuy', 'hoa', 'tho'];
+
+  function mocCapFor(moc) {
+    var m = (typeof moc === 'number' && isFinite(moc)) ? Math.floor(moc) : 1;
+    if (m <= 1) return 100;
+    if (m <= 9) return m * 100;
+    if (m <= 13) return 900 + (m - 9) * 400;
+    if (m <= 17) return 2500 + (m - 13) * 1200;
+    if (m <= 21) return 7300 + (m - 17) * 3600;
+    return 21700 + (Math.min(m, 25) - 21) * 9000;
+  }
+
+  function inferMoc(player) {
+    if (!player) return 1;
+    var byString = realmRankFromString(player.realm);
+    if (byString >= 10) {
+      // Đã đột phá Trúc Cơ thật: mốc = giai đoạn Trúc Cơ theo nhãn (10..13).
+      return Math.max(10, Math.min(13, byString));
+    }
+    var min = Infinity;
+    for (var i = 0; i < PATH_KEYS.length; i++) {
+      var p = player.paths ? player.paths[PATH_KEYS[i]] : null;
+      var v = (p && typeof p.tuVi === 'number') ? p.tuVi : 0;
+      if (v < min) min = v;
+    }
+    if (!isFinite(min) || min <= 0) return 1;
+    return Math.max(1, Math.min(9, Math.ceil(min / 100)));
+  }
+
+  function ensureTieuMoc(player) {
+    if (!player) return null;
+    if (!player.tieuMoc || typeof player.tieuMoc !== 'object') {
+      player.tieuMoc = { moc: inferMoc(player), ngoDao: false, thangTinhAnh: false, focus: null };
+    }
+    var st = player.tieuMoc;
+    if (typeof st.moc !== 'number' || !isFinite(st.moc) || st.moc < 1 || st.moc > 25) {
+      st.moc = inferMoc(player);
+    }
+    st.moc = Math.floor(st.moc);
+    if (typeof st.ngoDao !== 'boolean') st.ngoDao = !!st.ngoDao;
+    if (typeof st.thangTinhAnh !== 'boolean') st.thangTinhAnh = !!st.thangTinhAnh;
+    if (st.focus === undefined) st.focus = null;
+    return st;
+  }
+
+  function getMocIndex(player) {
+    var st = ensureTieuMoc(player);
+    return st ? st.moc : 1;
+  }
+
+  function setMocIndex(player, moc) {
+    var st = ensureTieuMoc(player);
+    if (st) st.moc = Math.max(1, Math.min(25, Math.floor(moc)));
+    return st ? st.moc : 1;
+  }
+
+  /** Trần tu vi MỖI ĐƯỜNG tại mốc hiện tại của người chơi. */
+  function getMocCap(player) {
+    return mocCapFor(getMocIndex(player));
+  }
+
+  /**
+   * Cộng tu vi cho một đường, kẹp tại trần mốc hiện tại. Trả về số THỰC cộng
+   * (0 khi đường đã đầy/vượt trần — tu vi sẵn có không bao giờ bị cắt).
+   */
+  function addTuViCapped(player, elem, amount) {
+    if (!player || !amount || amount <= 0) return 0;
+    if (!player.paths) return 0;
+    if (!player.paths[elem]) player.paths[elem] = { tuVi: 0 };
+    var cur = player.paths[elem].tuVi || 0;
+    var room = getMocCap(player) - cur;
+    if (room <= 0) return 0;
+    var added = Math.min(amount, room);
+    player.paths[elem].tuVi = cur + added;
+    return added;
   }
 
   /**
@@ -895,8 +1015,17 @@
     // Các hàm Đợt 2
     TU_VI_DAILY_POOL: TU_VI_DAILY_POOL,
     calcTuViGain: calcTuViGain,
+    LINH_THACH_DAILY_CAPS: LINH_THACH_DAILY_CAPS,
+    getLinhThachDailyCap: getLinhThachDailyCap,
     getLinhThachTaperFactor: getLinhThachTaperFactor,
     calcLinhThachGain: calcLinhThachGain,
+    mocCapFor: mocCapFor,
+    inferMoc: inferMoc,
+    ensureTieuMoc: ensureTieuMoc,
+    getMocIndex: getMocIndex,
+    setMocIndex: setMocIndex,
+    getMocCap: getMocCap,
+    addTuViCapped: addTuViCapped,
     calcChainBonus: calcChainBonus,
     incrementHuntChain: incrementHuntChain,
     breakHuntChain: breakHuntChain,

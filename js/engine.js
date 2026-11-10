@@ -1144,6 +1144,12 @@
           window.GameUI.refreshHUD();
           window.GameUI.showToast('Đả tọa tĩnh tâm: Linh Lực đã hồi phục');
         }
+        // Đợt T1: đả tọa tại điểm này trong lúc ở tầng 3 = hoàn thành tiểu
+        // bình cảnh NGỘ ĐẠO của mốc 3->4 (hồ sơ 06: "lên linh mạch đả tọa
+        // ngộ đạo 1 lần tại điểm linh mạch").
+        if (typeof window !== 'undefined' && window.GameTieuMoc && window.GameTieuMoc.noteNgoDao) {
+          window.GameTieuMoc.noteNgoDao(player);
+        }
         break;
       case 'rest_inn':
         player.hp = player.hpMax;
@@ -1240,8 +1246,9 @@
     var drop = groundDrops[i];
     if (!drop) return false;
     if (drop.itemId === 'linh-thach') {
-      // Tính Linh Thạch qua trần farm theo ngày (Hồ sơ 50)
-      var gainedLt = stateAPI ? stateAPI.calcLinhThachGain(todayData.farmLinhThach, drop.count) : drop.count;
+      // Tính Linh Thạch qua trần farm theo ngày (Hồ sơ 50 §7 — đợt T1: trần
+      // theo ĐẠI CẢNH GIỚI của người chơi, không còn ngưỡng cứng 300/600)
+      var gainedLt = stateAPI ? stateAPI.calcLinhThachGain(todayData.farmLinhThach, drop.count, player) : drop.count;
       player.linhThach = (player.linhThach || 0) + gainedLt;
       todayData.farmLinhThach += gainedLt;
       if (player.farmSession) {
@@ -1438,6 +1445,21 @@
     if (dpAPI && dpAPI.getTrackedTargetInfo) {
       var boardTarget = dpAPI.getTrackedTargetInfo(player);
       if (boardTarget) return boardTarget;
+    }
+
+    // Đợt T1: DẪN ĐƯỜNG ĐỘT PHÁ TIỂU MỐC — chỉ hoạt động khi người chơi đã
+    // bấm "Chỉ đường" trong bảng Đột Phá cho một điều kiện còn thiếu (móc
+    // duy nhất kiểu DANPHONG, cùng mức ưu tiên nhiệm vụ bảng): mũi tên và
+    // dấu chỉ tới nguồn THẬT của món còn thiếu (bãi quái/điểm hái/Lò Đan/
+    // điểm Đả Tọa/Chấp Sự), đúng bản đồ đúng cổng theo chuẩn hồ sơ 09. Khi
+    // điều kiện đã đủ hoặc người chơi tắt theo dõi, móc trả null và dẫn
+    // đường quay về chuỗi chính ngay bên dưới.
+    var tmAPI = (typeof window !== 'undefined' && window.GameTieuMoc)
+      ? window.GameTieuMoc
+      : (typeof global !== 'undefined' && global.GameTieuMoc ? global.GameTieuMoc : null);
+    if (tmAPI && tmAPI.getTrackedTargetInfo) {
+      var tmTarget = tmAPI.getTrackedTargetInfo(player);
+      if (tmTarget) return tmTarget;
     }
 
     // Khi sectStage >= 4: Chuỗi nhiệm vụ chính (Đợt 6 - Việc 1)
@@ -2213,24 +2235,50 @@
     };
     var elem = pillElemMap[itemId];
     if (elem) {
-      stateAPI.removeItemFromBag(player, itemId, 1);
       if (!player.paths[elem]) player.paths[elem] = { tuVi: 0 };
-      player.paths[elem].tuVi = (player.paths[elem].tuVi || 0) + 20;
+      // Đợt T1: đan cũng không đẩy tu vi vượt TRẦN MỐC chưa đột phá. Đường
+      // đã đầy trần: KHÔNG trừ đan, báo rõ lý do. Còn thiếu một ít thì đan
+      // chỉ hấp thụ tới trần và vẫn bị tiêu hao (báo trước trong thông báo).
+      var elemNames = { kim: 'Kim', moc: 'Mộc', thuy: 'Thủy', hoa: 'Hỏa', tho: 'Thổ' };
+      var capNow = (stateAPI && stateAPI.getMocCap) ? stateAPI.getMocCap(player) : Infinity;
+      var roomNow = capNow - (player.paths[elem].tuVi || 0);
+      if (roomNow <= 0) {
+        var msgCap = 'Đường ' + (elemNames[elem] || elem) + ' đã đầy trần mốc hiện tại (' + capNow + ' tu vi) — hãy Đột Phá Tiểu Mốc (gặp Chấp Sự) để mở trần trước khi dùng đan.';
+        if (typeof window !== 'undefined' && window.GameUI) {
+          window.GameUI.showToast(msgCap);
+        }
+        return { ok: false, reason: 'path_capped', msg: msgCap };
+      }
+      stateAPI.removeItemFromBag(player, itemId, 1);
+      var addedPill = Math.min(20, roomNow);
+      player.paths[elem].tuVi = (player.paths[elem].tuVi || 0) + addedPill;
 
       var stats = stateAPI.deriveStats(player.paths, player.equipment);
       player.hpMax = stats.hpMax;
       player.linhLucMax = stats.linhLucMax;
       stateAPI.savePlayer(player);
 
-      var elemNames = { kim: 'Kim', moc: 'Mộc', thuy: 'Thủy', hoa: 'Hỏa', tho: 'Thổ' };
-      var msg = 'Đã dùng ' + (elemNames[elem] || elem) + ' Linh Đan, +20 tu vi ' + (elemNames[elem] || elem) + '!';
+      var msg = 'Đã dùng ' + (elemNames[elem] || elem) + ' Linh Đan, +' + addedPill + ' tu vi ' + (elemNames[elem] || elem) + '!' +
+        (addedPill < 20 ? ' (Đan chỉ hấp thụ tới trần mốc ' + capNow + '.)' : '');
       if (audioAPI) audioAPI.playChime();
-      spawnFloatingText('+20 Tu vi ' + (elemNames[elem] || elem), player.x, player.y - 35, '#ffe9a8');
+      spawnFloatingText('+' + addedPill + ' Tu vi ' + (elemNames[elem] || elem), player.x, player.y - 35, '#ffe9a8');
       if (typeof window !== 'undefined' && window.GameUI) {
         window.GameUI.showToast(msg);
         window.GameUI.refreshHUD();
       }
-      return { ok: true, msg: msg, tuVi: player.paths[elem].tuVi };
+      return { ok: true, msg: msg, tuVi: player.paths[elem].tuVi, added: addedPill };
+    }
+
+    // Đợt T1: đan PHỤ TRỢ TẦNG (hồ sơ 06) không uống trực tiếp — chúng là
+    // điều kiện tiêu hao tại thời điểm đột phá tiểu mốc (Tụ Khí Tán ở mốc
+    // 4->5, Ngưng Khí Đan ở mốc 7->8). Bấm dùng: chỉ đường, không tiêu hao.
+    if (itemId === 'tu-khi-tan' || itemId === 'ngung-khi-dan') {
+      var auxName = itemId === 'tu-khi-tan' ? 'Tụ Khí Tán' : 'Ngưng Khí Đan';
+      var msgAux = auxName + ' là đan phụ trợ đột phá tiểu mốc — không uống trực tiếp. Hãy mở bảng Đột Phá Tiểu Mốc (gặp Chấp Sự Đường hoặc nút trong Bảng Nhân Vật), đan sẽ được tiêu hao đúng lúc đột phá.';
+      if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.showToast(msgAux);
+      }
+      return { ok: false, reason: 'aux_breakthrough_pill', msg: msgAux };
     }
 
     if (itemId === 'truc-co-dan') {
@@ -2269,6 +2317,10 @@
 
     stateAPI.removeItemFromBag(player, 'truc-co-dan', 1);
     player.realm = 'Trúc Cơ Sơ Kỳ';
+    // Đợt T1: đột phá ĐẠI cảnh giới thành công -> mốc tiểu đột phá chuyển
+    // sang giai đoạn Trúc Cơ đầu tiên (mốc 10, trần 1.300/đường). Công thức
+    // và điều kiện của tryBreakthrough giữ nguyên 100% như bản live (D.1).
+    if (stateAPI.setMocIndex) stateAPI.setMocIndex(player, 10);
     if (player.quests) {
       player.quests.mainStage = 10;
     }
@@ -3549,7 +3601,19 @@
     var rawTuVi = (m.tuViAmount !== undefined && m.tuViAmount !== null) ? m.tuViAmount : (m.tuViMoc || 2);
     var gainedTuVi = stateAPI ? stateAPI.calcTuViGain(todayData.farmTuVi, rawTuVi) : rawTuVi;
     if (!player.paths[tuViElem]) player.paths[tuViElem] = { tuVi: 0 };
-    player.paths[tuViElem].tuVi += gainedTuVi;
+    // Đợt T1: TRẦN TU VI THEO MỐC — tu vi săn được không vượt trần của mốc
+    // chưa đột phá (hồ sơ 02 §1/§3.3). Bể ngày 65 vẫn áp trước như cũ (D.2
+    // giữ nguyên); trần mốc kẹp tiếp sau: đạt trần thì dừng tăng dù bể còn,
+    // và bể ngày chỉ tính phần tu vi THỰC nhận. Tu vi sẵn có vượt trần (save
+    // cũ) không bao giờ bị cắt — addTuViCapped chỉ không cộng thêm.
+    var cappedAtMoc = false;
+    if (stateAPI && stateAPI.addTuViCapped) {
+      var beforeCap = gainedTuVi;
+      gainedTuVi = stateAPI.addTuViCapped(player, tuViElem, gainedTuVi);
+      cappedAtMoc = gainedTuVi < beforeCap;
+    } else {
+      player.paths[tuViElem].tuVi += gainedTuVi;
+    }
     // REALMFIX: đồng bộ nhãn cảnh giới ngay khi tu vi đổi (trước đây nhãn
     // chỉ đổi ở savePlayer/loadPlayer — hạ quái không lưu ngay nên HUD
     // phải chờ; nay nhãn khớp hạng tại đúng khoảnh khắc cộng tu vi)
@@ -3563,7 +3627,17 @@
 
     var tuViNames = { moc: 'Mộc', thuy: 'Thủy', hoa: 'Hỏa', tho: 'Thổ', kim: 'Kim' };
     var tuViColors = { moc: '#55d882', thuy: '#7fd4ff', hoa: '#ff9a5c', tho: '#e8c56b', kim: '#e8ecf2' };
-    spawnFloatingText('+' + gainedTuVi + ' Tu vi ' + (tuViNames[tuViElem] || 'Mộc'), m.x, m.y - 25, tuViColors[tuViElem] || '#55d882');
+    if (cappedAtMoc && gainedTuVi <= 0) {
+      spawnFloatingText('Tu vi ' + (tuViNames[tuViElem] || 'Mộc') + ' đã đầy trần mốc — hãy Đột Phá Tiểu Mốc!', m.x, m.y - 25, '#ffd76a');
+    } else {
+      spawnFloatingText('+' + gainedTuVi + ' Tu vi ' + (tuViNames[tuViElem] || 'Mộc'), m.x, m.y - 25, tuViColors[tuViElem] || '#55d882');
+    }
+
+    // Đợt T1: hạ quái TINH ANH trong lúc ở tầng 6 = hoàn thành tiểu bình cảnh
+    // của mốc 6->7 (hồ sơ 06 — điều kiện phụ lên tầng 7).
+    if (m.isElite && typeof window !== 'undefined' && window.GameTieuMoc && window.GameTieuMoc.noteEliteKill) {
+      window.GameTieuMoc.noteEliteKill(player);
+    }
 
     // 3. Tiến độ nhiệm vụ (Săn 5 Thảo Tinh ở Rừng Độc)
     if (player.quests && player.quests.talked_linhnhi && !player.quests.huntCompleted && m.mapId === 'rung-doc') {

@@ -55,6 +55,9 @@
     if (typeof window !== 'undefined' && window.GameDanPhong && window.GameDanPhong.attach) {
       window.GameDanPhong.attach(playerObj);
     }
+    if (typeof window !== 'undefined' && window.GameTieuMoc && window.GameTieuMoc.attach) {
+      window.GameTieuMoc.attach(playerObj);
+    }
   }
 
   function updateMinimapBackground() {
@@ -1459,11 +1462,19 @@
     var tuviThuy = document.getElementById('tuvi-thuy');
     var tuviMoc = document.getElementById('tuvi-moc');
 
-    if (tuviTho) tuviTho.textContent = (p.tho && p.tho.tuVi) || 0;
-    if (tuviKim) tuviKim.textContent = (p.kim && p.kim.tuVi) || 0;
-    if (tuviHoa) tuviHoa.textContent = (p.hoa && p.hoa.tuVi) || 0;
-    if (tuviThuy) tuviThuy.textContent = (p.thuy && p.thuy.tuVi) || 0;
-    if (tuviMoc) tuviMoc.textContent = (p.moc && p.moc.tuVi) || 0;
+    // Đợt T1: hiện kèm TRẦN MỐC hiện tại của từng đường và dấu ĐẦY TRẦN khi
+    // đường đã chạm trần (tu vi không tăng thêm cho tới khi đột phá tiểu mốc).
+    var mocCapNow = (stateAPI && stateAPI.getMocCap) ? stateAPI.getMocCap(player) : null;
+    var tuviText = function (v) {
+      var val = v || 0;
+      if (mocCapNow === null) return '' + val;
+      return val + ' / ' + mocCapNow + (val >= mocCapNow ? ' — ĐẦY TRẦN' : '');
+    };
+    if (tuviTho) tuviTho.textContent = tuviText(p.tho && p.tho.tuVi);
+    if (tuviKim) tuviKim.textContent = tuviText(p.kim && p.kim.tuVi);
+    if (tuviHoa) tuviHoa.textContent = tuviText(p.hoa && p.hoa.tuVi);
+    if (tuviThuy) tuviThuy.textContent = tuviText(p.thuy && p.thuy.tuVi);
+    if (tuviMoc) tuviMoc.textContent = tuviText(p.moc && p.moc.tuVi);
 
     // Chỉ số phái sinh (gồm cả trang bị đang mặc — khớp công thức chiến đấu của engine)
     var stats = stateAPI.deriveStats(player.paths, player.equipment);
@@ -1493,7 +1504,9 @@
     var rvEl = document.getElementById('char-panel-revival-pool');
 
     if (tvEl) tvEl.textContent = farmTuVi + ' / 65';
-    if (ltEl) ltEl.textContent = farmLt + ' / 300';
+    // Đợt T1: mẫu số là TRẦN LINH THẠCH NGÀY THEO CẢNH GIỚI (hồ sơ 50 §7:
+    // 300/1.200/4.000/12.000/30.000) — trước đây ghi cứng 300 ở mọi cảnh giới.
+    if (ltEl) ltEl.textContent = farmLt + ' / ' + ((stateAPI && stateAPI.getLinhThachDailyCap) ? stateAPI.getLinhThachDailyCap(player) : 300);
     if (rvEl) rvEl.textContent = revival + ' / 5';
 
     // Đợt K2: tỉ lệ Hài Hòa HH + trạng thái Liên Hoàn (chỉ hiển thị)
@@ -2061,6 +2074,14 @@
         window.GameEngine.refineTrucCoDan();
       }
       closeDialogue();
+    });
+    // Đợt T1: Đột Phá Tiểu Mốc — bảng điều kiện trần mốc (đầy 5 đường + Linh
+    // Thạch + nguyên liệu vùng), mở tại Chấp Sự Đường bất cứ lúc nào.
+    mkBtn('Đột Phá Tiểu Mốc', function () {
+      closeDialogue();
+      if (typeof window !== 'undefined' && window.GameTieuMoc && window.GameTieuMoc.openPanel) {
+        window.GameTieuMoc.openPanel();
+      }
     });
     // Đợt DANPHONG: Bảng Nhiệm Vụ Thu Thập + trả nhiệm vụ ngay tại Chấp Sự
     var dp = (typeof window !== 'undefined' && window.GameDanPhong) ? window.GameDanPhong : null;

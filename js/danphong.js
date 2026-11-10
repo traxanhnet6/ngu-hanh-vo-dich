@@ -82,6 +82,42 @@
     }
   ];
 
+  // ---------------------------------------------------------------------------
+  // ĐAN PHỤ TRỢ TẦNG (Đợt T1 — hồ sơ 06, bảng tầng Luyện Khí: điều kiện phụ
+  // đột phá lên tầng sau). Hồ sơ chỉ chốt TÊN và MỐC dùng (Tụ Khí Tán x2 khi
+  // lên tầng 5, Ngưng Khí Đan x1 khi lên tầng 8), không cho công thức luyện —
+  // hai công thức dưới đây là SỐ ĐỘI SOẠN đợt T1 (khai trong báo cáo đợt):
+  // nguyên liệu lấy từ các vùng ĐÃ MỞ ở mốc cần dùng (Tụ Khí Tán cần ở tầng 4:
+  // vùng Mộc + Thủy mở ở hạng 4; Ngưng Khí Đan cần ở tầng 7: vùng Hỏa mở ở
+  // hạng 7), tỉ lệ luyện 100% như Tu Luyện Đan. Đan phụ trợ KHÔNG uống trực
+  // tiếp — tiêu hao tại bảng Đột Phá Tiểu Mốc đúng thời điểm đột phá.
+  // ---------------------------------------------------------------------------
+  var AUX_RECIPES = [
+    {
+      pillId: 'tu-khi-tan', minRank: 4, usedAt: 'Đột phá tiểu mốc tầng 4 -> tầng 5 (cần 2 gói)',
+      materials: [
+        { itemId: 'la-thanh-tuy', count: 2 },
+        { itemId: 'bang-tinh', count: 1 }
+      ],
+      sourceNote: 'Lá Thanh Tụy: Thảo Tinh ở Rừng Độc (rơi 70%) và luống dược ở Tông Môn. Băng Tinh: Băng Tinh Linh ở Hồ Băng (rơi 50%).'
+    },
+    {
+      pillId: 'ngung-khi-dan', minRank: 7, usedAt: 'Đột phá tiểu mốc tầng 7 -> tầng 8 (cần 1 viên)',
+      materials: [
+        { itemId: 'hoa-tinh-tho', count: 2 },
+        { itemId: 'bang-tinh', count: 1 }
+      ],
+      sourceNote: 'Hỏa Tinh Thổ: Hỏa Nham Thú ở Mỏ Lửa (rơi 70%), Xích Diệm Ma tinh anh (rơi 100%). Băng Tinh: Băng Tinh Linh ở Hồ Băng (rơi 50%).'
+    }
+  ];
+
+  function getAuxRecipe(pillId) {
+    for (var i = 0; i < AUX_RECIPES.length; i++) {
+      if (AUX_RECIPES[i].pillId === pillId) return AUX_RECIPES[i];
+    }
+    return null;
+  }
+
   // Danh sách nguyên liệu Trúc Cơ Đan CHỈ ĐỂ HIỂN THỊ trong bảng Đan Phòng.
   // Việc trừ đồ/cấp đan do engine.refineTrucCoDan đảm nhiệm (nguồn sự thật
   // duy nhất); danh sách này phải khớp engine.js — refineTrucCoDan tự báo
@@ -333,6 +369,57 @@
     st.savePlayer(player);
 
     var msgOk = 'Luyện thành công 1 ' + itemName(recipe.pillId) + '! Dùng đan để tăng 20 tu vi ' + ELEM_NAMES[elem] + '.';
+    playChime();
+    showToast(msgOk);
+    refreshHUD();
+    return { ok: true, msg: msgOk, pillId: recipe.pillId };
+  }
+
+  /**
+   * Đợt T1: Luyện 1 đan PHỤ TRỢ TẦNG (Tụ Khí Tán / Ngưng Khí Đan) bằng nguyên
+   * liệu — cùng luật với luyện Tu Luyện Đan: thiếu nguyên liệu hoặc chưa mở
+   * vùng thì từ chối rõ ràng không trừ gì; túi đầy thì hoàn nguyên liệu.
+   */
+  function refineAux(player, pillId) {
+    if (!player) return { ok: false, msg: 'Không tìm thấy người chơi.' };
+    var recipe = getAuxRecipe(pillId);
+    if (!recipe) return { ok: false, msg: 'Không có công thức đan phụ trợ này.' };
+    var st = getStateAPI();
+    if (!st) return { ok: false, msg: 'GameState chưa sẵn sàng.' };
+
+    if (realmRank(player) < recipe.minRank) {
+      var msgLocked = 'Công thức ' + itemName(recipe.pillId) + ' mở ở ' + rankLabel(recipe.minRank) + ' (vùng nguyên liệu chưa mở).';
+      showToast(msgLocked);
+      return { ok: false, reason: 'locked', msg: msgLocked };
+    }
+
+    var missing = missingList(player, recipe.materials);
+    if (missing.length > 0) {
+      var msgMiss = 'Chưa đủ nguyên liệu luyện ' + itemName(recipe.pillId) + ': ' + missing.join(' · ') + '.';
+      showToast(msgMiss);
+      return { ok: false, reason: 'missing_materials', msg: msgMiss };
+    }
+
+    var i;
+    for (i = 0; i < recipe.materials.length; i++) {
+      st.removeItemFromBag(player, recipe.materials[i].itemId, recipe.materials[i].count);
+    }
+    var m = getMonstersAPI();
+    var addRes = st.addItemToBag(player, recipe.pillId, 1, m ? m.ITEM_DEFS : undefined);
+    if (!addRes || !addRes.success) {
+      for (i = 0; i < recipe.materials.length; i++) {
+        st.addItemToBag(player, recipe.materials[i].itemId, recipe.materials[i].count, m ? m.ITEM_DEFS : undefined);
+      }
+      var msgFull = 'Túi đồ đã đầy, không nhận thêm được ' + itemName(recipe.pillId) + '. Hãy dọn túi trước.';
+      showToast(msgFull);
+      return { ok: false, reason: 'bag_full', msg: msgFull };
+    }
+
+    if (!player.stats) player.stats = { playSec: 0, kills: 0, bossKills: 0, harvests: 0, refines: 0 };
+    player.stats.refines = (player.stats.refines || 0) + 1;
+    st.savePlayer(player);
+
+    var msgOk = 'Luyện thành công 1 ' + itemName(recipe.pillId) + '! ' + recipe.usedAt + ' — mở bảng Đột Phá Tiểu Mốc (gặp Chấp Sự) để dùng.';
     playChime();
     showToast(msgOk);
     refreshHUD();
@@ -606,6 +693,63 @@
       body.appendChild(card);
     });
 
+    // Đợt T1: thẻ ĐAN PHỤ TRỢ TẦNG (hồ sơ 06) — luyện bằng nguyên liệu tại
+    // Đan Phòng, tiêu hao tại bảng Đột Phá Tiểu Mốc.
+    var auxTitle = el('div', 'danphong-intro',
+      'Đan phụ trợ tầng (hồ sơ 06): Tụ Khí Tán và Ngưng Khí Đan không uống trực tiếp — chúng là điều kiện tiêu hao khi đột phá tiểu mốc tương ứng. Luyện tại đây, dùng tại bảng Đột Phá Tiểu Mốc (gặp Chấp Sự Đường).');
+    body.appendChild(auxTitle);
+
+    AUX_RECIPES.forEach(function (recipe) {
+      var unlocked = realmRank(player) >= recipe.minRank;
+      var missing = missingList(player, recipe.materials);
+      var pillDef = getItemDef(recipe.pillId);
+      var pillCount = countOf(player, recipe.pillId);
+
+      var card = el('div', 'danphong-card' + (unlocked ? '' : ' locked'));
+      var head = el('div', 'danphong-card-head');
+      var icon = el('div', 'danphong-card-icon');
+      setElementIconSprite(icon, pillDef, 40);
+      head.appendChild(icon);
+      var titles = el('div', 'danphong-card-titles');
+      titles.appendChild(el('div', 'danphong-card-name', itemName(recipe.pillId)));
+      titles.appendChild(el('div', 'danphong-card-sub', 'Dùng tại: ' + recipe.usedAt + ' · Trong túi: ' + pillCount));
+      head.appendChild(titles);
+      card.appendChild(head);
+
+      var mats = el('div', 'danphong-mats');
+      recipe.materials.forEach(function (mat) { mats.appendChild(materialLine(player, mat)); });
+      card.appendChild(mats);
+      card.appendChild(el('div', 'danphong-source', recipe.sourceNote));
+
+      var actions = el('div', 'danphong-actions');
+      if (!unlocked) {
+        actions.appendChild(el('span', 'danphong-lock-note', 'Mở ở ' + rankLabel(recipe.minRank)));
+      } else {
+        var btnRefineAux = el('button', 'btn wood danphong-btn danphong-btn-refine-aux', 'Luyện Đan Phụ Trợ');
+        btnRefineAux.type = 'button';
+        btnRefineAux.addEventListener('click', function () {
+          refineAux(livePlayer, recipe.pillId);
+          renderPanel();
+        });
+        actions.appendChild(btnRefineAux);
+        var tm = (typeof window !== 'undefined' && window.GameTieuMoc) ? window.GameTieuMoc : null;
+        if (tm && tm.openPanel) {
+          var btnOpenTm = el('button', 'btn wood danphong-btn danphong-btn-open-tieumoc', 'Mở Bảng Đột Phá');
+          btnOpenTm.type = 'button';
+          btnOpenTm.addEventListener('click', function () {
+            closePanel();
+            tm.openPanel();
+          });
+          actions.appendChild(btnOpenTm);
+        }
+        if (missing.length > 0) {
+          actions.appendChild(el('span', 'danphong-miss-note', 'Thiếu: ' + missing.join(' · ')));
+        }
+      }
+      card.appendChild(actions);
+      body.appendChild(card);
+    });
+
     // Thẻ Trúc Cơ Đan — luyện qua đúng hàm của engine (giữ nguyên công thức cũ)
     var tcCard = el('div', 'danphong-card danphong-card-trucco');
     var tcHead = el('div', 'danphong-card-head');
@@ -810,6 +954,9 @@
 
   // Xuất API
   exports.RECIPES = RECIPES;
+  exports.AUX_RECIPES = AUX_RECIPES;
+  exports.getAuxRecipe = getAuxRecipe;
+  exports.refineAux = refineAux;
   exports.BOARD_QUESTS = BOARD_QUESTS;
   exports.TRUC_CO_DISPLAY = TRUC_CO_DISPLAY;
   exports.ensureState = ensureState;

@@ -393,6 +393,24 @@
       iconCol: 5,
       iconRow: 2,
       desc: 'Đan dược nghịch thiên cải mệnh, phụ trợ tu sĩ Luyện Khí viên mãn đột phá Trúc Cơ Kỳ.'
+    },
+    'tu-khi-tan': {
+      id: 'tu-khi-tan',
+      name: 'Tụ Khí Tán',
+      type: 'consumable',
+      stackable: true,
+      iconCol: 5,
+      iconRow: 5,
+      desc: 'Bột thuốc tụ linh khí (hồ sơ 06 — đan phụ trợ tầng): tiêu hao 2 gói khi đột phá tiểu mốc từ tầng 4 lên tầng 5. Luyện tại Đan Phòng Tông Môn.'
+    },
+    'ngung-khi-dan': {
+      id: 'ngung-khi-dan',
+      name: 'Ngưng Khí Đan',
+      type: 'consumable',
+      stackable: true,
+      iconCol: 1,
+      iconRow: 0,
+      desc: 'Viên đan ngưng tụ linh khí thành hình (hồ sơ 06 — đan phụ trợ tầng): tiêu hao 1 viên khi đột phá tiểu mốc từ tầng 7 lên tầng 8. Luyện tại Đan Phòng Tông Môn.'
     }
   };
 
