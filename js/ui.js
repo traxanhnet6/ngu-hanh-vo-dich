@@ -61,6 +61,9 @@
     if (typeof window !== 'undefined' && window.GameDotPha && window.GameDotPha.attach) {
       window.GameDotPha.attach(playerObj);
     }
+    if (typeof window !== 'undefined' && window.GameKimDan && window.GameKimDan.attach) {
+      window.GameKimDan.attach(playerObj);
+    }
   }
 
   function updateMinimapBackground() {
@@ -962,7 +965,7 @@
     if (!el || !def) return;
     var scale = cellPx / 32; // sheet gốc: 6x7 ô 32px (nền 192x224)
     el.style.backgroundImage = "url('assets/art/icons-sheet.png')";
-    el.style.backgroundSize = (192 * scale) + 'px ' + (224 * scale) + 'px';
+    el.style.backgroundSize = (192 * scale) + 'px ' + (256 * scale) + 'px';
     el.style.backgroundPosition = (-(def.iconCol || 0) * cellPx) + 'px ' + (-(def.iconRow || 0) * cellPx) + 'px';
     el.style.backgroundRepeat = 'no-repeat';
     el.style.width = cellPx + 'px';
@@ -1417,6 +1420,21 @@
     if (nameEl) nameEl.textContent = player.name;
     if (realmEl) realmEl.textContent = player.realm || 'Phàm Nhân';
 
+    // Đợt T3: hàng PHẨM KIM ĐAN — chỉ hiện khi đã kết đan (phẩm là thưởng
+    // vĩnh viễn của hồ sơ 05C: linh lực tối đa + tu vi nhận theo phẩm).
+    var kdRowEl = document.getElementById('char-panel-kimdan-row');
+    var kdPhamEl = document.getElementById('char-panel-kimdan-pham');
+    var kdPham = (stateAPI && typeof stateAPI.getKimDanPham === 'function') ? stateAPI.getKimDanPham(player) : 0;
+    if (kdRowEl && kdPhamEl) {
+      if (kdPham >= 1 && typeof window !== 'undefined' && window.GameKimDan && window.GameKimDan.PHAM_NAMES) {
+        kdRowEl.style.display = '';
+        kdPhamEl.textContent = window.GameKimDan.PHAM_NAMES[kdPham] +
+          ' (linh lực tối đa +' + ((kdPham - 1) * 5) + '%, tu vi nhận +' + ((kdPham - 1) * 2) + '%)';
+      } else {
+        kdRowEl.style.display = 'none';
+      }
+    }
+
     var hpPct = Math.max(0, Math.min(100, (player.hp / player.hpMax) * 100));
     var llPct = Math.max(0, Math.min(100, (player.linhLuc / player.linhLucMax) * 100));
 
@@ -1453,6 +1471,20 @@
 
     if (nameEl) nameEl.textContent = player.name;
     if (realmEl) realmEl.textContent = player.realm || 'Phàm Nhân';
+
+    // Đợt T3: hàng PHẨM KIM ĐAN trong Bảng Nhân Vật (cùng khối ở refreshHUD).
+    var kdRowEl2 = document.getElementById('char-panel-kimdan-row');
+    var kdPhamEl2 = document.getElementById('char-panel-kimdan-pham');
+    var kdPham2 = (stateAPI && typeof stateAPI.getKimDanPham === 'function') ? stateAPI.getKimDanPham(player) : 0;
+    if (kdRowEl2 && kdPhamEl2) {
+      if (kdPham2 >= 1 && typeof window !== 'undefined' && window.GameKimDan && window.GameKimDan.PHAM_NAMES) {
+        kdRowEl2.style.display = '';
+        kdPhamEl2.textContent = window.GameKimDan.PHAM_NAMES[kdPham2] +
+          ' (linh lực tối đa +' + ((kdPham2 - 1) * 5) + '%, tu vi nhận +' + ((kdPham2 - 1) * 2) + '%)';
+      } else {
+        kdRowEl2.style.display = 'none';
+      }
+    }
 
     var harmony = stateAPI.harmonyOf(player.paths);
     if (harmonyEl) harmonyEl.textContent = harmony;

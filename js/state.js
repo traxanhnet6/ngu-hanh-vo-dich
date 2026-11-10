@@ -116,7 +116,7 @@
    * @param {Object} paths 5 đường tu
    * @returns {Object} Các chỉ số phái sinh
    */
-  function deriveStats(paths, equipment) {
+  function deriveStats(paths, equipment, kimDanPham) {
     var k = (paths && paths.kim && paths.kim.tuVi) || 0;
     var m = (paths && paths.moc && paths.moc.tuVi) || 0;
     var t = (paths && paths.thuy && paths.thuy.tuVi) || 0;
@@ -127,6 +127,18 @@
     var hpMax = Math.round(100 + (th * 2.0) + (k * 0.2) + (m * 0.5) + (h * 0.1) + (t * 0.1));
     // linhLucMax bắt đầu từ 20, tăng chủ yếu từ Thủy (+1.5/tuVi)
     var linhLucMax = Math.round(20 + (t * 1.5) + (m * 0.2));
+    // Đợt T3 — PHẨM KIM ĐAN (hồ sơ 05C): phẩm là thưởng VĨNH VIỄN, một kênh
+    // là SỨC CHỨA LINH LỰC. Hồ sơ chỉ chốt kênh (tu vi / luyện đan / linh
+    // lực), không chốt số — số dưới đây là SỐ ĐỘI SOẠN đợt T3 (provisional,
+    // khai trong báo cáo đợt): mỗi phẩm trên Nhất phẩm +5% linh lực tối đa
+    // (Cửu phẩm = +40%). Không truyền phẩm (mọi lời gọi cũ) -> hệ số 1,
+    // hành vi y như trước đợt.
+    var pham = (typeof kimDanPham === 'number' && isFinite(kimDanPham))
+      ? Math.floor(kimDanPham)
+      : (kimDanPham && typeof kimDanPham === 'object' ? getKimDanPham(kimDanPham) : 0);
+    if (pham >= 1) {
+      linhLucMax = Math.round(linhLucMax * (1 + 0.05 * (pham - 1)));
+    }
 
     // Đợt K2: Công kích của năm đường nhân hệ số Hài Hòa (hồ sơ 02 §5) —
     // một nguồn số duy nhất: bảng nhân vật hiện đúng số này và engine cũng
@@ -294,8 +306,8 @@
     var storage = getStorage(customStorage);
     player.lastSaved = Date.now();
 
-    // Đồng bộ lại chỉ số phái sinh
-    var stats = deriveStats(player.paths, player.equipment);
+    // Đồng bộ lại chỉ số phái sinh (đợt T3: kèm phẩm Kim Đan nếu đã kết đan)
+    var stats = deriveStats(player.paths, player.equipment, getKimDanPham(player));
     player.hpMax = stats.hpMax;
     player.linhLucMax = stats.linhLucMax;
     if (player.hp > player.hpMax) player.hp = player.hpMax;
@@ -385,10 +397,13 @@
       // Đợt T1: save cũ chưa có trạng thái đột phá tiểu mốc -> suy mốc từ
       // tu vi/nhãn hiện có; tu vi đã có GIỮ NGUYÊN (không cắt theo trần mới).
       ensureTieuMoc(data);
+      // Đợt T3: save cũ chưa có trạng thái Kim Đan -> bổ sung mặc định
+      // (chưa kết đan: phẩm 0, không đổi bất kỳ số nào của nhân vật).
+      ensureKimDan(data);
       if (!data.bagLocks || typeof data.bagLocks !== 'object') {
         data.bagLocks = {};
       }
-      var stats = deriveStats(data.paths, data.equipment);
+      var stats = deriveStats(data.paths, data.equipment, getKimDanPham(data));
       data.hpMax = stats.hpMax;
       data.linhLucMax = stats.linhLucMax;
       // REALMFIX: chuẩn hóa nhãn cảnh giới cho bản lưu cũ ngay khi nạp
@@ -484,8 +499,14 @@
     var byPaths = realmRankFromPaths(player.paths);
     var rank;
     if (byString >= 10) {
-      // Đã từng đột phá thật (chuỗi do tryBreakthrough ghi): luật đơn điệu cũ.
-      rank = Math.max(byString, byPaths);
+      // Đã từng đột phá thật (chuỗi do tryBreakthrough ghi): nhãn không bao
+      // giờ bị kéo xuống. Đợt T3 mở rộng luật DOTPHA-LABEL cho mốc Kim Đan:
+      // phần TU VI bị chặn ở TRẦN CỦA ĐẠI CẢNH GIỚI HIỆN TẠI — đầy trần
+      // Trúc Cơ Viên Mãn (min 2500) KHÔNG tự hiện nhãn "Kim Đan", nhãn Kim
+      // Đan chỉ mở khi đột phá Kim Đan thật thành công (engine ghi chuỗi);
+      // tương tự trần Kim Đan chặn ở hạng 17 chờ đợt Nguyên Anh.
+      var ceiling = byString <= 13 ? 13 : (byString <= 17 ? 17 : byPaths);
+      rank = Math.max(byString, Math.min(byPaths, ceiling));
     } else {
       // Chưa đột phá: phần tu vi không được đẩy nhãn qua khỏi Luyện Khí tầng 9.
       rank = Math.max(byString >= 0 ? byString : 0, Math.min(byPaths, 9));
@@ -758,6 +779,10 @@
   function inferMoc(player) {
     if (!player) return 1;
     var byString = realmRankFromString(player.realm);
+    if (byString >= 14) {
+      // Đợt T3: đã đột phá Kim Đan thật: mốc = giai đoạn Kim Đan (14..17).
+      return Math.max(14, Math.min(17, byString));
+    }
     if (byString >= 10) {
       // Đã đột phá Trúc Cơ thật: mốc = giai đoạn Trúc Cơ theo nhãn (10..13).
       return Math.max(10, Math.min(13, byString));
@@ -807,17 +832,58 @@
   /**
    * Cộng tu vi cho một đường, kẹp tại trần mốc hiện tại. Trả về số THỰC cộng
    * (0 khi đường đã đầy/vượt trần — tu vi sẵn có không bao giờ bị cắt).
+   * Đợt T3: nhân vật đã kết Kim Đan được cộng hệ số PHẨM ĐAN vào lượng tu vi
+   * trước khi kẹp trần (kênh "hệ số tu vi" của hồ sơ 05C; số đội soạn:
+   * +2% mỗi phẩm trên Nhất phẩm, Cửu phẩm = +16%). Chưa kết đan (phẩm 0)
+   * thì hệ số 1 — hành vi y như trước đợt.
    */
   function addTuViCapped(player, elem, amount) {
     if (!player || !amount || amount <= 0) return 0;
     if (!player.paths) return 0;
     if (!player.paths[elem]) player.paths[elem] = { tuVi: 0 };
+    var pham = getKimDanPham(player);
+    var effective = amount;
+    if (pham >= 1) effective = Math.round(amount * (1 + 0.02 * (pham - 1)));
     var cur = player.paths[elem].tuVi || 0;
     var room = getMocCap(player) - cur;
     if (room <= 0) return 0;
-    var added = Math.min(amount, room);
+    var added = Math.min(effective, room);
     player.paths[elem].tuVi = cur + added;
     return added;
+  }
+
+  // ==========================================================================
+  // TRẠNG THÁI KIM ĐAN — PHẨM ĐAN (Đợt T3, hồ sơ 02 §3.2 + 05C + 17A)
+  // player.kimDan = {
+  //   pham:     phẩm Kim Đan ĐÃ KẾT (0 = chưa kết đan; 1..9 = Nhất..Cửu phẩm),
+  //   pillPham: phẩm của viên Ngũ Hành Quy Nguyên Đan đang giữ (tính theo
+  //             Hài Hòa tại lúc LUYỆN — js/kimdan.js; 0 = chưa luyện viên nào),
+  //   tamMaWins / tamMaFalls: số lần thắng/thua tâm ma khi kết đan.
+  // }
+  // Khởi tạo lười như ensureTieuMoc: save cũ không có trường này vẫn nạp
+  // bình thường, mọi giá trị mặc định đều trung tính (phẩm 0 = không thưởng).
+  // ==========================================================================
+  function ensureKimDan(player) {
+    if (!player) return null;
+    if (!player.kimDan || typeof player.kimDan !== 'object') {
+      player.kimDan = { pham: 0, pillPham: 0, tamMaWins: 0, tamMaFalls: 0 };
+    }
+    var kd = player.kimDan;
+    if (typeof kd.pham !== 'number' || !isFinite(kd.pham) || kd.pham < 0 || kd.pham > 9) kd.pham = 0;
+    if (typeof kd.pillPham !== 'number' || !isFinite(kd.pillPham) || kd.pillPham < 0 || kd.pillPham > 9) kd.pillPham = 0;
+    kd.pham = Math.floor(kd.pham);
+    kd.pillPham = Math.floor(kd.pillPham);
+    if (typeof kd.tamMaWins !== 'number' || !isFinite(kd.tamMaWins) || kd.tamMaWins < 0) kd.tamMaWins = 0;
+    if (typeof kd.tamMaFalls !== 'number' || !isFinite(kd.tamMaFalls) || kd.tamMaFalls < 0) kd.tamMaFalls = 0;
+    if (kd.focus === undefined) kd.focus = null; // đích dẫn đường từ Bảng Đột Phá Kim Đan
+    return kd;
+  }
+
+  /** Phẩm Kim Đan đã kết của người chơi (0 = chưa kết đan). */
+  function getKimDanPham(player) {
+    if (!player || !player.kimDan || typeof player.kimDan !== 'object') return 0;
+    var p = player.kimDan.pham;
+    return (typeof p === 'number' && isFinite(p) && p >= 1 && p <= 9) ? Math.floor(p) : 0;
   }
 
   /**
@@ -1026,6 +1092,8 @@
     setMocIndex: setMocIndex,
     getMocCap: getMocCap,
     addTuViCapped: addTuViCapped,
+    ensureKimDan: ensureKimDan,
+    getKimDanPham: getKimDanPham,
     calcChainBonus: calcChainBonus,
     incrementHuntChain: incrementHuntChain,
     breakHuntChain: breakHuntChain,

@@ -1250,7 +1250,7 @@ input:checked + .slider:before {
   width: 32px;
   height: 32px;
   background-image: url('../assets/art/icons-sheet.png');
-  background-size: 192px 224px; /* 6x7 ô 32px */
+  background-size: 192px 256px; /* 6x8 ô 32px (hàng 7 thêm đợt T3) */
   background-repeat: no-repeat;
 }
 
@@ -2950,3 +2950,83 @@ body.photo-mode #toast-container { visibility: hidden; }
 /* Bảng đột phá dùng chung khuôn .tieumoc-* của bảng Tiểu Mốc; không còn
    lớp riêng cho tỉ lệ/hậu quả/phụ trợ (đã hủy theo phán của Bui
    2026-11-10: giữ 100% như hiện tại, chỉ thêm độ kiếp diễn thật). */
+
+/* ===== ĐỘT PHÁ KIM ĐAN — TÂM MA (đợt T3) ===== */
+/* Bảng đột phá dùng chung khuôn .tieumoc-*; các lớp dưới đây chỉ cho
+   khu vực trận đấu tâm ma trong bảng. */
+.kimdan-duel {
+  margin-top: 14px;
+  padding: 10px;
+  border: 1px solid rgba(150, 110, 220, 0.45);
+  border-radius: 8px;
+  background: rgba(24, 16, 44, 0.35);
+}
+
+.kimdan-duel-cols {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.kimdan-duel-card {
+  flex: 1 1 180px;
+  padding: 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.kimdan-duel-mirror {
+  border: 1px solid rgba(190, 90, 255, 0.55);
+}
+
+.kimdan-duel-name {
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.kimdan-bar-wrap {
+  margin-bottom: 6px;
+}
+
+.kimdan-bar-label {
+  font-size: 12px;
+  color: #d8d2c0;
+  margin-bottom: 2px;
+}
+
+.kimdan-bar {
+  height: 10px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.kimdan-bar-fill {
+  height: 100%;
+  transition: width 0.25s ease;
+}
+
+.kimdan-bar.hp .kimdan-bar-fill { background: #d8544f; }
+.kimdan-bar.hp.mirror .kimdan-bar-fill { background: #a04fd8; }
+.kimdan-bar.mp .kimdan-bar-fill { background: #4f8fd8; }
+
+.kimdan-duel-skills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 8px 0;
+}
+
+.kimdan-duel-log {
+  margin-top: 8px;
+  max-height: 150px;
+  overflow-y: auto;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #cfc9b8;
+}
+
+.kimdan-log-line {
+  padding: 1px 0;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.07);
+}

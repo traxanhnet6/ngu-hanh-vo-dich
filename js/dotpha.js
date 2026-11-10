@@ -331,7 +331,7 @@
     var cellPx = 40;
     var scale = cellPx / 32;
     elm.style.backgroundImage = "url('assets/art/icons-sheet.png')";
-    elm.style.backgroundSize = (192 * scale) + 'px ' + (224 * scale) + 'px';
+    elm.style.backgroundSize = (192 * scale) + 'px ' + (256 * scale) + 'px';
     elm.style.backgroundPosition = (-(def.iconCol || 0) * cellPx) + 'px ' + (-(def.iconRow || 0) * cellPx) + 'px';
     elm.style.backgroundRepeat = 'no-repeat';
     elm.style.width = cellPx + 'px';

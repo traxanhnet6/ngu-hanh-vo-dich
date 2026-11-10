@@ -229,13 +229,14 @@
         <div class="char-detail-col">
           <div class="detail-row"><span>Nhân vật:</span> <b id="char-panel-name">Hà Nhân</b></div>
           <div class="detail-row"><span>Cảnh giới:</span> <b id="char-panel-realm">Phàm Nhân</b></div>
+          <div class="detail-row" id="char-panel-kimdan-row" style="display:none"><span>Phẩm Kim Đan:</span> <b id="char-panel-kimdan-pham" class="gold-text">—</b></div>
           <div class="detail-row"><span>Chỉ số Hài Hòa:</span> <b id="char-panel-harmony" class="gold-text">0</b></div>
           <div class="detail-row"><span>Tỉ lệ Hài Hòa (HH):</span> <b id="char-panel-hh" class="gold-text">100%</b></div>
           <div class="detail-row"><span>Tương Sinh Liên Hoàn:</span> <b id="char-panel-lienhoan" class="green-text">Chưa kích hoạt (cần HH ≥ 80%)</b></div>
           <div class="detail-row"><span>Tu vi farm hôm nay:</span> <b id="char-panel-farm-tuvi" class="green-text">0 / 65</b></div>
           <div class="detail-row"><span>Linh Thạch farm:</span> <b id="char-panel-farm-lt" class="gold-text">0 / 300</b></div>
           <div class="detail-row"><span>Lượt hồi sinh:</span> <b id="char-panel-revival-pool" class="gold-text">5 / 5</b></div>
-          <div class="detail-row"><span>Đột phá:</span> <button id="btn-tieumoc-open" class="btn wood tieumoc-open-btn" type="button">Đột Phá Tiểu Mốc</button> <button id="btn-dotpha-open" class="btn wood tieumoc-open-btn" type="button">Đột Phá Trúc Cơ</button></div>
+          <div class="detail-row"><span>Đột phá:</span> <button id="btn-tieumoc-open" class="btn wood tieumoc-open-btn" type="button">Đột Phá Tiểu Mốc</button> <button id="btn-dotpha-open" class="btn wood tieumoc-open-btn" type="button">Đột Phá Trúc Cơ</button> <button id="btn-kimdan-open" class="btn wood tieumoc-open-btn" type="button">Đột Phá Kim Đan</button></div>
           
           <h3 class="section-title">Năm Trụ Ngũ Hành (Hồ sơ 49)</h3>
           <div class="pillar-item">
@@ -925,6 +926,22 @@
     </div>
   </div>
 
+  <!-- Modal Đột Phá Kim Đan — Tâm Ma + Độ Kiếp 5 Tia (Đợt T3) -->
+  <div id="kimdan-modal" class="modal-overlay hidden">
+    <div class="panel modal-box tieumoc-box">
+      <div class="modal-header">
+        <div class="danphong-header-title-wrap">
+          <h2 class="modal-title">ĐỘT PHÁ KIM ĐAN — TÂM MA & ĐỘ KIẾP</h2>
+          <span class="danphong-sub-badge">Đầy trần 5 đường + Ngũ Hành Quy Nguyên Đan — thắng tâm ma, chịu độ kiếp 5 tia, phẩm đan theo Hài Hòa</span>
+        </div>
+        <button id="kimdan-close" class="btn-close" type="button" aria-label="Đóng">×</button>
+      </div>
+      <div id="kimdan-body" class="tieumoc-body">
+        <!-- Nội dung render bởi GameKimDan -->
+      </div>
+    </div>
+  </div>
+
   <!-- Lớp phủ Hướng Dẫn Tân Thủ (Tutorial Overlay) -->
   <div id="tutorial-overlay" class="tutorial-overlay hidden">
     <div id="tutorial-spotlight" class="tutorial-spotlight"></div>
@@ -957,6 +974,7 @@
   <script src="js/danphong.js"></script>
   <script src="js/tieumoc.js"></script>
   <script src="js/dotpha.js"></script>
+  <script src="js/kimdan.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

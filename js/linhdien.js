@@ -248,7 +248,7 @@
     if (!el || !def) return;
     var scale = cellPx / 32;
     el.style.backgroundImage = "url('assets/art/icons-sheet.png')";
-    el.style.backgroundSize = (192 * scale) + 'px ' + (224 * scale) + 'px';
+    el.style.backgroundSize = (192 * scale) + 'px ' + (256 * scale) + 'px';
     el.style.backgroundPosition = (-(def.iconCol || 0) * cellPx) + 'px ' + (-(def.iconRow || 0) * cellPx) + 'px';
     el.style.backgroundRepeat = 'no-repeat';
     el.style.width = cellPx + 'px';

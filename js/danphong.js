@@ -603,7 +603,7 @@
     if (!el || !def) return;
     var scale = cellPx / 32;
     el.style.backgroundImage = "url('assets/art/icons-sheet.png')";
-    el.style.backgroundSize = (192 * scale) + 'px ' + (224 * scale) + 'px';
+    el.style.backgroundSize = (192 * scale) + 'px ' + (256 * scale) + 'px';
     el.style.backgroundPosition = (-(def.iconCol || 0) * cellPx) + 'px ' + (-(def.iconRow || 0) * cellPx) + 'px';
     el.style.backgroundRepeat = 'no-repeat';
     el.style.width = cellPx + 'px';
@@ -777,6 +777,52 @@
     tcActions.appendChild(el('span', 'danphong-miss-note', 'Luyện tại Đan Phòng hay gặp Chấp Sự đều cùng một công thức.'));
     tcCard.appendChild(tcActions);
     body.appendChild(tcCard);
+
+    // Đợt T3 — Thẻ Ngũ Hành Quy Nguyên Đan (đan đột phá Kim Đan, hồ sơ 02
+    // §3.2). Việc trừ đồ/cấp đan/phẩm do js/kimdan.js đảm nhiệm (nguồn sự
+    // thật duy nhất của công thức); thẻ này hiển thị đủ/thiếu từng món +
+    // phẩm dự kiến theo Hài Hòa hiện tại và gọi đúng hàm luyện của module.
+    var kdAPI = (typeof window !== 'undefined' && window.GameKimDan) ? window.GameKimDan : null;
+    if (kdAPI) {
+      var qnCard = el('div', 'danphong-card danphong-card-trucco');
+      var qnHead = el('div', 'danphong-card-head');
+      var qnIcon = el('div', 'danphong-card-icon');
+      setElementIconSprite(qnIcon, getItemDef('ngu-hanh-quy-nguyen-dan'), 40);
+      qnHead.appendChild(qnIcon);
+      var qnTitles = el('div', 'danphong-card-titles');
+      qnTitles.appendChild(el('div', 'danphong-card-name', 'Ngũ Hành Quy Nguyên Đan'));
+      var kdState = (player.kimDan && typeof player.kimDan === 'object') ? player.kimDan : { pillPham: 0 };
+      var preview = kdAPI.previewPham(player);
+      qnTitles.appendChild(el('div', 'danphong-card-sub',
+        'Đan đột phá Trúc Cơ Viên Mãn lên Kim Đan · Trong túi: ' + countOf(player, 'ngu-hanh-quy-nguyen-dan') +
+        ' viên · Linh Thạch: ' + (player.linhThach || 0) + '/' + kdAPI.RECIPE_LT_FEE +
+        ' · Hài Hòa hiện tại ' + Math.round(preview.hh * 100) + '% → phẩm dự kiến: ' + kdAPI.phamName(preview.pham) +
+        (kdState.pillPham ? ' · Phẩm đan đang giữ: ' + kdAPI.phamName(kdState.pillPham) : '')));
+      qnHead.appendChild(qnTitles);
+      qnCard.appendChild(qnHead);
+      var qnMats = el('div', 'danphong-mats');
+      kdAPI.RECIPE.forEach(function (mat) { qnMats.appendChild(materialLine(player, mat)); });
+      qnCard.appendChild(qnMats);
+      qnCard.appendChild(el('div', 'danphong-source',
+        'Năm Nguyên Tinh rơi chắc chắn từ 5 boss trấn vùng; Nước Ốc Đảo Tinh Khiết săn ở Hoang Mạc Hoàng Sa. Phẩm viên đan tính theo Hài Hòa lúc luyện — luyện lúc năm đường càng cân bằng, phẩm Kim Đan càng cao và theo cả đời.'));
+      var qnActions = el('div', 'danphong-actions');
+      var btnQn = el('button', 'btn wood danphong-btn danphong-btn-refine-trucco', 'Luyện Ngũ Hành Quy Nguyên Đan');
+      btnQn.type = 'button';
+      btnQn.addEventListener('click', function () {
+        kdAPI.refineQuyNguyen(livePlayer);
+        renderPanel();
+      });
+      qnActions.appendChild(btnQn);
+      var missingQn = missingList(player, kdAPI.RECIPE);
+      if ((player.linhThach || 0) < kdAPI.RECIPE_LT_FEE) {
+        missingQn.push('Linh Thạch ' + (player.linhThach || 0) + '/' + kdAPI.RECIPE_LT_FEE);
+      }
+      if (missingQn.length > 0) {
+        qnActions.appendChild(el('span', 'danphong-miss-note', 'Thiếu: ' + missingQn.join(' · ')));
+      }
+      qnCard.appendChild(qnActions);
+      body.appendChild(qnCard);
+    }
   }
 
   function rewardText(def) {

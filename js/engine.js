@@ -1473,6 +1473,17 @@
       if (dpTarget) return dpTarget;
     }
 
+    // Đợt T3: DẪN ĐƯỜNG ĐỘT PHÁ KIM ĐAN — chỉ hoạt động khi người chơi đã
+    // bấm "Chỉ đường" trong Bảng Đột Phá Kim Đan cho một mục còn thiếu
+    // (Quy Nguyên Đan / nguyên liệu gốc): mũi tên chỉ tới nguồn THẬT của
+    // mục đó (boss trấn vùng / tinh anh Hoang Mạc / Lò Đan). Đủ rồi thì
+    // móc trả null, dẫn đường quay về chuỗi chính.
+    var kdAPI2 = getKimDanAPI();
+    if (kdAPI2 && kdAPI2.getTrackedTargetInfo) {
+      var kdTarget = kdAPI2.getTrackedTargetInfo(player);
+      if (kdTarget) return kdTarget;
+    }
+
     // Khi sectStage >= 4: Chuỗi nhiệm vụ chính (Đợt 6 - Việc 1)
     var mainStage = q.mainStage;
     if (!mainStage || mainStage === 0) {
@@ -2342,6 +2353,20 @@
       return tryBreakthrough();
     }
 
+    // Đợt T3: Ngũ Hành Quy Nguyên Đan không uống trực tiếp — nó là đan của
+    // mốc đột phá ĐẠI cảnh giới Kim Đan (phải qua tâm ma + độ kiếp trong
+    // Bảng Đột Phá Kim Đan). Bấm dùng: mở bảng, không tiêu hao.
+    if (itemId === 'ngu-hanh-quy-nguyen-dan') {
+      var msgKD = 'Ngũ Hành Quy Nguyên Đan là đan kết đan — hãy mở Bảng Đột Phá Kim Đan (nút trong Bảng Nhân Vật): thắng tâm ma rồi chịu độ kiếp 5 tia mới kết đan được. Đan chỉ tiêu hao khi kết đan thành công.';
+      if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.showToast(msgKD);
+      }
+      if (typeof window !== 'undefined' && window.GameKimDan && window.GameKimDan.openPanel) {
+        window.GameKimDan.openPanel();
+      }
+      return { ok: false, reason: 'grand_breakthrough_pill', msg: msgKD };
+    }
+
     return { ok: false, msg: 'Vật phẩm không thể sử dụng trực tiếp' };
   }
 
@@ -2373,14 +2398,17 @@
   // =========================================================================
   var tribulation = null;
 
-  function startTribulation() {
+  // boltCount: số tia của thang độ kiếp (hồ sơ 05D §3 — Trúc Cơ 3, Kim Đan
+  // 5, Nguyên Anh 7, Hóa Thần 9). Không truyền -> 3 (độ kiếp Trúc Cơ của T2
+  // giữ nguyên hành vi). Đợt T3 dùng startTribulation(5) cho Kim Đan.
+  function startTribulation(boltCount) {
     if (!player) return;
     tribulation = {
       t: 0,
       phase: 'gather',
       gatherDur: 1.4,
       boltInterval: 0.85,
-      boltsTotal: 3,
+      boltsTotal: (typeof boltCount === 'number' && boltCount > 0) ? Math.floor(boltCount) : 3,
       boltsHit: 0,
       nextBoltAt: 1.4,
       outcome: 'success',
@@ -2636,6 +2664,112 @@
       window.GameUI.refreshHUD();
     }
     return { ok: true, realm: 'Trúc Cơ Sơ Kỳ', newRealm: 'Trúc Cơ Sơ Kỳ', msg: successMsg, rate: rate, roll: roll };
+  }
+
+  // Đợt T3: module Đột Phá Kim Đan (js/kimdan.js) giữ công thức, phẩm đan,
+  // bảng đột phá và trận tâm ma; engine là nơi duy nhất ÁP kết quả kết đan
+  // (khuôn tryBreakthrough của Trúc Cơ).
+  function getKimDanAPI() {
+    if (typeof window !== 'undefined' && window.GameKimDan) return window.GameKimDan;
+    if (typeof global !== 'undefined' && global.GameKimDan) return global.GameKimDan;
+    if (typeof require !== 'undefined') {
+      try { return require('./kimdan.js'); } catch (e) { return null; }
+    }
+    return null;
+  }
+
+  /**
+   * KẾT ĐAN — áp kết quả đột phá Kim Đan sau khi người chơi đã THẮNG TÂM MA
+   * trong Bảng Đột Phá Kim Đan (js/kimdan.js). Mọi điều kiện được kiểm LẠI
+   * tại đây (module dẫn luồng không phải nguồn tin cậy): mốc đúng 13 (Trúc
+   * Cơ Viên Mãn), năm đường đầy trần mốc, còn giữ Ngũ Hành Quy Nguyên Đan
+   * và cờ thắng tâm ma. Theo luật Bui đợt T2: đủ điều kiện là CHẮC CHẮN
+   * thành công (tỉ lệ khóa 1.0 trong kimdan.js CONFIG) — không nhánh thất
+   * bại, không án phạt; đan chỉ tiêu hao TẠI THỜI ĐIỂM NÀY. Phẩm Kim Đan =
+   * phẩm của viên đan (tính theo Hài Hòa lúc luyện, kimdan.js ghi vào
+   * player.kimDan.pillPham). Độ kiếp 5 TIA diễn kèm (hồ sơ 05D §3), nhãn
+   * Kim Đan mở tại đây như luật REALMFIX/DOTPHA-LABEL.
+   */
+  function tryKimDanBreakthrough(opts) {
+    opts = opts || {};
+    var p = opts.player || player;
+    if (!p) return { ok: false, msg: 'Chưa khởi tạo nhân vật' };
+    var st = stateAPI || (typeof window !== 'undefined' ? window.GameState : (typeof require !== 'undefined' ? require('./state.js') : null));
+
+    var moc = st && st.getMocIndex ? st.getMocIndex(p) : 0;
+    if (moc !== 13) {
+      var msgMoc = 'Đột phá Kim Đan chỉ mở ở mốc Trúc Cơ Viên Mãn (mốc 13).';
+      if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.showToast(msgMoc);
+      }
+      return { ok: false, reason: 'wrong_moc', msg: msgMoc };
+    }
+
+    var cap = st && st.getMocCap ? st.getMocCap(p) : 2500;
+    var keys = ['kim', 'moc', 'thuy', 'hoa', 'tho'];
+    var minTuVi = Infinity;
+    for (var i = 0; i < keys.length; i++) {
+      var v = (p.paths && p.paths[keys[i]] && p.paths[keys[i]].tuVi) || 0;
+      if (v < minTuVi) minTuVi = v;
+    }
+    if (minTuVi < cap) {
+      var msgLow = 'Chưa đủ tu vi để kết đan — cả 5 hệ phải đầy trần ' + cap + ' (hiện tại yếu nhất: ' + minTuVi + '/' + cap + ').';
+      if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.showToast(msgLow);
+      }
+      return { ok: false, reason: 'insufficient_tuvi', minTuVi: minTuVi, msg: msgLow };
+    }
+
+    var hasPill = st && st.hasItemInBag ? st.hasItemInBag(p, 'ngu-hanh-quy-nguyen-dan', 1) : false;
+    if (!hasPill) {
+      var msgNoPill = 'Thiếu Ngũ Hành Quy Nguyên Đan — hãy luyện tại Đan Phòng Tông Môn (5 Nguyên Tinh + 2 Nước Ốc Đảo Tinh Khiết + 1.500 Linh Thạch).';
+      if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.showToast(msgNoPill);
+      }
+      return { ok: false, reason: 'missing_pill', msg: msgNoPill };
+    }
+
+    if (!opts.tamMaWon) {
+      var msgTM = 'Phải thắng tâm ma trước khi kết đan — hãy vào cảnh giới tâm ma trong Bảng Đột Phá Kim Đan.';
+      if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.showToast(msgTM);
+      }
+      return { ok: false, reason: 'tam_ma_required', msg: msgTM };
+    }
+
+    var kdAPI = getKimDanAPI();
+    var kd = st && st.ensureKimDan ? st.ensureKimDan(p) : (p.kimDan || {});
+    // Phẩm của viên đan đã luyện; đường luyện chuẩn luôn ghi phẩm >= 1 —
+    // phòng hờ đan lọt vào túi qua đường khác thì tối thiểu Nhất phẩm.
+    var pham = (kd && kd.pillPham >= 1) ? kd.pillPham : 1;
+    var phamName = (kdAPI && kdAPI.PHAM_NAMES && kdAPI.PHAM_NAMES[pham]) || '';
+
+    if (st && st.removeItemFromBag) st.removeItemFromBag(p, 'ngu-hanh-quy-nguyen-dan', 1);
+    if (kd) {
+      kd.pham = pham;
+      kd.pillPham = 0;
+      kd.focus = null;
+    }
+    startTribulation(5);
+
+    p.realm = 'Kim Đan Sơ Kỳ';
+    // Đợt T3: mốc tiểu đột phá chuyển sang giai đoạn Kim Đan đầu tiên
+    // (mốc 14, trần 3.700/đường — thang trần đã có sẵn từ đợt T1).
+    if (st && st.setMocIndex) st.setMocIndex(p, 14);
+    if (st && st.savePlayer) st.savePlayer(p);
+
+    if (audioAPI) audioAPI.playChime();
+    var px = (p && typeof p.x === 'number') ? p.x : 0;
+    var py = (p && typeof p.y === 'number') ? p.y : 0;
+    if (typeof spawnFloatingText === 'function') {
+      spawnFloatingText('KẾT ĐAN ĐẠI THÀNH — ' + phamName.toUpperCase() + '!', px, py - 45, '#ffe9a8');
+    }
+    var successMsg = 'Năm nguyên tinh quy nguyên, lôi kiếp năm tia đã tan — đã kết Kim Đan Sơ Kỳ, phẩm đan: ' + phamName + ' (theo cả đời)!';
+    if (typeof window !== 'undefined' && window.GameUI) {
+      window.GameUI.showToast(successMsg);
+      window.GameUI.refreshHUD();
+    }
+    return { ok: true, realm: 'Kim Đan Sơ Kỳ', newRealm: 'Kim Đan Sơ Kỳ', pham: pham, msg: successMsg };
   }
 
   function exchangePill(elem) {
@@ -5891,6 +6025,7 @@
       return out;
     },
     getGroundDrops: function () { return groundDrops; },
+    getPlayer: function () { return player; },
     performContextAction: performContextAction,
     getActionContext: function () { return computeActionContext(); },
     startAutoQuestPath: startAutoQuestPath,
@@ -5904,6 +6039,8 @@
     getTravelState: function () { return travelState; },
     useItem: useItem,
     tryBreakthrough: tryBreakthrough,
+    tryKimDanBreakthrough: tryKimDanBreakthrough,
+    startTribulation: startTribulation,
     getTribulationState: getTribulationState,
     exchangePill: exchangePill,
     refineTrucCoDan: refineTrucCoDan,

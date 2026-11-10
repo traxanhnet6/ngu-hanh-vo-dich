@@ -59,7 +59,8 @@
   // materials: nguyên liệu vùng của mốc (hồ sơ 02 §3.3: 1–2 loại).
   // binhCanh: 'ngodao' (hồ sơ 06 — lên tầng 4) | 'elite' (hồ sơ 06 — lên tầng 7).
   // Mốc 9 không có tiểu đột phá: đó là đột phá ĐẠI cảnh giới qua Trúc Cơ Đan
-  // (engine.tryBreakthrough, giữ nguyên). Mốc 13: Kim Đan thuộc đợt T3.
+  // (engine.tryBreakthrough, giữ nguyên). Mốc 13 tương tự là đột phá ĐẠI
+  // cảnh giới Kim Đan (đợt T3 — js/kimdan.js). Mốc 17 chờ đợt Nguyên Anh.
   // ---------------------------------------------------------------------------
   var BREAKS = {
     1: { lt: 30, materials: [{ itemId: 'la-thanh-tuy', count: 4 }], binhCanh: null },
@@ -72,7 +73,17 @@
     8: { lt: 400, materials: [{ itemId: 'da-nung', count: 4 }], binhCanh: null },
     10: { lt: 600, materials: [{ itemId: 'cat-tinh', count: 4 }], binhCanh: null },
     11: { lt: 900, materials: [{ itemId: 'ngoc-cat-tam', count: 1 }, { itemId: 'hon-kiem-nho', count: 2 }], binhCanh: null },
-    12: { lt: 1300, materials: [{ itemId: 'manh-kiem-gay', count: 3 }, { itemId: 'ngoc-cat-tam', count: 1 }], binhCanh: null }
+    12: { lt: 1300, materials: [{ itemId: 'manh-kiem-gay', count: 3 }, { itemId: 'ngoc-cat-tam', count: 1 }], binhCanh: null },
+    // Đợt T3: tiểu mốc TRONG Kim Đan (14->15, 15->16, 16->17). Linh Thạch
+    // và nguyên liệu là SỐ ĐỘI SOẠN đợt T3 (hồ sơ 02 §3.3 chỉ chốt khung
+    // "Linh Thạch tăng theo mốc + 1-2 nguyên liệu vùng"): Linh Thạch tăng
+    // tiếp thang Trúc Cơ (600/900/1.300 -> 2.000/2.800/3.600, đều dưới trần
+    // farm ngày Kim Đan 4.000); nguyên liệu lấy từ các vùng đã mở hết.
+    // Mốc 13 là đột phá ĐẠI cảnh giới Kim Đan (xem getConditions), mốc 17
+    // chờ đợt Nguyên Anh.
+    14: { lt: 2000, materials: [{ itemId: 'ngoc-bang-tam', count: 2 }, { itemId: 'da-nung', count: 4 }], binhCanh: null },
+    15: { lt: 2800, materials: [{ itemId: 'ngoc-cat-tam', count: 2 }, { itemId: 'manh-kiem-gay', count: 3 }], binhCanh: null },
+    16: { lt: 3600, materials: [{ itemId: 'hoa-tinh-tho', count: 4 }, { itemId: 'hon-kiem-nho', count: 3 }], binhCanh: null }
   };
 
   // Bãi săn theo đường tu (đích dẫn đường khi một đường chưa đầy trần).
@@ -209,12 +220,22 @@
 
     if (moc === 9) {
       return {
-        moc: moc, cap: cap, kind: 'grand', nextLabel: 'Trúc Cơ Sơ Kỳ',
+        moc: moc, cap: cap, kind: 'grand', grandRealm: 'trucco', nextLabel: 'Trúc Cơ Sơ Kỳ',
         paths: paths, pathsOk: pathsOk,
         lt: null, materials: [], binhCanh: null, canBreak: false
       };
     }
-    if (moc >= 13 || !BREAKS[moc]) {
+    // Đợt T3: mốc 13 (Trúc Cơ Viên Mãn) là đột phá ĐẠI cảnh giới Kim Đan —
+    // cùng khuôn mốc 9: bảng tiểu mốc chỉ hiển thị và dẫn sang Bảng Đột Phá
+    // Kim Đan (js/kimdan.js), nơi có tâm ma + độ kiếp 5 tia.
+    if (moc === 13) {
+      return {
+        moc: moc, cap: cap, kind: 'grand', grandRealm: 'kimdan', nextLabel: 'Kim Đan Sơ Kỳ',
+        paths: paths, pathsOk: pathsOk,
+        lt: null, materials: [], binhCanh: null, canBreak: false
+      };
+    }
+    if (moc >= 17 || !BREAKS[moc]) {
       return {
         moc: moc, cap: cap, kind: 'future', nextLabel: mocLabel(moc + 1),
         paths: paths, pathsOk: pathsOk,
@@ -284,7 +305,9 @@
 
     var cond = getConditions(player);
     if (cond.kind === 'grand') {
-      var msgG = 'Đây là đột phá ĐẠI cảnh giới lên Trúc Cơ — hãy luyện Trúc Cơ Đan rồi dùng đan để đột phá (gặp Chấp Sự hoặc mở Đan Phòng).';
+      var msgG = cond.grandRealm === 'kimdan'
+        ? 'Đây là đột phá ĐẠI cảnh giới lên Kim Đan — hãy luyện Ngũ Hành Quy Nguyên Đan rồi mở Bảng Đột Phá Kim Đan để thắng tâm ma và kết đan.'
+        : 'Đây là đột phá ĐẠI cảnh giới lên Trúc Cơ — hãy luyện Trúc Cơ Đan rồi dùng đan để đột phá (gặp Chấp Sự hoặc mở Đan Phòng).';
       showToast(msgG);
       return { ok: false, reason: 'grand_breakthrough', msg: msgG };
     }
@@ -479,7 +502,7 @@
     if (!el || !def) return;
     var scale = cellPx / 32;
     el.style.backgroundImage = "url('assets/art/icons-sheet.png')";
-    el.style.backgroundSize = (192 * scale) + 'px ' + (224 * scale) + 'px';
+    el.style.backgroundSize = (192 * scale) + 'px ' + (256 * scale) + 'px';
     el.style.backgroundPosition = (-(def.iconCol || 0) * cellPx) + 'px ' + (-(def.iconRow || 0) * cellPx) + 'px';
     el.style.backgroundRepeat = 'no-repeat';
     el.style.width = cellPx + 'px';
@@ -535,13 +558,17 @@
     body.appendChild(head);
 
     if (cond.kind === 'grand') {
-      body.appendChild(el('div', 'tieumoc-section-title', 'Đột phá ĐẠI cảnh giới — lên Trúc Cơ Sơ Kỳ'));
+      var isKimDan = cond.grandRealm === 'kimdan';
+      body.appendChild(el('div', 'tieumoc-section-title', isKimDan
+        ? 'Đột phá ĐẠI cảnh giới — lên Kim Đan Sơ Kỳ'
+        : 'Đột phá ĐẠI cảnh giới — lên Trúc Cơ Sơ Kỳ'));
       cond.paths.forEach(function (p) {
         body.appendChild(condRow(null, 'Tu vi ' + ELEM_NAMES[p.elem], p.have + '/' + p.need + (p.ok ? ' — ĐẦY' : ''), p.ok,
           p.ok ? null : { type: 'path', key: p.elem }));
       });
-      var grandNote = el('div', 'tieumoc-source',
-        'Đủ 900 tu vi cả 5 đường thì luyện Trúc Cơ Đan (Đan Phòng hoặc Chấp Sự Đường). Đột phá Trúc Cơ có ĐỘ KIẾP diễn thật 3 tia (đợt T2) — hãy mở Bảng Đột Phá Trúc Cơ để xem đủ/thiếu từng nguyên liệu và bấm đột phá tại đó. Đột phá tiểu mốc không áp dụng cho mốc này.');
+      var grandNote = el('div', 'tieumoc-source', isKimDan
+        ? 'Đủ 2.500 tu vi cả 5 đường thì luyện Ngũ Hành Quy Nguyên Đan tại Đan Phòng (5 Nguyên Tinh + 2 Nước Ốc Đảo Tinh Khiết + 1.500 Linh Thạch). Đột phá Kim Đan phải thắng TÂM MA rồi chịu ĐỘ KIẾP 5 tia (đợt T3) — hãy mở Bảng Đột Phá Kim Đan để xem đủ/thiếu từng nguyên liệu và kết đan tại đó. Đột phá tiểu mốc không áp dụng cho mốc này.'
+        : 'Đủ 900 tu vi cả 5 đường thì luyện Trúc Cơ Đan (Đan Phòng hoặc Chấp Sự Đường). Đột phá Trúc Cơ có ĐỘ KIẾP diễn thật 3 tia (đợt T2) — hãy mở Bảng Đột Phá Trúc Cơ để xem đủ/thiếu từng nguyên liệu và bấm đột phá tại đó. Đột phá tiểu mốc không áp dụng cho mốc này.');
       body.appendChild(grandNote);
       var gActions = el('div', 'tieumoc-actions');
       var btnDp = el('button', 'btn wood tieumoc-btn', 'Mở Đan Phòng');
@@ -554,12 +581,16 @@
       });
       gActions.appendChild(btnDp);
       // Đợt T2: mở thẳng Bảng Đột Phá Trúc Cơ (js/dotpha.js) từ mục đại
-      // cảnh giới của bảng này.
-      var btnGrand = el('button', 'btn wood tieumoc-btn tieumoc-btn-break', 'Mở Bảng Đột Phá Trúc Cơ');
+      // cảnh giới của bảng này. Đợt T3: tương tự cho Kim Đan (js/kimdan.js).
+      var btnGrand = el('button', 'btn wood tieumoc-btn tieumoc-btn-break', isKimDan ? 'Mở Bảng Đột Phá Kim Đan' : 'Mở Bảng Đột Phá Trúc Cơ');
       btnGrand.type = 'button';
       btnGrand.addEventListener('click', function () {
         closePanel();
-        if (typeof window !== 'undefined' && window.GameDotPha && window.GameDotPha.openPanel) {
+        if (isKimDan) {
+          if (typeof window !== 'undefined' && window.GameKimDan && window.GameKimDan.openPanel) {
+            window.GameKimDan.openPanel();
+          }
+        } else if (typeof window !== 'undefined' && window.GameDotPha && window.GameDotPha.openPanel) {
           window.GameDotPha.openPanel();
         }
       });

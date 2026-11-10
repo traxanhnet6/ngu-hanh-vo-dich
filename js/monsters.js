@@ -214,6 +214,35 @@
       iconRow: 3,
       desc: 'Mũi kiếm gãy của thanh cự kiếm vô chủ ở Kiếm Trủng, sắc lạnh như còn vương kiếm ý ngàn năm.'
     },
+    // Đợt T3 (hồ sơ 02 §3.2 + sổ luật Điều 142): nguyên liệu phụ của công
+    // thức Ngũ Hành Quy Nguyên Đan — nước ốc đảo ở Hoang Mạc Hoàng Sa.
+    // Nguồn: Hoàng Sa Trùng rơi 30%, Sa Thạch Tượng tinh anh rơi chắc chắn
+    // (số đội soạn đợt T3 — hồ sơ chỉ chốt vùng nguồn, không chốt tỉ lệ).
+    // Biểu tượng ở HÀNG 7 (hàng mở rộng của bảng biểu tượng, đợt T3).
+    'nuoc-oc-dao-tinh-khiet': {
+      id: 'nuoc-oc-dao-tinh-khiet',
+      name: 'Nước Ốc Đảo Tinh Khiết',
+      type: 'material',
+      stackable: true,
+      iconCol: 1,
+      iconRow: 7,
+      desc: 'Nước nguồn trong vắt giữa lòng Hoang Mạc Hoàng Sa, linh khí thuần khiết — nguyên liệu phụ luyện Ngũ Hành Quy Nguyên Đan.'
+    },
+    // Đợt T3: đan chính của mốc đột phá Kim Đan (hồ sơ 02 §3.2, 05C, 17A).
+    // Luyện tại Đan Phòng Tông Môn từ 5 Nguyên Tinh + 2 Nước Ốc Đảo Tinh
+    // Khiết + 1.500 Linh Thạch (js/kimdan.js). PHẨM của viên đan khi luyện
+    // ra quyết bởi Hài Hòa hiện tại (xem js/kimdan.js) và trở thành phẩm
+    // Kim Đan vĩnh viễn khi đột phá. Bấm dùng: mở Bảng Đột Phá Kim Đan,
+    // không tiêu hao trực tiếp (như đan phụ trợ tầng của T1).
+    'ngu-hanh-quy-nguyen-dan': {
+      id: 'ngu-hanh-quy-nguyen-dan',
+      name: 'Ngũ Hành Quy Nguyên Đan',
+      type: 'consumable',
+      stackable: true,
+      iconCol: 0,
+      iconRow: 7,
+      desc: 'Viên đan bản sắc của tạp linh căn: năm Nguyên Tinh quy về một mối. Dùng để đột phá Kim Đan — phẩm đan theo độ Hài Hòa lúc luyện, quyết phẩm Kim Đan cả đời.'
+    },
     'linh-chi-ngan-nam': {
       id: 'linh-chi-ngan-nam',
       name: 'Linh Chi Ngàn Năm',
@@ -656,6 +685,9 @@
       drawScale: 1.0,
       dropTable: [
         { id: 'cat-tinh', chance: 0.60, min: 1, max: 1, isMaterial: true },
+        // Đợt T3: nguồn Nước Ốc Đảo Tinh Khiết (hồ sơ 02 §3.2 — Hoang Mạc
+        // Hoàng Sa; tỉ lệ 30% là số đội soạn đợt T3).
+        { id: 'nuoc-oc-dao-tinh-khiet', chance: 0.30, min: 1, max: 1, isMaterial: true },
         { id: 'linh-thach', chance: 0.18, min: 1, max: 2, isCurrency: true },
         { gearPool: COMMON_GEAR_POOL, chance: 0.04, isGear: true }
       ]
@@ -685,6 +717,8 @@
       drawScale: 1.0,
       dropTable: [
         { id: 'ngoc-cat-tam', chance: 1.0, min: 1, max: 1, isMaterial: true },
+        // Đợt T3: tinh anh Hoang Mạc rơi chắc chắn Nước Ốc Đảo Tinh Khiết.
+        { id: 'nuoc-oc-dao-tinh-khiet', chance: 1.0, min: 1, max: 1, isMaterial: true },
         { id: 'cat-tinh', chance: 0.70, min: 1, max: 1, isMaterial: true },
         { id: 'linh-thach', chance: 1.0, min: 10, max: 16, isCurrency: true },
         { gearPool: BETTER_GEAR_POOL, chance: 0.35, isGear: true }
