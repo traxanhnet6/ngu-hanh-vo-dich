@@ -1801,6 +1801,30 @@
     return null;
   }
 
+  // Các map săn chỉ tới được bằng Đài Truyền Tống — không map nào có cổng đi
+  // bộ vào chúng (chúng chỉ có cổng quay về Đài). Dùng chung cho
+  // planTravelRoute và findGuidanceHop.
+  var TELEPORT_ONLY_MAPS = ['ho-bang', 'mo-lua', 'hoang-mac', 'kiem-trung'];
+
+  // HOBANGFIX (2026-11-11): hop dẫn đường NHIỆM VỤ (mũi tên + Tự Tìm Đường)
+  // biết chặng truyền tống. findNextHopExit chỉ đi theo đồ thị cổng nên với
+  // đích là map truyền tống nó luôn trả null — mọi mục tiêu ở Hồ Băng / Mỏ
+  // Lửa / Hoang Mạc / Kiếm Trủng (nhiệm vụ chính giai đoạn 5, 6, 8; nhiệm vụ
+  // bảng thu thập; chỉ đường đột phá) đều gãy: game báo "Không tìm được đường
+  // sang ho-bang" và mũi tên biến mất. Luật hop đúng như tuyến di chuyển bản
+  // đồ tổng quan (planTravelRoute): chưa ở Đài thì hop là cổng tới Đài gần
+  // nhất; đang ở Đài thì hop là điểm đài (480,320) kèm cờ teleportToMap để
+  // Tự Tìm Đường gọi truyền tống khi đã vào đủ gần.
+  function findGuidanceHop(fromMapId, toMapId) {
+    var hop = findNextHopExit(fromMapId, toMapId);
+    if (hop) return hop;
+    if (!fromMapId || !toMapId || TELEPORT_ONLY_MAPS.indexOf(toMapId) === -1) return null;
+    if (fromMapId === 'dai-truyen-tong') {
+      return { exit: null, target: { x: 480, y: 320 }, targetMap: toMapId, teleportToMap: toMapId };
+    }
+    return findNextHopExit(fromMapId, 'dai-truyen-tong');
+  }
+
   function startAutoQuestPath(autoStarted) {
     var info = getQuestTargetInfo();
     if (!info || info.stepId === 'done') {
@@ -1879,11 +1903,34 @@
         if (currentPath.length === 0) failAutoPath('Không tìm được đường tới mục tiêu.');
       }
     } else {
+      // HOBANGFIX: hop dẫn đường biết chặng truyền tống (findGuidanceHop).
+      var hopNow = findGuidanceHop(currentMapId, info.mapId);
+      if (hopNow && hopNow.teleportToMap) {
+        // Đang ở Đài Truyền Tống, đích là map truyền tống: đi tới điểm đài,
+        // vào đủ gần (bán kính tương tác của đài = 64, cùng chuẩn updateTravel)
+        // thì truyền tống sang map đích và để Tự Tìm Đường chạy tiếp ở map mới.
+        var altarDist = Math.hypot(player.x - hopNow.target.x, player.y - hopNow.target.y);
+        if (altarDist <= 64) {
+          if (autoPath.teleportStamp && now - autoPath.teleportStamp < 4000) return; // vừa gọi truyền tống, chờ chuyển cảnh
+          autoPath.teleportStamp = now;
+          teleportTo(hopNow.teleportToMap);
+          if (currentMapId === 'dai-truyen-tong' && mapFade.dir === 0 && !pendingMapSwitch) {
+            // teleportTo bị cổng cảnh giới chặn (đã tự hiện lý do) — dừng lặng
+            cancelAutoPath(true);
+          }
+          return;
+        }
+        if (currentPath.length === 0 && now - autoPath.lastLegAt > 500) {
+          autoPath.lastLegAt = now;
+          triggerPathTo(hopNow.target.x, hopNow.target.y, null);
+          if (currentPath.length === 0) failAutoPath('Không tìm được đường tới Đài Truyền Tống.');
+        }
+        return;
+      }
       if (currentPath.length === 0 && now - autoPath.lastLegAt > 500) {
-        var exitHop = findNextHopExit(currentMapId, info.mapId);
-        if (!exitHop) { failAutoPath('Không tìm được đường sang ' + info.mapId); return; }
+        if (!hopNow) { failAutoPath('Không tìm được đường sang ' + info.mapId); return; }
         autoPath.lastLegAt = now;
-        triggerPathTo(exitHop.target.x, exitHop.target.y, null);
+        triggerPathTo(hopNow.target.x, hopNow.target.y, null);
         if (currentPath.length === 0) failAutoPath('Không tìm được đường ra cổng.');
       }
     }
@@ -2115,8 +2162,7 @@
       return { route: directRoute, needsTeleport: false, finalMapId: toMapId };
     }
 
-    var teleportMaps = ['ho-bang', 'mo-lua', 'hoang-mac', 'kiem-trung'];
-    if (teleportMaps.indexOf(toMapId) !== -1) {
+    if (TELEPORT_ONLY_MAPS.indexOf(toMapId) !== -1) {
       var routeToAltar = findRoute(fromMapId, 'dai-truyen-tong');
       if (routeToAltar) {
         return { route: routeToAltar.concat([toMapId]), needsTeleport: true, finalMapId: toMapId };
@@ -4613,7 +4659,7 @@
             drawGuidanceArrow(player.x, player.y, destA.x, destA.y);
           }
         } else {
-          var exitHop = findNextHopExit(currentMapId, qInfo.mapId);
+          var exitHop = findGuidanceHop(currentMapId, qInfo.mapId);
           if (exitHop && exitHop.target) {
             drawGuidanceArrow(player.x, player.y, exitHop.target.x, exitHop.target.y);
           }
@@ -5827,6 +5873,7 @@
     getQuestTargetInfo: getQuestTargetInfo,
     resolveQuestDestination: resolveQuestDestination,
     findRoute: findRoute,
+    findGuidanceHop: findGuidanceHop,
     getFieldMonsters: function () { return fieldMonsters; },
     // Kiểm chứng sprite quái nạp đúng khóa (bắt lỗi lệch khóa nạp/tra cứu như Đợt 3)
     getMonsterSheetStatus: function () {
