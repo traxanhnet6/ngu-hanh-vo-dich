@@ -259,7 +259,11 @@
     if (!isFinite(f.px) || !isFinite(f.py)) return false;
     var k = HH_GEN_DISPLAY_H / (data.charH * data.scaleFromMaster);
     genFrameDest = {
-      x: player.x - f.px * k, y: player.y - f.py * k, w: f.w * k, h: f.h * k
+      // Đợt KIẾP VÂN vòng 2/3: trừ playerLiftY — nhân vật bay lên trong pha
+      // kết độ kiếp; playerLiftY là 0 ngoài cảnh độ kiếp nên không đổi
+      // hành vi thường ngày. Lớp kiếm GRIPFIX bám theo genFrameDest này
+      // nên tự nhấc theo thân.
+      x: player.x - f.px * k, y: player.y - playerLiftY - f.py * k, w: f.w * k, h: f.h * k
     };
     ctx.drawImage(img, f.x, f.y, f.w, f.h,
       genFrameDest.x, genFrameDest.y, genFrameDest.w, genFrameDest.h);
@@ -424,7 +428,7 @@
     var k = HH_GEN_DISPLAY_H / (data.charH * data.scaleFromMaster);
     ctx.drawImage(img, r.x, r.y, r.w, r.h,
       player.x - f.px * k + (e.ax - spr.seat.x) * k,
-      player.y - f.py * k + (e.ay - spr.seat.y) * k,
+      player.y - playerLiftY - f.py * k + (e.ay - spr.seat.y) * k,
       r.w * k, r.h * k);
     return true;
   }
@@ -447,7 +451,28 @@
       'assets/chars/cothuye-sheet.png',
       'assets/art/icons-sheet.png',
       'assets/chars/hanhan-thaicuc-atlas.png',
-      'assets/chars/fx-thaicuc-yinyang.png'
+      'assets/chars/fx-thaicuc-yinyang.png',
+      // Đợt KIẾP VÂN vòng 3: tài sản thật của cảnh độ kiếp — mây bão + sương
+      // (vòng 1), tia lôi kiếp sinh hình trắng–tím (thang nặng dần 1→4),
+      // cung điện bò trong mây (2 tím + 1 hồng đỏ), khung bùng nổ tia cuối.
+      'assets/art/fx-kiep-van-1.png',
+      'assets/art/fx-kiep-van-2.png',
+      'assets/art/fx-kiep-van-3.png',
+      'assets/art/fx-kiep-suong.png',
+      'assets/art/fx-loi-kiep-1.png',
+      'assets/art/fx-loi-kiep-2.png',
+      'assets/art/fx-loi-kiep-3.png',
+      'assets/art/fx-loi-kiep-4.png',
+      'assets/art/fx-cung-dien-1.png',
+      'assets/art/fx-cung-dien-2.png',
+      'assets/art/fx-cung-dien-3.png',
+      'assets/art/fx-bung-no.png',
+      // Đợt KIẾP VÂN vòng 4: bộ mây bão sinh thật nhiều tầng có thể tích
+      // (trần bão xa, bụng mây xoáy sấm, hai cụm mây gần cuộn trào gờ sáng)
+      'assets/art/fx-kiep-van4-xa.png',
+      'assets/art/fx-kiep-van4-bung.png',
+      'assets/art/fx-kiep-van4-gan-1.png',
+      'assets/art/fx-kiep-van4-gan-2.png'
     ];
 
     var holder = (typeof window !== 'undefined' && window.GameMapData) ? window.GameMapData : (mapData && mapData.maps ? mapData : null);
@@ -533,6 +558,22 @@
         if (url === 'assets/art/icons-sheet.png') assets['icons_sheet'] = img;
         if (url === 'assets/chars/hanhan-thaicuc-atlas.png') assets['thaicuc_atlas'] = img;
         if (url === 'assets/chars/fx-thaicuc-yinyang.png') assets['thaicuc_yinyang'] = img;
+        if (url === 'assets/art/fx-kiep-van-1.png') assets['kiep_van_1'] = img;
+        if (url === 'assets/art/fx-kiep-van-2.png') assets['kiep_van_2'] = img;
+        if (url === 'assets/art/fx-kiep-van-3.png') assets['kiep_van_3'] = img;
+        if (url === 'assets/art/fx-kiep-suong.png') assets['kiep_suong'] = img;
+        if (url === 'assets/art/fx-loi-kiep-1.png') assets['loi_kiep_1'] = img;
+        if (url === 'assets/art/fx-loi-kiep-2.png') assets['loi_kiep_2'] = img;
+        if (url === 'assets/art/fx-loi-kiep-3.png') assets['loi_kiep_3'] = img;
+        if (url === 'assets/art/fx-loi-kiep-4.png') assets['loi_kiep_4'] = img;
+        if (url === 'assets/art/fx-cung-dien-1.png') assets['cung_dien_1'] = img;
+        if (url === 'assets/art/fx-cung-dien-2.png') assets['cung_dien_2'] = img;
+        if (url === 'assets/art/fx-cung-dien-3.png') assets['cung_dien_3'] = img;
+        if (url === 'assets/art/fx-bung-no.png') assets['bung_no'] = img;
+        if (url === 'assets/art/fx-kiep-van4-xa.png') assets['kiep_van4_xa'] = img;
+        if (url === 'assets/art/fx-kiep-van4-bung.png') assets['kiep_van4_bung'] = img;
+        if (url === 'assets/art/fx-kiep-van4-gan-1.png') assets['kiep_van4_gan_1'] = img;
+        if (url === 'assets/art/fx-kiep-van4-gan-2.png') assets['kiep_van4_gan_2'] = img;
       })(urls[i]);
     }
 
@@ -2414,34 +2455,58 @@
       outcome: 'success',
       outcomeDur: 1.7,
       outcomeT: 0,
-      bolt: null, // { points: [{x,y}], age }
+      bolt: null, // { topX, topY, botX, botY, age, seed, power, variant, flip }
       flash: 0,
       sparks: [],
+      // Đợt KIẾP VÂN vòng 3 — trạng thái THUẦN HÌNH ẢNH (không đụng kịch
+      // bản pha/con số): hạt sáng bay lên + mưa tia lửa vàng ở pha kết,
+      // cung điện bò trong mây ở pha tụ/đánh, vụ nổ của tia cuối.
+      motes: [],
+      rain: [],
+      arcs: [],
+      arcTimer: 0.3,
+      burst: null, // { t, x, y }
+      burstSparks: [],
       seed: Math.random() * 1000
     };
-    if (audioAPI && audioAPI.playThunderFar) audioAPI.playThunderFar();
+    // Âm thanh vòng 3: sấm rền lớn dần suốt pha tụ thay tiếng sấm xa một
+    // lần của T2 (playThunderFar giữ làm đường lùi cho môi trường thiếu
+    // hàm mới — stub kiểm tra cũ).
+    if (audioAPI && audioAPI.startTribRumble) audioAPI.startTribRumble();
+    else if (audioAPI && audioAPI.playThunderFar) audioAPI.playThunderFar();
   }
 
   function tribulationStrike() {
     if (!tribulation || !player) return;
-    var topX = player.x + (Math.random() - 0.5) * 70;
-    var topY = player.y - 430;
+    var topX = player.x + (Math.random() - 0.5) * 50;
+    var topY = player.y - 380;
     var botX = player.x;
     var botY = player.y - 14;
-    var pts = [];
-    var segs = 7;
-    for (var i = 0; i <= segs; i++) {
-      var f = i / segs;
-      var jitter = (i === 0 || i === segs) ? 0 : (Math.random() - 0.5) * 34 * (1 - Math.abs(f - 0.5));
-      pts.push({ x: topX + (botX - topX) * f + jitter, y: topY + (botY - topY) * f });
-    }
-    tribulation.bolt = { points: pts, age: 0 };
-    tribulation.flash = 1;
     tribulation.boltsHit++;
+    // Đợt KIẾP VÂN vòng 3: tia là HÌNH SINH THẬT (không vẽ polyline nữa —
+    // đường thủ tục đã hỏng hai vòng). Biến thể đi theo thang nặng dần:
+    // tia i dùng ảnh round(i/(total-1)*3) trong bộ 4 (nhẹ → nặng nhất);
+    // lật ngang ngẫu nhiên để các tia không lặp hình. power giữ thang
+    // 1..total như vòng 2 (tia sau mạnh hơn tia trước).
+    var total = tribulation.boltsTotal;
+    var idx = total > 1 ? Math.round((tribulation.boltsHit - 1) / (total - 1) * 3) : 3;
+    tribulation.bolt = {
+      topX: topX, topY: topY, botX: botX, botY: botY,
+      age: 0,
+      seed: Math.random() * 100,
+      power: tribulation.boltsHit,
+      variant: idx,
+      flip: Math.random() < 0.5
+    };
+    tribulation.flash = 1;
     // Rung màn hình tăng dần theo tia (thang neo của chuẩn độ kiếp: tia
     // cuối rung mạnh nhất).
     triggerScreenShake(0.28 + tribulation.boltsHit * 0.08, 5 + tribulation.boltsHit * 3);
-    if (audioAPI && audioAPI.playBolt) audioAPI.playBolt();
+    // Tiếng sét tỉ lệ sức tia: p01 đi 0 → 1 theo thứ tự tia (cả thang 3
+    // lẫn thang 5), tia cuối to và trầm nhất + dư âm rền sau đòn.
+    if (audioAPI && audioAPI.playBolt) {
+      audioAPI.playBolt(total > 1 ? (tribulation.boltsHit - 1) / (total - 1) : 1);
+    }
     for (var s = 0; s < 14; s++) {
       var ang = Math.random() * Math.PI * 2;
       var spd = 40 + Math.random() * 130;
@@ -2451,6 +2516,48 @@
         t: 0, dur: 0.4 + Math.random() * 0.3
       });
     }
+    // Tia CUỐI là một vụ nổ (theo video mẫu của Bui): khung bùng nổ tỏa
+    // tròn trắng–tím tại điểm chạm + vệt tia lửa văng ra. Thuần hình ảnh:
+    // burst sống 0,5s trong lớp vẽ, không đổi nhịp pha.
+    if (tribulation.boltsHit >= total) {
+      tribulation.burst = { t: 0, x: botX, y: botY };
+      for (var bs = 0; bs < 26; bs++) {
+        var ba = Math.random() * Math.PI * 2;
+        var bsp = 120 + Math.random() * 320;
+        tribulation.burstSparks.push({
+          x: botX, y: botY - 6,
+          vx: Math.cos(ba) * bsp, vy: Math.sin(ba) * bsp - 60,
+          t: 0, dur: 0.45 + Math.random() * 0.4
+        });
+      }
+    }
+  }
+
+  // Đợt KIẾP VÂN vòng 3: sinh một cung điện bò trong mây (pha tụ + pha
+  // đánh). Cung sống ngắn 0,16–0,38s, nhấp nháy mạnh; vị trí neo TƯƠNG
+  // ĐỐI theo nhân vật (dx quanh vòng mây, dy quanh bụng mây py−150) nên
+  // bám mây khi vẽ. Cửa sổ nguồn ngẫu nhiên trên ảnh cung + lật ngang để
+  // không lộ lặp; biến thể hồng đỏ hiếm (~16%).
+  function spawnTribArc(tr, strength) {
+    var imgs = [assets.cung_dien_1, assets.cung_dien_2, assets.cung_dien_3];
+    var pick = Math.random();
+    var vi = pick < 0.42 ? 0 : (pick < 0.84 ? 1 : 2);
+    var img = imgs[vi];
+    if (!img || !img.complete || !img.naturalWidth) return;
+    var winFrac = 0.4 + Math.random() * 0.3;
+    tr.arcs.push({
+      img: img,
+      vi: vi,
+      dx: (Math.random() - 0.5) * 320,
+      dy: -330 + (Math.random() - 0.5) * 76,
+      w: (110 + Math.random() * 90) * (0.55 + 0.6 * strength) * 1.15,
+      sx: Math.random() * (1 - winFrac),
+      sw: winFrac,
+      flip: Math.random() < 0.5,
+      seed: Math.random() * 100,
+      t: 0,
+      dur: 0.22 + Math.random() * 0.28
+    });
   }
 
   function updateTribulation(dt) {
@@ -2470,6 +2577,37 @@
       sp.vy += 260 * dt;
       if (sp.t >= sp.dur) tr.sparks.splice(i, 1);
     }
+    // Vòng 3: tuổi của vụ nổ tia cuối + vệt lửa văng (thuần hình ảnh).
+    if (tr.burst) {
+      tr.burst.t += dt;
+      if (tr.burst.t > 0.5) tr.burst = null;
+    }
+    for (var bi2 = tr.burstSparks.length - 1; bi2 >= 0; bi2--) {
+      var bsp2 = tr.burstSparks[bi2];
+      bsp2.t += dt;
+      bsp2.x += bsp2.vx * dt;
+      bsp2.y += bsp2.vy * dt;
+      bsp2.vy += 300 * dt;
+      if (bsp2.t >= bsp2.dur) tr.burstSparks.splice(bi2, 1);
+    }
+    // Vòng 3: cung điện trong mây — sinh dày dần theo độ tụ, sống ở cả
+    // pha tụ lẫn pha đánh (sét sống trong mây trước và giữa các tia
+    // giáng, đúng ngôn ngữ video mẫu).
+    if (tr.phase === 'gather' || tr.phase === 'bolts') {
+      var strength = tr.phase === 'gather' ? Math.min(1, tr.t / tr.gatherDur) : 1;
+      tr.arcTimer -= dt;
+      var maxArcs = tr.phase === 'gather' ? 3 + Math.round(3 * strength) : 5;
+      if (tr.arcTimer <= 0 && tr.arcs.length < maxArcs) {
+        spawnTribArc(tr, strength);
+        tr.arcTimer = (tr.phase === 'gather' ? 0.30 - 0.19 * strength : 0.15) * (0.7 + Math.random() * 0.6);
+      }
+      // Sấm rền bám độ tụ của mây.
+      if (audioAPI && audioAPI.setTribRumbleLevel) audioAPI.setTribRumbleLevel(strength);
+    }
+    for (var ai = tr.arcs.length - 1; ai >= 0; ai--) {
+      tr.arcs[ai].t += dt;
+      if (tr.arcs[ai].t >= tr.arcs[ai].dur) tr.arcs.splice(ai, 1);
+    }
 
     if (tr.phase === 'gather') {
       if (tr.t >= tr.gatherDur) {
@@ -2485,12 +2623,61 @@
       if (tr.boltsHit >= tr.boltsTotal && tr.t >= tr.nextBoltAt - tr.boltInterval + 0.55) {
         tr.phase = 'outcome';
         tr.outcomeT = 0;
+        // Âm thanh pha kết: rền tắt, thiên âm sáng lên, gió nổi theo
+        // độ bay của nhân vật.
+        if (audioAPI && audioAPI.stopTribRumble) audioAPI.stopTribRumble();
+        if (audioAPI && audioAPI.playHeavenChime) audioAPI.playHeavenChime();
+        if (audioAPI && audioAPI.startTribWind) audioAPI.startTribWind();
       }
       return;
     }
     if (tr.phase === 'outcome') {
       tr.outcomeT += dt;
+      // Gió bám độ cao bay lên (0 khi chạm đất, 1 ở đỉnh 84px).
+      if (audioAPI && audioAPI.setTribWindLevel) {
+        audioAPI.setTribWindLevel(Math.max(0, Math.min(1, computeTribulationLift() / TRIB_LIFT_H)));
+      }
+      // Đợt KIẾP VÂN vòng 2: hạt sáng sinh quanh chân nhân vật và bay lên
+      // trong cột sáng suốt pha kết (tối đa ~26 hạt sống cùng lúc).
+      if (player && tr.motes.length < 26 && Math.random() < 0.55) {
+        tr.motes.push({
+          x: player.x + (Math.random() - 0.5) * 96,
+          y: player.y - Math.random() * 12,
+          vy: -(26 + Math.random() * 38),
+          sway: Math.random() * Math.PI * 2,
+          t: 0, dur: 1.0 + Math.random() * 0.9,
+          r: 1.1 + Math.random() * 1.9
+        });
+      }
+      for (var mi = tr.motes.length - 1; mi >= 0; mi--) {
+        var mo = tr.motes[mi];
+        mo.t += dt;
+        mo.y += mo.vy * dt;
+        mo.x += Math.sin(mo.t * 3 + mo.sway) * 9 * dt;
+        if (mo.t >= mo.dur) tr.motes.splice(mi, 1);
+      }
+      // Vòng 3: mưa tia lửa VÀNG rơi từ khe mây xé phía trên xuống quanh
+      // nhân vật (ngôn ngữ pha kết của video mẫu), suốt pha kết.
+      if (player && tr.rain.length < 48 && Math.random() < 0.9) {
+        tr.rain.push({
+          x: player.x + (Math.random() - 0.5) * 680,
+          y: player.y - 430 + Math.random() * 120,
+          vy: 130 + Math.random() * 90,
+          sway: Math.random() * Math.PI * 2,
+          len: 7 + Math.random() * 5,
+          t: 0, dur: 2.6
+        });
+      }
+      for (var rj = tr.rain.length - 1; rj >= 0; rj--) {
+        var rd = tr.rain[rj];
+        rd.t += dt;
+        rd.y += rd.vy * dt;
+        rd.x += Math.sin(rd.t * 2.2 + rd.sway) * 7 * dt;
+        if (rd.t >= rd.dur || rd.y > player.y + 8) tr.rain.splice(rj, 1);
+      }
       if (tr.outcomeT >= tr.outcomeDur) {
+        if (audioAPI && audioAPI.stopTribWind) audioAPI.stopTribWind();
+        if (audioAPI && audioAPI.stopTribRumble) audioAPI.stopTribRumble();
         tribulation = null;
       }
     }
@@ -2503,8 +2690,264 @@
       phase: tribulation.phase,
       boltsHit: tribulation.boltsHit,
       boltsTotal: tribulation.boltsTotal,
-      outcome: tribulation.outcome
+      outcome: tribulation.outcome,
+      liftY: Math.round(computeTribulationLift())
     };
+  }
+
+  // =========================================================================
+  // Đợt KIẾP VÂN vòng 2 + vòng 3 (Bui chỉ rõ 17:32–17:33 ngày 2026-11-10,
+  // video mẫu 04:30 ngày 2026-11-11): mây thật (vòng 1, giữ nguyên) + sét
+  // SINH HÌNH THẬT trắng–tím + cung điện bò trong mây + tia cuối bùng nổ
+  // + hào quang pha kết vàng (cột sáng mép mềm, vòng nhiều lớp, nắng vàng
+  // xuyên mây, mưa tia lửa vàng) + NHÂN VẬT BAY LÊN khi thành công. Kịch
+  // bản pha + mọi con số của T2/T3 giữ nguyên — đây thuần là lớp hình.
+  // =========================================================================
+  function tribSmooth(u) {
+    u = Math.max(0, Math.min(1, u));
+    return u * u * (3 - 2 * u);
+  }
+
+  // Độ nhấc nhân vật (px) theo tiến trình pha kết: bốc lên mềm trong
+  // 38% đầu, lơ lửng ở đỉnh (nhấp nhô rất nhẹ) tới 68% — trùng cửa sổ hào
+  // quang tỏa mạnh nhất — rồi hạ xuống mềm, về đúng 0 khi cảnh kết thúc.
+  // Đỉnh đã chọn: 84px (đọc rõ ở kích thước thật, bóng đất tách hẳn).
+  var TRIB_LIFT_H = 84;
+  var playerLiftY = 0; // độ nhấc của KHUNG VẼ hiện tại — CHỈ là lệch vẽ, player.y không bao giờ đổi
+  function computeTribulationLift() {
+    if (!tribulation || tribulation.phase !== 'outcome') return 0;
+    var op = tribulation.outcomeT / tribulation.outcomeDur;
+    if (op < 0.38) return TRIB_LIFT_H * tribSmooth(op / 0.38);
+    if (op < 0.68) return TRIB_LIFT_H * (1 + 0.03 * Math.sin(tribulation.outcomeT * 2.4));
+    return TRIB_LIFT_H * (1 - tribSmooth((op - 0.68) / 0.32));
+  }
+
+  // Kết cấu sáng vẽ sẵn một lần (vẽ lại bằng drawImage mỗi khung, rẻ hơn
+  // tạo gradient lớn lặp lại): quầng radial trắng ấm + cột sáng (hồ sơ
+  // ngang mềm hai mép, phai dần lên đỉnh) nướng sẵn màu vàng ấm.
+  var tribGlowTex = null;
+  var tribBeamTex = null;
+  function getTribTextures() {
+    if (tribGlowTex && tribBeamTex) return;
+    var c1 = document.createElement('canvas');
+    c1.width = 256; c1.height = 256;
+    var g1 = c1.getContext('2d');
+    var rg = g1.createRadialGradient(128, 128, 0, 128, 128, 128);
+    rg.addColorStop(0, 'rgba(255, 250, 224, 1)');
+    rg.addColorStop(0.25, 'rgba(255, 244, 200, 0.55)');
+    rg.addColorStop(0.6, 'rgba(255, 238, 180, 0.15)');
+    rg.addColorStop(1, 'rgba(255, 238, 180, 0)');
+    g1.fillStyle = rg;
+    g1.fillRect(0, 0, 256, 256);
+    tribGlowTex = c1;
+
+    var c2 = document.createElement('canvas');
+    c2.width = 256; c2.height = 256;
+    var g2 = c2.getContext('2d');
+    var hg = g2.createLinearGradient(0, 0, 256, 0);
+    hg.addColorStop(0, 'rgba(255, 240, 196, 0)');
+    hg.addColorStop(0.22, 'rgba(255, 242, 204, 0.30)');
+    hg.addColorStop(0.5, 'rgba(255, 252, 232, 0.82)');
+    hg.addColorStop(0.78, 'rgba(255, 242, 204, 0.30)');
+    hg.addColorStop(1, 'rgba(255, 240, 196, 0)');
+    g2.fillStyle = hg;
+    g2.fillRect(0, 0, 256, 256);
+    g2.globalCompositeOperation = 'destination-in';
+    var vg = g2.createLinearGradient(0, 0, 0, 256);
+    vg.addColorStop(0, 'rgba(255,255,255,0)');
+    vg.addColorStop(0.4, 'rgba(255,255,255,0.5)');
+    vg.addColorStop(0.75, 'rgba(255,255,255,0.88)');
+    vg.addColorStop(1, 'rgba(255,255,255,1)');
+    g2.fillStyle = vg;
+    g2.fillRect(0, 0, 256, 256);
+    tribBeamTex = c2;
+  }
+
+  // Quầng radial theo tông màu (tím cho lôi kiếp, hồng cho cung đỏ) —
+  // dùng cho mây phát sáng từ bên trong quanh cung điện và miệng tia.
+  var tribGlowTexByKey = {};
+  function getTribGlowTex(key) {
+    if (tribGlowTexByKey[key]) return tribGlowTexByKey[key];
+    if (typeof document === 'undefined') return null;
+    var rgb = key === 'pink' ? '255, 120, 160' : '168, 130, 255';
+    var c = document.createElement('canvas');
+    c.width = 256; c.height = 256;
+    var g = c.getContext('2d');
+    var rg = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+    rg.addColorStop(0, 'rgba(' + rgb + ', 0.9)');
+    rg.addColorStop(0.3, 'rgba(' + rgb + ', 0.42)');
+    rg.addColorStop(0.65, 'rgba(' + rgb + ', 0.12)');
+    rg.addColorStop(1, 'rgba(' + rgb + ', 0)');
+    g.fillStyle = rg;
+    g.fillRect(0, 0, 256, 256);
+    tribGlowTexByKey[key] = c;
+    return c;
+  }
+
+  // Cường độ tia theo tuổi: chớp mạnh nhất lúc chạm đất, suy giảm nhanh
+  // kèm nhấp nháy tần số cao và một nhịp lóe lại (restrike) — tia sống
+  // trong 0,22 giây chứ không phải một khung tĩnh mờ dần đều. (Vòng 2)
+  function boltIntensity(bolt) {
+    var u = bolt.age / 0.22;
+    if (u >= 1) return 0;
+    var decay = Math.pow(1 - u, 0.75);
+    var flick = 0.84 + 0.16 * Math.sin(bolt.age * 170 + bolt.seed * 11);
+    var restrike = 0.22 * Math.max(0, Math.sin(u * 9 + bolt.seed)) * (1 - u);
+    return Math.max(0, Math.min(1.15, decay * flick + restrike));
+  }
+
+  // Vòng 3: vẽ tia lôi kiếp bằng ẢNH SINH THẬT — ảnh neo theo trục
+  // mây→điểm chạm (xoay theo độ lệch ngang của miệng tia), bề rộng lớn
+  // dần theo sức tia; kèm mây phát sáng từ bên trong quanh miệng tia và
+  // vũng sáng tím tại điểm chạm đất (bloom như video mẫu).
+  function drawLightningBolt(bolt, px, py) {
+    var inten = boltIntensity(bolt);
+    if (inten <= 0.01) return;
+    var total = tribulation ? tribulation.boltsTotal : bolt.power;
+    var p01 = total > 1 ? (bolt.power - 1) / (total - 1) : 1;
+    var dx = bolt.botX - bolt.topX, dy = bolt.botY - bolt.topY;
+    var len = Math.sqrt(dx * dx + dy * dy);
+    var midX = (bolt.topX + bolt.botX) / 2, midY = (bolt.topY + bolt.botY) / 2;
+    var theta = Math.atan2(-dx, dy);
+    var aClamped = Math.min(1, inten);
+    getTribTextures();
+    var glowV = getTribGlowTex('violet');
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    // Mây phát sáng từ bên trong quanh miệng tia.
+    if (glowV) {
+      ctx.globalAlpha = 0.5 * aClamped;
+      ctx.drawImage(glowV, bolt.topX - 175, bolt.topY - 28, 350, 195);
+      ctx.globalAlpha = 0.35 * aClamped;
+      ctx.drawImage(glowV, bolt.topX - 95, bolt.topY - 12, 190, 110);
+    }
+    // Vũng sáng tại điểm chạm.
+    ctx.fillStyle = 'rgba(178, 142, 255, ' + (0.20 * aClamped).toFixed(3) + ')';
+    ctx.beginPath();
+    ctx.ellipse(bolt.botX, bolt.botY + 6, 76, 19, 0, 0, Math.PI * 2);
+    ctx.fill();
+    if (glowV) {
+      ctx.globalAlpha = 0.55 * aClamped;
+      ctx.drawImage(glowV, bolt.botX - 62, bolt.botY - 62, 124, 124);
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    // Thân tia: ảnh sinh thật; lượt hai 'lighter' nhẹ cho bloom.
+    var imgs = [assets.loi_kiep_1, assets.loi_kiep_2, assets.loi_kiep_3, assets.loi_kiep_4];
+    var img = imgs[Math.max(0, Math.min(3, bolt.variant || 0))];
+    ctx.save();
+    ctx.translate(midX, midY);
+    ctx.rotate(theta);
+    if (bolt.flip) ctx.scale(-1, 1);
+    if (img && img.complete && img.naturalWidth > 0) {
+      var drawH = len * 1.05;
+      var drawW = drawH * (img.naturalWidth / img.naturalHeight) * (0.8 + 0.38 * p01);
+      ctx.globalAlpha = aClamped;
+      ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 0.3 * aClamped;
+      ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
+    } else {
+      // Đường lùi tối thiểu khi ảnh chưa về kịp (cảnh không bao giờ
+      // trống tia): một nét trắng–tím dày có hào quang.
+      ctx.globalAlpha = aClamped;
+      ctx.strokeStyle = 'rgba(196, 168, 255, 0.8)';
+      ctx.lineWidth = 7;
+      ctx.shadowColor = 'rgba(168, 130, 255, 0.9)';
+      ctx.shadowBlur = 18;
+      ctx.beginPath();
+      ctx.moveTo(-dx / 2, -dy / 2);
+      ctx.lineTo(dx / 2, dy / 2);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+      ctx.lineWidth = 2.4;
+      ctx.shadowBlur = 0;
+      ctx.beginPath();
+      ctx.moveTo(-dx / 2, -dy / 2);
+      ctx.lineTo(dx / 2, dy / 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  // Vòng 3: vẽ các cung điện đang sống trong mây (pha tụ + pha đánh) —
+  // bụng mây phát sáng đúng tông quanh mỗi cung rồi mới tới thân cung.
+  function drawTribArcs(tr, px, py, visStrength) {
+    if (!tr.arcs.length) return;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (var i = 0; i < tr.arcs.length; i++) {
+      var arc = tr.arcs[i];
+      var u = Math.min(1, arc.t / arc.dur);
+      var env = Math.pow(Math.sin(Math.PI * u), 0.7);
+      var flick = 0.72 + 0.28 * Math.sin(arc.t * 150 + arc.seed * 23);
+      var a = env * flick * visStrength;
+      if (a <= 0.02) continue;
+      var cx = px + arc.dx, cy = py + arc.dy;
+      var glow = getTribGlowTex(arc.vi === 2 ? 'pink' : 'violet');
+      if (glow) {
+        ctx.globalAlpha = 0.32 * a;
+        ctx.drawImage(glow, cx - arc.w * 0.55, cy - arc.w * 0.17, arc.w * 1.1, arc.w * 0.34);
+      }
+      var img = arc.img;
+      var swPx = img.naturalWidth * arc.sw;
+      var sxPx = img.naturalWidth * arc.sx;
+      var dh = arc.w * (img.naturalHeight / swPx);
+      ctx.save();
+      ctx.translate(cx, cy);
+      if (arc.flip) ctx.scale(-1, 1);
+      ctx.globalAlpha = 0.95 * a;
+      ctx.drawImage(img, sxPx, 0, swPx, img.naturalHeight, -arc.w / 2, -dh / 2, arc.w, dh);
+      ctx.restore();
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  // Vòng 3: vụ nổ của tia cuối — khung tỏa tròn trắng–tím nở bung tại
+  // điểm chạm + vệt tia lửa văng (theo khung cao trào của video mẫu).
+  function drawTribBurst(tr) {
+    if (tr.burstSparks.length) {
+      ctx.save();
+      ctx.lineCap = 'round';
+      for (var i = 0; i < tr.burstSparks.length; i++) {
+        var s = tr.burstSparks[i];
+        var a = Math.max(0, 1 - s.t / s.dur);
+        if (a <= 0.01) continue;
+        ctx.strokeStyle = (i % 3 === 0)
+          ? 'rgba(255, 255, 255, ' + (0.85 * a).toFixed(3) + ')'
+          : 'rgba(216, 182, 255, ' + (0.8 * a).toFixed(3) + ')';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(s.x, s.y);
+        ctx.lineTo(s.x - s.vx * 0.045, s.y - s.vy * 0.045);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+    if (!tr.burst) return;
+    var u = Math.min(1, tr.burst.t / 0.5);
+    var ease = 1 - Math.pow(1 - u, 3);
+    var dia = 110 + ease * 430;
+    var alpha = Math.pow(1 - u, 1.25) * 0.95;
+    var img = assets.bung_no;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    if (img && img.complete && img.naturalWidth > 0) {
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(img, tr.burst.x - dia / 2, tr.burst.y - 14 - dia / 2, dia, dia);
+    }
+    var glowV = getTribGlowTex('violet');
+    if (glowV) {
+      ctx.globalAlpha = 0.5 * (1 - u);
+      var gd = 150 * (1 - u * 0.4);
+      ctx.drawImage(glowV, tr.burst.x - gd / 2, tr.burst.y - 14 - gd / 2, gd, gd);
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
   }
 
   function renderTribulation() {
@@ -2521,78 +2964,349 @@
 
     ctx.save();
 
-    // Lớp sẫm cục bộ quanh nhân vật khi mây tụ (không đụng lớp ngày đêm);
-    // pha kết mây đã tan nên không phủ tối nữa.
-    if (tr.phase !== 'outcome') {
-      var darkA = 0.26 * gatherP;
-      ctx.fillStyle = 'rgba(10, 10, 18, ' + darkA.toFixed(3) + ')';
+    // =========================================================================
+    // Đợt KIẾP VÂN vòng 4 — Việc 3: Không khí bão toàn cảnh (giảm sáng nền +
+    // tối viền) ở mức trình diễn thuần túy để khối mây đúng tông mẫu.
+    // Kết thúc cảnh tự động trả toàn bộ cảnh về trạng thái ban đầu.
+    // =========================================================================
+    var stormP = (tr.phase === 'outcome')
+      ? Math.max(0, 1 - (tr.outcomeT / tr.outcomeDur))
+      : gatherP;
+
+    if (stormP > 0.01) {
+      // 1. Lớp phủ tối nền giông bão (chìm tông cả bản đồ, cây cối, mặt đất)
+      var darkA = 0.44 * stormP;
+      ctx.fillStyle = 'rgba(6, 8, 16, ' + darkA.toFixed(3) + ')';
+      ctx.fillRect(camera.x - 60, camera.y - 60, camera.viewportW + 120, camera.viewportH + 120);
+
+      // 2. Tối viền (vignette giông bão) tỏa từ tâm người chơi ra ngoài
+      var vigGrad = ctx.createRadialGradient(
+        px, py - 90, camera.viewportW * 0.28,
+        px, py - 90, camera.viewportW * 1.05
+      );
+      vigGrad.addColorStop(0, 'rgba(4, 5, 12, 0)');
+      vigGrad.addColorStop(0.55, 'rgba(4, 5, 12, ' + (0.22 * stormP).toFixed(3) + ')');
+      vigGrad.addColorStop(1, 'rgba(4, 5, 12, ' + (0.50 * stormP).toFixed(3) + ')');
+      ctx.fillStyle = vigGrad;
       ctx.fillRect(camera.x - 60, camera.y - 60, camera.viewportW + 120, camera.viewportH + 120);
     }
 
-    // Đám mây kiếp: 9 cụm elip tối xoáy quanh phía trên nhân vật, kéo từ
-    // xa vào gần khi tụ; pha kết tản ra xa theo vòng tròn và mờ dần.
-    var cloudR;
-    if (tr.phase === 'gather') cloudR = 430 - 290 * gatherP;
-    else if (tr.phase === 'bolts') cloudR = 140;
-    else cloudR = 140 + 400 * (tr.outcomeT / tr.outcomeDur);
-    var cloudAlpha = tr.phase === 'outcome'
-      ? 0.55 * gatherP
-      : 0.28 + 0.3 * gatherP;
-    for (var ci = 0; ci < 9; ci++) {
-      var ang = (ci / 9) * Math.PI * 2 + tr.seed + tr.t * 0.12;
-      var cxp = px + Math.cos(ang) * cloudR;
-      var cyp = py - 150 + Math.sin(ang) * cloudR * 0.30;
-      var crx = 120 + (ci % 3) * 36;
-      var cry = 34 + (ci % 4) * 7;
-      ctx.fillStyle = 'rgba(24, 22, 38, ' + cloudAlpha.toFixed(3) + ')';
-      ctx.beginPath();
-      ctx.ellipse(cxp, cyp, crx, cry, 0, 0, Math.PI * 2);
-      ctx.fill();
+    // =========================================================================
+    // Đợt KIẾP VÂN vòng 4 — Việc 1 & 2: Làm lại toàn bộ lớp mây kiếp
+    // Bộ mây bão 3 tầng có thể tích thật:
+    //  - Tầng 1 (xa): Trần bão xa (fx-kiep-van4-xa.png) che phủ vòm trời phía trên
+    //  - Tầng 2 (trung): Bụng mây / miệng xoáy (fx-kiep-van4-bung.png) ngay trên đầu nhân vật
+    //  - Tầng 3 (gần): Hai cụm mây cuộn trào có gờ sáng lạnh (fx-kiep-van4-gan-1/2)
+    // =========================================================================
+    var imgXa = assets.kiep_van4_xa;
+    var imgBung = assets.kiep_van4_bung;
+    var imgGan1 = assets.kiep_van4_gan_1;
+    var imgGan2 = assets.kiep_van4_gan_2;
+
+    var kv4Ready = imgXa && imgXa.complete && imgXa.naturalWidth > 0 &&
+                   imgBung && imgBung.complete && imgBung.naturalWidth > 0 &&
+                   imgGan1 && imgGan1.complete && imgGan1.naturalWidth > 0 &&
+                   imgGan2 && imgGan2.complete && imgGan2.naturalWidth > 0;
+
+    if (kv4Ready) {
+      var isOutcome = (tr.phase === 'outcome');
+      var op = isOutcome ? (tr.outcomeT / tr.outcomeDur) : 0;
+      var opEase = tribSmooth(op);
+      var cloudAlpha = isOutcome ? Math.max(0, 1 - op * 1.1) : (0.40 + 0.58 * gatherP);
+      var tearX = isOutcome ? (opEase * 380) : 0;
+
+      // Hơi sương mờ tầng nền
+      var mist = assets.kiep_suong;
+      if (mist && mist.complete && mist.naturalWidth > 0 && !isOutcome) {
+        var mistW = Math.max(camera.viewportW * 1.5, 780);
+        var mistH = mistW * mist.naturalHeight / mist.naturalWidth;
+        var mistX = px + Math.sin(tr.t * 0.08 + tr.seed) * 20;
+        ctx.save();
+        ctx.globalAlpha = 0.12 * gatherP;
+        ctx.drawImage(mist, mistX - mistW / 2, py - 240 - mistH / 2, mistW, mistH);
+        ctx.restore();
+      }
+
+      // 1. Tầng xa: Trần bão kéo tới che phủ bầu trời phía trên
+      var ceilW = Math.max(camera.viewportW * 1.45, 820);
+      var ceilH = ceilW * (imgXa.naturalHeight / imgXa.naturalWidth);
+      var ceilBaseY = camera.y - 40 + (1 - gatherP) * -80;
+      var ceilSwayX = Math.sin(tr.t * 0.08 + tr.seed) * 16;
+      var cxCenter = camera.x + camera.viewportW / 2 + ceilSwayX;
+
+      ctx.save();
+      ctx.globalAlpha = cloudAlpha * 0.96;
+      if (!isOutcome || tearX < 1) {
+        ctx.drawImage(imgXa, cxCenter - ceilW / 2, ceilBaseY, ceilW, ceilH);
+      } else {
+        // Pha kết: xé mở trần bão làm hai nửa tách về hai phía
+        var halfNatW = imgXa.naturalWidth / 2;
+        var halfDrawW = ceilW / 2;
+        ctx.drawImage(imgXa, 0, 0, halfNatW, imgXa.naturalHeight,
+          cxCenter - halfDrawW - tearX, ceilBaseY, halfDrawW, ceilH);
+        ctx.drawImage(imgXa, halfNatW, 0, halfNatW, imgXa.naturalHeight,
+          cxCenter + tearX, ceilBaseY, halfDrawW, ceilH);
+      }
+      ctx.restore();
+
+      // 2. Tầng trung: Bụng mây / xoáy sấm ngay phía trên đầu nhân vật
+      var bungBaseW = 440;
+      var bungW = (bungBaseW + Math.sin(tr.t * 0.35 + tr.seed) * 14) * (0.82 + 0.18 * gatherP);
+      var bungH = bungW * (imgBung.naturalHeight / imgBung.naturalWidth);
+      var bungCX = px + Math.sin(tr.t * 0.12 + tr.seed) * 8;
+      var bungCY = py - 335 + Math.sin(tr.t * 0.16 + tr.seed) * 6;
+
+      ctx.save();
+      ctx.globalAlpha = cloudAlpha;
+      if (!isOutcome || tearX < 1) {
+        ctx.save();
+        ctx.translate(bungCX, bungCY);
+        ctx.rotate(tr.t * 0.04 + tr.seed);
+        ctx.drawImage(imgBung, -bungW / 2, -bungH / 2, bungW, bungH);
+        ctx.restore();
+      } else {
+        var bScale = 1 + opEase * 0.35;
+        var bW = bungW * bScale;
+        var bH = bungH * bScale;
+        var halfBW = bW / 2;
+        var halfBNat = imgBung.naturalWidth / 2;
+        ctx.drawImage(imgBung, 0, 0, halfBNat, imgBung.naturalHeight,
+          bungCX - halfBW - tearX * 0.9, bungCY - bH / 2, halfBW, bH);
+        ctx.drawImage(imgBung, halfBNat, 0, halfBNat, imgBung.naturalHeight,
+          bungCX + tearX * 0.9, bungCY - bH / 2, halfBW, bH);
+      }
+      ctx.restore();
+
+      // Bụng mây phát sáng từ bên trong khi sét giáng
+      if (tr.bolt) {
+        getTribTextures();
+        var glowV2 = getTribGlowTex('violet');
+        if (glowV2) {
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.globalAlpha = 0.40 * Math.min(1, boltIntensity(tr.bolt));
+          ctx.drawImage(glowV2, bungCX - 210, bungCY - 130, 420, 260);
+          ctx.restore();
+        }
+      }
+
+      // 3. Tầng gần: Các cụm mây cuộn trào có gờ sáng lạnh (nổi khối, tương phản)
+      ctx.save();
+      ctx.globalAlpha = cloudAlpha;
+
+      // Cụm gần A (bên trái): dải mây ngang gờ sáng trên
+      var c1W = 380;
+      var c1H = c1W * (imgGan1.naturalHeight / imgGan1.naturalWidth);
+      var c1X = px - 130 - (1 - gatherP) * 50 - tearX * 1.1 + Math.sin(tr.t * 0.18) * 8;
+      var c1Y = py - 280 + Math.sin(tr.t * 0.22) * 5;
+      ctx.drawImage(imgGan1, c1X - c1W / 2, c1Y - c1H / 2, c1W, c1H);
+
+      // Cụm gần B (bên phải): lật ngang đối xứng, gờ sáng viền ngoài
+      var c2W = 360;
+      var c2H = c2W * (imgGan1.naturalHeight / imgGan1.naturalWidth);
+      var c2X = px + 130 + (1 - gatherP) * 50 + tearX * 1.1 + Math.sin(tr.t * 0.15 + 1.2) * 8;
+      var c2Y = py - 265 + Math.sin(tr.t * 0.20 + 0.8) * 5;
+      ctx.save();
+      ctx.translate(c2X, c2Y);
+      ctx.scale(-1, 1);
+      ctx.drawImage(imgGan1, -c2W / 2, -c2H / 2, c2W, c2H);
+      ctx.restore();
+
+      // Cụm gần C (phía trên / đe mây): đe mây cuộn tầng sâu
+      var c3W = 320;
+      var c3H = c3W * (imgGan2.naturalHeight / imgGan2.naturalWidth);
+      var c3X = px + 25 + Math.sin(tr.t * 0.10 + 2.1) * 10;
+      var c3Y = py - 380 - (isOutcome ? tearX * 0.6 : 0) + Math.sin(tr.t * 0.14) * 6;
+      ctx.drawImage(imgGan2, c3X - c3W / 2, c3Y - c3H / 2, c3W, c3H);
+
+      ctx.restore();
+    } else {
+      // Đường lùi khi ảnh đợt 4 chưa nạp xong
+      var cloudR;
+      if (tr.phase === 'gather') cloudR = 430 - 290 * gatherP;
+      else if (tr.phase === 'bolts') cloudR = 140;
+      else cloudR = 140 + 400 * (tr.outcomeT / tr.outcomeDur);
+      var cloudAlphaOld = tr.phase === 'outcome' ? 0.55 * gatherP : 0.28 + 0.3 * gatherP;
+      var kiepImgs = [assets.kiep_van_1, assets.kiep_van_2, assets.kiep_van_3];
+      var kiepReady = false;
+      for (var ki = 0; ki < kiepImgs.length; ki++) {
+        if (kiepImgs[ki] && kiepImgs[ki].complete && kiepImgs[ki].naturalWidth > 0) { kiepReady = true; break; }
+      }
+      if (kiepReady) {
+        for (var ci = 0; ci < 9; ci++) {
+          var ang = (ci / 9) * Math.PI * 2 + tr.seed + tr.t * 0.12;
+          var cxp = px + Math.cos(ang) * cloudR;
+          var cyp = py - 150 + Math.sin(ang) * cloudR * 0.30 + Math.sin(tr.t * 0.5 + ci * 2.1) * 4;
+          var imgK = kiepImgs[ci % 3] || kiepImgs[0];
+          if (!imgK || !imgK.complete || !imgK.naturalWidth) continue;
+          var drawW = 2 * (120 + (ci % 3) * 36) * ((ci % 3) === 2 ? 0.82 : 1.06);
+          var drawH = drawW * imgK.naturalHeight / imgK.naturalWidth;
+          ctx.save();
+          ctx.globalAlpha = cloudAlphaOld;
+          ctx.translate(cxp, cyp);
+          ctx.rotate(tr.t * 0.05 * (ci % 2 === 0 ? 1 : -1) + ci * 0.35);
+          if (ci % 2 === 1) ctx.scale(-1, 1);
+          ctx.drawImage(imgK, -drawW / 2, -drawH / 2, drawW, drawH);
+          ctx.restore();
+        }
+      } else {
+        for (var ci2 = 0; ci2 < 9; ci2++) {
+          var ang2 = (ci2 / 9) * Math.PI * 2 + tr.seed + tr.t * 0.12;
+          var cxp2 = px + Math.cos(ang2) * cloudR;
+          var cyp2 = py - 150 + Math.sin(ang2) * cloudR * 0.30;
+          var crx2 = 120 + (ci2 % 3) * 36;
+          var cry2 = 34 + (ci2 % 4) * 7;
+          ctx.fillStyle = 'rgba(24, 22, 38, ' + cloudAlphaOld.toFixed(3) + ')';
+          ctx.beginPath();
+          ctx.ellipse(cxp2, cyp2, crx2, cry2, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
     }
 
-    // Tia sét đang đánh xuống (vẽ gấp khúc sáng, lõi trắng + hào quang).
-    if (tr.bolt) {
-      var boltA = Math.max(0, 1 - tr.bolt.age / 0.22);
-      var pts = tr.bolt.points;
-      ctx.lineJoin = 'round';
-      ctx.shadowColor = 'rgba(170, 200, 255, 0.9)';
-      ctx.shadowBlur = 16;
-      ctx.strokeStyle = 'rgba(140, 175, 255, ' + (0.55 * boltA).toFixed(3) + ')';
-      ctx.lineWidth = 6;
-      ctx.beginPath();
-      ctx.moveTo(pts[0].x, pts[0].y);
-      for (var bi = 1; bi < pts.length; bi++) ctx.lineTo(pts[bi].x, pts[bi].y);
-      ctx.stroke();
-      ctx.strokeStyle = 'rgba(255, 255, 255, ' + (0.95 * boltA).toFixed(3) + ')';
-      ctx.lineWidth = 2.2;
-      ctx.beginPath();
-      ctx.moveTo(pts[0].x, pts[0].y);
-      for (var bj = 1; bj < pts.length; bj++) ctx.lineTo(pts[bj].x, pts[bj].y);
-      ctx.stroke();
-      ctx.shadowBlur = 0;
+    // Vòng 3: cung điện bò TRONG mây ở pha tụ + pha đánh, bụng mây phát
+    // sáng theo cung (lớp còn thiếu hẳn ở hai vòng trước).
+    if (tr.phase !== 'outcome') {
+      drawTribArcs(tr, px, py, tr.phase === 'gather' ? 0.35 + 0.65 * gatherP : 0.95);
     }
 
-    // Hạt điện tóe ở điểm chạm.
+    // Tia lôi kiếp đang đánh xuống — Đợt KIẾP VÂN vòng 3: HÌNH SINH
+    // THẬT trắng–tím (thay polyline hai nét của T2 và đường thủ tục ba
+    // lớp của vòng 2 — cả hai đã bị Bui bác).
+    if (tr.bolt) drawLightningBolt(tr.bolt, px, py);
+
+    // Vụ nổ của tia cuối (nở bung + vệt lửa) — thuần lớp vẽ.
+    drawTribBurst(tr);
+
+    // Hạt điện tóe ở điểm chạm (tông trắng–tím theo ngôn ngữ mẫu).
     for (var si = 0; si < tr.sparks.length; si++) {
       var spark = tr.sparks[si];
       var sa = Math.max(0, 1 - spark.t / spark.dur);
-      ctx.fillStyle = 'rgba(190, 215, 255, ' + (0.85 * sa).toFixed(3) + ')';
+      ctx.fillStyle = 'rgba(208, 188, 255, ' + (0.85 * sa).toFixed(3) + ')';
       ctx.fillRect(spark.x - 1.6, spark.y - 1.6, 3.2, 3.2);
     }
 
-    // Pha kết: cột sáng + vòng mây tan tròn từ nhân vật.
+    // Pha kết — Đợt KIẾP VÂN vòng 2 + vòng 3: hào quang VÀNG làm lại
+    // toàn bộ (thay cột gradient chữ nhật + nét elip phẳng cũ): quầng
+    // sáng đất, hai vòng hào quang tỏa nhiều lớp, nắng vàng xuyên khe
+    // mây xé xuống, cột sáng mép mềm, hào quang ôm nhân vật ĐANG BAY ở
+    // độ cao playerLiftY, hạt sáng bay lên + mưa tia lửa vàng rơi. Mây
+    // tan theo vòng tròn ở trên giữ nguyên của vòng 1.
     if (tr.phase === 'outcome') {
       var op = tr.outcomeT / tr.outcomeDur;
-      var grad = ctx.createLinearGradient(0, py - 430, 0, py);
-      grad.addColorStop(0, 'rgba(255, 240, 190, 0)');
-      grad.addColorStop(1, 'rgba(255, 240, 190, ' + (0.5 * (1 - op)).toFixed(3) + ')');
-      ctx.fillStyle = grad;
-      ctx.fillRect(px - 26, py - 430, 52, 430);
-      ctx.strokeStyle = 'rgba(255, 233, 168, ' + (0.8 * (1 - op)).toFixed(3) + ')';
+      // Bao sáng chung: bốc nhanh, giữ đỉnh giữa pha (trùng lúc nhân vật
+      // lơ lửng ở đỉnh), tắt hẳn cuối pha.
+      var beamEnv = tribSmooth(op / 0.16) * (1 - tribSmooth((op - 0.6) / 0.4));
+      var liftHere = playerLiftY;
+      getTribTextures();
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+
+      // Quầng sáng dẹt trên mặt đất dưới nhân vật.
+      ctx.globalAlpha = 0.22 * beamEnv;
+      ctx.drawImage(tribGlowTex, px - 110, py - 34, 220, 68);
+
+      // Hai vòng hào quang lan trên mặt đất: vòng chính + vòng phụ trễ
+      // nhịp, mỗi vòng ba lớp (tỏa mềm / dải chính / lõi mảnh).
+      var ringSpecs = [
+        { o: op, maxR: 512, a: 1 },
+        { o: Math.max(0, (op - 0.22) / 0.78), maxR: 330, a: 0.55 }
+      ];
+      for (var ri = 0; ri < ringSpecs.length; ri++) {
+        var rs = ringSpecs[ri];
+        if (rs.o <= 0) continue;
+        var rr = 24 + (1 - Math.pow(1 - rs.o, 2.2)) * rs.maxR;
+        var rEnv = Math.pow(Math.max(0, Math.sin(Math.PI * Math.min(1, rs.o * 1.08))), 0.8) * rs.a;
+        if (rEnv <= 0.01) continue;
+        var ry = (py - 8);
+        var squash = 0.36;
+        ctx.shadowColor = 'rgba(255, 220, 140, 0.8)';
+        ctx.strokeStyle = 'rgba(255, 214, 130, ' + (0.10 * rEnv).toFixed(3) + ')';
+        ctx.lineWidth = 30;
+        ctx.shadowBlur = 24;
+        ctx.beginPath(); ctx.ellipse(px, ry, rr, rr * squash, 0, 0, Math.PI * 2); ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = 'rgba(255, 226, 156, ' + (0.42 * rEnv).toFixed(3) + ')';
+        ctx.lineWidth = 9;
+        ctx.beginPath(); ctx.ellipse(px, ry, rr, rr * squash, 0, 0, Math.PI * 2); ctx.stroke();
+        ctx.strokeStyle = 'rgba(255, 250, 224, ' + (0.8 * rEnv).toFixed(3) + ')';
+        ctx.lineWidth = 2.4;
+        ctx.beginPath(); ctx.ellipse(px, ry, rr, rr * squash, 0, 0, Math.PI * 2); ctx.stroke();
+      }
+
+      // Vòng 3: nắng VÀNG xuyên xuống từ khe mây xé phía trên (god rays
+      // của video mẫu) — 5 dải xòe quạt, sáng nhất ở miệng khe (lật
+      // ngược kết cấu cột để đầu sáng nằm trên), lắc rất nhẹ. Miệng khe
+      // neo ở py−380: ngay trên vành mây đang tan (vành vươn tới ~py−312)
+      // để đầu sáng của các dải nằm trong khung nhìn điện thoại.
+      var riftX = px + Math.sin(tr.outcomeT * 0.8) * 6;
+      var riftY = py - 380;
+      var shaftSpecs = [
+        { a: -0.46, w: 34 }, { a: -0.22, w: 50 }, { a: 0, w: 66 },
+        { a: 0.22, w: 50 }, { a: 0.46, w: 34 }
+      ];
+      for (var gi = 0; gi < shaftSpecs.length; gi++) {
+        var sh = shaftSpecs[gi];
+        ctx.save();
+        ctx.translate(riftX, riftY);
+        ctx.rotate(sh.a + Math.sin(tr.outcomeT * 0.6 + gi * 1.7) * 0.02);
+        ctx.globalAlpha = (0.16 + 0.04 * Math.sin(tr.outcomeT * 1.1 + gi * 1.9)) * beamEnv;
+        ctx.drawImage(tribBeamTex, -sh.w / 2, 500, sh.w, -500);
+        ctx.restore();
+      }
+      ctx.globalAlpha = 1;
+
+      // Hào quang ôm nhân vật đang lơ lửng + vòng hào quang trên đầu.
+      // Độ đậm đã hiệu chỉnh sau lượt soi đầu: cột + quầng mà quá tay là
+      // cháy trắng nuốt mất nhân vật — giữ mức nhân vật còn đọc rõ hình.
+      var charCY = py - liftHere - 56;
+      ctx.globalAlpha = 0.2 * beamEnv;
+      ctx.drawImage(tribGlowTex, px - 115, charCY - 115, 230, 230);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = 'rgba(255, 236, 180, ' + (0.55 * beamEnv).toFixed(3) + ')';
       ctx.lineWidth = 3;
+      ctx.shadowColor = 'rgba(255, 226, 150, 0.9)';
+      ctx.shadowBlur = 12;
       ctx.beginPath();
-      ctx.ellipse(px, py - 8, 30 + op * 520, (30 + op * 520) * 0.36, 0, 0, Math.PI * 2);
+      ctx.ellipse(px, py - liftHere - 122, 30, 9, 0, 0, Math.PI * 2);
       ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Cột sáng chính: lớp tỏa rộng mờ + lõi mép mềm, bề rộng thở nhẹ.
+      var beamW = 96 * (0.93 + 0.07 * Math.sin(tr.outcomeT * 3.1));
+      var beamSway = Math.sin(tr.outcomeT * 0.9) * 3;
+      ctx.globalAlpha = 0.13 * beamEnv;
+      ctx.drawImage(tribBeamTex, px - beamW * 0.95 + beamSway, py - 466, beamW * 1.9, 472);
+      ctx.globalAlpha = 0.4 * beamEnv;
+      ctx.drawImage(tribBeamTex, px - beamW / 2 + beamSway, py - 466, beamW, 472);
+      ctx.globalAlpha = 1;
+
+      // Hạt sáng bay lên trong cột.
+      for (var pi = 0; pi < tr.motes.length; pi++) {
+        var mote = tr.motes[pi];
+        var ma = Math.max(0, 1 - mote.t / mote.dur) * 0.8 * beamEnv;
+        if (ma <= 0.01) continue;
+        ctx.fillStyle = 'rgba(255, 246, 214, ' + ma.toFixed(3) + ')';
+        ctx.beginPath();
+        ctx.arc(mote.x, mote.y, mote.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Vòng 3: mưa tia lửa VÀNG rơi từ khe mây xuống quanh nhân vật.
+      ctx.lineCap = 'round';
+      for (var rdi = 0; rdi < tr.rain.length; rdi++) {
+        var drop = tr.rain[rdi];
+        var ra = 0.8 * beamEnv * Math.min(1, (py + 6 - drop.y) / 40 + 0.3);
+        if (ra <= 0.01) continue;
+        ctx.strokeStyle = 'rgba(255, 226, 150, ' + ra.toFixed(3) + ')';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(drop.x, drop.y);
+        ctx.lineTo(drop.x + 1.5, drop.y + drop.len);
+        ctx.stroke();
+      }
+
+      ctx.restore();
     }
 
     // Chớp sáng trắng toàn khung ngay khoảnh khắc tia chạm đất.
@@ -4424,6 +5138,11 @@
   function render() {
     if (!ctx || !canvas) return;
 
+    // Đợt KIẾP VÂN vòng 2/3: độ nhấc vẽ của nhân vật trong pha kết độ
+    // kiếp — tính MỘT lần cho cả khung (thân, nón, kiếm, hào quang dùng
+    // chung một giá trị nên không lệch nhau); ngoài cảnh độ kiếp là 0.
+    playerLiftY = computeTribulationLift();
+
     ctx.save();
     ctx.fillStyle = '#141a16';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -4638,10 +5357,14 @@
       type: 'player',
       baseY: player.y,
       draw: function () {
+        // Đợt KIẾP VÂN vòng 2/3: bóng chân Ở LẠI mặt đất khi nhân vật bay
+        // lên (pha kết độ kiếp) — nhỏ lại và mờ dần theo tỉ lệ độ cao,
+        // đúng luật bóng theo độ cao; thân vẽ nhấc lên ở các neo dưới.
+        var liftR = Math.max(0, Math.min(1, playerLiftY / TRIB_LIFT_H));
         ctx.save();
-        ctx.fillStyle = 'rgba(10, 15, 10, 0.45)';
+        ctx.fillStyle = 'rgba(10, 15, 10, ' + (0.45 * (1 - 0.5 * liftR)).toFixed(3) + ')';
         ctx.beginPath();
-        ctx.ellipse(player.x, player.y, 22, 9, 0, 0, Math.PI * 2);
+        ctx.ellipse(player.x, player.y, 22 * (1 - 0.4 * liftR), 9 * (1 - 0.4 * liftR), 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
 
@@ -4662,7 +5385,7 @@
           ctx.drawImage(
             tcSheet,
             tcFrame * tcCa.frameW, skillCastAnim.row * tcCa.frameH, tcCa.frameW, tcCa.frameH,
-            player.x - tcCa.pivotX * tcScale, player.y - tcCa.pivotY * tcScale,
+            player.x - tcCa.pivotX * tcScale, player.y - playerLiftY - tcCa.pivotY * tcScale,
             tcCa.frameW * tcScale, tcCa.frameH * tcScale
           );
           return;
@@ -4719,7 +5442,7 @@
           ctx.drawImage(
             walkSheet,
             wFrame * 96, wFrameY, 96, 120,
-            player.x - 48, player.y - 118, 96, 120
+            player.x - 48, player.y - playerLiftY - 118, 96, 120
           );
           if (isHat && hatWalk && hatWalk.complete && hatWalk.naturalWidth > 0) {
             var hatCols = Math.max(1, Math.round(hatWalk.naturalWidth / 96));
@@ -4727,25 +5450,25 @@
             ctx.drawImage(
               hatWalk,
               hFrame * 96, wFrameY, 96, 120,
-              player.x - 48, player.y - 118, 96, 120
+              player.x - 48, player.y - playerLiftY - 118, 96, 120
             );
           }
-          drawHeldWeapon({ x: player.x - 48, y: player.y - 118, w: 96, h: 120 }, genDirName, HH_HAND_OLD);
+          drawHeldWeapon({ x: player.x - 48, y: player.y - playerLiftY - 118, w: 96, h: 120 }, genDirName, HH_HAND_OLD);
         } else if (!genDrawn && assets.hanhan_idle && assets.hanhan_idle.complete) {
           var frameY = (player.dir || 0) * 120;
           ctx.drawImage(
             assets.hanhan_idle,
             0, frameY, 96, 120,
-            player.x - 48, player.y - 118, 96, 120
+            player.x - 48, player.y - playerLiftY - 118, 96, 120
           );
           if (isHat && hatIdle && hatIdle.complete && hatIdle.naturalWidth > 0) {
             ctx.drawImage(
               hatIdle,
               0, frameY, 96, 120,
-              player.x - 48, player.y - 118, 96, 120
+              player.x - 48, player.y - playerLiftY - 118, 96, 120
             );
           }
-          drawHeldWeapon({ x: player.x - 48, y: player.y - 118, w: 96, h: 120 }, genDirName, HH_HAND_OLD);
+          drawHeldWeapon({ x: player.x - 48, y: player.y - playerLiftY - 118, w: 96, h: 120 }, genDirName, HH_HAND_OLD);
         }
       }
     });

@@ -513,12 +513,22 @@
     } catch (e) {}
   }
 
-  /** Một tia sét đánh xuống: nhiễu cao tần xé rất ngắn + tiếng trầm dội nối tiếp. */
-  function playBolt() {
+  /** Một tia sét đánh xuống: nhiễu cao tần xé rất ngắn + tiếng trầm dội nối tiếp.
+   * Đợt KIẾP VÂN vòng 3: thêm đối số power01 (0..1 theo thang tia) — độ
+   * lớn/độ trầm/dư âm tỉ lệ sức tia; KHÔNG truyền đối số thì giữ nguyên
+   * hành vi cũ tuyệt đối (mọi nơi gọi cũ không đổi tiếng). */
+  function playBolt(power01) {
     if (!ctx || !sfxGain) return;
     try {
       if (ctx.state === 'suspended') ctx.resume();
       var now = ctx.currentTime;
+      var hasP = typeof power01 === 'number' && isFinite(power01);
+      var p = hasP ? Math.max(0, Math.min(1, power01)) : 0;
+      var crackGain = hasP ? 0.26 + 0.14 * p : 0.30;
+      var crackDur = hasP ? 0.26 + 0.10 * p : 0.28;
+      var subStart = hasP ? 110 - 25 * p : 120;
+      var subPeak = hasP ? 0.30 + 0.18 * p : 0.34;
+      var subDur = hasP ? 0.7 + 0.35 * p : 0.75;
       // Lớp xé cao tần
       var len = Math.floor(ctx.sampleRate * 0.5);
       var buf = ctx.createBuffer(1, len, ctx.sampleRate);
@@ -532,8 +542,8 @@
       hp.type = 'highpass';
       hp.frequency.setValueAtTime(900, now);
       var g1 = ctx.createGain();
-      g1.gain.setValueAtTime(0.30, now);
-      g1.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+      g1.gain.setValueAtTime(crackGain, now);
+      g1.gain.exponentialRampToValueAtTime(0.001, now + crackDur);
       src.connect(hp);
       hp.connect(g1);
       g1.connect(sfxGain);
@@ -542,16 +552,193 @@
       // Lớp trầm dội
       var osc = ctx.createOscillator();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(120, now);
-      osc.frequency.exponentialRampToValueAtTime(38, now + 0.7);
+      osc.frequency.setValueAtTime(subStart, now);
+      osc.frequency.exponentialRampToValueAtTime(38, now + subDur - 0.05);
       var g2 = ctx.createGain();
       g2.gain.setValueAtTime(0.0001, now);
-      g2.gain.exponentialRampToValueAtTime(0.34, now + 0.03);
-      g2.gain.exponentialRampToValueAtTime(0.0001, now + 0.75);
+      g2.gain.exponentialRampToValueAtTime(subPeak, now + 0.03);
+      g2.gain.exponentialRampToValueAtTime(0.0001, now + subDur);
       osc.connect(g2);
       g2.connect(sfxGain);
       osc.start(now);
-      osc.stop(now + 0.8);
+      osc.stop(now + subDur + 0.05);
+      // Dư âm rền ngắn sau đòn (chỉ khi có thang sức tia): nhiễu nâu qua
+      // lowpass trầm, tắt dần ~0,9–1,4s — tiếng sét "lăn" sau cú nổ.
+      if (hasP) {
+        var tailBuf = getThunderNoiseBuffer(2.2);
+        if (tailBuf) {
+          var tailDur = 0.9 + 0.5 * p;
+          var tSrc = ctx.createBufferSource();
+          tSrc.buffer = tailBuf;
+          var tFilter = ctx.createBiquadFilter();
+          tFilter.type = 'lowpass';
+          tFilter.frequency.setValueAtTime(140, now);
+          var tGain = ctx.createGain();
+          tGain.gain.setValueAtTime(0.0001, now);
+          tGain.gain.exponentialRampToValueAtTime(0.10 + 0.12 * p, now + 0.04);
+          tGain.gain.exponentialRampToValueAtTime(0.0001, now + tailDur);
+          tSrc.connect(tFilter);
+          tFilter.connect(tGain);
+          tGain.connect(sfxGain);
+          tSrc.start(now);
+          tSrc.stop(now + tailDur + 0.05);
+        }
+      }
+    } catch (e) {}
+  }
+
+  // =====================================================================
+  // Đợt KIẾP VÂN vòng 3 — lớp nền âm thanh của cảnh độ kiếp: sấm rền khi
+  // mây tụ (mức theo độ tụ), gió khi nhân vật bay lên (mức theo độ cao),
+  // thiên âm khi độ kiếp thành công. Mọi lớp đều chạy qua sfxGain nên
+  // tôn trọng âm lượng/tắt tiếng trong cài đặt của game; không tệp ngoài.
+  // =====================================================================
+  function tribClamp01(x) {
+    x = (typeof x === 'number' && isFinite(x)) ? x : 0;
+    return Math.max(0, Math.min(1, x));
+  }
+
+  var tribRumble = null; // { src, gain, filter }
+  function startTribRumble() {
+    if (!ctx || !sfxGain) return;
+    try {
+      if (ctx.state === 'suspended') ctx.resume();
+      stopTribRumble(true);
+      var buf = getThunderNoiseBuffer(2.2);
+      if (!buf) return;
+      var src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      var filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 120;
+      filter.Q.value = 0.4;
+      var gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      src.connect(filter);
+      filter.connect(gain);
+      gain.connect(sfxGain);
+      src.start();
+      tribRumble = { src: src, gain: gain, filter: filter };
+    } catch (e) {}
+  }
+
+  function setTribRumbleLevel(x) {
+    if (!tribRumble || !ctx) return;
+    try {
+      tribRumble.gain.gain.setTargetAtTime(0.02 + 0.13 * tribClamp01(x), ctx.currentTime, 0.12);
+    } catch (e) {}
+  }
+
+  function stopTribRumble(immediate) {
+    if (!tribRumble || !ctx) { tribRumble = null; return; }
+    var bed = tribRumble;
+    tribRumble = null;
+    try {
+      var now = ctx.currentTime;
+      bed.gain.gain.cancelScheduledValues(now);
+      if (immediate) {
+        bed.gain.gain.setValueAtTime(0.0001, now);
+        bed.src.stop(now + 0.05);
+      } else {
+        bed.gain.gain.setTargetAtTime(0.0001, now, 0.09);
+        bed.src.stop(now + 0.35);
+      }
+    } catch (e) {}
+  }
+
+  /** Thiên âm pha kết: ba nốt sine ngũ cung tấn công chậm, ngân dài,
+   * sáng mà không chói — khác hẳn tiếng chuông nhiệm vụ playChime. */
+  function playHeavenChime() {
+    if (!ctx || !sfxGain) return;
+    try {
+      if (ctx.state === 'suspended') ctx.resume();
+      var now = ctx.currentTime;
+      var notes = [
+        { f: 587.33, t: 0.00 },
+        { f: 880.00, t: 0.12 },
+        { f: 1174.66, t: 0.24 }
+      ];
+      for (var i = 0; i < notes.length; i++) {
+        var t0 = now + notes[i].t;
+        var o = ctx.createOscillator();
+        o.type = 'sine';
+        o.frequency.value = notes[i].f;
+        var g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(0.075, t0 + 0.18);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.6);
+        o.connect(g);
+        g.connect(sfxGain);
+        o.start(t0);
+        o.stop(t0 + 1.7);
+        var o2 = ctx.createOscillator();
+        o2.type = 'sine';
+        o2.frequency.value = notes[i].f * 2;
+        var g2 = ctx.createGain();
+        g2.gain.setValueAtTime(0.0001, t0);
+        g2.gain.exponentialRampToValueAtTime(0.018, t0 + 0.10);
+        g2.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.9);
+        o2.connect(g2);
+        g2.connect(sfxGain);
+        o2.start(t0);
+        o2.stop(t0 + 1.0);
+      }
+    } catch (e) {}
+  }
+
+  var tribWind = null; // { src, gain, lfo }
+  function startTribWind() {
+    if (!ctx || !sfxGain) return;
+    try {
+      if (ctx.state === 'suspended') ctx.resume();
+      stopTribWind(true);
+      var len = Math.floor(ctx.sampleRate * 1.5);
+      var buf = ctx.createBuffer(1, len, ctx.sampleRate);
+      var d = buf.getChannelData(0);
+      for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      var src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      var filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 700;
+      filter.Q.value = 0.6;
+      var lfo = ctx.createOscillator();
+      lfo.type = 'sine';
+      lfo.frequency.value = 0.4;
+      var lfoGain = ctx.createGain();
+      lfoGain.gain.value = 180;
+      lfo.connect(lfoGain);
+      lfoGain.connect(filter.frequency);
+      var gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      src.connect(filter);
+      filter.connect(gain);
+      gain.connect(sfxGain);
+      src.start();
+      lfo.start();
+      tribWind = { src: src, gain: gain, lfo: lfo };
+    } catch (e) {}
+  }
+
+  function setTribWindLevel(x) {
+    if (!tribWind || !ctx) return;
+    try {
+      tribWind.gain.gain.setTargetAtTime(0.10 * tribClamp01(x), ctx.currentTime, 0.1);
+    } catch (e) {}
+  }
+
+  function stopTribWind(immediate) {
+    if (!tribWind || !ctx) { tribWind = null; return; }
+    var bed = tribWind;
+    tribWind = null;
+    try {
+      var now = ctx.currentTime;
+      bed.gain.gain.cancelScheduledValues(now);
+      bed.gain.gain.setTargetAtTime(0.0001, now, immediate ? 0.02 : 0.06);
+      bed.src.stop(now + (immediate ? 0.08 : 0.25));
+      if (bed.lfo) bed.lfo.stop(now + (immediate ? 0.08 : 0.25));
     } catch (e) {}
   }
 
@@ -593,6 +780,13 @@
     playDeathGong: playDeathGong,
     playThunderFar: playThunderFar,
     playBolt: playBolt,
+    startTribRumble: startTribRumble,
+    setTribRumbleLevel: setTribRumbleLevel,
+    stopTribRumble: stopTribRumble,
+    playHeavenChime: playHeavenChime,
+    startTribWind: startTribWind,
+    setTribWindLevel: setTribWindLevel,
+    stopTribWind: stopTribWind,
     setMusicVolume: setMusicVolume,
     setSfxVolume: setSfxVolume,
     setMasterVolume: setMasterVolume,
