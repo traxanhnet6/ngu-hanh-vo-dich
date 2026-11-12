@@ -75,6 +75,1584 @@
   var playerSlowTimer = 0;
   var playerSlowRatio = 0;
 
+  // ============================================================
+  // ĐỢT V1 — CHẶNG 0: KHUNG CƠ CHẾ VÙNG DÙNG CHUNG
+  // - zoneClock: đồng hồ nhịp vùng (giây), tăng theo dt trong update(),
+  //   reset về 0 mỗi lần đổi map (initEngine/switchMap/setCurrentMap).
+  //   Mọi cơ chế vùng chặng 1–5 (sương độc, băng nứt, dung nham, bão cát,
+  //   kiếm vũ) và nhịp chiêu boss Hỏa (chặng 3) đều đọc cùng đồng hồ này.
+  // - Vùng nguy hiểm đọc từ map hiện tại (mapData.zoneHazards, khai trong
+  //   js/mapdata.js, mặc định rỗng); hình vùng: circle/polygon/rect.
+  // - Telegraph vùng đi qua mảng visualEffects sẵn có, theo đúng mẫu
+  //   telegraph_re_troi (~4651): dựng -> hết giờ -> gỡ; vẽ cùng lớp đất.
+  //   Chặng 0 chưa gắn hiệu ứng gây hại nào khi telegraph hết giờ — các
+  //   chặng sau thêm nhánh xử lý trong updateVisualEffects.
+  // - Không đổi số liệu K2/T1/T2/T3, không đổi hệ dẫn đường, không đổi
+  //   nhịp độ kiếp.
+  // ============================================================
+  var zoneClock = 0;
+  // PROVISIONAL: bán kính an toàn quanh điểm móc (khớp V1_SAFE_RADIUS trong
+  // mapdata.js) — hồ sơ 01 không cho số, chờ Bui phán.
+  var ZONE_SAFE_RADIUS = 150;
+  // Luật trình diễn (Quy trình Boss): mọi telegraph ≥700ms trước khi gây hại.
+  var ZONE_TELEGRAPH_MIN_DURATION = 0.7;
+
+  /** Tiến đồng hồ nhịp vùng theo dt (gọi trong update chính). */
+  function updateZoneClock(dt) {
+    if (typeof dt === 'number' && isFinite(dt) && dt > 0) zoneClock += dt;
+  }
+
+  /** Lấy holder mapdata (trình duyệt: window.GameMapData; Node: require). */
+  function getMapDataHolder() {
+    if (typeof window !== 'undefined' && window.GameMapData) return window.GameMapData;
+    if (typeof require !== 'undefined') {
+      try { return require('./mapdata.js'); } catch (e) { return null; }
+    }
+    return null;
+  }
+
+  /** Danh sách vùng nguy hiểm của map hiện tại (mặc định rỗng ở chặng 0). */
+  function getZoneHazardsForCurrentMap() {
+    if (mapData && Array.isArray(mapData.zoneHazards)) return mapData.zoneHazards;
+    return [];
+  }
+
+  /** Điểm (x, y) có nằm trong hình shape không (ủy quyền cho mapdata.js). */
+  function zonePointInShape(x, y, shape) {
+    var holder = getMapDataHolder();
+    if (holder && typeof holder.zonePointInShape === 'function') {
+      return holder.zonePointInShape(x, y, shape);
+    }
+    return false;
+  }
+
+  /** Các hazard của map hiện tại đang chứa điểm (x, y). */
+  function zoneHazardsAt(x, y) {
+    var list = getZoneHazardsForCurrentMap();
+    var out = [];
+    for (var i = 0; i < list.length; i++) {
+      var hz = list[i];
+      // Đợt V1 chặng 1: hazard đổi vị trí theo chu kỳ (trũng sương độc) thì
+      // kiểm theo HÌNH ĐANG HOẠT ĐỘNG, không phải hình khai báo đầu tiên.
+      if (hz && zonePointInShape(x, y, getHazardActiveShape(hz))) out.push(hz);
+    }
+    return out;
+  }
+
+  /** Người chơi có đang đứng trong một vùng nguy hiểm không (theo hazardId nếu có). */
+  function isPlayerInZoneHazard(hazardId) {
+    if (!player) return false;
+    var list = zoneHazardsAt(player.x, player.y);
+    if (!hazardId) return list.length > 0;
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].id === hazardId) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Xếp một telegraph vùng vào hàng đợi visualEffects dùng chung.
+   * opts: { x, y, radius, shape, duration, color, label, hazardId }.
+   * duration < 0.7s được nâng lên 0.7s theo luật telegraph ≥700ms.
+   * Trả về entry đã xếp (để test/chặng sau theo dõi).
+   */
+  function queueZoneTelegraph(opts) {
+    opts = opts || {};
+    var duration = (typeof opts.duration === 'number' && isFinite(opts.duration))
+      ? opts.duration : ZONE_TELEGRAPH_MIN_DURATION;
+    if (duration < ZONE_TELEGRAPH_MIN_DURATION) duration = ZONE_TELEGRAPH_MIN_DURATION;
+    var entry = {
+      type: 'telegraph_zone',
+      x: opts.x || 0,
+      y: opts.y || 0,
+      radius: opts.radius || 0,
+      shape: opts.shape || null,
+      timer: duration,
+      duration: duration,
+      color: opts.color || null,
+      label: opts.label || '',
+      hazardId: opts.hazardId || null
+    };
+    visualEffects.push(entry);
+    return entry;
+  }
+
+  /** Các telegraph vùng đang chờ trong hàng đợi visualEffects. */
+  function getZoneTelegraphs() {
+    var out = [];
+    for (var i = 0; i < visualEffects.length; i++) {
+      if (visualEffects[i].type === 'telegraph_zone') out.push(visualEffects[i]);
+    }
+    return out;
+  }
+
+  // ============================================================
+  // ĐỢT V1 — CHẶNG 1: RỪNG ĐỘC — ĐỘC SƯƠNG + HOA GIẢI ĐỘC (hồ sơ 01 §1)
+  // - Trũng sương độc: hazard kind 'poison_fog' khai trong mapdata.js, một
+  //   hazard với nhiều vị trí luân phiên theo zoneClock (chu kỳ cycleSec).
+  // - Đứng trong trũng (không kháng độc) thì tích tầng độc mỗi nhịp tick;
+  //   mỗi tầng gây sát thương theo tick; ra khỏi trũng thì tầng rụng dần.
+  // - Kháng độc: player.v1.poisonResistUntil (mốc giây performance.now()/1000,
+  //   cùng đồng hồ với harvestReadyTimes) — trong thời gian kháng thì không
+  //   tích tầng, không chịu tick. Hoa Giải Độc dùng qua useItem: xóa sạch
+  //   tầng độc + đặt kháng độc POISON_RESIST_DURATION giây.
+  // - Quái hệ Mộc miễn nhiễm độc (isMonsterImmuneToPoison). Phần "quái mạnh
+  //   lên trong sương" hồ sơ không cho số nên ngoài phạm vi đợt này (ghi
+  //   trong PROGRESS.md/báo cáo, chờ Bui phán).
+  // - Chỉ thị hình ảnh: entry type 'poison_fog' duy trì trong visualEffects
+  //   (vẽ cùng lớp đất, nhánh vẽ trong render), không sinh ảnh raster mới.
+  // - updatePoison(dt, p) nhận người chơi tường minh (mặc định player của
+  //   module) để test Node gọi trực tiếp được mà không cần lái update().
+  // ============================================================
+  // PROVISIONAL (hồ sơ 01 không cho số, chờ Bui phán):
+  var POISON_TICK_INTERVAL = 1.0;       // nhịp tick độc (giây)
+  var POISON_DMG_PER_STACK = 2;         // máu trừ mỗi tick trên mỗi tầng độc
+  var POISON_MAX_STACKS = 10;           // trần tầng độc
+  var POISON_STACK_DECAY_INTERVAL = 3.0; // ngoài sương: rụng 1 tầng mỗi 3 giây
+  var POISON_RESIST_DURATION = 60;      // kháng độc sau khi dùng Hoa Giải Độc (giây)
+  var POISON_REGEN_SLOW_PER_STACK = 0.1; // mỗi tầng độc giảm 10% tốc độ hồi máu ngoài giao tranh
+  var poisonTickTimer = 0;
+  var poisonDecayTimer = 0;
+  var poisonFogIndex = -1; // vị trí trũng đang hoạt động (theo zoneClock), -1 = chưa khởi tạo
+
+  /** Hình đang hoạt động của một hazard (trũng sương đổi vị trí theo zoneClock). */
+  function getHazardActiveShape(hz) {
+    if (!hz) return null;
+    if (hz.kind === 'poison_fog' && Array.isArray(hz.positions) && hz.positions.length > 0) {
+      var cycle = (typeof hz.cycleSec === 'number' && hz.cycleSec > 0) ? hz.cycleSec : 180;
+      var idx = Math.floor(zoneClock / cycle) % hz.positions.length;
+      if (idx < 0) idx = 0;
+      return hz.positions[idx];
+    }
+    return hz.shape || hz;
+  }
+
+  /** Chỉ số vị trí trũng sương đang hoạt động (-1 nếu không phải trũng sương). */
+  function getPoisonFogActiveIndex(hz) {
+    if (!hz || hz.kind !== 'poison_fog' || !Array.isArray(hz.positions) || hz.positions.length === 0) return -1;
+    var cycle = (typeof hz.cycleSec === 'number' && hz.cycleSec > 0) ? hz.cycleSec : 180;
+    var idx = Math.floor(zoneClock / cycle) % hz.positions.length;
+    return idx < 0 ? 0 : idx;
+  }
+
+  /** Trũng sương độc của map hiện tại (null nếu map không có). */
+  function getActivePoisonFogHazard() {
+    var list = getZoneHazardsForCurrentMap();
+    for (var i = 0; i < list.length; i++) {
+      if (list[i] && list[i].kind === 'poison_fog') return list[i];
+    }
+    return null;
+  }
+
+  /** Entry 'poison_fog' đang duy trì trong visualEffects (null nếu chưa có). */
+  function getPoisonFogFx() {
+    for (var i = 0; i < visualEffects.length; i++) {
+      if (visualEffects[i].type === 'poison_fog') return visualEffects[i];
+    }
+    return null;
+  }
+
+  /**
+   * Duy trì chỉ thị hình ảnh trũng sương: giữ đúng một entry 'poison_fog'
+   * trong visualEffects khi map hiện tại có trũng sương, gỡ khi không còn.
+   * Entry được làm mới vị trí/bán kính theo trũng đang hoạt động và timer
+   * luôn đặt lại 1.0 giây để updateVisualEffects không gỡ giữa hai khung.
+   */
+  function maintainPoisonFogFx() {
+    var fog = getActivePoisonFogHazard();
+    var shape = fog ? getHazardActiveShape(fog) : null;
+    var fx = getPoisonFogFx();
+    if (!fog || !shape || shape.kind !== 'circle') {
+      if (fx) {
+        var at = visualEffects.indexOf(fx);
+        if (at >= 0) visualEffects.splice(at, 1);
+      }
+      return;
+    }
+    if (fx) {
+      fx.x = shape.cx;
+      fx.y = shape.cy;
+      fx.radius = shape.r;
+      fx.shape = shape;
+      fx.timer = 1.0;
+      return;
+    }
+    visualEffects.push({
+      type: 'poison_fog',
+      x: shape.cx,
+      y: shape.cy,
+      radius: shape.r,
+      shape: shape,
+      timer: 1.0,
+      duration: 1.0,
+      color: 'rgba(120, 220, 90, 0.55)',
+      hazardId: fog.id || null,
+      seed: Math.random() * 10
+    });
+  }
+
+  /** Người chơi có đang kháng độc không (mốc giây performance.now()/1000). */
+  function isPlayerPoisonResistant(p) {
+    var pl = p || player;
+    if (!pl || !pl.v1) return false;
+    var nowSec = (typeof performance !== 'undefined' && performance.now) ? performance.now() / 1000 : 0;
+    return (pl.v1.poisonResistUntil || 0) > nowSec;
+  }
+
+  /** Quái có miễn nhiễm độc không — hệ Mộc miễn nhiễm (hồ sơ 01 §1). */
+  function isMonsterImmuneToPoison(m) {
+    if (!m) return false;
+    var elem = m.element || m.tuViElement || null;
+    return elem === 'moc';
+  }
+
+  /** Hệ số hồi máu còn lại khi đang trúng độc (1 = hồi bình thường, 0 = không hồi). */
+  function poisonRegenMultiplier(p) {
+    var pl = p || player;
+    if (!pl || !pl.v1) return 1;
+    var stacks = pl.v1.poisonStacks || 0;
+    if (stacks <= 0) return 1;
+    return Math.max(0, 1 - POISON_REGEN_SLOW_PER_STACK * stacks);
+  }
+
+  /**
+   * Dùng Hoa Giải Độc lên người chơi p: xóa sạch tầng độc + đặt kháng độc
+   * trong POISON_RESIST_DURATION giây. Không trừ vật phẩm trong túi (useItem
+   * lo phần đó). Trả về { ok, resistUntil }.
+   */
+  function applyAntidoteFlower(p, nowSec) {
+    var pl = p || player;
+    if (!pl) return { ok: false };
+    if (!pl.v1) pl.v1 = { poisonStacks: 0, poisonResistUntil: 0, unlockedZones: {} };
+    var now = (typeof nowSec === 'number' && isFinite(nowSec)) ? nowSec : ((typeof performance !== 'undefined' && performance.now) ? performance.now() / 1000 : 0);
+    pl.v1.poisonStacks = 0;
+    pl.v1.poisonResistUntil = now + POISON_RESIST_DURATION;
+    poisonTickTimer = 0;
+    poisonDecayTimer = 0;
+    return { ok: true, resistUntil: pl.v1.poisonResistUntil };
+  }
+
+  /**
+   * Cập nhật cơ chế độc sương Rừng Độc theo dt. Gọi trong update chính, ngay
+   * sau updateZoneClock. p mặc định là player của module.
+   */
+  function updatePoison(dt, p) {
+    var pl = p || player;
+    if (!pl || !mapData) return;
+    if (typeof dt !== 'number' || !isFinite(dt) || dt <= 0) return;
+
+    // Chỉ thị hình ảnh trũng sương luôn duy trì theo map hiện tại.
+    maintainPoisonFogFx();
+
+    // Trũng đổi vị trí theo chu kỳ -> báo một dòng chữ bay tại trũng mới.
+    var fog = getActivePoisonFogHazard();
+    if (fog) {
+      var idx = getPoisonFogActiveIndex(fog);
+      if (poisonFogIndex !== -1 && idx !== poisonFogIndex) {
+        var newShape = getHazardActiveShape(fog);
+        if (newShape && newShape.kind === 'circle') {
+          spawnFloatingText('Sương độc tụ lại nơi này!', newShape.cx, newShape.cy - 40, '#b6ff7a');
+        }
+      }
+      poisonFogIndex = idx;
+    } else {
+      poisonFogIndex = -1;
+    }
+
+    if (!pl.v1) pl.v1 = { poisonStacks: 0, poisonResistUntil: 0, unlockedZones: {} };
+    if (pl.hp <= 0) return; // đã gục — không tích thêm độc
+
+    var resistant = isPlayerPoisonResistant(pl);
+    var inFog = false;
+    if (!resistant) {
+      var here = zoneHazardsAt(pl.x, pl.y);
+      for (var i = 0; i < here.length; i++) {
+        if (here[i].kind === 'poison_fog') { inFog = true; break; }
+      }
+    }
+
+    if (inFog) {
+      poisonDecayTimer = 0;
+      poisonTickTimer += dt;
+      if (poisonTickTimer >= POISON_TICK_INTERVAL) {
+        poisonTickTimer -= POISON_TICK_INTERVAL;
+        pl.v1.poisonStacks = Math.min(POISON_MAX_STACKS, (pl.v1.poisonStacks || 0) + 1);
+        var dmg = pl.v1.poisonStacks * POISON_DMG_PER_STACK;
+        pl.hp = Math.max(0, (pl.hp || 0) - dmg);
+        lastCombatTime = (typeof performance !== 'undefined' && performance.now) ? performance.now() : 0;
+        spawnDamageNumber(pl.x, pl.y - 45, dmg, 'moc', false);
+        spawnFloatingText('Trúng độc (' + pl.v1.poisonStacks + ' tầng)', pl.x, pl.y - 70, '#b6ff7a');
+        if (audioAPI && audioAPI.playPoisonTick) audioAPI.playPoisonTick();
+        // Chỉ gọi xử lý gục khi người chơi bị tick chính là player của module
+        // (trình duyệt thật); test Node truyền người chơi giả thì chỉ trừ máu.
+        if (pl.hp <= 0 && pl === player) handlePlayerDeath();
+      }
+    } else {
+      poisonTickTimer = 0;
+      if ((pl.v1.poisonStacks || 0) > 0) {
+        poisonDecayTimer += dt;
+        if (poisonDecayTimer >= POISON_STACK_DECAY_INTERVAL) {
+          poisonDecayTimer -= POISON_STACK_DECAY_INTERVAL;
+          pl.v1.poisonStacks = Math.max(0, pl.v1.poisonStacks - 1);
+        }
+      } else {
+        poisonDecayTimer = 0;
+      }
+    }
+  }
+
+  // ============================================================
+  // ĐỢT V1 — CHẶNG 2: HỒ BĂNG — BĂNG TRƯỢT + BĂNG NỨT (hồ sơ 01 §2)
+  // - Mặt băng trơn: hazard kind 'ice_sheet' khai trong mapdata.js (hình
+  //   chữ nhật giữa hồ). Trên băng, vận tốc người chơi không đặt ngay theo
+  //   phím như đất thường mà tiến dần tới hướng điều khiển (gia tốc
+  //   ICE_ACCEL); thả phím thì trượt tiếp theo quán tính, giảm dần theo
+  //   ma sát ICE_FRICTION. Chỉ áp cho điều khiển trực tiếp (WASD/joystick);
+  //   đường đi tự động (click A*/dẫn đường) giữ nguyên đi chính xác từng
+  //   điểm mốc để không phá HOBANGFIX — khi có đường đi thì slideVel về 0.
+  //   Trượt khỏi mép băng sang bãi tuyết thì dừng ngay (tuyết bám).
+  // - Ô băng nứt: hazard kind 'ice_crack' (tròn r=70) khai trong mapdata.js.
+  //   Đứng trên ô thì tích thời gian đứng: 2s -> nứt nhẹ (cấp 1), 4s ->
+  //   nứt sâu (cấp 2) + telegraph vùng 2.0s (≥0.7s theo luật) báo sắp vỡ,
+  //   6s -> vỡ: trừ máu nước lạnh + đẩy về bờ gần nhất (shore trong dữ
+  //   liệu hazard mặt băng, mặc định spawn của map). Rời ô thì vết nứt
+  //   "nguội" dần (hồi một nửa tốc độ tích). Ô vỡ tái tạo sau 20s; đứng
+  //   trên lỗ đã vỡ thì rơi lại (cách nhau tối thiểu 3s).
+  // - Quái bản địa di chuyển trên băng không bị trượt (hồ sơ 01 §2): quái
+  //   không dùng khối di chuyển người chơi nên không cần mã riêng — ghi
+  //   rõ để khỏi cài thừa. Boss dậm nứt băng theo nhịp (hồ sơ §2) CHƯA
+  //   làm ở chặng này — để chặng sau cùng nhịp boss.
+  // - KHÔNG LÀM: "vào Hồ Băng không Băng Phù thì trừ máu vì rét" — điểm
+  //   chờ Bui phán (v1-plan §6.1), đội không tự quyết.
+  // - Trạng thái nứt/trượt là trạng thái phiên (module), không lưu save:
+  //   đổi map thì reset; save cũ nạp an toàn, không cần trường v1 mới.
+  // - Chỉ thị hình ảnh: entry 'ice_sheet' + một entry 'ice_crack' mỗi ô
+  //   trong visualEffects (vẽ cùng lớp đất như trũng sương, không sinh
+  //   ảnh raster mới).
+  // - updateIce(dt, p) nhận người chơi tường minh (mặc định player của
+  //   module) để test Node gọi trực tiếp được như updatePoison.
+  // ============================================================
+  // PROVISIONAL (hồ sơ 01 không cho số, chờ Bui phán):
+  var ICE_ACCEL = 3.0;             // tốc độ vận tốc tiến tới hướng điều khiển trên băng (1/giây)
+  var ICE_FRICTION = 1.2;          // ma sát trượt sau khi thả phím (1/giây); quãng trượt ở 138px/s ≈ 115px
+  var ICE_CRACK_STAGE1_SEC = 2.0;  // đứng 2s -> nứt nhẹ (cấp 1)
+  var ICE_CRACK_STAGE2_SEC = 4.0;  // đứng 4s -> nứt sâu (cấp 2) + telegraph
+  var ICE_CRACK_BREAK_SEC = 6.0;   // đứng 6s -> vỡ
+  var ICE_CRACK_REGEN_SEC = 20.0;  // ô vỡ tái tạo sau 20 giây
+  var ICE_FALL_DMG = 15;           // máu trừ khi rơi xuống nước lạnh
+  var ICE_FALL_COOLDOWN_SEC = 3.0; // thời gian chờ tối thiểu giữa 2 lần rơi
+  var ICE_SLIDE_SOUND_INTERVAL = 0.5; // nhịp phát tiếng trượt khi đang trượt (giây)
+  var slideVel = { x: 0, y: 0 };   // vận tốc trượt hiện tại của người chơi (px/s)
+  var iceCrack = {};               // trạng thái từng ô nứt: { standTime, brokenUntil, telegraphQueued, stage }
+  var iceMapId = null;             // map của trạng thái nứt/trượt đang giữ (đổi map -> reset)
+  var lastIceFallClock = -100;     // zoneClock lúc rơi lần gần nhất
+  var iceSlideSoundTimer = 0;      // nhịp phát tiếng trượt
+
+  /** Hazard mặt băng của map hiện tại (null nếu map không có). */
+  function getIceSheetHazard() {
+    var list = getZoneHazardsForCurrentMap();
+    for (var i = 0; i < list.length; i++) {
+      if (list[i] && list[i].kind === 'ice_sheet') return list[i];
+    }
+    return null;
+  }
+
+  /** Điểm (x, y) có đang trên mặt băng không. */
+  function isPointOnIce(x, y) {
+    var sheet = getIceSheetHazard();
+    if (!sheet) return false;
+    return zonePointInShape(x, y, getHazardActiveShape(sheet));
+  }
+
+  /** Người chơi có đang đứng trên mặt băng không. */
+  function isPlayerOnIce(p) {
+    var pl = p || player;
+    if (!pl) return false;
+    return isPointOnIce(pl.x, pl.y);
+  }
+
+  /** Các ô băng nứt của map hiện tại. */
+  function getIceCrackTiles() {
+    var list = getZoneHazardsForCurrentMap();
+    var out = [];
+    for (var i = 0; i < list.length; i++) {
+      if (list[i] && list[i].kind === 'ice_crack') out.push(list[i]);
+    }
+    return out;
+  }
+
+  /** Trạng thái của một ô nứt (tạo mới nếu chưa có). */
+  function getIceCrackState(tileId) {
+    if (!iceCrack[tileId]) {
+      iceCrack[tileId] = { standTime: 0, brokenUntil: -1, telegraphQueued: false, stage: 0 };
+    }
+    return iceCrack[tileId];
+  }
+
+  /** Cấp nứt của một ô theo thời gian đứng + trạng thái vỡ (0 nguyên, 1 nứt nhẹ, 2 nứt sâu, 3 vỡ). */
+  function iceCrackStageOf(st) {
+    if (!st) return 0;
+    if (st.brokenUntil >= 0 && zoneClock < st.brokenUntil) return 3;
+    if (st.standTime >= ICE_CRACK_BREAK_SEC) return 3;
+    if (st.standTime >= ICE_CRACK_STAGE2_SEC) return 2;
+    if (st.standTime >= ICE_CRACK_STAGE1_SEC) return 1;
+    return 0;
+  }
+
+  /** Bờ gần nhất để đẩy người chơi về khi rơi (điểm shore trong dữ liệu mặt băng, mặc định spawn của map). */
+  function nearestShore(x, y) {
+    var sheet = getIceSheetHazard();
+    var pts = (sheet && Array.isArray(sheet.shore) && sheet.shore.length > 0) ? sheet.shore : null;
+    if (!pts) {
+      if (mapData && mapData.spawn) return { x: mapData.spawn.x, y: mapData.spawn.y };
+      return { x: x, y: y };
+    }
+    var best = pts[0];
+    var bd = Math.hypot(x - pts[0].x, y - pts[0].y);
+    for (var i = 1; i < pts.length; i++) {
+      var d = Math.hypot(x - pts[i].x, y - pts[i].y);
+      if (d < bd) { bd = d; best = pts[i]; }
+    }
+    return { x: best.x, y: best.y };
+  }
+
+  /**
+   * Tính vận tốc mới sau một bước dt (hàm thuần theo vận tốc hiện tại trong
+   * slideVel — test Node đặt vận tốc qua Engine.ice.setVelocity rồi gọi).
+   * - Trên đất thường (onIce=false): vận tốc = đúng hướng điều khiển x tốc
+   *   độ, thả phím thì dừng ngay (hành vi cũ, không trượt).
+   * - Trên băng: tiến dần tới vận tốc mục tiêu theo ICE_ACCEL; thả phím
+   *   thì giảm theo ma sát ICE_FRICTION (hàm mũ), dưới 1px/s thì dừng hẳn.
+   */
+  function computeSlideVelocity(dt, inputX, inputY, onIce, speed) {
+    if (typeof dt !== 'number' || !isFinite(dt) || dt <= 0) {
+      return { x: slideVel.x, y: slideVel.y };
+    }
+    if (!onIce) {
+      if (inputX === 0 && inputY === 0) return { x: 0, y: 0 };
+      return { x: inputX * speed, y: inputY * speed };
+    }
+    var out = { x: slideVel.x, y: slideVel.y };
+    if (inputX !== 0 || inputY !== 0) {
+      var k = 1 - Math.exp(-ICE_ACCEL * dt);
+      out.x += (inputX * speed - out.x) * k;
+      out.y += (inputY * speed - out.y) * k;
+    } else {
+      var d = Math.exp(-ICE_FRICTION * dt);
+      out.x *= d;
+      out.y *= d;
+      if (Math.hypot(out.x, out.y) < 1) { out.x = 0; out.y = 0; }
+    }
+    return out;
+  }
+
+  /**
+   * Rơi xuống nước lạnh khi ô băng vỡ (hoặc đứng trên lỗ đã vỡ): trừ máu,
+   * đẩy về bờ gần nhất, dừng trượt, hủy đường đi. Trả về sát thương đã trừ.
+   */
+  function doIceFall(pl, tile) {
+    var dmg = ICE_FALL_DMG;
+    pl.hp = Math.max(0, (pl.hp || 0) - dmg);
+    lastCombatTime = (typeof performance !== 'undefined' && performance.now) ? performance.now() : 0;
+    spawnDamageNumber(pl.x, pl.y - 45, dmg, 'thuy', false);
+    spawnFloatingText('Rơi xuống nước lạnh!', pl.x, pl.y - 70, '#9fdcff');
+    var shore = nearestShore(pl.x, pl.y);
+    pl.x = shore.x;
+    pl.y = shore.y;
+    slideVel.x = 0;
+    slideVel.y = 0;
+    currentPath = [];
+    lastIceFallClock = zoneClock;
+    if (audioAPI && audioAPI.playIceBreak) audioAPI.playIceBreak();
+    // Chỉ gọi xử lý gục khi người chơi bị rơi chính là player của module
+    // (trình duyệt thật); test Node truyền người chơi giả thì chỉ trừ máu.
+    if (pl.hp <= 0 && pl === player) handlePlayerDeath();
+    return dmg;
+  }
+
+  /** Entry 'ice_sheet' đang duy trì trong visualEffects (null nếu chưa có). */
+  function getIceSheetFx() {
+    for (var i = 0; i < visualEffects.length; i++) {
+      if (visualEffects[i].type === 'ice_sheet') return visualEffects[i];
+    }
+    return null;
+  }
+
+  /** Entry 'ice_crack' của một ô nứt (null nếu chưa có). */
+  function getIceCrackFx(tileId) {
+    for (var i = 0; i < visualEffects.length; i++) {
+      if (visualEffects[i].type === 'ice_crack' && visualEffects[i].tileId === tileId) return visualEffects[i];
+    }
+    return null;
+  }
+
+  /**
+   * Duy trì chỉ thị hình ảnh mặt băng + ô nứt: giữ đúng một entry
+   * 'ice_sheet' và một entry 'ice_crack' mỗi ô trong visualEffects khi ở
+   * Hồ Băng, gỡ khi sang map khác. Entry làm mới vị trí/cấp nứt theo trạng
+   * thái hiện tại và timer luôn đặt lại 1.0 giây để updateVisualEffects
+   * không gỡ giữa hai khung.
+   */
+  function maintainIceFx() {
+    var sheet = getIceSheetHazard();
+    var sheetFx = getIceSheetFx();
+    if (!sheet || !sheet.shape || sheet.shape.kind !== 'rect') {
+      if (sheetFx) {
+        var at = visualEffects.indexOf(sheetFx);
+        if (at >= 0) visualEffects.splice(at, 1);
+      }
+      for (var r = visualEffects.length - 1; r >= 0; r--) {
+        if (visualEffects[r].type === 'ice_crack') visualEffects.splice(r, 1);
+      }
+      return;
+    }
+    var scx = sheet.shape.x + sheet.shape.w / 2;
+    var scy = sheet.shape.y + sheet.shape.h / 2;
+    if (sheetFx) {
+      sheetFx.x = scx;
+      sheetFx.y = scy;
+      sheetFx.w = sheet.shape.w;
+      sheetFx.h = sheet.shape.h;
+      sheetFx.shape = sheet.shape;
+      sheetFx.timer = 1.0;
+    } else {
+      visualEffects.push({
+        type: 'ice_sheet',
+        x: scx,
+        y: scy,
+        w: sheet.shape.w,
+        h: sheet.shape.h,
+        shape: sheet.shape,
+        timer: 1.0,
+        duration: 1.0,
+        color: 'rgba(170, 225, 255, 0.5)',
+        hazardId: sheet.id || null,
+        seed: Math.random() * 10
+      });
+    }
+    var tiles = getIceCrackTiles();
+    var wanted = {};
+    for (var t = 0; t < tiles.length; t++) {
+      var tile = tiles[t];
+      wanted[tile.id] = true;
+      var st = getIceCrackState(tile.id);
+      var fx = getIceCrackFx(tile.id);
+      var stage = iceCrackStageOf(st);
+      if (fx) {
+        fx.x = tile.shape.cx;
+        fx.y = tile.shape.cy;
+        fx.radius = tile.shape.r;
+        fx.shape = tile.shape;
+        fx.stage = stage;
+        fx.timer = 1.0;
+      } else {
+        visualEffects.push({
+          type: 'ice_crack',
+          tileId: tile.id,
+          x: tile.shape.cx,
+          y: tile.shape.cy,
+          radius: tile.shape.r,
+          shape: tile.shape,
+          stage: stage,
+          timer: 1.0,
+          duration: 1.0,
+          color: 'rgba(150, 220, 255, 0.9)',
+          hazardId: tile.id,
+          seed: (t + 1) * 1.7
+        });
+      }
+    }
+    for (var c = visualEffects.length - 1; c >= 0; c--) {
+      if (visualEffects[c].type === 'ice_crack' && !wanted[visualEffects[c].tileId]) {
+        visualEffects.splice(c, 1);
+      }
+    }
+  }
+
+  /**
+   * Cập nhật cơ chế băng Hồ Băng theo dt. Gọi trong update chính, ngay sau
+   * updatePoison. p mặc định là player của module.
+   */
+  function updateIce(dt, p) {
+    var pl = p || player;
+    if (!pl || !mapData) return;
+    if (typeof dt !== 'number' || !isFinite(dt) || dt <= 0) return;
+
+    // Đổi map -> trạng thái nứt/trượt của map cũ không mang sang.
+    if (iceMapId !== currentMapId) {
+      iceCrack = {};
+      slideVel.x = 0;
+      slideVel.y = 0;
+      lastIceFallClock = -100;
+      iceMapId = currentMapId;
+    }
+
+    // Chỉ thị hình ảnh mặt băng + ô nứt luôn duy trì theo map hiện tại.
+    maintainIceFx();
+
+    // Đã gục — dừng trượt, không tích thêm nứt.
+    if (pl.hp <= 0) {
+      slideVel.x = 0;
+      slideVel.y = 0;
+      return;
+    }
+
+    var tiles = getIceCrackTiles();
+    if (tiles.length === 0) return;
+
+    // Ô băng người chơi đang đứng (nếu có).
+    var stoodTile = null;
+    var here = zoneHazardsAt(pl.x, pl.y);
+    for (var i = 0; i < here.length; i++) {
+      if (here[i].kind === 'ice_crack') { stoodTile = here[i]; break; }
+    }
+
+    for (var t = 0; t < tiles.length; t++) {
+      var tile = tiles[t];
+      var st = getIceCrackState(tile.id);
+      var prevStage = iceCrackStageOf(st);
+      // Tái tạo: hết thời gian vỡ thì ô về nguyên trạng.
+      if (st.brokenUntil >= 0 && zoneClock >= st.brokenUntil) {
+        st.standTime = 0;
+        st.brokenUntil = -1;
+        st.telegraphQueued = false;
+      }
+      var broken = st.brokenUntil >= 0 && zoneClock < st.brokenUntil;
+      if (stoodTile && stoodTile.id === tile.id) {
+        if (broken) {
+          // Đứng trên lỗ băng đã vỡ: rơi lại nếu hết thời gian chờ giữa 2 lần rơi.
+          if (zoneClock - lastIceFallClock >= ICE_FALL_COOLDOWN_SEC) {
+            doIceFall(pl, tile);
+          }
+        } else {
+          st.standTime += dt;
+        }
+      } else if (!broken) {
+        // Rời ô: vết nứt "nguội" dần (hồi một nửa tốc độ tích).
+        st.standTime = Math.max(0, st.standTime - dt * 0.5);
+      }
+      var stage = iceCrackStageOf(st);
+      st.stage = stage;
+      if (stage === 2 && prevStage < 2 && !st.telegraphQueued) {
+        // Telegraph báo sắp vỡ: thời lượng = thời gian còn lại tới lúc vỡ
+        // (2.0s, ≥0.7s theo luật) — queueZoneTelegraph tự nâng nếu dưới 0.7s.
+        queueZoneTelegraph({
+          x: tile.shape.cx, y: tile.shape.cy, radius: tile.shape.r, shape: tile.shape,
+          duration: ICE_CRACK_BREAK_SEC - ICE_CRACK_STAGE2_SEC,
+          color: 'rgba(150, 220, 255, 0.9)', label: 'Băng nứt!', hazardId: tile.id
+        });
+        st.telegraphQueued = true;
+        if (audioAPI && audioAPI.playIceCrack) audioAPI.playIceCrack();
+      } else if (stage === 1 && prevStage < 1) {
+        if (audioAPI && audioAPI.playIceCrack) audioAPI.playIceCrack();
+      }
+      if (stage < 2) st.telegraphQueued = false;
+      if (stage === 3 && prevStage < 3 && !broken) {
+        // Vỡ do đứng đủ lâu (không phải lỗ đã vỡ từ trước): khóa ô tới lúc tái tạo.
+        st.brokenUntil = zoneClock + ICE_CRACK_REGEN_SEC;
+        st.stage = 3;
+        doIceFall(pl, tile);
+      }
+    }
+    // Làm mới lại chỉ thị hình ảnh sau khi trạng thái nứt đổi trong khung
+    // này (không thì cấp nứt trên entry chậm một khung so với trạng thái).
+    maintainIceFx();
+  }
+
+  // ============================================================
+  // ĐỢT V1 — CHẶNG 3: MỎ LỬA — DUNG NHAM THEO NHỊP, ĐỒNG HỒ CHUNG
+  // VỚI BOSS HỎA (hồ sơ 01 §3)
+  // - Họng phun dung nham: hazard kind 'lava_vent' (tròn r=80) khai trong
+  //   mapdata.js (4 họng ở sân mỏ). Phun theo NHỊP CHUNG với boss Hỏa:
+  //   chu kỳ 8.0 giây = boss_xich_diem_viem_quan.bossSkill.interval, nhịp
+  //   phun tại zoneClock = firstDelay + k*interval (5.0, 13.0, 21.0, ...)
+  //   — đúng nhịp tung chiêu Cột Dung Nham của boss (hồ sơ 01 §3: "boss
+  //   dùng chính nhịp này làm mốc tung chiêu"). CHỈ đổi nguồn nhịp (đọc
+  //   từ zoneClock), KHÔNG đổi bất kỳ số boss nào (interval 8.0,
+  //   firstDelay 5.0, damage 30, telegraph 85/1.1 giữ nguyên trong
+  //   js/monsters.js; lịch chiêu boss đọc cùng đồng hồ qua opts.zoneClock
+  //   truyền ở updateMonster — xem monsters.js updateMonster).
+  // - Một chu kỳ 8 giây: [báo trước 2.0s: tiếng rít + telegraph vùng 2.0s
+  //   (≥0.7s theo luật) trên từng họng] -> [phun 1.0s: đứng trong họng thì
+  //   chịu sát thương Hỏa lớn, một lần mỗi đợt phun] -> [yên 5.0s].
+  // - Chỉ thị hình ảnh: một entry 'lava_vent' mỗi họng trong visualEffects
+  //   (vẽ cùng lớp đất như trũng sương/mặt băng, không sinh ảnh raster
+  //   mới); pha của họng (calm/warn/erupt) cập nhật theo zoneClock.
+  // - Trạng thái nhịp là trạng thái phiên (module), không lưu save: đổi
+  //   map thì reset; save cũ nạp an toàn, không cần trường v1 mới.
+  // - updateLava(dt, p) nhận người chơi tường minh (mặc định player của
+  //   module) để test Node gọi trực tiếp được như updatePoison/updateIce.
+  // ============================================================
+  // Chu kỳ + mốc nhịp KHÓA THEO SỐ BOSS HỎA (không phải số tự chế):
+  // bossSkill.interval = 8.0, firstDelay = 5.0 (js/monsters.js) — test
+  // v1-mo-lua.mjs kiểm tĩnh hai số này khớp hằng số dưới đây.
+  var LAVA_CYCLE_SEC = 8.0;      // chu kỳ phun = interval chiêu boss Hỏa
+  var LAVA_BEAT_OFFSET = 5.0;    // nhịp phun đầu tại zoneClock = firstDelay boss Hỏa
+  var LAVA_TELEGRAPH_SEC = 2.0;  // báo trước mỗi đợt phun (hồ sơ 01 §3: 2 giây)
+  // PROVISIONAL (hồ sơ 01 không cho số, chờ Bui phán):
+  var LAVA_ERUPTION_SEC = 1.0;   // cột dung nham đứng sau nhịp phun (giây)
+  var LAVA_DAMAGE = 25;          // máu trừ khi đứng trong họng lúc phun ("sát thương Hỏa lớn")
+  var lavaMapId = null;          // map của trạng thái nhịp hiện tại (reset khi đổi map)
+  var lavaWarnCycle = -2;        // cycleIndex đã xếp telegraph báo trước (-2 = chưa xếp)
+  var lavaHitCycle = -2;         // cycleIndex đã gây sát thương phun (-2 = chưa gây)
+
+  /** Pha nhịp dung nham tại một mốc zoneClock cho trước (hàm thuần, để test). */
+  function lavaPhaseAt(clock) {
+    var c = (typeof clock === 'number' && isFinite(clock)) ? clock : zoneClock;
+    var t = (c - LAVA_BEAT_OFFSET) % LAVA_CYCLE_SEC;
+    if (t < 0) t += LAVA_CYCLE_SEC;
+    return t;
+  }
+
+  /** Chỉ số chu kỳ phun chứa mốc zoneClock cho trước (âm trước nhịp đầu). */
+  function lavaCycleIndexAt(clock) {
+    var c = (typeof clock === 'number' && isFinite(clock)) ? clock : zoneClock;
+    return Math.floor((c - LAVA_BEAT_OFFSET) / LAVA_CYCLE_SEC);
+  }
+
+  /** Pha nhịp hiện tại: 'calm' (yên), 'warn' (báo trước), 'erupt' (đang phun). */
+  function lavaPhaseNow() {
+    var phase = lavaPhaseAt(zoneClock);
+    if (phase < LAVA_ERUPTION_SEC) return 'erupt';
+    if (phase >= LAVA_CYCLE_SEC - LAVA_TELEGRAPH_SEC) return 'warn';
+    return 'calm';
+  }
+
+  /** Các họng phun dung nham của map hiện tại ([] nếu map không có). */
+  function getLavaVents() {
+    var list = getZoneHazardsForCurrentMap();
+    var out = [];
+    for (var i = 0; i < list.length; i++) {
+      if (list[i] && list[i].kind === 'lava_vent') out.push(list[i]);
+    }
+    return out;
+  }
+
+  /** Entry 'lava_vent' của một họng (null nếu chưa có). */
+  function getLavaVentFx(ventId) {
+    for (var i = 0; i < visualEffects.length; i++) {
+      if (visualEffects[i].type === 'lava_vent' && visualEffects[i].ventId === ventId) return visualEffects[i];
+    }
+    return null;
+  }
+
+  /**
+   * Duy trì chỉ thị hình ảnh họng phun: một entry 'lava_vent' mỗi họng
+   * trong visualEffects khi ở Mỏ Lửa, gỡ khi sang map khác. Entry được
+   * làm mới pha (calm/warn/erupt) theo zoneClock và timer luôn đặt lại
+   * 1.0 giây để updateVisualEffects không gỡ giữa hai khung.
+   */
+  function maintainLavaFx() {
+    var vents = getLavaVents();
+    var phase = lavaPhaseNow();
+    for (var i = 0; i < vents.length; i++) {
+      var vent = vents[i];
+      var shape = getHazardActiveShape(vent);
+      if (!shape || shape.kind !== 'circle') continue;
+      var fx = getLavaVentFx(vent.id);
+      if (fx) {
+        fx.x = shape.cx;
+        fx.y = shape.cy;
+        fx.radius = shape.r;
+        fx.shape = shape;
+        fx.phase = phase;
+        fx.timer = 1.0;
+      } else {
+        visualEffects.push({
+          type: 'lava_vent',
+          ventId: vent.id,
+          x: shape.cx,
+          y: shape.cy,
+          radius: shape.r,
+          shape: shape,
+          phase: phase,
+          timer: 1.0,
+          duration: 1.0,
+          color: 'rgba(255, 110, 30, 0.8)',
+          hazardId: vent.id || null,
+          seed: Math.random() * 10
+        });
+      }
+    }
+    // Gỡ entry của họng không còn thuộc map hiện tại.
+    for (var j = visualEffects.length - 1; j >= 0; j--) {
+      var e = visualEffects[j];
+      if (e.type !== 'lava_vent') continue;
+      var stillHere = false;
+      for (var k = 0; k < vents.length; k++) {
+        if (vents[k].id === e.ventId) { stillHere = true; break; }
+      }
+      if (!stillHere) visualEffects.splice(j, 1);
+    }
+  }
+
+  /** Người chơi có đang đứng trong họng phun nào không (trả về họng đó). */
+  function lavaVentAtPlayer(pl) {
+    var here = zoneHazardsAt(pl.x, pl.y);
+    for (var i = 0; i < here.length; i++) {
+      if (here[i].kind === 'lava_vent') return here[i];
+    }
+    return null;
+  }
+
+  /**
+   * Cập nhật cơ chế dung nham Mỏ Lửa theo dt. Gọi trong update chính, ngay
+   * sau updateIce. p mặc định là player của module.
+   */
+  function updateLava(dt, p) {
+    var pl = p || player;
+    if (!pl || !mapData) return;
+    if (typeof dt !== 'number' || !isFinite(dt) || dt <= 0) return;
+
+    // Đổi map -> trạng thái nhịp của map cũ không mang sang.
+    if (lavaMapId !== currentMapId) {
+      lavaWarnCycle = -2;
+      lavaHitCycle = -2;
+      lavaMapId = currentMapId;
+    }
+
+    // Chỉ thị hình ảnh họng phun luôn duy trì theo map hiện tại.
+    maintainLavaFx();
+
+    var vents = getLavaVents();
+    if (vents.length === 0) return;
+    // Đã gục — không chịu thêm sát thương phun.
+    if (pl.hp <= 0) return;
+
+    var phase = lavaPhaseNow();
+    var cycle = lavaCycleIndexAt(zoneClock);
+
+    if (phase === 'warn' && lavaWarnCycle !== cycle) {
+      // Vào cửa sổ báo trước 2.0s: xếp đúng một telegraph mỗi họng (thời
+      // lượng 2.0s, ≥0.7s theo luật — queueZoneTelegraph tự nâng nếu dưới
+      // 0.7s) + tiếng rít báo trước, một lần mỗi chu kỳ.
+      for (var i = 0; i < vents.length; i++) {
+        var shape = getHazardActiveShape(vents[i]);
+        if (!shape || shape.kind !== 'circle') continue;
+        queueZoneTelegraph({
+          x: shape.cx, y: shape.cy, radius: shape.r, shape: shape,
+          duration: LAVA_TELEGRAPH_SEC,
+          color: 'rgba(255, 110, 30, 0.9)', label: 'Dung nham sắp phun!', hazardId: vents[i].id
+        });
+      }
+      lavaWarnCycle = cycle;
+      if (audioAPI && audioAPI.playLavaWarn) audioAPI.playLavaWarn();
+    }
+
+    if (phase === 'erupt' && lavaHitCycle !== cycle) {
+      // Vào cửa sổ phun: người chơi đang đứng trong họng thì chịu một lần
+      // sát thương Hỏa của đợt phun này (đứng ngoài thì không sao; vào
+      // họng giữa chừng lúc đang phun vẫn dính một lần của đợt này — mốc
+      // chu kỳ chỉ đặt khi thực sự gây sát thương).
+      var vent = lavaVentAtPlayer(pl);
+      if (vent) {
+        pl.hp = Math.max(0, (pl.hp || 0) - LAVA_DAMAGE);
+        lastCombatTime = (typeof performance !== 'undefined' && performance.now) ? performance.now() : 0;
+        spawnDamageNumber(pl.x, pl.y - 45, LAVA_DAMAGE, 'hoa', false);
+        spawnFloatingText('Dung nham phun!', pl.x, pl.y - 70, '#ff9a5c');
+        if (audioAPI && audioAPI.playLavaErupt) audioAPI.playLavaErupt();
+        // Chỉ gọi xử lý gục khi người chơi bị phun chính là player của module
+        // (trình duyệt thật); test Node truyền người chơi giả thì chỉ trừ máu.
+        if (pl.hp <= 0 && pl === player) handlePlayerDeath();
+        lavaHitCycle = cycle;
+      }
+    }
+  }
+
+  // ============================================================
+  // ĐỢT V1 — CHẶNG 4: HOANG MẠC — BÃO CÁT + CÁT LÚN (hồ sơ 01 §4)
+  // - Bão cát theo chu kỳ đọc từ zoneClock của chặng 0 (map `hoang-mac`,
+  //   cờ `sandStorm.enabled` trong mapdata.js): chu kỳ 90 giây =
+  //   [yên 55s] -> [báo trước 5s] -> [bão 30s]. Khi bão:
+  //   + lớp phủ giảm tầm nhìn vẽ trên canvas (drawSandStormOverlay, vẽ SAU
+  //     thực thể để che cả người chơi/quái, TRƯỚC màn đen chuyển cảnh);
+  //   + hệ số tốc độ gió trong khối di chuyển: currentSpeed nhân
+  //     (1 - SAND_STORM_SLOW_RATIO) — người chơi di chuyển chậm hơn khi bão
+  //     (áp cho cả điều khiển trực tiếp lẫn đường đi tự động, chỉ đổi TỐC
+  //     ĐỘ, không đổi logic dẫn đường HOBANGFIX).
+  // - Chỉ thị hình ảnh: entry 'sand_storm' trong visualEffects theo mẫu
+  //   chặng 1–3 (giữ đúng một entry, cập nhật pha + vị trí người chơi mỗi
+  //   khung, gỡ khi sang map khác); không sinh ảnh raster mới.
+  // - Cát lún: hazard kind 'cat_lun' (tròn r=90) khai trong zoneHazards của
+  //   hoang-mac. Đứng trong ô thì playerSlowRatio tăng dần theo thời gian
+  //   đứng; ra khỏi ô thì giảm dần. Trần làm chậm 65% (còn 35% tốc độ) nên
+  //   người chơi vẫn tự bước ra được, không kẹt cứng. Không đè hiệu ứng
+  //   làm chậm mạnh hơn từ nguồn khác (đòn quái/chiêu boss).
+  // - Âm thanh: audioAPI.playSandWindGust() khi gió nổi (báo trước, cường
+  //   độ thấp) và khi bão ập tới (cường độ 1) — hàm mới trong js/audio.js.
+  // - MỌI số dưới đây là PROVISIONAL (hồ sơ 01 §4 không cho số, chờ Bui
+  //   phán): chu kỳ bão/nghỉ, mức giảm tầm nhìn, mức ảnh hưởng di chuyển
+  //   khi bão; tốc độ chậm dần + trần làm chậm + tốc độ hồi của cát lún.
+  // - Trạng thái là trạng thái phiên (module), KHÔNG thêm trường save: đổi
+  //   map thì tự reset; save cũ nạp an toàn.
+  // - updateSandStorm(dt, p) / updateQuicksand(dt, p) nhận người chơi
+  //   tường minh (mặc định player của module) như updatePoison/updateIce/
+  //   updateLava để test Node gọi trực tiếp được.
+  // ============================================================
+  var SAND_STORM_CYCLE_SEC = 90;          // PROVISIONAL: chu kỳ bão/nghỉ (hồ sơ không cho số)
+  var SAND_STORM_DURATION_SEC = 30;       // PROVISIONAL: thời lượng có bão trong chu kỳ
+  var SAND_STORM_WARN_SEC = 5;            // PROVISIONAL: báo trước khi bão ập tới (≥ 0.7s luật telegraph)
+  var SAND_STORM_VISIBILITY_ALPHA = 0.45; // PROVISIONAL: mức giảm tầm nhìn (alpha lớp phủ khi bão)
+  var SAND_STORM_SLOW_RATIO = 0.30;       // PROVISIONAL: gió bão làm chậm 30% tốc độ di chuyển
+  var CAT_LUN_SLOW_PER_SEC = 0.06;        // PROVISIONAL: chậm thêm mỗi giây đứng trong cát lún
+  var CAT_LUN_SLOW_MAX = 0.65;            // PROVISIONAL: trần làm chậm (còn 35% tốc độ — vẫn thoát được)
+  var CAT_LUN_RECOVER_PER_SEC = 0.20;     // PROVISIONAL: tốc độ hồi khi ra khỏi ô cát lún
+  var quicksandSlow = 0;                  // mức chậm cát lún hiện tại (0..CAT_LUN_SLOW_MAX)
+  var quicksandCellId = null;             // ô cát lún người chơi đang đứng (null = ngoài)
+  var quicksandAppliedDelta = 0;          // phần cát lún đã cộng vào playerSlowRatio khung trước
+  var quicksandMapId = null;              // map của trạng thái cát lún (reset khi đổi map)
+  var sandStormMapId = null;              // map của trạng thái bão (reset khi đổi map)
+  var sandStormWarnCycle = -2;            // cycleIndex đã báo "gió nổi" (-2 = chưa)
+  var sandStormGustCycle = -2;            // cycleIndex đã phát tiếng bão ập tới (-2 = chưa)
+
+  /** Map hiện tại có bão cát không (hoang-mac khai sandStorm.enabled). */
+  function hasSandStorm() {
+    return !!(mapData && mapData.sandStorm && mapData.sandStorm.enabled);
+  }
+
+  /** Pha bão cát tại một mốc zoneClock cho trước (hàm thuần, để test). */
+  function sandStormPhaseAt(clock) {
+    var c = (typeof clock === 'number' && isFinite(clock)) ? clock : zoneClock;
+    var t = c % SAND_STORM_CYCLE_SEC;
+    if (t < 0) t += SAND_STORM_CYCLE_SEC;
+    var calmEnd = SAND_STORM_CYCLE_SEC - SAND_STORM_DURATION_SEC - SAND_STORM_WARN_SEC;
+    var warnEnd = SAND_STORM_CYCLE_SEC - SAND_STORM_DURATION_SEC;
+    if (t >= warnEnd) return 'storm';
+    if (t >= calmEnd) return 'warn';
+    return 'calm';
+  }
+
+  /** Chỉ số chu kỳ bão chứa mốc zoneClock cho trước. */
+  function sandStormCycleIndexAt(clock) {
+    var c = (typeof clock === 'number' && isFinite(clock)) ? clock : zoneClock;
+    return Math.floor(c / SAND_STORM_CYCLE_SEC);
+  }
+
+  /** Pha bão cát hiện tại: 'calm' | 'warn' | 'storm'. */
+  function sandStormPhaseNow() {
+    return sandStormPhaseAt(zoneClock);
+  }
+
+  /**
+   * Hệ số làm chậm do gió bão (0 khi không bão / map không có bão). Khối di
+   * chuyển trong update() nhân currentSpeed với (1 - giá trị này).
+   */
+  function sandStormWindSlowRatio() {
+    if (!hasSandStorm()) return 0;
+    return sandStormPhaseNow() === 'storm' ? SAND_STORM_SLOW_RATIO : 0;
+  }
+
+  /** Entry 'sand_storm' đang duy trì trong visualEffects (null nếu chưa có). */
+  function getSandStormFx() {
+    for (var i = 0; i < visualEffects.length; i++) {
+      if (visualEffects[i].type === 'sand_storm') return visualEffects[i];
+    }
+    return null;
+  }
+
+  /**
+   * Duy trì chỉ thị bão cát: đúng một entry 'sand_storm' khi ở map có bão,
+   * bám theo người chơi (lớp phủ phủ kín khung hình), cập nhật pha theo
+   * zoneClock; gỡ khi sang map khác. Timer luôn đặt lại 1.0 giây để
+   * updateVisualEffects không gỡ giữa hai khung.
+   */
+  function maintainSandStormFx(pl, phase) {
+    var fx = getSandStormFx();
+    if (fx) {
+      fx.x = pl.x;
+      fx.y = pl.y;
+      fx.phase = phase;
+      fx.timer = 1.0;
+    } else {
+      visualEffects.push({
+        type: 'sand_storm',
+        x: pl.x,
+        y: pl.y,
+        phase: phase,
+        timer: 1.0,
+        duration: 1.0,
+        seed: Math.random() * 10
+      });
+    }
+    // Loại entry trùng (nếu có) — chỉ giữ đúng một lớp bão.
+    var kept = false;
+    for (var j = visualEffects.length - 1; j >= 0; j--) {
+      if (visualEffects[j].type !== 'sand_storm') continue;
+      if (!kept) { kept = true; continue; }
+      visualEffects.splice(j, 1);
+    }
+  }
+
+  /** Gỡ mọi entry bão cát (rời map có bão). */
+  function clearSandStormFx() {
+    for (var i = visualEffects.length - 1; i >= 0; i--) {
+      if (visualEffects[i].type === 'sand_storm') visualEffects.splice(i, 1);
+    }
+  }
+
+  /**
+   * Trả playerSlowRatio về nền trước khi cát lún ghi vào (bỏ đúng phần cát
+   * lún đã cộng, giữ hiệu ứng làm chậm khác nếu còn). Dùng khi đổi map/reset.
+   */
+  function restoreQuicksandSlow() {
+    if (quicksandAppliedDelta > 0) {
+      playerSlowRatio = Math.max(0, playerSlowRatio - quicksandAppliedDelta);
+      if (playerSlowRatio <= 0.0001) {
+        playerSlowRatio = 0;
+        playerSlowTimer = 0;
+      }
+    }
+    quicksandAppliedDelta = 0;
+  }
+
+  /** Các ô cát lún của map hiện tại ([] nếu map không có). */
+  function getQuicksandCells() {
+    var list = getZoneHazardsForCurrentMap();
+    var out = [];
+    for (var i = 0; i < list.length; i++) {
+      if (list[i] && list[i].kind === 'cat_lun') out.push(list[i]);
+    }
+    return out;
+  }
+
+  /** Entry 'cat_lun' của một ô (null nếu chưa có). */
+  function getQuicksandFx(cellId) {
+    for (var i = 0; i < visualEffects.length; i++) {
+      if (visualEffects[i].type === 'cat_lun' && visualEffects[i].cellId === cellId) return visualEffects[i];
+    }
+    return null;
+  }
+
+  /**
+   * Duy trì chỉ thị hình ảnh ô cát lún: một entry 'cat_lun' mỗi ô trong
+   * visualEffects khi ở Hoang Mạc, gỡ khi sang map khác; timer làm mới
+   * 1.0 giây mỗi khung. Vẽ cùng lớp đất như trũng sương/mặt băng/họng phun.
+   */
+  function maintainQuicksandFx() {
+    var cells = getQuicksandCells();
+    for (var i = 0; i < cells.length; i++) {
+      var cell = cells[i];
+      var shape = getHazardActiveShape(cell);
+      if (!shape || shape.kind !== 'circle') continue;
+      var fx = getQuicksandFx(cell.id);
+      if (fx) {
+        fx.x = shape.cx;
+        fx.y = shape.cy;
+        fx.radius = shape.r;
+        fx.shape = shape;
+        fx.timer = 1.0;
+      } else {
+        visualEffects.push({
+          type: 'cat_lun',
+          cellId: cell.id,
+          x: shape.cx,
+          y: shape.cy,
+          radius: shape.r,
+          shape: shape,
+          timer: 1.0,
+          duration: 1.0,
+          color: 'rgba(196, 158, 92, 0.8)',
+          hazardId: cell.id || null,
+          seed: Math.random() * 10
+        });
+      }
+    }
+    // Gỡ entry của ô không còn thuộc map hiện tại.
+    for (var j = visualEffects.length - 1; j >= 0; j--) {
+      var e = visualEffects[j];
+      if (e.type !== 'cat_lun') continue;
+      var stillHere = false;
+      for (var k = 0; k < cells.length; k++) {
+        if (cells[k].id === e.cellId) { stillHere = true; break; }
+      }
+      if (!stillHere) visualEffects.splice(j, 1);
+    }
+  }
+
+  /** Ô cát lún người chơi đang đứng (null nếu ngoài mọi ô). */
+  function quicksandCellAtPlayer(pl) {
+    var here = zoneHazardsAt(pl.x, pl.y);
+    for (var i = 0; i < here.length; i++) {
+      if (here[i].kind === 'cat_lun') return here[i];
+    }
+    return null;
+  }
+
+  /**
+   * Cập nhật cơ chế bão cát Hoang Mạc theo dt. Gọi trong update chính, ngay
+   * sau updateLava (trước updateQuicksand). p mặc định là player của module.
+   */
+  function updateSandStorm(dt, p) {
+    var pl = p || player;
+    if (!pl || !mapData) return;
+    if (typeof dt !== 'number' || !isFinite(dt) || dt <= 0) return;
+
+    // Map không có bão (hoặc vừa rời Hoang Mạc): gỡ lớp phủ + reset nhịp.
+    if (!hasSandStorm()) {
+      clearSandStormFx();
+      sandStormMapId = null;
+      sandStormWarnCycle = -2;
+      sandStormGustCycle = -2;
+      return;
+    }
+
+    // Đổi map -> nhịp bão của map cũ không mang sang.
+    if (sandStormMapId !== currentMapId) {
+      sandStormWarnCycle = -2;
+      sandStormGustCycle = -2;
+      sandStormMapId = currentMapId;
+    }
+
+    var phase = sandStormPhaseNow();
+    var cycle = sandStormCycleIndexAt(zoneClock);
+
+    maintainSandStormFx(pl, phase);
+
+    if (phase === 'warn' && sandStormWarnCycle !== cycle) {
+      // Gió bắt đầu nổi: báo bằng chữ bay + tiếng gió nhẹ (báo trước
+      // SAND_STORM_WARN_SEC giây, trên luật telegraph ≥ 700 ms).
+      sandStormWarnCycle = cycle;
+      spawnFloatingText('Gió cát nổi lên...', pl.x, pl.y - 70, '#f0d79a');
+      if (audioAPI && audioAPI.playSandWindGust) audioAPI.playSandWindGust(0.45);
+    }
+
+    if (phase === 'storm' && sandStormGustCycle !== cycle) {
+      // Bão ập tới: chữ báo + tiếng gió mạnh một lần mỗi chu kỳ.
+      sandStormGustCycle = cycle;
+      spawnFloatingText('Bão cát ập tới!', pl.x, pl.y - 70, '#e8c27a');
+      if (audioAPI && audioAPI.playSandWindGust) audioAPI.playSandWindGust(1);
+    }
+  }
+
+  /**
+   * Cập nhật cơ chế cát lún Hoang Mạc theo dt. Gọi trong update chính, ngay
+   * sau updateSandStorm. Đứng trong ô thì mức chậm tăng dần, ra khỏi ô thì
+   * hồi dần; mức chậm được ghi vào playerSlowRatio đúng như brief chặng 4
+   * (khối di chuyển tính currentSpeed = SPEED * (1 - playerSlowRatio)).
+   * p mặc định là player của module.
+   */
+  function updateQuicksand(dt, p) {
+    var pl = p || player;
+    if (!pl || !mapData) return;
+    if (typeof dt !== 'number' || !isFinite(dt) || dt <= 0) return;
+
+    // Chỉ thị hình ảnh ô cát lún luôn duy trì theo map hiện tại.
+    maintainQuicksandFx();
+
+    // Đổi map -> mức chậm của map cũ không mang sang.
+    if (quicksandMapId !== currentMapId) {
+      restoreQuicksandSlow();
+      quicksandSlow = 0;
+      quicksandCellId = null;
+      quicksandMapId = currentMapId;
+    }
+
+    var cell = quicksandCellAtPlayer(pl);
+    if (cell) {
+      if (quicksandCellId !== cell.id) {
+        quicksandCellId = cell.id;
+        spawnFloatingText('Cát lún!', pl.x, pl.y - 70, '#f2d68b');
+      }
+      // Đứng càng lâu càng lún: mức chậm tăng đều tới trần (PROVISIONAL).
+      quicksandSlow = Math.min(CAT_LUN_SLOW_MAX, quicksandSlow + CAT_LUN_SLOW_PER_SEC * dt);
+    } else {
+      quicksandCellId = null;
+      // Ra khỏi ô: tốc độ hồi dần (PROVISIONAL).
+      quicksandSlow = Math.max(0, quicksandSlow - CAT_LUN_RECOVER_PER_SEC * dt);
+    }
+
+    // Áp vào đúng playerSlowRatio (brief chặng 4). Giữ hiệu ứng làm chậm
+    // mạnh hơn từ nguồn khác (đòn quái/chiêu boss): nền = giá trị đang ghi
+    // trừ phần cát lún đã cộng ở khung trước, nhờ vậy phần hồi của cát lún
+    // không bị chính giá trị cũ của nó chặn lại.
+    var baseSlow = (playerSlowTimer > 0) ? Math.max(0, playerSlowRatio - quicksandAppliedDelta) : 0;
+    var effSlow = Math.max(baseSlow, quicksandSlow);
+    if (effSlow > 0.0001) {
+      playerSlowRatio = effSlow;
+      playerSlowTimer = Math.max(playerSlowTimer, 0.15);
+      quicksandAppliedDelta = effSlow - baseSlow;
+    } else {
+      // Không còn mức chậm nào đang hiệu lực: trả về 0 hẳn để tốc độ hồi đủ
+      // ngay khi cát lún tan (không để giá trị cũ nằm lại trong playerSlowRatio).
+      playerSlowRatio = 0;
+      playerSlowTimer = 0;
+      quicksandAppliedDelta = 0;
+    }
+    return quicksandSlow;
+  }
+
+  /**
+   * Đợt V1 chặng 4: lớp phủ bão cát — vẽ SAU thực thể (che cả người chơi và
+   * quái để giảm tầm nhìn đúng nghĩa), TRƯỚC màn đen chuyển cảnh. Chỉ vẽ khi
+   * ở map có bão và pha warn/storm; pha warn mờ dần lên, pha storm đặc hơn +
+   * các vệt gió chéo chạy. PROVISIONAL: mức giảm tầm nhìn
+   * SAND_STORM_VISIBILITY_ALPHA (hồ sơ 01 §4 không cho số).
+   */
+  function drawSandStormOverlay() {
+    if (!ctx || !canvas || !hasSandStorm()) return;
+    var phase = sandStormPhaseNow();
+    if (phase === 'calm') return;
+    var t = zoneClock % SAND_STORM_CYCLE_SEC;
+    if (t < 0) t += SAND_STORM_CYCLE_SEC;
+    var warnStart = SAND_STORM_CYCLE_SEC - SAND_STORM_DURATION_SEC - SAND_STORM_WARN_SEC;
+    var nowS = (typeof performance !== 'undefined' && performance.now) ? performance.now() / 1000 : 0;
+    var alpha;
+    if (phase === 'warn') {
+      var warnP = Math.max(0, Math.min(1, (t - warnStart) / SAND_STORM_WARN_SEC));
+      alpha = SAND_STORM_VISIBILITY_ALPHA * 0.45 * warnP;
+    } else {
+      var stormPulse = 0.5 + 0.5 * Math.sin(nowS * 2.4);
+      alpha = SAND_STORM_VISIBILITY_ALPHA * (0.85 + 0.15 * stormPulse);
+    }
+    ctx.save();
+    ctx.fillStyle = 'rgba(196, 158, 92, ' + Math.min(0.85, alpha) + ')';
+    ctx.fillRect(camera.x - 20, camera.y - 20, camera.viewportW + 40, camera.viewportH + 40);
+    if (phase === 'storm') {
+      // Vệt gió cát chéo chạy ngang khung hình (chỉ thị, không gây hại).
+      ctx.strokeStyle = 'rgba(255, 236, 196, 0.32)';
+      ctx.lineWidth = 2;
+      for (var si = 0; si < 12; si++) {
+        var sy = camera.y + ((si * 53 + nowS * 260) % (camera.viewportH + 120)) - 60;
+        var sx = camera.x + ((si * 137 + nowS * 620) % (camera.viewportW + 160)) - 80;
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(sx + 70, sy - 14);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  // ============================================================
+  // ĐỢT V1 — CHẶNG 5: KIẾM TRỦNG HUYỀN THIẾT — KIẾM VŨ CHU KỲ + KIẾM KHÍ QUÉT (hồ sơ 01 §5)
+  // - Kiếm Vũ: đợt mưa kiếm theo chu kỳ (SWORD_RAIN_CYCLE_SEC = 120s,
+  //   PROVISIONAL, hồ sơ [ĐỀ XUẤT] 4 phút). Đợt kéo dài 20s (đúng hồ sơ ghi
+  //   rõ 20 giây), gồm các làn kiếm rơi cách nhau 4.0s. Mỗi điểm rơi có
+  //   telegraph vệt sáng bạc (bán kính 65px, thời lượng 1.2s ≥ 700ms luật
+  //   telegraph) + âm rung ngân kim loại playSwordRainWarn. Khi kiếm cắm
+  //   xuống (playSwordFall): người chơi trong bán kính chịu sát thương Kim
+  //   30 máu (SWORD_RAIN_DAMAGE, PROVISIONAL).
+  // - Kiếm Khí Quét: 2 lối đi cố định (kind 'sword_sweep' khai trong
+  //   mapdata.js) có luồng kiếm khí quét qua theo chu kỳ SWORD_SWEEP_CYCLE_SEC
+  //   = 24s (PROVISIONAL). Báo trước 2.0s bằng vệt sáng bạc và tiếng rít
+  //   playSwordSweepWarn (≥ 700ms), sau đó kiếm khí quét qua 1.5s
+  //   (playSwordSweep). Người chơi trong làn bị trừ 25 máu
+  //   (SWORD_SWEEP_DAMAGE, PROVISIONAL) một lần mỗi đợt quét.
+  // - Quái hệ Kim tránh được hoặc miễn nhiễm theo hồ sơ 01 §5.
+  // - Trạng thái phiên (module), không thêm trường save; đổi map tự reset.
+  // - updateSwordRain(dt, p) / updateSwordSweep(dt, p) nhận p tường minh
+  //   (mặc định player của module) để test Node gọi trực tiếp được.
+  // ============================================================
+  var SWORD_RAIN_CYCLE_SEC = 120;         // PROVISIONAL: chu kỳ đợt Kiếm Vũ (hồ sơ [ĐỀ XUẤT] 4 phút = 240s)
+  var SWORD_RAIN_DURATION_SEC = 20;      // thời lượng đợt Kiếm Vũ (hồ sơ 01 §5: "kéo dài 20 giây")
+  var SWORD_RAIN_WARN_SEC = 1.2;         // PROVISIONAL: thời lượng dấu báo trước khi kiếm rơi (≥ 0.7s)
+  var SWORD_RAIN_INTERVAL_SEC = 4.0;     // PROVISIONAL: nhịp giữa các làn kiếm trong đợt Kiếm Vũ
+  var SWORD_RAIN_DAMAGE = 30;            // PROVISIONAL: sát thương Kim khi trúng kiếm rơi
+  var SWORD_RAIN_RADIUS = 65;            // PROVISIONAL: bán kính vùng sát thương của kiếm rơi
+
+  var SWORD_SWEEP_CYCLE_SEC = 24.0;      // PROVISIONAL: chu kỳ quét kiếm khí
+  var SWORD_SWEEP_WARN_SEC = 2.0;        // PROVISIONAL: thời lượng báo trước (≥ 0.7s)
+  var SWORD_SWEEP_DURATION_SEC = 1.5;    // PROVISIONAL: thời lượng kiếm khí quét qua lối đi
+  var SWORD_SWEEP_DAMAGE = 25;           // PROVISIONAL: sát thương Kim khi trúng vệt quét
+
+  var swordRainMapId = null;
+  var swordRainWarnCycle = -2;
+  var swordRainActiveCycle = -2;
+  var swordRainLastWaveIndex = -1;
+  var swordRainActiveTelegraphs = []; // mảng { cx, cy, r, explodeAt, struck }
+
+  var swordSweepMapId = null;
+  var swordSweepWarnCycle = -2;
+  var swordSweepActiveCycle = -2;
+  var swordSweepHitCycle = -2;
+
+  function hasSwordStorm() {
+    return Boolean(mapData && (mapData.id === 'kiem-trung' || (mapData.swordStorm && mapData.swordStorm.enabled)));
+  }
+
+  function swordRainCycleIndexAt(clock) {
+    if (typeof clock !== 'number' || !isFinite(clock) || clock < 0) return 0;
+    return Math.floor(clock / SWORD_RAIN_CYCLE_SEC);
+  }
+
+  function swordRainPhaseAt(clock) {
+    if (typeof clock !== 'number' || !isFinite(clock) || clock < 0) return 'calm';
+    var t = clock % SWORD_RAIN_CYCLE_SEC;
+    if (t < 0) t += SWORD_RAIN_CYCLE_SEC;
+    var activeStart = SWORD_RAIN_CYCLE_SEC - SWORD_RAIN_DURATION_SEC;
+    var warnStart = activeStart - 5.0;
+    if (t < warnStart) return 'calm';
+    if (t < activeStart) return 'warn';
+    return 'active';
+  }
+
+  function swordRainPhaseNow() {
+    return swordRainPhaseAt(zoneClock);
+  }
+
+  function resetSwordRain() {
+    swordRainMapId = null;
+    swordRainWarnCycle = -2;
+    swordRainActiveCycle = -2;
+    swordRainLastWaveIndex = -1;
+    swordRainActiveTelegraphs = [];
+  }
+
+  function swordSweepCycleIndexAt(clock) {
+    if (typeof clock !== 'number' || !isFinite(clock) || clock < 0) return 0;
+    return Math.floor(clock / SWORD_SWEEP_CYCLE_SEC);
+  }
+
+  function swordSweepPhaseAt(clock) {
+    if (typeof clock !== 'number' || !isFinite(clock) || clock < 0) return 'calm';
+    var t = clock % SWORD_SWEEP_CYCLE_SEC;
+    if (t < 0) t += SWORD_SWEEP_CYCLE_SEC;
+    var warnStart = SWORD_SWEEP_CYCLE_SEC - SWORD_SWEEP_DURATION_SEC - SWORD_SWEEP_WARN_SEC;
+    var sweepStart = SWORD_SWEEP_CYCLE_SEC - SWORD_SWEEP_DURATION_SEC;
+    if (t < warnStart) return 'calm';
+    if (t < sweepStart) return 'warn';
+    return 'sweep';
+  }
+
+  function swordSweepPhaseNow() {
+    return swordSweepPhaseAt(zoneClock);
+  }
+
+  function resetSwordSweep() {
+    swordSweepMapId = null;
+    swordSweepWarnCycle = -2;
+    swordSweepActiveCycle = -2;
+    swordSweepHitCycle = -2;
+  }
+
+  function getSwordSweepLanes() {
+    if (!mapData || !Array.isArray(mapData.zoneHazards)) return [];
+    var out = [];
+    for (var i = 0; i < mapData.zoneHazards.length; i++) {
+      var hz = mapData.zoneHazards[i];
+      if (hz && hz.kind === 'sword_sweep') out.push(hz);
+    }
+    return out;
+  }
+
+  function isPlayerInSwordSweepLane(pl, lane) {
+    if (!pl || !lane || !lane.shape) return false;
+    return zonePointInShape(pl.x, pl.y, lane.shape);
+  }
+
+  function maintainSwordSweepFx(phase) {
+    var lanes = getSwordSweepLanes();
+    var existing = {};
+    for (var i = 0; i < visualEffects.length; i++) {
+      var fx = visualEffects[i];
+      if (fx && fx.type === 'sword_sweep') existing[fx.laneId] = fx;
+    }
+    for (var l = 0; l < lanes.length; l++) {
+      var lane = lanes[l];
+      var entry = existing[lane.id];
+      if (!entry) {
+        visualEffects.push({
+          type: 'sword_sweep',
+          laneId: lane.id,
+          shape: lane.shape,
+          phase: phase,
+          timer: 1.0,
+          duration: 1.0
+        });
+      } else {
+        entry.phase = phase;
+        entry.timer = 1.0;
+        entry.duration = 1.0;
+        delete existing[lane.id];
+      }
+    }
+    for (var staleId in existing) {
+      var stale = existing[staleId];
+      var idx = visualEffects.indexOf(stale);
+      if (idx !== -1) visualEffects.splice(idx, 1);
+    }
+  }
+
+  function clearSwordSweepFx() {
+    for (var i = visualEffects.length - 1; i >= 0; i--) {
+      if (visualEffects[i].type === 'sword_sweep' || visualEffects[i].type === 'sword_fall_strike') {
+        visualEffects.splice(i, 1);
+      }
+    }
+  }
+
+  function updateSwordRain(dt, p) {
+    var pl = p || player;
+    if (!pl || !mapData) return;
+    if (typeof dt !== 'number' || !isFinite(dt) || dt <= 0) return;
+
+    if (!hasSwordStorm()) {
+      clearSwordSweepFx();
+      resetSwordRain();
+      return;
+    }
+
+    if (swordRainMapId !== currentMapId) {
+      resetSwordRain();
+      swordRainMapId = currentMapId;
+    }
+
+    var phase = swordRainPhaseNow();
+    var cycle = swordRainCycleIndexAt(zoneClock);
+
+    if (phase === 'warn' && swordRainWarnCycle !== cycle) {
+      swordRainWarnCycle = cycle;
+      spawnFloatingText('Kiếm khí chấn động, Kiếm Vũ sắp tới!', pl.x, pl.y - 70, '#d8ecf8');
+      if (audioAPI && audioAPI.playSwordRainWarn) audioAPI.playSwordRainWarn();
+    }
+
+    if (phase === 'active') {
+      if (swordRainActiveCycle !== cycle) {
+        swordRainActiveCycle = cycle;
+        swordRainLastWaveIndex = -1;
+        spawnFloatingText('Kiếm Vũ hạ xuống!', pl.x, pl.y - 70, '#eaf4fc');
+      }
+
+      var t = zoneClock % SWORD_RAIN_CYCLE_SEC;
+      if (t < 0) t += SWORD_RAIN_CYCLE_SEC;
+      var activeStart = SWORD_RAIN_CYCLE_SEC - SWORD_RAIN_DURATION_SEC;
+      var wave = Math.floor((t - activeStart) / SWORD_RAIN_INTERVAL_SEC);
+
+      if (wave !== swordRainLastWaveIndex && wave >= 0 && wave < Math.floor(SWORD_RAIN_DURATION_SEC / SWORD_RAIN_INTERVAL_SEC)) {
+        swordRainLastWaveIndex = wave;
+        // Lấy danh sách điểm rơi từ mapdata hoặc mặc định
+        var holder = getMapDataHolder();
+        var spots = (holder && Array.isArray(holder.SWORD_RAIN_SPOTS_KIEM_TRUNG))
+          ? holder.SWORD_RAIN_SPOTS_KIEM_TRUNG
+          : [];
+        if (spots.length > 0) {
+          // Mỗi đợt chọn 3 điểm rơi phân tán theo wave
+          var waveSpots = [];
+          for (var s = 0; s < 3; s++) {
+            var spotIdx = (wave * 3 + s) % spots.length;
+            waveSpots.push(spots[spotIdx]);
+          }
+          for (var wi = 0; wi < waveSpots.length; wi++) {
+            var sp = waveSpots[wi];
+            queueZoneTelegraph({
+              shape: { kind: 'circle', cx: sp.cx, cy: sp.cy, r: sp.r || SWORD_RAIN_RADIUS },
+              duration: SWORD_RAIN_WARN_SEC,
+              label: 'Kiếm Vũ',
+              color: '#d4eaf7'
+            });
+            swordRainActiveTelegraphs.push({
+              cx: sp.cx,
+              cy: sp.cy,
+              r: sp.r || SWORD_RAIN_RADIUS,
+              explodeAt: zoneClock + SWORD_RAIN_WARN_SEC,
+              struck: false
+            });
+          }
+          if (audioAPI && audioAPI.playSwordRainWarn) audioAPI.playSwordRainWarn();
+        }
+      }
+    }
+
+    // Cập nhật các điểm kiếm đang rơi
+    for (var i = swordRainActiveTelegraphs.length - 1; i >= 0; i--) {
+      var item = swordRainActiveTelegraphs[i];
+      if (zoneClock >= item.explodeAt) {
+        if (!item.struck) {
+          item.struck = true;
+          // Hiệu ứng kiếm cắm
+          visualEffects.push({
+            type: 'sword_fall_strike',
+            x: item.cx,
+            y: item.cy,
+            radius: item.r,
+            timer: 0.5,
+            duration: 0.5
+          });
+          if (audioAPI && audioAPI.playSwordFall) audioAPI.playSwordFall();
+
+          // Kiểm tra trúng người chơi
+          var dx = pl.x - item.cx;
+          var dy = pl.y - item.cy;
+          if (Math.sqrt(dx * dx + dy * dy) <= item.r) {
+            pl.hp = Math.max(0, pl.hp - SWORD_RAIN_DAMAGE);
+            spawnFloatingText('-' + SWORD_RAIN_DAMAGE + ' (Kiếm Vũ)', pl.x, pl.y - 70, '#d8ecf8');
+            if (pl.hp <= 0 && pl === player && typeof handlePlayerDeath === 'function') {
+              handlePlayerDeath();
+            }
+          }
+        }
+        swordRainActiveTelegraphs.splice(i, 1);
+      }
+    }
+  }
+
+  function updateSwordSweep(dt, p) {
+    var pl = p || player;
+    if (!pl || !mapData) return;
+    if (typeof dt !== 'number' || !isFinite(dt) || dt <= 0) return;
+
+    if (!hasSwordStorm()) {
+      clearSwordSweepFx();
+      resetSwordSweep();
+      return;
+    }
+
+    if (swordSweepMapId !== currentMapId) {
+      resetSwordSweep();
+      swordSweepMapId = currentMapId;
+    }
+
+    var phase = swordSweepPhaseNow();
+    var cycle = swordSweepCycleIndexAt(zoneClock);
+
+    maintainSwordSweepFx(phase);
+
+    if (phase === 'warn') {
+      if (swordSweepWarnCycle !== cycle) {
+        swordSweepWarnCycle = cycle;
+        var lanes = getSwordSweepLanes();
+        for (var l = 0; l < lanes.length; l++) {
+          queueZoneTelegraph({
+            shape: lanes[l].shape,
+            duration: SWORD_SWEEP_WARN_SEC,
+            label: 'Kiếm Khí Quét',
+            color: '#e2f1ff'
+          });
+        }
+        spawnFloatingText('Kiếm khí tụ lại...', pl.x, pl.y - 70, '#d0e8f8');
+        if (audioAPI && audioAPI.playSwordSweepWarn) audioAPI.playSwordSweepWarn();
+      }
+    }
+
+    if (phase === 'sweep') {
+      if (swordSweepActiveCycle !== cycle) {
+        swordSweepActiveCycle = cycle;
+        spawnFloatingText('Kiếm khí quét qua!', pl.x, pl.y - 70, '#eaf4fc');
+        if (audioAPI && audioAPI.playSwordSweep) audioAPI.playSwordSweep();
+      }
+
+      // Sát thương 1 lần mỗi chu kỳ nếu người chơi đứng trong bất kỳ làn quét nào
+      if (swordSweepHitCycle !== cycle) {
+        var sweepLanes = getSwordSweepLanes();
+        var hit = false;
+        for (var sl = 0; sl < sweepLanes.length; sl++) {
+          if (isPlayerInSwordSweepLane(pl, sweepLanes[sl])) {
+            hit = true;
+            break;
+          }
+        }
+        if (hit) {
+          swordSweepHitCycle = cycle;
+          pl.hp = Math.max(0, pl.hp - SWORD_SWEEP_DAMAGE);
+          spawnFloatingText('-' + SWORD_SWEEP_DAMAGE + ' (Kiếm Khí)', pl.x, pl.y - 70, '#eaf4fc');
+          if (pl.hp <= 0 && pl === player && typeof handlePlayerDeath === 'function') {
+            handlePlayerDeath();
+          }
+        }
+      }
+    }
+  }
+
   // Chiến đấu người chơi
   var targetMonster = null;
   var basicAttackCd = 0;
@@ -656,6 +2234,7 @@
       mapData = typeof window !== 'undefined' ? window.MapData : (typeof require !== 'undefined' ? require('./mapdata.js') : null);
       currentMapId = 'mieu_hoang';
     }
+    zoneClock = 0; // Đợt V1 chặng 0: vào map mới -> đồng hồ nhịp vùng chạy lại từ đầu
     stateAPI = typeof window !== 'undefined' ? window.GameState : (typeof require !== 'undefined' ? require('./state.js') : null);
     audioAPI = typeof window !== 'undefined' ? window.GameAudio : null;
     pathfinder = typeof window !== 'undefined' ? window.Pathfinder : (typeof require !== 'undefined' ? require('./pathfind.js') : null);
@@ -1274,7 +2853,12 @@
       spawnFloatingText('+' + countItem + ' ' + name, player.x, player.y - 35, '#7ce898');
     }
 
-    if (audioAPI) audioAPI.playPickup();
+    // Đợt V1 chặng 1: hái Hoa Giải Độc có âm riêng (chuông nhẹ), các điểm
+    // hái khác giữ âm nhặt thường.
+    if (audioAPI) {
+      if (node.itemId === 'hoa-giai-doc' && audioAPI.playFlowerHarvest) audioAPI.playFlowerHarvest();
+      else audioAPI.playPickup();
+    }
     if (typeof window !== 'undefined' && window.GameUI) {
       window.GameUI.refreshHUD();
     }
@@ -1452,9 +3036,13 @@
     return isFinite(min) ? min : 0;
   }
 
-  function getQuestTargetInfo() {
-    if (!player || !player.quests) return null;
-    var q = player.quests;
+  function getQuestTargetInfo(p) {
+    var pl = (p && typeof p === 'object') ? p : player;
+    if (!pl && typeof Engine !== 'undefined' && Engine.getPlayer) {
+      pl = Engine.getPlayer();
+    }
+    if (!pl || !pl.quests) return null;
+    var q = pl.quests;
     if (!q.talked_linhnhi) {
       return { stepId: 'talk_linhnhi', stage: 0, mapId: 'mieu_hoang', kind: 'npc', npcId: 'npc_linhnhi' };
     }
@@ -1484,8 +3072,19 @@
       ? window.GameDanPhong
       : (typeof global !== 'undefined' && global.GameDanPhong ? global.GameDanPhong : null);
     if (dpAPI && dpAPI.getTrackedTargetInfo) {
-      var boardTarget = dpAPI.getTrackedTargetInfo(player);
+      var boardTarget = dpAPI.getTrackedTargetInfo(pl);
       if (boardTarget) return boardTarget;
+    }
+
+    // Đợt V1 chặng 7: DẪN ĐƯỜNG VIỆC MỞ VÙNG THEO HỒ SƠ 01
+    // (Băng Phù, sửa cầu, hộ tống, Kiếm Lệnh) — khi đang nhận và theo dõi
+    // việc mở vùng nào thì mũi tên + Tự Tìm Đường dẫn dắt tới đích (qua Đài Truyền Tống nếu khác map).
+    var zqAPI = (typeof window !== 'undefined' && window.GameZoneQuests)
+      ? window.GameZoneQuests
+      : (typeof global !== 'undefined' && global.GameZoneQuests ? global.GameZoneQuests : (typeof require !== 'undefined' ? (function () { try { return require('./zonequests.js'); } catch (e) { return null; } })() : null));
+    if (zqAPI && zqAPI.getTrackedTargetInfo) {
+      var zqTarget = zqAPI.getTrackedTargetInfo(pl);
+      if (zqTarget) return zqTarget;
     }
 
     // Đợt T1: DẪN ĐƯỜNG ĐỘT PHÁ TIỂU MỐC — chỉ hoạt động khi người chơi đã
@@ -1499,7 +3098,7 @@
       ? window.GameTieuMoc
       : (typeof global !== 'undefined' && global.GameTieuMoc ? global.GameTieuMoc : null);
     if (tmAPI && tmAPI.getTrackedTargetInfo) {
-      var tmTarget = tmAPI.getTrackedTargetInfo(player);
+      var tmTarget = tmAPI.getTrackedTargetInfo(pl);
       if (tmTarget) return tmTarget;
     }
 
@@ -1510,7 +3109,7 @@
     // chuỗi chính.
     var dpqAPI = getDotPhaAPI();
     if (dpqAPI && dpqAPI.getTrackedTargetInfo) {
-      var dpTarget = dpqAPI.getTrackedTargetInfo(player);
+      var dpTarget = dpqAPI.getTrackedTargetInfo(pl);
       if (dpTarget) return dpTarget;
     }
 
@@ -1521,7 +3120,7 @@
     // móc trả null, dẫn đường quay về chuỗi chính.
     var kdAPI2 = getKimDanAPI();
     if (kdAPI2 && kdAPI2.getTrackedTargetInfo) {
-      var kdTarget = kdAPI2.getTrackedTargetInfo(player);
+      var kdTarget = kdAPI2.getTrackedTargetInfo(pl);
       if (kdTarget) return kdTarget;
     }
 
@@ -2127,6 +3726,7 @@
       }
 
       currentMapId = targetMapId;
+      zoneClock = 0; // Đợt V1 chặng 0: đổi map -> đồng hồ nhịp vùng chạy lại từ đầu
       // Đợt 3 (Note 3B): chuyển theme nhạc + môi trường theo map, crossfade trong GameMusic
       if (typeof window !== 'undefined' && window.GameMusic) {
         window.GameMusic.setMap(targetMapId);
@@ -2406,6 +4006,22 @@
         window.GameKimDan.openPanel();
       }
       return { ok: false, reason: 'grand_breakthrough_pill', msg: msgKD };
+    }
+
+    // Đợt V1 chặng 1: Hoa Giải Độc — giải độc tức thì + kháng độc một lúc
+    // (xem applyAntidoteFlower trong khối V1 chặng 1 ở đầu tệp).
+    if (itemId === 'hoa-giai-doc') {
+      stateAPI.removeItemFromBag(player, itemId, 1);
+      var cured = applyAntidoteFlower(player);
+      stateAPI.savePlayer(player);
+      var msgFlower = 'Đã dùng Hoa Giải Độc: hết độc, kháng độc ' + POISON_RESIST_DURATION + ' giây!';
+      if (audioAPI && audioAPI.playChime) audioAPI.playChime();
+      spawnFloatingText('Giải độc!', player.x, player.y - 35, '#b6ff7a');
+      if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.showToast(msgFlower);
+        window.GameUI.refreshHUD();
+      }
+      return { ok: true, msg: msgFlower, resistUntil: cured.resistUntil };
     }
 
     return { ok: false, msg: 'Vật phẩm không thể sử dụng trực tiếp' };
@@ -4200,6 +5816,29 @@
     if (!player.stats) player.stats = { playSec: 0, kills: 0, bossKills: 0, harvests: 0, refines: 0 };
     player.stats.playSec = (player.stats.playSec || 0) + dt;
 
+    // Đợt V1 chặng 0: đồng hồ nhịp vùng chạy theo dt (đồng bộ mọi cơ chế vùng
+    // chặng 1–5 + nhịp chiêu boss Hỏa ở chặng 3).
+    updateZoneClock(dt);
+    // Đợt V1 chặng 1: cơ chế độc sương Rừng Độc (tích tầng, tick trừ máu,
+    // duy trì chỉ thị hình ảnh trũng sương).
+    updatePoison(dt);
+    // Đợt V1 chặng 2: cơ chế băng Hồ Băng (ô nứt theo thời gian đứng, duy
+    // trì chỉ thị hình ảnh mặt băng + ô nứt; trượt quán tính xử lý trong
+    // khối di chuyển bên dưới qua slideVel/computeSlideVelocity).
+    updateIce(dt);
+    // Đợt V1 chặng 3: cơ chế dung nham Mỏ Lửa (họng phun theo nhịp chung
+    // 8 giây với boss Hỏa: báo trước 2 giây rồi phun, duy trì chỉ thị
+    // hình ảnh họng phun theo pha nhịp).
+    updateLava(dt);
+    // Đợt V1 chặng 4: bão cát theo chu kỳ (lớp phủ giảm tầm nhìn + hệ số gió
+    // trong khối di chuyển) và cát lún (chậm dần theo thời gian đứng, hồi
+    // dần khi ra khỏi ô) — Hoang Mạc.
+    updateSandStorm(dt);
+    updateQuicksand(dt);
+    // Đợt V1 chặng 5: cơ chế Kiếm Vũ theo chu kỳ và Kiếm Khí Quét qua lối đi — Kiếm Trủng.
+    updateSwordRain(dt);
+    updateSwordSweep(dt);
+
     if (screenShakeTimer > 0) {
       screenShakeTimer -= dt;
       if (screenShakeTimer <= 0) {
@@ -4264,11 +5903,17 @@
       playerSlowTimer = Math.max(0, playerSlowTimer - dt);
       currentSpeed = SPEED * (1.0 - playerSlowRatio);
     }
+    // Đợt V1 chặng 4: bão cát Hoang Mạc — hệ số tốc độ gió trong khối di
+    // chuyển (PROVISIONAL 30%; 0 khi yên bão hoặc map không có bão). Không
+    // đổi logic di chuyển/dẫn đường, chỉ nhân tốc độ.
+    currentSpeed = currentSpeed * (1.0 - sandStormWindSlowRatio());
 
     // Cập nhật hồi phục khí huyết và linh lực theo giây (Brief §5)
     var inCombat = (now - lastCombatTime) < 5000;
     if (!inCombat) {
-      player.hp = Math.min(player.hpMax, player.hp + 1.5 * dt);
+      // Đợt V1 chặng 1: đang trúng độc thì hồi máu chậm lại theo tầng độc
+      // (PROVISIONAL: 10%/tầng — xem khối V1 chặng 1 ở đầu tệp).
+      player.hp = Math.min(player.hpMax, player.hp + 1.5 * dt * poisonRegenMultiplier(player));
       player.linhLuc = Math.min(player.linhLucMax, player.linhLuc + 2.0 * dt);
     } else {
       player.linhLuc = Math.min(player.linhLucMax, player.linhLuc + 0.4 * dt);
@@ -4286,6 +5931,16 @@
     var moved = false;
     var vx = 0;
     var vy = 0;
+    // Đợt V1 chặng 2: trượt băng — chỉ có quán tính khi đang đứng trên mặt
+    // băng (ice_sheet của map hiện tại). Trên đất thường giữ nguyên hành vi
+    // cũ (dừng ngay khi thả phím), slideVel về 0. Bị trói thì đứng yên,
+    // không trượt.
+    var onIceNow = canMove && isPlayerOnIce(player);
+    var slidingOnly = false; // đang trượt quán tính mà không còn điều khiển
+    if (!canMove) {
+      slideVel.x = 0;
+      slideVel.y = 0;
+    }
 
     if (canMove) {
       if (keysDown.up) vy -= 1;
@@ -4302,26 +5957,58 @@
         vx /= len;
         vy /= len;
 
-        var stepDist = currentSpeed * dt;
-        var targetX = player.x + vx * stepDist;
-        var targetY = player.y + vy * stepDist;
+        if (onIceNow) {
+          // Trên băng: vận tốc tiến dần tới hướng điều khiển (gia tốc
+          // ICE_ACCEL), không đặt ngay như đất thường.
+          var sv = computeSlideVelocity(dt, vx, vy, true, currentSpeed);
+          slideVel.x = sv.x;
+          slideVel.y = sv.y;
+          if (Math.hypot(slideVel.x, slideVel.y) > 0) {
+            var slideX = player.x + slideVel.x * dt;
+            var slideY = player.y + slideVel.y * dt;
+            if (mapData.isWalkable(slideX, player.y)) {
+              player.x = slideX;
+              moved = true;
+            } else {
+              slideVel.x = 0; // trượt đụng tường: dừng thành phần ngang
+            }
+            if (mapData.isWalkable(player.x, slideY)) {
+              player.y = slideY;
+              moved = true;
+            } else {
+              slideVel.y = 0; // trượt đụng tường: dừng thành phần dọc
+            }
+            if (moved) player.dir = getDirFromVelocity(slideVel.x, slideVel.y);
+            else player.dir = getDirFromVelocity(vx, vy); // kẹt tường: mặt vẫn theo phím
+          }
+        } else {
+          slideVel.x = 0;
+          slideVel.y = 0;
+          var stepDist = currentSpeed * dt;
+          var targetX = player.x + vx * stepDist;
+          var targetY = player.y + vy * stepDist;
 
-        if (mapData.isWalkable(targetX, player.y)) {
-          player.x = targetX;
-          moved = true;
-        }
-        if (mapData.isWalkable(player.x, targetY)) {
-          player.y = targetY;
-          moved = true;
-        }
+          if (mapData.isWalkable(targetX, player.y)) {
+            player.x = targetX;
+            moved = true;
+          }
+          if (mapData.isWalkable(player.x, targetY)) {
+            player.y = targetY;
+            moved = true;
+          }
 
-        player.dir = getDirFromVelocity(vx, vy);
+          player.dir = getDirFromVelocity(vx, vy);
+        }
         currentPath = [];
         pendingInteraction = null;
         targetMonster = null;
         if (autoPath.active) cancelAutoPath(true);
         if (travelState.active) cancelTravel();
       } else if (currentPath.length > 0) {
+        // Đường đi tự động (click A*/dẫn đường): giữ nguyên đi chính xác
+        // từng điểm mốc, không áp quán tính — slideVel về 0.
+        slideVel.x = 0;
+        slideVel.y = 0;
         var targetWP = currentPath[0];
         var dwx = targetWP.x - player.x;
         var dwy = targetWP.y - player.y;
@@ -4346,6 +6033,38 @@
           player.dir = getDirFromVelocity(nvx, nvy);
         }
         moved = true;
+      } else if (onIceNow) {
+        // Không điều khiển, không đường đi: trượt tiếp theo quán tính rồi
+        // dừng hẳn (đi hết đà mới dừng — hồ sơ 01 §2).
+        var sv2 = computeSlideVelocity(dt, 0, 0, true, currentSpeed);
+        slideVel.x = sv2.x;
+        slideVel.y = sv2.y;
+        if (Math.hypot(slideVel.x, slideVel.y) > 1) {
+          var slideX2 = player.x + slideVel.x * dt;
+          var slideY2 = player.y + slideVel.y * dt;
+          if (mapData.isWalkable(slideX2, player.y)) {
+            player.x = slideX2;
+            moved = true;
+          } else {
+            slideVel.x = 0;
+          }
+          if (mapData.isWalkable(player.x, slideY2)) {
+            player.y = slideY2;
+            moved = true;
+          } else {
+            slideVel.y = 0;
+          }
+          if (moved) {
+            player.dir = getDirFromVelocity(slideVel.x, slideVel.y);
+            slidingOnly = true; // trượt không bước: không phát tiếng bước chân
+          }
+        } else {
+          slideVel.x = 0;
+          slideVel.y = 0;
+        }
+      } else {
+        slideVel.x = 0;
+        slideVel.y = 0;
       }
     }
 
@@ -4360,13 +6079,23 @@
     lastPY = player.y;
 
     if (moved) {
-      stepSoundAccumulator += dt;
-      if (stepSoundAccumulator >= 0.32) {
-        stepSoundAccumulator = 0;
-        if (audioAPI) audioAPI.playStep();
+      if (slidingOnly) {
+        // Đang trượt quán tính: tiếng trượt theo nhịp, không tiếng bước chân.
+        iceSlideSoundTimer -= dt;
+        if (iceSlideSoundTimer <= 0) {
+          iceSlideSoundTimer = ICE_SLIDE_SOUND_INTERVAL;
+          if (audioAPI && audioAPI.playIceSlide) audioAPI.playIceSlide();
+        }
+      } else {
+        stepSoundAccumulator += dt;
+        if (stepSoundAccumulator >= 0.32) {
+          stepSoundAccumulator = 0;
+          if (audioAPI) audioAPI.playStep();
+        }
       }
     } else {
       stepSoundAccumulator = 0.28;
+      iceSlideSoundTimer = 0;
     }
 
     // Tự động đánh cơ bản khi đã chọn mục tiêu quái
@@ -4621,7 +6350,11 @@
       monstersAPI.updateMonster(m, playerPos, dt, {
         onMonsterAttack: function (attacker) {
           handleMonsterAttackPlayer(attacker);
-        }
+        },
+        // Đợt V1 chặng 3: truyền đồng hồ nhịp vùng để boss Hỏa đọc lịch
+        // chiêu từ nhịp chung (xem monsters.js updateMonster); các boss
+        // khác không dùng trường này nên hành vi cũ giữ nguyên.
+        zoneClock: zoneClock
       });
 
       // Đợt K2: hiệu ứng đốt trừ máu theo nhịp tích lũy (không qua giáp —
@@ -5208,6 +6941,336 @@
         ctx.stroke();
         ctx.restore();
       }
+
+      // Đợt V1 chặng 0: vẽ telegraph vùng (cùng lớp đất, cùng mẫu co dần báo
+      // thời điểm kích hoạt như telegraph_re_troi; đa giác vẽ theo hình thật).
+      if (vfx.type === 'telegraph_zone' && getSettingsCached().showBossTelegraph !== false) {
+        ctx.save();
+        var zProgress = 1.0 - (vfx.timer / vfx.duration);
+        ctx.strokeStyle = vfx.color ? vfx.color : 'rgba(255, 120, 60, 0.85)';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        if (vfx.shape && vfx.shape.kind === 'polygon' && Array.isArray(vfx.shape.points) && vfx.shape.points.length >= 3) {
+          ctx.moveTo(vfx.shape.points[0][0], vfx.shape.points[0][1]);
+          for (var zp = 1; zp < vfx.shape.points.length; zp++) {
+            ctx.lineTo(vfx.shape.points[zp][0], vfx.shape.points[zp][1]);
+          }
+          ctx.closePath();
+        } else {
+          ctx.arc(vfx.x, vfx.y, vfx.radius, 0, Math.PI * 2);
+        }
+        ctx.globalAlpha = 0.15 + zProgress * 0.25;
+        ctx.fillStyle = vfx.color ? vfx.color : 'rgba(255, 120, 60, 1)';
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.stroke();
+        // Vòng co lại báo thời điểm kích hoạt (chỉ cho telegraph tròn)
+        if (!vfx.shape || vfx.shape.kind !== 'polygon') {
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(vfx.x, vfx.y, vfx.radius * (1.0 - zProgress), 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      // Đợt V1 chặng 1: vẽ trũng sương độc — mảng xanh lục mờ đập nhịp + viền
+      // + bọt khí độc trôi trong trũng (cùng lớp đất như telegraph; chỉ là
+      // chỉ thị hình ảnh, không sinh ảnh raster mới).
+      if (vfx.type === 'poison_fog') {
+        ctx.save();
+        var fogNow = (typeof performance !== 'undefined' && performance.now) ? performance.now() / 1000 : 0;
+        var fogPulse = 0.5 + 0.5 * Math.sin(fogNow * 1.6 + (vfx.seed || 0));
+        ctx.globalAlpha = 0.16 + fogPulse * 0.10;
+        ctx.fillStyle = '#7ddc4a';
+        ctx.beginPath();
+        ctx.arc(vfx.x, vfx.y, vfx.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 0.55;
+        ctx.strokeStyle = '#a8f07e';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(vfx.x, vfx.y, vfx.radius, 0, Math.PI * 2);
+        ctx.stroke();
+        // Bọt khí độc trôi trong trũng (3 bọt, xoay chậm theo thời gian)
+        ctx.fillStyle = 'rgba(220, 255, 170, 0.7)';
+        for (var fb = 0; fb < 3; fb++) {
+          var fa = fogNow * 0.5 + (vfx.seed || 0) + fb * (Math.PI * 2 / 3);
+          var fr = vfx.radius * (0.35 + 0.15 * (fb % 2));
+          ctx.beginPath();
+          ctx.arc(vfx.x + Math.cos(fa) * fr, vfx.y + Math.sin(fa) * fr * 0.6, 5 + fogPulse * 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+      // Đợt V1 chặng 2: vẽ mặt băng trượt — mảng xanh băng nhạt đập nhịp +
+      // viền sáng, cùng lớp đất như trũng sương (chỉ là chỉ thị hình ảnh).
+      if (vfx.type === 'ice_sheet') {
+        ctx.save();
+        var iceNow = (typeof performance !== 'undefined' && performance.now) ? performance.now() / 1000 : 0;
+        var icePulse = 0.5 + 0.5 * Math.sin(iceNow * 1.2 + (vfx.seed || 0));
+        ctx.globalAlpha = 0.10 + icePulse * 0.06;
+        ctx.fillStyle = '#aee1ff';
+        ctx.fillRect(vfx.x - vfx.w / 2, vfx.y - vfx.h / 2, vfx.w, vfx.h);
+        ctx.globalAlpha = 0.45;
+        ctx.strokeStyle = '#d8f1ff';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(vfx.x - vfx.w / 2, vfx.y - vfx.h / 2, vfx.w, vfx.h);
+        // Vệt sáng chéo chạy chậm trên mặt băng (đọc ra mặt băng trơn)
+        ctx.globalAlpha = 0.10 + icePulse * 0.08;
+        ctx.fillStyle = '#ffffff';
+        var sheenX = vfx.x - vfx.w / 2 + ((iceNow * 60) % (vfx.w + 240)) - 120;
+        ctx.beginPath();
+        ctx.moveTo(sheenX, vfx.y - vfx.h / 2);
+        ctx.lineTo(sheenX + 120, vfx.y - vfx.h / 2);
+        ctx.lineTo(sheenX + 40, vfx.y + vfx.h / 2);
+        ctx.lineTo(sheenX - 80, vfx.y + vfx.h / 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // Đợt V1 chặng 2: vẽ ô băng nứt theo cấp — cấp 0 chỉ viền mờ, cấp 1
+      // hai vết nứt, cấp 2 nhiều vết nứt + viền cảnh báo đập nhịp, cấp 3
+      // lỗ nước tối (đã vỡ, chờ tái tạo).
+      if (vfx.type === 'ice_crack') {
+        ctx.save();
+        var iceCrackStage = (typeof vfx.stage === 'number') ? vfx.stage : 0;
+        var iceCrackNow = (typeof performance !== 'undefined' && performance.now) ? performance.now() / 1000 : 0;
+        if (iceCrackStage >= 3) {
+          ctx.globalAlpha = 0.85;
+          ctx.fillStyle = '#0d3a5c';
+          ctx.beginPath();
+          ctx.arc(vfx.x, vfx.y, vfx.radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 0.9;
+          ctx.strokeStyle = '#7fc4ee';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(vfx.x, vfx.y, vfx.radius, 0, Math.PI * 2);
+          ctx.stroke();
+        } else {
+          ctx.globalAlpha = 0.35 + (iceCrackStage === 2 ? 0.25 * (0.5 + 0.5 * Math.sin(iceCrackNow * 6)) : 0);
+          ctx.strokeStyle = iceCrackStage === 2 ? '#ffffff' : '#cfeeff';
+          ctx.lineWidth = iceCrackStage === 2 ? 2.5 : 1.5;
+          ctx.beginPath();
+          ctx.arc(vfx.x, vfx.y, vfx.radius, 0, Math.PI * 2);
+          ctx.stroke();
+          // Vết nứt: góc cố định theo seed của ô (đọc ổn định giữa các khung)
+          var crackCount = iceCrackStage === 1 ? 2 : (iceCrackStage === 2 ? 5 : 0);
+          ctx.strokeStyle = '#e8f6ff';
+          ctx.lineWidth = 1.5;
+          for (var ck = 0; ck < crackCount; ck++) {
+            var ca = (vfx.seed || 0) + ck * 2.1;
+            var cr = vfx.radius * (0.45 + 0.35 * ((ck % 2) + 1) / 2);
+            var cx2 = vfx.x + Math.cos(ca) * cr;
+            var cy2 = vfx.y + Math.sin(ca) * cr * 0.8;
+            ctx.beginPath();
+            ctx.moveTo(vfx.x, vfx.y);
+            ctx.lineTo((vfx.x + cx2) / 2 + Math.sin(ca) * 8, (vfx.y + cy2) / 2 - Math.cos(ca) * 8);
+            ctx.lineTo(cx2, cy2);
+            ctx.stroke();
+          }
+        }
+        ctx.restore();
+      }
+
+      // Đợt V1 chặng 3: vẽ họng phun dung nham theo pha nhịp — calm: miệng
+      // họng tối + viền cam mờ đập nhịp chậm; warn: mảng cam sáng đập nhanh
+      // + vệt sáng bốc lên (báo sắp phun); erupt: cột dung nham sáng (vàng
+      // cam + lõi trắng) + tia lửa bắn lên. Cùng lớp đất như trũng sương.
+      if (vfx.type === 'lava_vent') {
+        ctx.save();
+        var lavaNow = (typeof performance !== 'undefined' && performance.now) ? performance.now() / 1000 : 0;
+        var lavaPhase = vfx.phase || 'calm';
+        if (lavaPhase === 'erupt') {
+          var eruptPulse = 0.5 + 0.5 * Math.sin(lavaNow * 9 + (vfx.seed || 0));
+          ctx.globalAlpha = 0.55 + eruptPulse * 0.25;
+          ctx.fillStyle = '#ff7a1a';
+          ctx.beginPath();
+          ctx.arc(vfx.x, vfx.y, vfx.radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 0.85;
+          ctx.fillStyle = '#ffd23e';
+          ctx.beginPath();
+          ctx.arc(vfx.x, vfx.y, vfx.radius * (0.45 + eruptPulse * 0.15), 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 0.95;
+          ctx.fillStyle = '#fff6d8';
+          ctx.beginPath();
+          ctx.arc(vfx.x, vfx.y, vfx.radius * 0.2, 0, Math.PI * 2);
+          ctx.fill();
+          // Tia lửa bắn lên khỏi cột (3 tia, vị trí xoay theo thời gian)
+          ctx.strokeStyle = '#ffb347';
+          ctx.lineWidth = 2;
+          for (var ls = 0; ls < 3; ls++) {
+            var la = lavaNow * 2.2 + (vfx.seed || 0) + ls * (Math.PI * 2 / 3);
+            var lr = vfx.radius * 0.7;
+            ctx.beginPath();
+            ctx.moveTo(vfx.x + Math.cos(la) * lr * 0.4, vfx.y + Math.sin(la) * lr * 0.4 - 6);
+            ctx.lineTo(vfx.x + Math.cos(la) * lr, vfx.y + Math.sin(la) * lr - 26);
+            ctx.stroke();
+          }
+        } else if (lavaPhase === 'warn') {
+          var warnPulse = 0.5 + 0.5 * Math.sin(lavaNow * 6 + (vfx.seed || 0));
+          ctx.globalAlpha = 0.30 + warnPulse * 0.25;
+          ctx.fillStyle = '#ff6e1e';
+          ctx.beginPath();
+          ctx.arc(vfx.x, vfx.y, vfx.radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 0.9;
+          ctx.strokeStyle = '#ffc46b';
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.arc(vfx.x, vfx.y, vfx.radius, 0, Math.PI * 2);
+          ctx.stroke();
+          // Vệt sáng bốc lên từ họng (báo sắp phun)
+          ctx.globalAlpha = 0.35 + warnPulse * 0.3;
+          ctx.strokeStyle = '#ffe9a8';
+          ctx.lineWidth = 2;
+          for (var lw = 0; lw < 2; lw++) {
+            var lx = vfx.x + (lw === 0 ? -vfx.radius * 0.35 : vfx.radius * 0.35);
+            ctx.beginPath();
+            ctx.moveTo(lx, vfx.y - vfx.radius * 0.3);
+            ctx.lineTo(lx, vfx.y - vfx.radius * (0.9 + warnPulse * 0.3));
+            ctx.stroke();
+          }
+        } else {
+          var calmPulse = 0.5 + 0.5 * Math.sin(lavaNow * 1.4 + (vfx.seed || 0));
+          ctx.globalAlpha = 0.8;
+          ctx.fillStyle = '#2a1210';
+          ctx.beginPath();
+          ctx.arc(vfx.x, vfx.y, vfx.radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 0.25 + calmPulse * 0.2;
+          ctx.strokeStyle = '#ff7a2a';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(vfx.x, vfx.y, vfx.radius, 0, Math.PI * 2);
+          ctx.stroke();
+          // Than hồng âm ỉ trong họng (2 đốm, sáng tối theo nhịp chậm)
+          ctx.globalAlpha = 0.3 + calmPulse * 0.4;
+          ctx.fillStyle = '#ff5a1e';
+          ctx.beginPath();
+          ctx.arc(vfx.x - vfx.radius * 0.3, vfx.y + vfx.radius * 0.15, 5, 0, Math.PI * 2);
+          ctx.arc(vfx.x + vfx.radius * 0.3, vfx.y - vfx.radius * 0.1, 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      // Đợt V1 chặng 4: vẽ ô cát lún Hoang Mạc — mảng vàng nâu tối + xoáy
+      // cát quay chậm + hạt cát bị hút vào tâm (cùng lớp đất như trũng sương;
+      // chỉ là chỉ thị hình ảnh, không sinh ảnh raster mới).
+      if (vfx.type === 'cat_lun') {
+        ctx.save();
+        var qsNow = (typeof performance !== 'undefined' && performance.now) ? performance.now() / 1000 : 0;
+        var qsPulse = 0.5 + 0.5 * Math.sin(qsNow * 1.1 + (vfx.seed || 0));
+        ctx.globalAlpha = 0.20 + qsPulse * 0.08;
+        ctx.fillStyle = '#a97c3f';
+        ctx.beginPath();
+        ctx.ellipse(vfx.x, vfx.y, vfx.radius, vfx.radius * 0.72, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 0.45;
+        ctx.strokeStyle = '#e2c184';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(vfx.x, vfx.y, vfx.radius, vfx.radius * 0.72, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        // Xoáy cát: 3 vòng cung quay chậm quanh tâm ô
+        ctx.globalAlpha = 0.35 + qsPulse * 0.2;
+        ctx.strokeStyle = '#f3dcae';
+        ctx.lineWidth = 1.6;
+        for (var qa = 0; qa < 3; qa++) {
+          var qsA0 = qsNow * 0.9 + (vfx.seed || 0) + qa * (Math.PI * 2 / 3);
+          var qsR = vfx.radius * (0.35 + 0.2 * qa);
+          ctx.beginPath();
+          ctx.ellipse(vfx.x, vfx.y, qsR, qsR * 0.72, 0, qsA0, qsA0 + 1.6);
+          ctx.stroke();
+        }
+        // Hạt cát bị hút vào tâm (2 hạt, bán kính co theo thời gian)
+        ctx.fillStyle = 'rgba(250, 230, 180, 0.75)';
+        for (var qp = 0; qp < 2; qp++) {
+          var qpPhase = ((qsNow * 0.35 + qp * 0.5 + (vfx.seed || 0)) % 1);
+          var qpr = vfx.radius * (1 - qpPhase) * 0.8;
+          var qpa = qsNow * 1.4 + qp * Math.PI;
+          ctx.beginPath();
+          ctx.arc(vfx.x + Math.cos(qpa) * qpr, vfx.y + Math.sin(qpa) * qpr * 0.72, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      // Đợt V1 chặng 5: vẽ làn kiếm khí quét Kiếm Trủng — mảng màu bạc lạnh
+      // theo pha (calm: vệt khí mờ nhạt; warn: vệt sáng bạc đập nhanh báo sắp quét;
+      // sweep: luồng kiếm khí bạc lướt qua).
+      if (vfx.type === 'sword_sweep' && vfx.shape) {
+        ctx.save();
+        var swNow = (typeof performance !== 'undefined' && performance.now) ? performance.now() / 1000 : 0;
+        var swPhase = vfx.phase || 'calm';
+        var shp = vfx.shape;
+        if (shp.kind === 'rect') {
+          if (swPhase === 'sweep') {
+            var swpPulse = 0.5 + 0.5 * Math.sin(swNow * 12);
+            ctx.globalAlpha = 0.45 + swpPulse * 0.25;
+            ctx.fillStyle = '#e8f4fc';
+            ctx.fillRect(shp.x, shp.y, shp.w, shp.h);
+            ctx.globalAlpha = 0.9;
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2.5;
+            ctx.strokeRect(shp.x, shp.y, shp.w, shp.h);
+            // Vệt kiếm khí lướt nhanh
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.lineWidth = 3;
+            var sweepProg = (swNow * 3.5) % 1;
+            var sweepX = shp.x + sweepProg * shp.w;
+            ctx.beginPath();
+            ctx.moveTo(sweepX - 40, shp.y);
+            ctx.lineTo(sweepX + 40, shp.y + shp.h);
+            ctx.stroke();
+          } else if (swPhase === 'warn') {
+            var swWarnPulse = 0.5 + 0.5 * Math.sin(swNow * 8);
+            ctx.globalAlpha = 0.20 + swWarnPulse * 0.18;
+            ctx.fillStyle = '#b8d8f0';
+            ctx.fillRect(shp.x, shp.y, shp.w, shp.h);
+            ctx.globalAlpha = 0.75;
+            ctx.strokeStyle = '#d0ecf8';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(shp.x, shp.y, shp.w, shp.h);
+          } else {
+            var swCalmPulse = 0.5 + 0.5 * Math.sin(swNow * 1.5);
+            ctx.globalAlpha = 0.06 + swCalmPulse * 0.04;
+            ctx.fillStyle = '#c0d4e4';
+            ctx.fillRect(shp.x, shp.y, shp.w, shp.h);
+            ctx.globalAlpha = 0.25;
+            ctx.strokeStyle = '#b0c8dc';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(shp.x, shp.y, shp.w, shp.h);
+          }
+        }
+        ctx.restore();
+      }
+
+      // Đợt V1 chặng 5: vẽ kiếm cắm xuống sau khi rơi (sword_fall_strike)
+      if (vfx.type === 'sword_fall_strike') {
+        ctx.save();
+        var prog = 1.0 - (vfx.timer / (vfx.duration || 0.5));
+        ctx.globalAlpha = Math.max(0, 1.0 - prog);
+        // Vòng sáng bùng lên tại điểm cắm
+        ctx.fillStyle = '#e8f4fc';
+        ctx.beginPath();
+        ctx.arc(vfx.x, vfx.y, (vfx.radius || 65) * (0.3 + 0.7 * prog), 0, Math.PI * 2);
+        ctx.fill();
+        // Thanh kiếm bạc cắm xiên
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(vfx.x - 8, vfx.y - 35);
+        ctx.lineTo(vfx.x, vfx.y);
+        ctx.stroke();
+        ctx.restore();
+      }
     }
 
     // 3b. (Đợt K1) Hiệu ứng mặt đất của engine VFX mới: vòng phù văn, hình
@@ -5528,6 +7591,10 @@
     if (exitChip.timer > 0) {
       drawExitChip(player.x, player.y - 130, exitChip.text);
     }
+
+    // 9b. Đợt V1 chặng 4: lớp phủ bão cát Hoang Mạc — vẽ TRÊN thực thể
+    // (giảm tầm nhìn đúng nghĩa) nhưng dưới màn đen chuyển cảnh.
+    drawSandStormOverlay();
 
     // 10. Màn đen chuyển cảnh (Fade)
     if (mapFade.alpha > 0) {
@@ -6750,6 +8817,7 @@
     getGroundDrops: function () { return groundDrops; },
     getPlayer: function () { return player; },
     performContextAction: performContextAction,
+    executeHarvestNode: executeHarvestNode,
     getActionContext: function () { return computeActionContext(); },
     startAutoQuestPath: startAutoQuestPath,
     toggleAutoQuestPath: toggleAutoQuestPath,
@@ -6782,15 +8850,187 @@
     isPlayerInNpcRange: isPlayerInNpcRange,
     triggerDialogue: triggerDialogue,
     getLastOpenedDialogue: function () { return lastOpenedDialogue; },
+    // Đợt V1 chặng 0: khung cơ chế vùng dùng chung (zoneClock, vùng nguy hiểm,
+    // telegraph vùng, cổng an toàn) — xem khối V1 ở đầu tệp.
+    zone: {
+      getClock: function () { return zoneClock; },
+      setClock: function (c) { zoneClock = (typeof c === 'number' && isFinite(c)) ? c : 0; },
+      tick: updateZoneClock,
+      resetClock: function () { zoneClock = 0; },
+      getHazards: getZoneHazardsForCurrentMap,
+      pointInShape: zonePointInShape,
+      hazardsAt: zoneHazardsAt,
+      isPlayerInHazard: isPlayerInZoneHazard,
+      queueTelegraph: queueZoneTelegraph,
+      getTelegraphs: getZoneTelegraphs,
+      SAFE_RADIUS: ZONE_SAFE_RADIUS,
+      TELEGRAPH_MIN_DURATION: ZONE_TELEGRAPH_MIN_DURATION,
+      checkSafety: function (safeRadius) {
+        var holder = getMapDataHolder();
+        if (holder && typeof holder.zoneCheckHazardsSafe === 'function') {
+          return holder.zoneCheckHazardsSafe(mapData, safeRadius);
+        }
+        return { ok: true, hazardCount: 0, anchorCount: 0, safeRadius: safeRadius || ZONE_SAFE_RADIUS, violations: [] };
+      }
+    },
+    // Đợt V1 chặng 1: cơ chế độc sương Rừng Độc (xem khối V1 chặng 1 ở đầu tệp).
+    poison: {
+      update: updatePoison,
+      getStacks: function (pl) { return (pl && pl.v1 && pl.v1.poisonStacks) || 0; },
+      isResistant: isPlayerPoisonResistant,
+      isMonsterImmune: isMonsterImmuneToPoison,
+      regenMultiplier: poisonRegenMultiplier,
+      applyFlower: applyAntidoteFlower,
+      getActiveFogHazard: getActivePoisonFogHazard,
+      getActiveFogShape: getHazardActiveShape,
+      getActiveFogIndex: getPoisonFogActiveIndex,
+      getFogFx: getPoisonFogFx,
+      resetTimers: function () { poisonTickTimer = 0; poisonDecayTimer = 0; poisonFogIndex = -1; },
+      TICK_INTERVAL: POISON_TICK_INTERVAL,
+      DMG_PER_STACK: POISON_DMG_PER_STACK,
+      MAX_STACKS: POISON_MAX_STACKS,
+      DECAY_INTERVAL: POISON_STACK_DECAY_INTERVAL,
+      RESIST_DURATION: POISON_RESIST_DURATION,
+      REGEN_SLOW_PER_STACK: POISON_REGEN_SLOW_PER_STACK
+    },
+    // Đợt V1 chặng 2: cơ chế băng Hồ Băng (xem khối V1 chặng 2 ở đầu tệp).
+    ice: {
+      update: updateIce,
+      isOnIce: isPlayerOnIce,
+      isPointOnIce: isPointOnIce,
+      getSheet: getIceSheetHazard,
+      getCrackTiles: getIceCrackTiles,
+      getCrackState: getIceCrackState,
+      crackStageOf: iceCrackStageOf,
+      nearestShore: nearestShore,
+      computeVelocity: computeSlideVelocity,
+      getVelocity: function () { return { x: slideVel.x, y: slideVel.y }; },
+      setVelocity: function (x, y) {
+        slideVel.x = (typeof x === 'number' && isFinite(x)) ? x : 0;
+        slideVel.y = (typeof y === 'number' && isFinite(y)) ? y : 0;
+      },
+      getSheetFx: getIceSheetFx,
+      getCrackFx: getIceCrackFx,
+      doFall: doIceFall,
+      reset: function () {
+        iceCrack = {};
+        slideVel.x = 0;
+        slideVel.y = 0;
+        lastIceFallClock = -100;
+        iceSlideSoundTimer = 0;
+        iceMapId = null;
+      },
+      ACCEL: ICE_ACCEL,
+      FRICTION: ICE_FRICTION,
+      CRACK_STAGE1_SEC: ICE_CRACK_STAGE1_SEC,
+      CRACK_STAGE2_SEC: ICE_CRACK_STAGE2_SEC,
+      CRACK_BREAK_SEC: ICE_CRACK_BREAK_SEC,
+      CRACK_REGEN_SEC: ICE_CRACK_REGEN_SEC,
+      FALL_DMG: ICE_FALL_DMG,
+      FALL_COOLDOWN_SEC: ICE_FALL_COOLDOWN_SEC,
+      SLIDE_SOUND_INTERVAL: ICE_SLIDE_SOUND_INTERVAL
+    },
+    // Đợt V1 chặng 3: cơ chế dung nham Mỏ Lửa (xem khối V1 chặng 3 ở đầu tệp).
+    lava: {
+      update: updateLava,
+      getVents: getLavaVents,
+      getVentFx: getLavaVentFx,
+      phaseAt: lavaPhaseAt,
+      cycleIndexAt: lavaCycleIndexAt,
+      phaseNow: lavaPhaseNow,
+      ventAtPlayer: lavaVentAtPlayer,
+      reset: function () {
+        lavaWarnCycle = -2;
+        lavaHitCycle = -2;
+        lavaMapId = null;
+      },
+      CYCLE_SEC: LAVA_CYCLE_SEC,
+      BEAT_OFFSET: LAVA_BEAT_OFFSET,
+      TELEGRAPH_SEC: LAVA_TELEGRAPH_SEC,
+      ERUPTION_SEC: LAVA_ERUPTION_SEC,
+      DAMAGE: LAVA_DAMAGE
+    },
+    // Đợt V1 chặng 4: bão cát + cát lún Hoang Mạc (xem khối V1 chặng 4 ở đầu tệp).
+    sandstorm: {
+      update: updateSandStorm,
+      phaseAt: sandStormPhaseAt,
+      cycleIndexAt: sandStormCycleIndexAt,
+      phaseNow: sandStormPhaseNow,
+      windSlowRatio: sandStormWindSlowRatio,
+      getFx: getSandStormFx,
+      reset: function () {
+        clearSandStormFx();
+        sandStormMapId = null;
+        sandStormWarnCycle = -2;
+        sandStormGustCycle = -2;
+      },
+      CYCLE_SEC: SAND_STORM_CYCLE_SEC,
+      DURATION_SEC: SAND_STORM_DURATION_SEC,
+      WARN_SEC: SAND_STORM_WARN_SEC,
+      VISIBILITY_ALPHA: SAND_STORM_VISIBILITY_ALPHA,
+      SLOW_RATIO: SAND_STORM_SLOW_RATIO
+    },
+    quicksand: {
+      update: updateQuicksand,
+      getCells: getQuicksandCells,
+      cellAtPlayer: quicksandCellAtPlayer,
+      getSlow: function () { return quicksandSlow; },
+      getCellId: function () { return quicksandCellId; },
+      getPlayerSlowRatio: function () { return playerSlowRatio; },
+      getPlayerSlowTimer: function () { return playerSlowTimer; },
+      getFx: getQuicksandFx,
+      reset: function () {
+        restoreQuicksandSlow();
+        quicksandSlow = 0;
+        quicksandCellId = null;
+        quicksandMapId = null;
+      },
+      SLOW_PER_SEC: CAT_LUN_SLOW_PER_SEC,
+      SLOW_MAX: CAT_LUN_SLOW_MAX,
+      RECOVER_PER_SEC: CAT_LUN_RECOVER_PER_SEC
+    },
+    // Đợt V1 chặng 5: kiếm vũ + kiếm khí quét Kiếm Trủng
+    swordRain: {
+      update: updateSwordRain,
+      phaseAt: swordRainPhaseAt,
+      cycleIndexAt: swordRainCycleIndexAt,
+      phaseNow: swordRainPhaseNow,
+      getActiveTelegraphs: function () { return swordRainActiveTelegraphs; },
+      reset: resetSwordRain,
+      CYCLE_SEC: SWORD_RAIN_CYCLE_SEC,
+      DURATION_SEC: SWORD_RAIN_DURATION_SEC,
+      WARN_SEC: SWORD_RAIN_WARN_SEC,
+      INTERVAL_SEC: SWORD_RAIN_INTERVAL_SEC,
+      DAMAGE: SWORD_RAIN_DAMAGE,
+      RADIUS: SWORD_RAIN_RADIUS
+    },
+    swordSweep: {
+      update: updateSwordSweep,
+      phaseAt: swordSweepPhaseAt,
+      cycleIndexAt: swordSweepCycleIndexAt,
+      phaseNow: swordSweepPhaseNow,
+      getLanes: getSwordSweepLanes,
+      isPlayerInLane: isPlayerInSwordSweepLane,
+      reset: resetSwordSweep,
+      CYCLE_SEC: SWORD_SWEEP_CYCLE_SEC,
+      WARN_SEC: SWORD_SWEEP_WARN_SEC,
+      DURATION_SEC: SWORD_SWEEP_DURATION_SEC,
+      DAMAGE: SWORD_SWEEP_DAMAGE
+    },
     setCurrentMap: function (mapId) {
       currentMapId = mapId;
+      zoneClock = 0; // Đợt V1 chặng 0: đổi map -> đồng hồ nhịp vùng chạy lại từ đầu
       var holder = (typeof window !== 'undefined' && window.GameMapData) ? window.GameMapData : (typeof require !== 'undefined' ? require('./mapdata.js') : null);
       if (holder && holder.maps && holder.maps[mapId]) {
         mapData = holder.maps[mapId];
       } else if (holder && holder.getMap) {
         mapData = holder.getMap(mapId);
       }
-    }
+    },
+    // Đợt V1 chặng 7: việc mở vùng theo hồ sơ 01
+    zoneQuests: (typeof window !== 'undefined' && window.GameZoneQuests)
+      ? window.GameZoneQuests
+      : (typeof global !== 'undefined' && global.GameZoneQuests ? global.GameZoneQuests : (typeof require !== 'undefined' ? (function () { try { return require('./zonequests.js'); } catch (e) { return null; } })() : null))
   };
 
   if (typeof module !== 'undefined' && module.exports) {

@@ -52,6 +52,17 @@
       iconRow: 1,
       desc: 'Nấm linh chi đỏ tía mọc ở gốc cổ thụ, bồi bổ khí huyết và tăng tu vi.'
     },
+    // Đợt V1 chặng 1: Hoa Giải Độc — mọc ở mép trũng sương độc Rừng Độc
+    // (hồ sơ 01 §1). Dùng trực tiếp qua túi đồ: giải độc tức thì + kháng độc.
+    'hoa-giai-doc': {
+      id: 'hoa-giai-doc',
+      name: 'Hoa Giải Độc',
+      type: 'consumable',
+      stackable: true,
+      iconCol: 2,
+      iconRow: 7,
+      desc: 'Hoa trắng mọc ở mép trũng sương độc Rừng Độc Thanh Tụy. Dùng để giải độc và kháng độc một lúc.'
+    },
     'non-la': {
       id: 'non-la',
       name: 'Nón Lá',
@@ -368,6 +379,134 @@
       iconCol: 1,
       iconRow: 4,
       desc: 'Băng tủy tinh khiết kết tinh từ hàn khí hồ băng, nguyên liệu luyện Trúc Cơ Đan.'
+    },
+    // Đợt V1 chặng 6: Danh mục nguyên liệu thu thập 5 vùng theo hồ sơ 01
+    'nhua-cay-ngan-nam': {
+      id: 'nhua-cay-ngan-nam',
+      name: 'Nhựa Cây Ngàn Năm',
+      type: 'material',
+      stackable: true,
+      iconCol: 1,
+      iconRow: 1,
+      desc: 'Dòng nhựa vàng óng chảy từ thân cổ thụ ngàn năm Rừng Độc Thanh Tụy, linh khí Mộc nồng đậm.'
+    },
+    'ngoc-trai-ho': {
+      id: 'ngoc-trai-ho',
+      name: 'Ngọc Trai Hồ',
+      type: 'material',
+      stackable: true,
+      iconCol: 3,
+      iconRow: 4,
+      desc: 'Ngọc trai phát sáng thu từ vỏ sò dưới lỗ băng Hồ Băng Hàn Kính, mang hàn khí thuần khiết.'
+    },
+    'tuyet-lien': {
+      id: 'tuyet-lien',
+      name: 'Tuyết Liên',
+      type: 'material',
+      stackable: true,
+      iconCol: 2,
+      iconRow: 4,
+      desc: 'Hoa sen trắng mọc trên vách đá băng Hồ Băng Hàn Kính, nguyên liệu quý luyện Thủy Linh Đan.'
+    },
+    'quang-do': {
+      id: 'quang-do',
+      name: 'Quặng Đỏ',
+      type: 'material',
+      stackable: true,
+      iconCol: 4,
+      iconRow: 3,
+      desc: 'Quặng sắt đỏ rực trên vách hầm Mỏ Lửa Xích Diệm, chứa hỏa lực dồi dào.'
+    },
+    'luu-huynh-vang': {
+      id: 'luu-huynh-vang',
+      name: 'Lưu Huỳnh Vàng',
+      type: 'material',
+      stackable: true,
+      iconCol: 5,
+      iconRow: 3,
+      desc: 'Bột lưu huỳnh vàng kết tụ quanh miệng họng phun dung nham Mỏ Lửa Xích Diệm.'
+    },
+    'tam-lo-nguoi': {
+      id: 'tam-lo-nguoi',
+      name: 'Tâm Lò Nguội',
+      type: 'material',
+      stackable: true,
+      iconCol: 6,
+      iconRow: 3,
+      desc: 'Lõi lò luyện cổ bỏ hoang tại Mỏ Lửa Xích Diệm, đọng lại hỏa tinh trầm tích.'
+    },
+    'xuong-linh-thao': {
+      id: 'xuong-linh-thao',
+      name: 'Xương Linh Thảo',
+      type: 'material',
+      stackable: true,
+      iconCol: 3,
+      iconRow: 5,
+      desc: 'Cây xương rồng thuốc mọc trên bãi đá Hoang Mạc Hoàng Sa, rễ chứa dược tính giải khát và trị thương.'
+    },
+    'dia-tam-thach-vun': {
+      id: 'dia-tam-thach-vun',
+      name: 'Địa Tâm Thạch Vụn',
+      type: 'material',
+      stackable: true,
+      iconCol: 4,
+      iconRow: 5,
+      desc: 'Mảnh đá địa tâm vụn khai quật từ tàn tích cổ Hoang Mạc Hoàng Sa, chứa tinh hoa Thổ mạch.'
+    },
+    'sat-huyen-vun': {
+      id: 'sat-huyen-vun',
+      name: 'Sắt Huyền Vụn',
+      type: 'material',
+      stackable: true,
+      iconCol: 4,
+      iconRow: 6,
+      desc: 'Mảnh sắt vụn từ muôn vàn thanh kiếm cổ cắm khắp Kiếm Trủng Huyền Thiết.'
+    },
+    'huyen-thiet-khoi': {
+      id: 'huyen-thiet-khoi',
+      name: 'Huyền Thiết Khối',
+      type: 'material',
+      stackable: true,
+      iconCol: 6,
+      iconRow: 6,
+      desc: 'Khối quặng huyền thiết lẫn mảnh kiếm gãy tại Kiếm Trủng Huyền Thiết, nguyên liệu rèn binh khí thượng hạng.'
+    },
+    'bot-kiem-khi': {
+      id: 'bot-kiem-khi',
+      name: 'Bột Kiếm Khí',
+      type: 'material',
+      stackable: true,
+      iconCol: 3,
+      iconRow: 6,
+      desc: 'Bụi sáng đọng lại trên bia đá sau mỗi đợt Kiếm Vũ quét qua Kiếm Trủng Huyền Thiết.'
+    },
+    'tam-kiem-vo': {
+      id: 'tam-kiem-vo',
+      name: 'Tâm Kiếm Vỡ',
+      type: 'material',
+      stackable: true,
+      iconCol: 2,
+      iconRow: 6,
+      desc: 'Mảnh tâm kiếm cổ phát sáng giữa các gò kiếm lớn Kiếm Trủng Huyền Thiết.'
+    },
+    // Đợt V1 chặng 7: Vật phẩm nhiệm vụ mở vùng theo hồ sơ 01 (§2, §5)
+    'bang-phu': {
+      id: 'bang-phu',
+      name: 'Băng Phù',
+      type: 'quest',
+      stackable: false,
+      iconCol: 3,
+      iconRow: 7,
+      desc: 'Bùa hộ mệnh chống rét khi vào Hồ Băng Hàn Kính (hồ sơ 01 §2: vật phẩm nhiệm vụ, không bán).'
+    },
+    'kiem-lenh': {
+      id: 'kiem-lenh',
+      name: 'Huyền Thiết Kiếm Lệnh',
+      type: 'quest',
+      stackable: false,
+      iconCol: 4,
+      iconRow: 7,
+      desc: 'Lệnh bài tông môn cấp để tiến vào Kiếm Trủng Huyền Thiết (hồ sơ 01 §5).'
     },
     'dan-kim': {
       id: 'dan-kim',
@@ -1151,7 +1290,39 @@
       center: 'player'
     } : null);
     if (m.isElite && skillCfg && m.state !== 'return') {
-      m.reTroiTimer -= dt;
+      // Đợt V1 chặng 3: NHỊP CHUNG với dung nham vùng — boss Hỏa
+      // (boss_xich_diem_viem_quan) đọc lịch chiêu từ zoneClock của engine
+      // (truyền qua opts.zoneClock) thay vì đếm riêng bằng reTroiTimer:
+      // nhịp tung tại zoneClock = firstDelay + k*interval (5.0, 13.0,
+      // 21.0, ...) — đúng nhịp phun của họng dung nham (hồ sơ 01 §3:
+      // "boss dùng chính nhịp này làm mốc tung chiêu"). KHÔNG đổi bất kỳ
+      // số chiêu/boss nào (interval 8.0, firstDelay 5.0, damage 30,
+      // telegraph 85/1.1 giữ nguyên trong dữ liệu boss). Các boss khác và
+      // trường hợp engine không truyền zoneClock thì giữ nguyên đường đếm
+      // riêng cũ. Hệ quả của nhịp chung: chiêu chỉ tung đúng nhịp (không
+      // tung bù giữa nhịp khi người chơi mới vào tầm) — ghi trong PROGRESS.
+      var sharedClock = (opts && typeof opts.zoneClock === 'number' && isFinite(opts.zoneClock)
+        && m.speciesId === 'boss_xich_diem_viem_quan') ? opts.zoneClock : null;
+      if (sharedClock !== null) {
+        var beatFirst = skillCfg.firstDelay || 5.0;
+        var beatInterval = skillCfg.interval;
+        var prevClock = (typeof m._prevZoneClock === 'number') ? m._prevZoneClock : sharedClock;
+        var prevBeat = Math.floor((prevClock - beatFirst) / beatInterval);
+        var curBeat = Math.floor((sharedClock - beatFirst) / beatInterval);
+        // Tới nhịp (vượt mốc firstDelay + k*interval kể từ khung trước) ->
+        // sẵn sàng tung trong khung này (chờ đủ điều kiện tầm bên dưới).
+        if (sharedClock >= beatFirst && curBeat > prevBeat) m.reTroiTimer = 0;
+        else {
+          // Đồng bộ reTroiTimer = thời gian tới nhịp sau (để các chỗ khác
+          // đọc vẫn thấy đúng nhịp chờ); trước nhịp đầu thì chờ firstDelay.
+          var sinceFirst = sharedClock - beatFirst;
+          m.reTroiTimer = sinceFirst < 0 ? beatFirst - sharedClock
+            : beatInterval - (sinceFirst % beatInterval);
+        }
+        m._prevZoneClock = sharedClock;
+      } else {
+        m.reTroiTimer -= dt;
+      }
       if (m.reTroiTimer <= 0 && playerPos && distPlayer < 520) {
         if (skillCfg.lowHpOnly && m.hp > m.maxHp * (skillCfg.lowHpThreshold || 0.4)) {
           // Chưa tới pha dùng chiêu — hẹn kiểm lại sau 1 giây

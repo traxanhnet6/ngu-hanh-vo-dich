@@ -446,6 +446,43 @@
     forceWalkable(collisionGridRungDoc, RUNG_DOC_KEY_ANCHORS[a].x, RUNG_DOC_KEY_ANCHORS[a].y);
   }
 
+  // Đợt V1 chặng 1: TRŨNG SƯƠNG ĐỘC Rừng Độc (hồ sơ 01 §1) — một hazard với ba
+  // vị trí trũng luân phiên theo zoneClock (chu kỳ POISON_FOG_CYCLE_SEC).
+  // Vị trí đã kiểm bằng tay: ngoài bán kính an toàn 150px quanh spawn/cổng
+  // vào, đi được (không nằm trong lòng suối hay cây/đá chặn), tâm trũng cách
+  // điểm sinh quái gần nhất ≥ 200px. Hoa Giải Độc mọc ở MÉP từng trũng.
+  var POISON_FOG_POOLS = [
+    { kind: 'circle', cx: 700, cy: 950, r: 120 },
+    { kind: 'circle', cx: 1250, cy: 300, r: 120 },
+    { kind: 'circle', cx: 1600, cy: 1100, r: 120 }
+  ];
+  // PROVISIONAL: chu kỳ đổi vị trí trũng — hồ sơ 01 ghi [ĐỀ XUẤT] 3 phút,
+  // chờ Bui phán.
+  var POISON_FOG_CYCLE_SEC = 180;
+  var ZONE_HAZARDS_RUNG_DOC = [
+    {
+      id: 'doc_suong_trung',
+      kind: 'poison_fog',
+      name: 'Trũng Sương Độc',
+      shape: POISON_FOG_POOLS[0],
+      positions: POISON_FOG_POOLS,
+      cycleSec: POISON_FOG_CYCLE_SEC
+    }
+  ];
+  // Đợt V1 chặng 6: Điểm hái đầy đủ Rừng Độc theo hồ sơ 01 §1
+  // Lá Thanh Tụy (hồi 120s) · Linh Chi Rừng (900s) · Hoa Giải Độc (300s) · Nhựa Cây Ngàn Năm (1800s)
+  var HARVEST_NODES_RUNG_DOC = [
+    { id: 'harvest_rd_flower_1', itemId: 'hoa-giai-doc', name: 'Hoa Giải Độc', x: 700, y: 1110, radius: 48, respawnSec: 300, count: 1 },
+    { id: 'harvest_rd_flower_2', itemId: 'hoa-giai-doc', name: 'Hoa Giải Độc', x: 1410, y: 300, radius: 48, respawnSec: 300, count: 1 },
+    { id: 'harvest_rd_flower_3', itemId: 'hoa-giai-doc', name: 'Hoa Giải Độc', x: 1760, y: 1100, radius: 48, respawnSec: 300, count: 1 },
+    { id: 'harvest_rd_la_1', itemId: 'la-thanh-tuy', name: 'Lá Thanh Tụy', x: 380, y: 500, radius: 48, respawnSec: 120, count: 1 },
+    { id: 'harvest_rd_la_2', itemId: 'la-thanh-tuy', name: 'Lá Thanh Tụy', x: 950, y: 420, radius: 48, respawnSec: 120, count: 1 },
+    { id: 'harvest_rd_la_3', itemId: 'la-thanh-tuy', name: 'Lá Thanh Tụy', x: 1250, y: 850, radius: 48, respawnSec: 120, count: 1 },
+    { id: 'harvest_rd_linhchi_1', itemId: 'linh-chi-rung', name: 'Linh Chi Rừng', x: 820, y: 260, radius: 48, respawnSec: 900, count: 1 },
+    { id: 'harvest_rd_linhchi_2', itemId: 'linh-chi-rung', name: 'Linh Chi Rừng', x: 1550, y: 750, radius: 48, respawnSec: 900, count: 1 },
+    { id: 'harvest_rd_nhua_1', itemId: 'nhua-cay-ngan-nam', name: 'Nhựa Cây Ngàn Năm', x: 1680, y: 450, radius: 48, respawnSec: 1800, count: 1 }
+  ];
+
   var MAP_RUNG_DOC = {
     id: 'rung-doc',
     name: 'Rừng Độc Thanh Tụy',
@@ -464,7 +501,8 @@
     keyAnchors: RUNG_DOC_KEY_ANCHORS,
     npcs: [],
     interactables: [],
-    harvestNodes: [],
+    harvestNodes: HARVEST_NODES_RUNG_DOC,
+    zoneHazards: ZONE_HAZARDS_RUNG_DOC, // Đợt V1 chặng 1: trũng sương độc (3 vị trí luân phiên) + Hoa Giải Độc ở mép trũng
     monsterPacks: RUNG_DOC_PACKS,
     zones: ZONES_RUNG_DOC
   };
@@ -1640,12 +1678,65 @@
 
   var isWalkableHoBang = makeZoneIsWalkable(EXITS_HO_BANG, STAND_OBJECTS_HO_BANG, SCENERY_OBSTACLES_HO_BANG);
 
+  // Đợt V1 chặng 2: MẶT BĂNG TRƯỢT + Ô BĂNG NỨT Hồ Băng (hồ sơ 01 §2).
+  // - Mặt băng: hình chữ nhật lớn giữa hồ (x 300–1800, y 150–1130); bờ tây
+  //   (x < 300, nơi spawn/cổng vào) là bãi tuyết đi thường — người chơi
+  //   bước qua mép băng mới bắt đầu trượt. Mép băng cách spawn (90,640)
+  //   210px và cách tâm cổng vào (22,640) 278px — ngoài bán kính an toàn
+  //   150px. Đảo băng giữa hồ (boss Hàn Kính Giao Vương, 1180,680) nằm
+  //   trong mặt băng như hồ sơ mô tả.
+  // - Ô băng nứt: 6 ô tròn r=70 trong mặt băng; đứng lâu trên ô thì nứt
+  //   theo cấp rồi vỡ — rơi xuống nước lạnh, trừ máu, đẩy về bờ gần nhất
+  //   (shore: bờ tây = điểm spawn). Vị trí đã kiểm bằng tay: ngoài 150px
+  //   quanh spawn/cổng vào; tâm ô cách điểm sinh quái gần nhất ≥ 130px;
+  //   không chồng vật cản (thông băng/đá băng), tâm ô đi được.
+  var ICE_SHEET_HO_BANG = { kind: 'rect', x: 300, y: 150, w: 1500, h: 980 };
+  var ICE_CRACK_TILES_HO_BANG = [
+    { id: 'bang_nut_1', kind: 'circle', cx: 700, cy: 300, r: 70 },
+    { id: 'bang_nut_2', kind: 'circle', cx: 1000, cy: 300, r: 70 },
+    { id: 'bang_nut_3', kind: 'circle', cx: 1450, cy: 400, r: 70 },
+    { id: 'bang_nut_4', kind: 'circle', cx: 700, cy: 1000, r: 70 },
+    { id: 'bang_nut_5', kind: 'circle', cx: 1150, cy: 950, r: 70 },
+    { id: 'bang_nut_6', kind: 'circle', cx: 1550, cy: 800, r: 70 }
+  ];
+  var HO_BANG_SHORE_POINTS = [{ x: 90, y: 640 }]; // bờ tây = điểm spawn
+  var ZONE_HAZARDS_HO_BANG = [
+    {
+      id: 'mat_bang_truot',
+      kind: 'ice_sheet',
+      name: 'Mặt Băng Trượt',
+      shape: ICE_SHEET_HO_BANG,
+      shore: HO_BANG_SHORE_POINTS
+    }
+  ];
+  for (var _iceT = 0; _iceT < ICE_CRACK_TILES_HO_BANG.length; _iceT++) {
+    ZONE_HAZARDS_HO_BANG.push({
+      id: ICE_CRACK_TILES_HO_BANG[_iceT].id,
+      kind: 'ice_crack',
+      name: 'Ô Băng Nứt',
+      shape: ICE_CRACK_TILES_HO_BANG[_iceT]
+    });
+  }
+
   var collisionGridHoBang = buildGrid(1920, 1280, isWalkableHoBang);
   forceWalkable(collisionGridHoBang, SPAWN_HO_BANG.x, SPAWN_HO_BANG.y);
   forceWalkable(collisionGridHoBang, EXITS_HO_BANG[0].target.x, EXITS_HO_BANG[0].target.y);
   for (var a = 0; a < HO_BANG_KEY_ANCHORS.length; a++) {
     forceWalkable(collisionGridHoBang, HO_BANG_KEY_ANCHORS[a].x, HO_BANG_KEY_ANCHORS[a].y);
   }
+
+  // Đợt V1 chặng 6: Điểm hái đầy đủ Hồ Băng theo hồ sơ 01 §2
+  // Băng Tinh (hồi 300s) · Ngọc Trai Hồ (600s) · Tuyết Liên (1200s) · Băng Tủy (1800s)
+  var HARVEST_NODES_HO_BANG = [
+    { id: 'harvest_hb_bangtinh_1', itemId: 'bang-tinh', name: 'Băng Tinh', x: 220, y: 480, radius: 48, respawnSec: 300, count: 1 },
+    { id: 'harvest_hb_bangtinh_2', itemId: 'bang-tinh', name: 'Băng Tinh', x: 250, y: 800, radius: 48, respawnSec: 300, count: 1 },
+    { id: 'harvest_hb_bangtinh_3', itemId: 'bang-tinh', name: 'Băng Tinh', x: 520, y: 240, radius: 48, respawnSec: 300, count: 1 },
+    { id: 'harvest_hb_ngoctrai_1', itemId: 'ngoc-trai-ho', name: 'Ngọc Trai Hồ', x: 480, y: 520, radius: 48, respawnSec: 600, count: 1 },
+    { id: 'harvest_hb_ngoctrai_2', itemId: 'ngoc-trai-ho', name: 'Ngọc Trai Hồ', x: 620, y: 860, radius: 48, respawnSec: 600, count: 1 },
+    { id: 'harvest_hb_tuyetlien_1', itemId: 'tuyet-lien', name: 'Tuyết Liên', x: 1380, y: 260, radius: 48, respawnSec: 1200, count: 1 },
+    { id: 'harvest_hb_tuyetlien_2', itemId: 'tuyet-lien', name: 'Tuyết Liên', x: 1680, y: 950, radius: 48, respawnSec: 1200, count: 1 },
+    { id: 'harvest_hb_bangtuy_1', itemId: 'bang-tuy', name: 'Băng Tủy', x: 1150, y: 600, radius: 48, respawnSec: 1800, count: 1 }
+  ];
 
   var MAP_HO_BANG = {
     id: 'ho-bang',
@@ -1665,7 +1756,8 @@
     keyAnchors: HO_BANG_KEY_ANCHORS,
     npcs: [],
     interactables: [],
-    harvestNodes: [],
+    harvestNodes: HARVEST_NODES_HO_BANG,
+    zoneHazards: ZONE_HAZARDS_HO_BANG, // Đợt V1 chặng 2: mặt băng trượt (1) + ô băng nứt (6)
     monsterPacks: HO_BANG_PACKS,
     packs: HO_BANG_PACKS,
     zones: ZONES_HO_BANG,
@@ -1752,6 +1844,42 @@
     forceWalkable(collisionGridMoLua, MO_LUA_KEY_ANCHORS[a].x, MO_LUA_KEY_ANCHORS[a].y);
   }
 
+  // Đợt V1 chặng 3: HỌNG PHUN DUNG NHAM Mỏ Lửa (hồ sơ 01 §3) — 4 họng phun
+  // ở sân mỏ, phun theo nhịp chung 8 giây với boss Hỏa (xem LAVA_CYCLE_SEC
+  // trong js/engine.js). Vị trí đã kiểm bằng tay: tâm họng đi được, ngoài
+  // bán kính an toàn 150px quanh spawn/cổng vào (tâm cách spawn gần nhất
+  // 487px, cách điểm rơi cổng 587px — tính tới mép họng còn dư ≥ 150px),
+  // tâm họng cách điểm sinh quái gần nhất ≥ 238px (không họng nào phủ
+  // điểm sinh quái — bãi farm vẫn chơi được), không chồng vật cản.
+  var LAVA_VENTS_MO_LUA = [
+    { id: 'hong_phun_1', kind: 'circle', cx: 500, cy: 300, r: 80 },
+    { id: 'hong_phun_2', kind: 'circle', cx: 1300, cy: 400, r: 80 },
+    { id: 'hong_phun_3', kind: 'circle', cx: 550, cy: 800, r: 80 },
+    { id: 'hong_phun_4', kind: 'circle', cx: 1450, cy: 950, r: 80 }
+  ];
+  var ZONE_HAZARDS_MO_LUA = [];
+  for (var _lavaV = 0; _lavaV < LAVA_VENTS_MO_LUA.length; _lavaV++) {
+    ZONE_HAZARDS_MO_LUA.push({
+      id: LAVA_VENTS_MO_LUA[_lavaV].id,
+      kind: 'lava_vent',
+      name: 'Họng Phun Dung Nham',
+      shape: LAVA_VENTS_MO_LUA[_lavaV]
+    });
+  }
+
+  // Đợt V1 chặng 6: Điểm hái đầy đủ Mỏ Lửa theo hồ sơ 01 §3
+  // Quặng Đỏ (hồi 300s) · Hỏa Tinh Thô (900s) · Lưu Huỳnh Vàng (600s) · Tâm Lò Nguội (1800s)
+  var HARVEST_NODES_MO_LUA = [
+    { id: 'harvest_ml_quangdo_1', itemId: 'quang-do', name: 'Quặng Đỏ', x: 320, y: 450, radius: 48, respawnSec: 300, count: 1 },
+    { id: 'harvest_ml_quangdo_2', itemId: 'quang-do', name: 'Quặng Đỏ', x: 820, y: 320, radius: 48, respawnSec: 300, count: 1 },
+    { id: 'harvest_ml_quangdo_3', itemId: 'quang-do', name: 'Quặng Đỏ', x: 1100, y: 850, radius: 48, respawnSec: 300, count: 1 },
+    { id: 'harvest_ml_hoatinh_1', itemId: 'hoa-tinh-tho', name: 'Hỏa Tinh Thô', x: 900, y: 650, radius: 48, respawnSec: 900, count: 1 },
+    { id: 'harvest_ml_hoatinh_2', itemId: 'hoa-tinh-tho', name: 'Hỏa Tinh Thô', x: 1580, y: 620, radius: 48, respawnSec: 900, count: 1 },
+    { id: 'harvest_ml_luuhuynh_1', itemId: 'luu-huynh-vang', name: 'Lưu Huỳnh Vàng', x: 680, y: 750, radius: 48, respawnSec: 600, count: 1 },
+    { id: 'harvest_ml_luuhuynh_2', itemId: 'luu-huynh-vang', name: 'Lưu Huỳnh Vàng', x: 1200, y: 480, radius: 48, respawnSec: 600, count: 1 },
+    { id: 'harvest_ml_tamlo_1', itemId: 'tam-lo-nguoi', name: 'Tâm Lò Nguội', x: 1620, y: 350, radius: 48, respawnSec: 1800, count: 1 }
+  ];
+
   var MAP_MO_LUA = {
     id: 'mo-lua',
     name: 'Mỏ Lửa Xích Diệm',
@@ -1770,7 +1898,8 @@
     keyAnchors: MO_LUA_KEY_ANCHORS,
     npcs: [],
     interactables: [],
-    harvestNodes: [],
+    harvestNodes: HARVEST_NODES_MO_LUA,
+    zoneHazards: ZONE_HAZARDS_MO_LUA, // Đợt V1 chặng 3: 4 họng phun dung nham theo nhịp chung với boss Hỏa
     monsterPacks: MO_LUA_PACKS,
     packs: MO_LUA_PACKS,
     zones: ZONES_MO_LUA,
@@ -1848,6 +1977,35 @@
     { id: 'pack_boss_hoang_sa', speciesId: 'boss_hoang_sa_co_vuong', anchor: { x: 1470, y: 420 }, count: 1, spread: 0, isBoss: true }
   ];
 
+  // Đợt V1 chặng 4: ô cát lún Hoang Mạc (hồ sơ 01 §4) — hazard kind
+  // 'cat_lun' (tròn r=90) khai trong zoneHazards của map. Đứng trong ô thì
+  // người chơi chậm dần qua playerSlowRatio theo thời gian đứng, thoát ra
+  // thì tốc độ hồi dần (xem khối V1 chặng 4 ở js/engine.js).
+  // Vị trí: tâm ô đi được; ngoài bán kính an toàn 150px quanh spawn và
+  // điểm rơi cổng vào (map không có NPC/điểm trả nhiệm vụ); tâm ô cách
+  // điểm sinh quái gần nhất ≥ 200px và không phủ điểm sinh quái nào (bãi
+  // farm vẫn chơi được); các ô không chồng nhau. Cổng zoneCheckHazardsSafe
+  // kiểm lại toàn bộ ở test/v1-hoang-mac.mjs.
+  var QUICKSAND_CELLS_HOANG_MAC = [
+    { id: 'cat_lun_1', cx: 300, cy: 400, r: 90 },
+    { id: 'cat_lun_2', cx: 600, cy: 600, r: 90 },
+    { id: 'cat_lun_3', cx: 800, cy: 700, r: 90 },
+    { id: 'cat_lun_4', cx: 1250, cy: 700, r: 90 },
+    { id: 'cat_lun_5', cx: 1100, cy: 1100, r: 90 },
+    { id: 'cat_lun_6', cx: 1500, cy: 900, r: 90 },
+    { id: 'cat_lun_7', cx: 300, cy: 1050, r: 90 }
+  ];
+  var ZONE_HAZARDS_HOANG_MAC = [];
+  for (var _qsI = 0; _qsI < QUICKSAND_CELLS_HOANG_MAC.length; _qsI++) {
+    var _qsCell = QUICKSAND_CELLS_HOANG_MAC[_qsI];
+    ZONE_HAZARDS_HOANG_MAC.push({
+      id: _qsCell.id,
+      kind: 'cat_lun',
+      name: 'Cát Lún',
+      shape: { kind: 'circle', cx: _qsCell.cx, cy: _qsCell.cy, r: _qsCell.r }
+    });
+  }
+
   var isWalkableHoangMac = makeZoneIsWalkable(EXITS_HOANG_MAC, STAND_OBJECTS_HOANG_MAC, SCENERY_OBSTACLES_HOANG_MAC);
 
   var collisionGridHoangMac = buildGrid(1920, 1280, isWalkableHoangMac);
@@ -1856,6 +2014,19 @@
   for (var a = 0; a < HOANG_MAC_KEY_ANCHORS.length; a++) {
     forceWalkable(collisionGridHoangMac, HOANG_MAC_KEY_ANCHORS[a].x, HOANG_MAC_KEY_ANCHORS[a].y);
   }
+
+  // Đợt V1 chặng 6: Điểm hái đầy đủ Hoang Mạc theo hồ sơ 01 §4
+  // Cát Tinh (hồi 300s) · Xương Linh Thảo (600s) · Nước Ốc Đảo (900s) · Địa Tâm Thạch Vụn (1800s)
+  var HARVEST_NODES_HOANG_MAC = [
+    { id: 'harvest_hm_cattinh_1', itemId: 'cat-tinh', name: 'Cát Tinh', x: 450, y: 480, radius: 48, respawnSec: 300, count: 1 },
+    { id: 'harvest_hm_cattinh_2', itemId: 'cat-tinh', name: 'Cát Tinh', x: 950, y: 520, radius: 48, respawnSec: 300, count: 1 },
+    { id: 'harvest_hm_cattinh_3', itemId: 'cat-tinh', name: 'Cát Tinh', x: 1380, y: 650, radius: 48, respawnSec: 300, count: 1 },
+    { id: 'harvest_hm_xuonglinh_1', itemId: 'xuong-linh-thao', name: 'Xương Linh Thảo', x: 680, y: 350, radius: 48, respawnSec: 600, count: 1 },
+    { id: 'harvest_hm_xuonglinh_2', itemId: 'xuong-linh-thao', name: 'Xương Linh Thảo', x: 1320, y: 950, radius: 48, respawnSec: 600, count: 1 },
+    { id: 'harvest_hm_nuococdao_1', itemId: 'nuoc-oc-dao-tinh-khiet', name: 'Nước Ốc Đảo Tinh Khiết', x: 980, y: 820, radius: 48, respawnSec: 900, count: 1 },
+    { id: 'harvest_hm_nuococdao_2', itemId: 'nuoc-oc-dao-tinh-khiet', name: 'Nước Ốc Đảo Tinh Khiết', x: 1050, y: 860, radius: 48, respawnSec: 900, count: 1 },
+    { id: 'harvest_hm_diatam_1', itemId: 'dia-tam-thach-vun', name: 'Địa Tâm Thạch Vụn', x: 1650, y: 550, radius: 48, respawnSec: 1800, count: 1 }
+  ];
 
   var MAP_HOANG_MAC = {
     id: 'hoang-mac',
@@ -1875,7 +2046,11 @@
     keyAnchors: HOANG_MAC_KEY_ANCHORS,
     npcs: [],
     interactables: [],
-    harvestNodes: [],
+    harvestNodes: HARVEST_NODES_HOANG_MAC,
+    zoneHazards: ZONE_HAZARDS_HOANG_MAC, // Đợt V1 chặng 4: 7 ô cát lún (kind 'cat_lun')
+    // Đợt V1 chặng 4: map có bão cát theo chu kỳ (engine đọc cờ này; số chu kỳ/
+    // mức giảm tầm nhìn/mức ảnh hưởng di chuyển nằm ở khối V1 chặng 4 js/engine.js).
+    sandStorm: { enabled: true },
     monsterPacks: HOANG_MAC_PACKS,
     packs: HOANG_MAC_PACKS,
     zones: ZONES_HOANG_MAC,
@@ -1956,12 +2131,70 @@
 
   var isWalkableKiemTrung = makeZoneIsWalkable(EXITS_KIEM_TRUNG, STAND_OBJECTS_KIEM_TRUNG, SCENERY_OBSTACLES_KIEM_TRUNG);
 
+  // Đợt V1 chặng 5: 2 làn kiếm khí quét cố định ở Kiếm Trủng (hồ sơ 01 §5)
+  // kind 'sword_sweep' khai trong zoneHazards của map.
+  // Khi quét (theo chu kỳ SWORD_SWEEP_CYCLE_SEC trong engine.js), có telegraph
+  // vệt sáng bạc ≥ 700ms trước khi kiếm khí quét qua gây sát thương Kim.
+  // Vị trí ngoài bán kính an toàn 150px quanh spawn (90, 640) và cổng Đài Truyền Tống (22, 640).
+  var SWORD_SWEEP_LANES_KIEM_TRUNG = [
+    { id: 'kiem_khi_1', name: 'Kiếm Khí Lối Bắc', shape: { kind: 'rect', x: 450, y: 530, w: 550, h: 60 } },
+    { id: 'kiem_khi_2', name: 'Kiếm Khí Lối Nam', shape: { kind: 'rect', x: 600, y: 780, w: 650, h: 60 } }
+  ];
+
+  // Đợt V1 chặng 5: 8 điểm rơi Kiếm Vũ tiềm năng (hồ sơ 01 §5)
+  // Mỗi đợt Kiếm Vũ kéo dài 20s, các điểm rơi luân phiên có vệt sáng bạc báo trước
+  // rồi kiếm cắm xuống gây sát thương Kim diện rộng. Bán kính rơi r=65.
+  // Toàn bộ các điểm đều ngoài bán kính an toàn 150px quanh spawn và cổng ra.
+  var SWORD_RAIN_SPOTS_KIEM_TRUNG = [
+    { id: 'kiem_vu_spot_1', cx: 380, cy: 420, r: 65 },
+    { id: 'kiem_vu_spot_2', cx: 620, cy: 460, r: 65 },
+    { id: 'kiem_vu_spot_3', cx: 780, cy: 660, r: 65 },
+    { id: 'kiem_vu_spot_4', cx: 980, cy: 520, r: 65 },
+    { id: 'kiem_vu_spot_5', cx: 1150, cy: 780, r: 65 },
+    { id: 'kiem_vu_spot_6', cx: 1380, cy: 460, r: 65 },
+    { id: 'kiem_vu_spot_7', cx: 1420, cy: 720, r: 65 },
+    { id: 'kiem_vu_spot_8', cx: 1620, cy: 580, r: 65 }
+  ];
+
+  var ZONE_HAZARDS_KIEM_TRUNG = [];
+  for (var _skI = 0; _skI < SWORD_SWEEP_LANES_KIEM_TRUNG.length; _skI++) {
+    var _lane = SWORD_SWEEP_LANES_KIEM_TRUNG[_skI];
+    ZONE_HAZARDS_KIEM_TRUNG.push({
+      id: _lane.id,
+      kind: 'sword_sweep',
+      name: _lane.name,
+      shape: _lane.shape
+    });
+  }
+  for (var _srI = 0; _srI < SWORD_RAIN_SPOTS_KIEM_TRUNG.length; _srI++) {
+    var _spot = SWORD_RAIN_SPOTS_KIEM_TRUNG[_srI];
+    ZONE_HAZARDS_KIEM_TRUNG.push({
+      id: _spot.id,
+      kind: 'sword_rain_spot',
+      name: 'Điểm Rơi Kiếm Vũ',
+      shape: { kind: 'circle', cx: _spot.cx, cy: _spot.cy, r: _spot.r }
+    });
+  }
+
   var collisionGridKiemTrung = buildGrid(1920, 1280, isWalkableKiemTrung);
   forceWalkable(collisionGridKiemTrung, SPAWN_KIEM_TRUNG.x, SPAWN_KIEM_TRUNG.y);
   forceWalkable(collisionGridKiemTrung, EXITS_KIEM_TRUNG[0].target.x, EXITS_KIEM_TRUNG[0].target.y);
   for (var a = 0; a < KIEM_TRUNG_KEY_ANCHORS.length; a++) {
     forceWalkable(collisionGridKiemTrung, KIEM_TRUNG_KEY_ANCHORS[a].x, KIEM_TRUNG_KEY_ANCHORS[a].y);
   }
+
+  // Đợt V1 chặng 6: Điểm hái đầy đủ Kiếm Trủng theo hồ sơ 01 §5
+  // Sắt Huyền Vụn (hồi 300s) · Huyền Thiết Khối (900s) · Bột Kiếm Khí (120s) · Tâm Kiếm Vỡ (1800s)
+  var HARVEST_NODES_KIEM_TRUNG = [
+    { id: 'harvest_kt_sathuyen_1', itemId: 'sat-huyen-vun', name: 'Sắt Huyền Vụn', x: 320, y: 520, radius: 48, respawnSec: 300, count: 1 },
+    { id: 'harvest_kt_sathuyen_2', itemId: 'sat-huyen-vun', name: 'Sắt Huyền Vụn', x: 820, y: 420, radius: 48, respawnSec: 300, count: 1 },
+    { id: 'harvest_kt_sathuyen_3', itemId: 'sat-huyen-vun', name: 'Sắt Huyền Vụn', x: 1280, y: 860, radius: 48, respawnSec: 300, count: 1 },
+    { id: 'harvest_kt_huyenthiet_1', itemId: 'huyen-thiet-khoi', name: 'Huyền Thiết Khối', x: 1050, y: 620, radius: 48, respawnSec: 900, count: 1 },
+    { id: 'harvest_kt_huyenthiet_2', itemId: 'huyen-thiet-khoi', name: 'Huyền Thiết Khối', x: 1550, y: 750, radius: 48, respawnSec: 900, count: 1 },
+    { id: 'harvest_kt_botkiem_1', itemId: 'bot-kiem-khi', name: 'Bột Kiếm Khí', x: 720, y: 340, radius: 48, respawnSec: 120, count: 1 },
+    { id: 'harvest_kt_botkiem_2', itemId: 'bot-kiem-khi', name: 'Bột Kiếm Khí', x: 1620, y: 360, radius: 48, respawnSec: 120, count: 1 },
+    { id: 'harvest_kt_tamkiem_1', itemId: 'tam-kiem-vo', name: 'Tâm Kiếm Vỡ', x: 1480, y: 520, radius: 48, respawnSec: 1800, count: 1 }
+  ];
 
   var MAP_KIEM_TRUNG = {
     id: 'kiem-trung',
@@ -1981,13 +2214,202 @@
     keyAnchors: KIEM_TRUNG_KEY_ANCHORS,
     npcs: [],
     interactables: [],
-    harvestNodes: [],
+    harvestNodes: HARVEST_NODES_KIEM_TRUNG,
+    zoneHazards: ZONE_HAZARDS_KIEM_TRUNG, // Đợt V1 chặng 5: 2 làn kiếm khí quét + 8 điểm rơi kiếm vũ
+    swordStorm: { enabled: true },
     monsterPacks: KIEM_TRUNG_PACKS,
     packs: KIEM_TRUNG_PACKS,
     zones: ZONES_KIEM_TRUNG,
     minRealmRank: 11,
     minRealmLabel: 'Trúc Cơ Trung Kỳ'
   };
+
+  // ============================================================
+  // ĐỢT V1 — CHẶNG 0: KHUNG CƠ CHẾ VÙNG DÙNG CHUNG (hình học + cổng an toàn)
+  // Các hàm thuần, không chạm DOM/canvas — gọi được từ Node (test) lẫn trình duyệt.
+  // Hình vùng nguy hiểm (hazard.shape): một trong ba dạng:
+  //   { kind: 'circle', cx, cy, r }
+  //   { kind: 'polygon', points: [[x, y], ...] }   (đa giác khép, >= 3 đỉnh)
+  //   { kind: 'rect', x, y, w, h }
+  // Một hazard đầy đủ: { id, kind: 'poison-fog' | ..., shape: {...} } — các
+  // chặng 1–5 điền thêm trường riêng của từng cơ chế (chu kỳ, sát thương...).
+  // ============================================================
+
+  // PROVISIONAL: bán kính an toàn quanh cổng vào/Đài Truyền Tống/NPC/điểm trả
+  // nhiệm vụ — hồ sơ 01 không cho số, chờ Bui phán. 150px lớn hơn bán kính
+  // telegraph boss vùng (85–90px) và hơn 1 giây di chuyển (SPEED 138px/s).
+  var V1_SAFE_RADIUS = 150;
+
+  /** Điểm (x, y) có nằm trong hình shape không (biên tính là trong). */
+  function v1PointInShape(x, y, shape) {
+    if (!shape || typeof x !== 'number' || typeof y !== 'number' ||
+        !isFinite(x) || !isFinite(y)) return false;
+    if (shape.kind === 'circle') {
+      if (typeof shape.cx !== 'number' || typeof shape.cy !== 'number' ||
+          typeof shape.r !== 'number' || shape.r < 0) return false;
+      var dx = x - shape.cx;
+      var dy = y - shape.cy;
+      return dx * dx + dy * dy <= shape.r * shape.r;
+    }
+    if (shape.kind === 'rect') {
+      if (typeof shape.x !== 'number' || typeof shape.y !== 'number' ||
+          typeof shape.w !== 'number' || typeof shape.h !== 'number') return false;
+      return x >= shape.x && x <= shape.x + shape.w &&
+             y >= shape.y && y <= shape.y + shape.h;
+    }
+    if (shape.kind === 'polygon') {
+      if (!Array.isArray(shape.points) || shape.points.length < 3) return false;
+      // Ray casting (tia ngang sang phải); điểm trên biên tính là trong.
+      var inside = false;
+      var pts = shape.points;
+      for (var i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+        var xi = pts[i][0], yi = pts[i][1];
+        var xj = pts[j][0], yj = pts[j][1];
+        if (((yi > y) !== (yj > y)) &&
+            (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) inside = !inside;
+      }
+      return inside;
+    }
+    return false;
+  }
+
+  /** Khoảng cách từ điểm tới đoạn thẳng AB (phụ cho v1PointShapeDistance). */
+  function v1DistToSegment(px, py, ax, ay, bx, by) {
+    var abx = bx - ax, aby = by - ay;
+    var lenSq = abx * abx + aby * aby;
+    var t = 0;
+    if (lenSq > 0) {
+      t = ((px - ax) * abx + (py - ay) * aby) / lenSq;
+      if (t < 0) t = 0;
+      if (t > 1) t = 1;
+    }
+    var cx = ax + t * abx, cy = ay + t * aby;
+    return Math.hypot(px - cx, py - cy);
+  }
+
+  /** Khoảng cách ngắn nhất từ điểm tới hình shape (0 nếu điểm nằm trong hình). */
+  function v1PointShapeDistance(x, y, shape) {
+    if (!shape || typeof x !== 'number' || typeof y !== 'number' ||
+        !isFinite(x) || !isFinite(y)) return Infinity;
+    if (shape.kind === 'circle') {
+      if (typeof shape.cx !== 'number' || typeof shape.cy !== 'number' ||
+          typeof shape.r !== 'number' || shape.r < 0) return Infinity;
+      return Math.max(0, Math.hypot(x - shape.cx, y - shape.cy) - shape.r);
+    }
+    if (shape.kind === 'rect') {
+      if (typeof shape.x !== 'number' || typeof shape.y !== 'number' ||
+          typeof shape.w !== 'number' || typeof shape.h !== 'number') return Infinity;
+      var rdx = Math.max(shape.x - x, 0, x - (shape.x + shape.w));
+      var rdy = Math.max(shape.y - y, 0, y - (shape.y + shape.h));
+      return Math.hypot(rdx, rdy);
+    }
+    if (shape.kind === 'polygon') {
+      if (!Array.isArray(shape.points) || shape.points.length < 3) return Infinity;
+      if (v1PointInShape(x, y, shape)) return 0;
+      var min = Infinity;
+      var pts = shape.points;
+      for (var i = 0; i < pts.length; i++) {
+        var a = pts[i], b = pts[(i + 1) % pts.length];
+        var d = v1DistToSegment(x, y, a[0], a[1], b[0], b[1]);
+        if (d < min) min = d;
+      }
+      return min;
+    }
+    return Infinity;
+  }
+
+  /**
+   * Các điểm móc an toàn tuyệt đối của một map: điểm xuất hiện (spawn), tâm
+   * vùng cổng ra + điểm rơi của cổng (exit target), vị trí NPC, vị trí
+   * interactable (Đài Truyền Tống, điểm trả nhiệm vụ...). Mọi vùng nguy hiểm
+   * khai báo phải nằm ngoài V1_SAFE_RADIUS quanh từng điểm này.
+   */
+  function v1SafeAnchorsForMap(map) {
+    var anchors = [];
+    if (!map) return anchors;
+    if (map.spawn && typeof map.spawn.x === 'number' && typeof map.spawn.y === 'number') {
+      anchors.push({ label: 'spawn', x: map.spawn.x, y: map.spawn.y });
+    }
+    if (Array.isArray(map.exits)) {
+      for (var e = 0; e < map.exits.length; e++) {
+        var ex = map.exits[e];
+        if (!ex) continue;
+        if (ex.rect && typeof ex.rect.x === 'number') {
+          anchors.push({
+            label: 'exit:' + (ex.id || e),
+            x: ex.rect.x + (ex.rect.w || 0) / 2,
+            y: ex.rect.y + (ex.rect.h || 0) / 2
+          });
+        }
+        if (ex.target && typeof ex.target.x === 'number' && typeof ex.target.y === 'number') {
+          anchors.push({ label: 'exit-target:' + (ex.id || e), x: ex.target.x, y: ex.target.y });
+        }
+      }
+    }
+    if (Array.isArray(map.npcs)) {
+      for (var n = 0; n < map.npcs.length; n++) {
+        var npc = map.npcs[n];
+        if (npc && typeof npc.x === 'number' && typeof npc.y === 'number') {
+          anchors.push({ label: 'npc:' + (npc.id || npc.name || n), x: npc.x, y: npc.y });
+        }
+      }
+    }
+    if (Array.isArray(map.interactables)) {
+      for (var k = 0; k < map.interactables.length; k++) {
+        var it = map.interactables[k];
+        if (it && typeof it.x === 'number' && typeof it.y === 'number') {
+          anchors.push({ label: 'interactable:' + (it.id || it.name || k), x: it.x, y: it.y });
+        }
+      }
+    }
+    return anchors;
+  }
+
+  /**
+   * Cổng an toàn chặng 0: kiểm tra mọi vùng nguy hiểm khai báo trong map có
+   * nằm ngoài bán kính an toàn quanh mọi điểm móc an toàn không.
+   * Trả về { ok, hazardCount, anchorCount, safeRadius, violations: [...] },
+   * mỗi violation: { hazardId, anchor, distance, safeRadius }.
+   * Map chưa khai hazard nào (zoneHazards rỗng) thì đạt.
+   */
+  function v1CheckHazardsSafe(map, safeRadius) {
+    var radius = (typeof safeRadius === 'number' && isFinite(safeRadius) && safeRadius >= 0)
+      ? safeRadius : V1_SAFE_RADIUS;
+    var hazards = (map && Array.isArray(map.zoneHazards)) ? map.zoneHazards : [];
+    var anchors = v1SafeAnchorsForMap(map);
+    var violations = [];
+    for (var h = 0; h < hazards.length; h++) {
+      var hz = hazards[h];
+      if (!hz) continue;
+      // Đợt V1 chặng 1: hazard có nhiều vị trí luân phiên (trũng sương độc)
+      // thì kiểm TỪNG vị trí — trũng sẽ chiếm lần lượt mọi vị trí theo chu kỳ.
+      var shapes = (hz.positions && Array.isArray(hz.positions) && hz.positions.length > 0)
+        ? hz.positions : [hz.shape || hz];
+      var hzId = hz.id || ('hazard-' + h);
+      for (var s = 0; s < shapes.length; s++) {
+        for (var a = 0; a < anchors.length; a++) {
+          var d = v1PointShapeDistance(anchors[a].x, anchors[a].y, shapes[s]);
+          if (d < radius) {
+            var violation = {
+              hazardId: hzId,
+              anchor: anchors[a].label,
+              distance: Math.round(d * 10) / 10,
+              safeRadius: radius
+            };
+            if (shapes.length > 1) violation.positionIndex = s;
+            violations.push(violation);
+          }
+        }
+      }
+    }
+    return {
+      ok: violations.length === 0,
+      hazardCount: hazards.length,
+      anchorCount: anchors.length,
+      safeRadius: radius,
+      violations: violations
+    };
+  }
 
   // ============================================================
   // HỆ THỐNG QUẢN LÝ BẢN ĐỒ TOÀN CỤC
@@ -2010,6 +2432,31 @@
     maps: ALL_MAPS,
     buildGrid: buildGrid,
     forceWalkable: forceWalkable,
+    // Đợt V1 chặng 0: khung cơ chế vùng dùng chung (hình học + cổng an toàn)
+    V1_SAFE_RADIUS: V1_SAFE_RADIUS,
+    // Đợt V1 chặng 1: chu kỳ đổi vị trí trũng sương độc Rừng Độc (PROVISIONAL)
+    POISON_FOG_CYCLE_SEC: POISON_FOG_CYCLE_SEC,
+    // Đợt V1 chặng 2: mặt băng trượt + ô băng nứt Hồ Băng
+    ICE_SHEET_HO_BANG: ICE_SHEET_HO_BANG,
+    ICE_CRACK_TILES_HO_BANG: ICE_CRACK_TILES_HO_BANG,
+    HO_BANG_SHORE_POINTS: HO_BANG_SHORE_POINTS,
+    // Đợt V1 chặng 3: họng phun dung nham Mỏ Lửa
+    LAVA_VENTS_MO_LUA: LAVA_VENTS_MO_LUA,
+    // Đợt V1 chặng 4: ô cát lún Hoang Mạc
+    QUICKSAND_CELLS_HOANG_MAC: QUICKSAND_CELLS_HOANG_MAC,
+    // Đợt V1 chặng 5: kiếm khí quét + điểm rơi kiếm vũ Kiếm Trủng
+    SWORD_SWEEP_LANES_KIEM_TRUNG: SWORD_SWEEP_LANES_KIEM_TRUNG,
+    SWORD_RAIN_SPOTS_KIEM_TRUNG: SWORD_RAIN_SPOTS_KIEM_TRUNG,
+    // Đợt V1 chặng 6: danh mục điểm hái 5 vùng theo hồ sơ 01
+    HARVEST_NODES_RUNG_DOC: HARVEST_NODES_RUNG_DOC,
+    HARVEST_NODES_HO_BANG: HARVEST_NODES_HO_BANG,
+    HARVEST_NODES_MO_LUA: HARVEST_NODES_MO_LUA,
+    HARVEST_NODES_HOANG_MAC: HARVEST_NODES_HOANG_MAC,
+    HARVEST_NODES_KIEM_TRUNG: HARVEST_NODES_KIEM_TRUNG,
+    zonePointInShape: v1PointInShape,
+    zonePointShapeDistance: v1PointShapeDistance,
+    zoneSafeAnchorsForMap: v1SafeAnchorsForMap,
+    zoneCheckHazardsSafe: v1CheckHazardsSafe,
     getMap: function (id) {
       if (!id) return MAP_MIEU_HOANG;
       var clean = id.replace('_', '-');

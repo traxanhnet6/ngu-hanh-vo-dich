@@ -237,6 +237,8 @@
       usedGiftcodes: {},
       tieuMoc: { moc: 1, ngoDao: false, thangTinhAnh: false, focus: null },
       bagLocks: {},
+      // Đợt V1 chặng 0 + chặng 7: trạng thái cơ chế vùng và việc mở vùng (xem ensureV1).
+      v1: { poisonStacks: 0, poisonResistUntil: 0, unlockedZones: {}, zoneQuests: { activeQuestId: null, tracked: false, completed: {} } },
       revivalPool: 5,
       revivalLastRegen: Date.now(),
       lastSpringUse: 0,
@@ -400,6 +402,9 @@
       // Đợt T3: save cũ chưa có trạng thái Kim Đan -> bổ sung mặc định
       // (chưa kết đan: phẩm 0, không đổi bất kỳ số nào của nhân vật).
       ensureKimDan(data);
+      // Đợt V1 chặng 0: save cũ chưa có trạng thái cơ chế vùng -> bổ sung
+      // mặc định (chưa nhiễm độc, chưa kháng độc, chưa mở việc vùng nào).
+      ensureV1(data);
       if (!data.bagLocks || typeof data.bagLocks !== 'object') {
         data.bagLocks = {};
       }
@@ -414,6 +419,30 @@
     } catch (e) {
       return null;
     }
+  }
+
+  // Đợt V1 chặng 0 + chặng 7: save cũ chưa có trạng thái cơ chế vùng -> bổ sung mặc định.
+  // player.v1: { poisonStacks (tầng độc đang tích, chặng 1),
+  //   poisonResistUntil (mốc giây kháng độc còn lại, chặng 1),
+  //   unlockedZones (việc mở vùng đã hoàn thành theo mapId, chặng 7),
+  //   zoneQuests (tiến trình 4 việc mở vùng hồ sơ 01, chặng 7) }.
+  function ensureV1(player) {
+    if (!player) return null;
+    if (!player.v1 || typeof player.v1 !== 'object') {
+      player.v1 = { poisonStacks: 0, poisonResistUntil: 0, unlockedZones: {}, zoneQuests: { activeQuestId: null, tracked: false, completed: {} } };
+    }
+    var v1 = player.v1;
+    if (typeof v1.poisonStacks !== 'number' || !isFinite(v1.poisonStacks) || v1.poisonStacks < 0) v1.poisonStacks = 0;
+    v1.poisonStacks = Math.floor(v1.poisonStacks);
+    if (typeof v1.poisonResistUntil !== 'number' || !isFinite(v1.poisonResistUntil) || v1.poisonResistUntil < 0) v1.poisonResistUntil = 0;
+    if (!v1.unlockedZones || typeof v1.unlockedZones !== 'object' || Array.isArray(v1.unlockedZones)) v1.unlockedZones = {};
+    if (!v1.zoneQuests || typeof v1.zoneQuests !== 'object') {
+      v1.zoneQuests = { activeQuestId: null, tracked: false, completed: {} };
+    }
+    if (!v1.zoneQuests.completed || typeof v1.zoneQuests.completed !== 'object') {
+      v1.zoneQuests.completed = {};
+    }
+    return v1;
   }
 
   // ==========================================================================
@@ -1093,6 +1122,7 @@
     getMocCap: getMocCap,
     addTuViCapped: addTuViCapped,
     ensureKimDan: ensureKimDan,
+    ensureV1: ensureV1,
     getKimDanPham: getKimDanPham,
     calcChainBonus: calcChainBonus,
     incrementHuntChain: incrementHuntChain,

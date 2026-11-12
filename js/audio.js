@@ -416,6 +416,323 @@
   }
 
   /**
+   * Đợt V1 chặng 1: tiếng tick độc — bọt khí trầm, trượt xuống (mỗi nhịp độc).
+   */
+  function playPoisonTick() {
+    if (!ctx || !sfxGain) return;
+    try {
+      if (ctx.state === 'suspended') ctx.resume();
+      var now = ctx.currentTime;
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(210, now);
+      osc.frequency.exponentialRampToValueAtTime(90, now + 0.18);
+
+      gain.gain.setValueAtTime(0.10, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+
+      osc.connect(gain);
+      gain.connect(sfxGain);
+
+      osc.start(now);
+      osc.stop(now + 0.18);
+    } catch (e) {}
+  }
+
+  /**
+   * Đợt V1 chặng 1: tiếng hái Hoa Giải Độc — chuông nhẹ hai nốt, khác
+   * playPickup (cao hơn, ngắn hơn) để nghe ra là hái hoa.
+   */
+  function playFlowerHarvest() {
+    if (!ctx || !sfxGain) return;
+    try {
+      if (ctx.state === 'suspended') ctx.resume();
+      var now = ctx.currentTime;
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(523, now);
+      osc.frequency.exponentialRampToValueAtTime(784, now + 0.3);
+
+      gain.gain.setValueAtTime(0.10, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+      osc.connect(gain);
+      gain.connect(sfxGain);
+
+      osc.start(now);
+      osc.stop(now + 0.3);
+    } catch (e) {}
+  }
+
+  /**
+   * Đợt V1 chặng 2: tiếng trượt trên băng — vệt trượt nhẹ, trượt xuống
+   * (phát theo nhịp khi đang trượt quán tính, không phải mỗi khung).
+   */
+  function playIceSlide() {
+    if (!ctx || !sfxGain) return;
+    try {
+      if (ctx.state === 'suspended') ctx.resume();
+      var now = ctx.currentTime;
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(320, now);
+      osc.frequency.exponentialRampToValueAtTime(170, now + 0.3);
+
+      gain.gain.setValueAtTime(0.05, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+      osc.connect(gain);
+      gain.connect(sfxGain);
+
+      osc.start(now);
+      osc.stop(now + 0.3);
+    } catch (e) {}
+  }
+
+  /**
+   * Đợt V1 chặng 2: tiếng băng nứt — rắc sắc, ngắn (khi ô băng lên cấp nứt).
+   */
+  function playIceCrack() {
+    if (!ctx || !sfxGain) return;
+    try {
+      if (ctx.state === 'suspended') ctx.resume();
+      var now = ctx.currentTime;
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(900, now);
+      osc.frequency.exponentialRampToValueAtTime(180, now + 0.12);
+
+      gain.gain.setValueAtTime(0.09, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+
+      osc.connect(gain);
+      gain.connect(sfxGain);
+
+      osc.start(now);
+      osc.stop(now + 0.12);
+    } catch (e) {}
+  }
+
+  /**
+   * Đợt V1 chặng 2: tiếng băng vỡ — trầm, nặng (khi ô băng vỡ, rơi xuống
+   * nước lạnh).
+   */
+  function playIceBreak() {
+    if (!ctx || !sfxGain) return;
+    try {
+      if (ctx.state === 'suspended') ctx.resume();
+      var now = ctx.currentTime;
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(170, now);
+      osc.frequency.exponentialRampToValueAtTime(45, now + 0.45);
+
+      gain.gain.setValueAtTime(0.14, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+
+      osc.connect(gain);
+      gain.connect(sfxGain);
+
+      osc.start(now);
+      osc.stop(now + 0.45);
+    } catch (e) {}
+  }
+
+  /**
+   * Đợt V1 chặng 3: tiếng rít báo trước khi dung nham phun — rít cao,
+   * trượt xuống (phát một lần khi vào cửa sổ báo trước 2 giây, hồ sơ
+   * 01 §3: "2 giây báo trước bằng tiếng rít và vệt sáng").
+   */
+  function playLavaWarn() {
+    if (!ctx || !sfxGain) return;
+    try {
+      if (ctx.state === 'suspended') ctx.resume();
+      var now = ctx.currentTime;
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(1200, now);
+      osc.frequency.exponentialRampToValueAtTime(320, now + 0.5);
+
+      gain.gain.setValueAtTime(0.06, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+
+      osc.connect(gain);
+      gain.connect(sfxGain);
+
+      osc.start(now);
+      osc.stop(now + 0.5);
+    } catch (e) {}
+  }
+
+  /**
+   * Đợt V1 chặng 3: tiếng dung nham phun trào — gầm trầm, nặng (khi cột
+   * dung nham dựng lên, phát cùng lúc gây sát thương phun).
+   */
+  function playLavaErupt() {
+    if (!ctx || !sfxGain) return;
+    try {
+      if (ctx.state === 'suspended') ctx.resume();
+      var now = ctx.currentTime;
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(95, now);
+      osc.frequency.exponentialRampToValueAtTime(38, now + 0.5);
+
+      gain.gain.setValueAtTime(0.16, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+
+      osc.connect(gain);
+      gain.connect(sfxGain);
+
+      osc.start(now);
+      osc.stop(now + 0.5);
+    } catch (e) {}
+  }
+
+  /**
+   * Đợt V1 chặng 4: tiếng gió bão cát Hoang Mạc — một đợt gió rít ngắn
+   * (nhiễu trắng qua bandpass quét lên rồi xuống), dùng theo pha: intensity
+   * thấp khi gió bắt đầu nổi (báo trước), 1 khi bão ập tới. Cùng mẫu
+   * startTribWind trong tệp; Node không có WebAudio nên hàm trả về êm.
+   */
+  function playSandWindGust(intensity) {
+    if (!ctx || !sfxGain) return;
+    try {
+      if (ctx.state === 'suspended') ctx.resume();
+      var k = (typeof intensity === 'number' && isFinite(intensity)) ? Math.max(0, Math.min(1, intensity)) : 1;
+      var now = ctx.currentTime;
+      var len = Math.floor(ctx.sampleRate * 0.9);
+      var buf = ctx.createBuffer(1, len, ctx.sampleRate);
+      var d = buf.getChannelData(0);
+      for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      var src = ctx.createBufferSource();
+      src.buffer = buf;
+      var filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.Q.value = 0.7;
+      filter.frequency.setValueAtTime(420, now);
+      filter.frequency.exponentialRampToValueAtTime(1500, now + 0.35);
+      filter.frequency.exponentialRampToValueAtTime(260, now + 0.9);
+      var gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.045 + 0.075 * k, now + 0.18);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.9);
+      src.connect(filter);
+      filter.connect(gain);
+      gain.connect(sfxGain);
+      src.start(now);
+      src.stop(now + 0.92);
+    } catch (e) {}
+  }
+
+  /**
+   * Đợt V1 chặng 5: tiếng rung ngân kim loại báo trước kiếm rơi Kiếm Vũ
+   * (sine rung ngân 650 -> 1100 Hz, 0.45s).
+   */
+  function playSwordRainWarn() {
+    if (!ctx || !sfxGain) return;
+    try {
+      if (ctx.state === 'suspended') ctx.resume();
+      var now = ctx.currentTime;
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(650, now);
+      osc.frequency.exponentialRampToValueAtTime(1100, now + 0.4);
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.22, now + 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+      osc.connect(gain);
+      gain.connect(sfxGain);
+      osc.start(now);
+      osc.stop(now + 0.45);
+    } catch (e) {}
+  }
+
+  /**
+   * Đợt V1 chặng 5: tiếng kiếm rơi cắm xuống đất (triangle đanh 480 -> 90 Hz, 0.3s).
+   */
+  function playSwordFall() {
+    if (!ctx || !sfxGain) return;
+    try {
+      if (ctx.state === 'suspended') ctx.resume();
+      var now = ctx.currentTime;
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(480, now);
+      osc.frequency.exponentialRampToValueAtTime(90, now + 0.28);
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.38, now + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+      osc.connect(gain);
+      gain.connect(sfxGain);
+      osc.start(now);
+      osc.stop(now + 0.3);
+    } catch (e) {}
+  }
+
+  /**
+   * Đợt V1 chặng 5: tiếng gió rít tích tụ kiếm khí quét (sawtooth 320 -> 780 Hz, 0.5s).
+   */
+  function playSwordSweepWarn() {
+    if (!ctx || !sfxGain) return;
+    try {
+      if (ctx.state === 'suspended') ctx.resume();
+      var now = ctx.currentTime;
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(320, now);
+      osc.frequency.exponentialRampToValueAtTime(780, now + 0.45);
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.18, now + 0.1);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+      osc.connect(gain);
+      gain.connect(sfxGain);
+      osc.start(now);
+      osc.stop(now + 0.5);
+    } catch (e) {}
+  }
+
+  /**
+   * Đợt V1 chặng 5: tiếng kiếm khí quét vụt ngang (sawtooth sắc bén 1150 -> 280 Hz, 0.35s).
+   */
+  function playSwordSweep() {
+    if (!ctx || !sfxGain) return;
+    try {
+      if (ctx.state === 'suspended') ctx.resume();
+      var now = ctx.currentTime;
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(1150, now);
+      osc.frequency.exponentialRampToValueAtTime(280, now + 0.32);
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.42, now + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+      osc.connect(gain);
+      gain.connect(sfxGain);
+      osc.start(now);
+      osc.stop(now + 0.35);
+    } catch (e) {}
+  }
+
+  /**
    * Tiếng báo không đủ linh lực (dull thud)
    */
   function playDull() {
@@ -776,6 +1093,18 @@
     playVineSnare: playVineSnare,
     playHit: playHit,
     playPickup: playPickup,
+    playPoisonTick: playPoisonTick,
+    playFlowerHarvest: playFlowerHarvest,
+    playIceSlide: playIceSlide,
+    playIceCrack: playIceCrack,
+    playIceBreak: playIceBreak,
+    playLavaWarn: playLavaWarn,
+    playLavaErupt: playLavaErupt,
+    playSandWindGust: playSandWindGust,
+    playSwordRainWarn: playSwordRainWarn,
+    playSwordFall: playSwordFall,
+    playSwordSweepWarn: playSwordSweepWarn,
+    playSwordSweep: playSwordSweep,
     playDull: playDull,
     playDeathGong: playDeathGong,
     playThunderFar: playThunderFar,
