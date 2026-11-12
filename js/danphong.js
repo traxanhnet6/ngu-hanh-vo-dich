@@ -1024,3 +1024,12 @@
   exports.isPanelOpen = isPanelOpen;
 
 })(typeof module !== 'undefined' && module.exports ? module.exports : (window.GameDanPhong = {}));
+
+// Đợt D2: re-export API Luyện Đan tương tác qua Dan Phong module (tương thích test/import).
+try {
+  var _ldD2 = require('./luyendan.js');
+  if (_ldD2 && typeof module !== 'undefined' && module.exports) {
+    for (var _k in _ldD2) { if (!module.exports[_k]) module.exports[_k] = _ldD2[_k]; }
+  }
+  if (typeof window !== 'undefined') { window.GameLuyenDan = window.GameLuyenDan || _ldD2; }
+} catch (e) {}

@@ -239,6 +239,10 @@
       bagLocks: {},
       // Đợt V1 chặng 0 + chặng 7: trạng thái cơ chế vùng và việc mở vùng (xem ensureV1).
       v1: { poisonStacks: 0, poisonResistUntil: 0, unlockedZones: {}, zoneQuests: { activeQuestId: null, tracked: false, completed: {} } },
+      // Đợt D1: trạng thái Linh Điền (đất/thửa/chăm/pháp quyết). ensureState ở linhdien.js sẽ chuẩn hóa khi nạp.
+      linhDien: { soilLevel: 0, unlockedPlots: 6, plots: [], spells: {}, soilFertility: 0 },
+      // Đợt D2: trạng thái Luyện Đan tương tác. ensureState ở luyendan.js sẽ chuẩn hóa khi nạp.
+      luyenDan: { furnaceGrade: 0, proficiency: {}, successes: 0, examsPassed: 0, rank: 0, toxin: 0, recipes: [], availableRecipes: [], fragments: {}, pillGrades: {}, lastGrade: null },
       revivalPool: 5,
       revivalLastRegen: Date.now(),
       lastSpringUse: 0,
@@ -405,6 +409,10 @@
       // Đợt V1 chặng 0: save cũ chưa có trạng thái cơ chế vùng -> bổ sung
       // mặc định (chưa nhiễm độc, chưa kháng độc, chưa mở việc vùng nào).
       ensureV1(data);
+      // Đợt D1: save cũ chưa có Linh Điền thật -> bổ sung mặc định an toàn.
+      try { var _ld = require('./linhdien.js'); if (_ld && _ld.ensureState) _ld.ensureState(data); } catch (e) {}
+      // Đợt D2: save cũ chưa có Luyện Đan tương tác -> bổ sung mặc định an toàn.
+      try { var _ld2 = require('./luyendan.js'); if (_ld2 && _ld2.ensureState) _ld2.ensureState(data); } catch (e) {}
       if (!data.bagLocks || typeof data.bagLocks !== 'object') {
         data.bagLocks = {};
       }
@@ -443,6 +451,37 @@
       v1.zoneQuests.completed = {};
     }
     return v1;
+  }
+
+  // Đợt D2: save cũ chưa có Luyện Đan tương tác -> bổ sung mặc định an toàn.
+  function ensureLuyenDan(player) {
+    if (!player) return null;
+    try {
+      var ldMod = null;
+      if (typeof global !== 'undefined' && global.GameLuyenDan && global.GameLuyenDan.ensureState) ldMod = global.GameLuyenDan;
+      else if (typeof window !== 'undefined' && window.GameLuyenDan && window.GameLuyenDan.ensureState) ldMod = window.GameLuyenDan;
+      else { try { ldMod = require('./luyendan.js'); } catch (e) { ldMod = null; } }
+      if (ldMod && ldMod.ensureState) return ldMod.ensureState(player);
+    } catch (e) {}
+    if (!player.luyenDan || typeof player.luyenDan !== 'object') player.luyenDan = { furnaceGrade: 0, proficiency: {}, successes: 0, examsPassed: 0, rank: 0, toxin: 0, recipes: [], availableRecipes: [], fragments: {}, pillGrades: {}, lastGrade: null };
+    return player.luyenDan;
+  }
+
+  // Đợt D1: save cũ chưa có Linh Điền thật -> bổ sung mặc định an toàn.
+  // (linhdien.js.ensureState làm phần chính; hàm này chỉ là cầu nối để state.js
+  // không phụ thuộc cứng vào linhdien.js khi nạp module trong Node.)
+  function ensureLinhDien(player) {
+    if (!player) return null;
+    try {
+      var ldMod = null;
+      if (typeof global !== 'undefined' && global.GameLinhDien && global.GameLinhDien.ensureState) ldMod = global.GameLinhDien;
+      else if (typeof window !== 'undefined' && window.GameLinhDien && window.GameLinhDien.ensureState) ldMod = window.GameLinhDien;
+      else { try { ldMod = require('./linhdien.js'); } catch (e) { ldMod = null; } }
+      if (ldMod && ldMod.ensureState) return ldMod.ensureState(player);
+    } catch (e) {}
+    if (!player.linhDien || typeof player.linhDien !== 'object') player.linhDien = { soilLevel: 0, unlockedPlots: 6, plots: [], spells: {}, soilFertility: 0 };
+    if (!Array.isArray(player.linhDien.plots)) player.linhDien.plots = [];
+    return player.linhDien;
   }
 
   // ==========================================================================
@@ -1123,6 +1162,8 @@
     addTuViCapped: addTuViCapped,
     ensureKimDan: ensureKimDan,
     ensureV1: ensureV1,
+    ensureLinhDien: ensureLinhDien,
+    ensureLuyenDan: ensureLuyenDan,
     getKimDanPham: getKimDanPham,
     calcChainBonus: calcChainBonus,
     incrementHuntChain: incrementHuntChain,
