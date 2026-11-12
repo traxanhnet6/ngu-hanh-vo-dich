@@ -353,11 +353,23 @@
     var waterFactor = plot.watered ? 0.75 : 1.0;
     var weedFactor = (plot.weed || plot.pest) ? 1.15 : 1.0;
     var fertFactor = plot.fertilizedCount > 0 ? Math.max(0.85, 1 - 0.05 * plot.fertilizedCount) : 1.0;
-    var growSec = plantDef.growSec * syn * waterFactor * weedFactor * fertFactor;
+    // Đợt N2: thú giữ ruộng (GameLinhThu.guardBonus) giảm tỉ lệ cỏ/sâu
+    // (ngưỡng xuất hiện chậm lại) + tăng tốc chăm cây (growSec ngắn lại).
+    // Không có thú giữ ruộng thì mọi hệ số bằng 1, hành vi D1 giữ nguyên.
+    var guardBonus = null;
+    try {
+      if (typeof window !== 'undefined' && window.GameLinhThu && window.GameLinhThu.guardBonus) guardBonus = window.GameLinhThu.guardBonus(player, now);
+      else if (typeof require === 'function') { var ltN2 = require('./linh-thu.js'); if (ltN2 && ltN2.guardBonus) guardBonus = ltN2.guardBonus(player, now); }
+    } catch (e) { guardBonus = null; }
+    var guardActive = !!(guardBonus && guardBonus.active);
+    var guardGrow = guardActive ? guardBonus.growFactor : 1;
+    var weedAt = 0.4 * (1 + (guardActive ? guardBonus.weedDelay : 0));
+    var pestAt = 0.7 * (1 + (guardActive ? guardBonus.pestDelay : 0));
+    var growSec = plantDef.growSec * syn * waterFactor * weedFactor * fertFactor * guardGrow;
 
     // cỏ dại / sâu linh xuất hiện theo thời gian
-    var weed = plot.weedCleared ? false : (now >= plot.plantedAt + plantDef.growSec * 1000 * 0.4);
-    var pest = plot.pestCleared ? false : (now >= plot.plantedAt + plantDef.growSec * 1000 * 0.7);
+    var weed = plot.weedCleared ? false : (now >= plot.plantedAt + plantDef.growSec * 1000 * weedAt);
+    var pest = plot.pestCleared ? false : (now >= plot.plantedAt + plantDef.growSec * 1000 * pestAt);
     plot.weed = weed;
     plot.pest = pest;
 

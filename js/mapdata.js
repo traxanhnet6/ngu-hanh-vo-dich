@@ -722,6 +722,7 @@
   ];
 
   var NPCS_TONG_MON = [
+    { id: 'npc_tuan_thu_su', name: 'Tuần Thú Sư', asset: 'assets/art/npc-tiepdan.png', originalW: 239, originalH: 560, w: 51, h: 120, x: 790, y: 945, feetX: 816, feetY: 1065, baseY: 1065, collisionRadius: 14, standTile: { x: 816, y: 1085 }, questGate: null, dialogueDefault: ['Tuần Thú Sư: xem thú, chuồng và đổi Đan Thú.'], dialogueQuest: ['Linh Thú Hoàn đầu tiên tặng một lần.'] },
     {
       id: 'npc_tiepdan',
       name: 'Tiếp Dẫn Đệ Tử',
@@ -2428,6 +2429,20 @@
     'kiem-trung': MAP_KIEM_TRUNG
   };
 
+  // Đợt N2: Tuần Thú Sư — quà gặp đầu (Linh Thú Hoàn) còn nhận được không?
+  // Đọc qua GameLinhThu để một nguồn sự thật duy nhất với bảng thú/UI.
+  function tuanThuSuFirstGiftAvailable(player) {
+    try {
+      var lt = null;
+      if (typeof window !== 'undefined' && window.GameLinhThu) lt = window.GameLinhThu;
+      else if (typeof global !== 'undefined' && global.GameLinhThu) lt = global.GameLinhThu;
+      else if (typeof require === 'function') lt = require('./linh-thu.js');
+      if (!lt || !lt.ensureState) return false;
+      var s = lt.ensureState(player);
+      return !!(s && !s.firstHoanGiven);
+    } catch (e) { return false; }
+  }
+
   var MapData = Object.assign({}, MAP_MIEU_HOANG, {
     maps: ALL_MAPS,
     buildGrid: buildGrid,
@@ -2457,6 +2472,8 @@
     zonePointShapeDistance: v1PointShapeDistance,
     zoneSafeAnchorsForMap: v1SafeAnchorsForMap,
     zoneCheckHazardsSafe: v1CheckHazardsSafe,
+    // Đợt N2: trạng thái quà gặp đầu của Tuần Thú Sư (qua GameLinhThu)
+    tuanThuSuFirstGiftAvailable: tuanThuSuFirstGiftAvailable,
     getMap: function (id) {
       if (!id) return MAP_MIEU_HOANG;
       var clean = id.replace('_', '-');

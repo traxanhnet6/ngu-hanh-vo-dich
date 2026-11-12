@@ -8,6 +8,16 @@
 
   // Định nghĩa các vật phẩm trong game (Brief §6 & Check 9)
   var ITEM_DEFS = {
+    'linh-thu-hoan': { id: 'linh-thu-hoan', name: 'Linh Thú Hoàn', type: 'consumable', stackable: true, iconCol: 0, iconRow: 1, desc: 'Vòng thuần phục linh thú.' },
+    'dan-thu': { id: 'dan-thu', name: 'Đan Thú', type: 'consumable', stackable: true, iconCol: 0, iconRow: 1, desc: 'Đan hồi sinh linh thú.' },
+    'trung-moc': { id: 'trung-moc', name: 'Trứng Linh Thú Mộc', type: 'egg', stackable: false, iconCol: 1, iconRow: 5, desc: 'Trứng hệ Mộc.' },
+    'trung-thuy': { id: 'trung-thuy', name: 'Trứng Linh Thú Thủy', type: 'egg', stackable: false, iconCol: 2, iconRow: 0, desc: 'Trứng hệ Thủy.' },
+    'trung-hoa': { id: 'trung-hoa', name: 'Trứng Linh Thú Hỏa', type: 'egg', stackable: false, iconCol: 3, iconRow: 5, desc: 'Trứng hệ Hỏa.' },
+    'trung-tho': { id: 'trung-tho', name: 'Trứng Linh Thú Thổ', type: 'egg', stackable: false, iconCol: 5, iconRow: 5, desc: 'Trứng hệ Thổ.' },
+    'trung-kim': { id: 'trung-kim', name: 'Trứng Linh Thú Kim', type: 'egg', stackable: false, iconCol: 0, iconRow: 5, desc: 'Trứng hệ Kim.' },
+    'yen-linh-thu': { id: 'yen-linh-thu', name: 'Yên Linh Thú', type: 'pet-gear', slot: 'saddle', stackable: false, iconCol: 4, iconRow: 0, desc: 'Tăng sức chứa túi yên.' },
+    'chuong-linh-thu': { id: 'chuong-linh-thu', name: 'Chuông Linh Thú', type: 'pet-gear', slot: 'collar', stackable: false, iconCol: 4, iconRow: 1, desc: 'Tăng sức chiêu thú.' },
+    'giap-linh-thu': { id: 'giap-linh-thu', name: 'Giáp Linh Thú', type: 'pet-gear', slot: 'armor', stackable: false, iconCol: 4, iconRow: 1, def: 3, desc: 'Tăng máu và đỡ đòn.' },
     'linh-thach': {
       id: 'linh-thach',
       name: 'Linh Thạch',
@@ -15,6 +25,36 @@
       iconCol: 0,
       iconRow: 0,
       desc: 'Đá chứa linh khí trời đất, tiền tệ cơ bản của giới tu tiên.'
+    },
+    'nhan-tru-vat-linh': {
+      id: 'nhan-tru-vat-linh',
+      name: 'Nhẫn Trữ Vật (Linh phẩm)',
+      type: 'container',
+      quality: 'rare',
+      stackable: false,
+      iconCol: 0,
+      iconRow: 0,
+      desc: 'Nhẫn trữ vật phẩm Linh phẩm — không bán ở cửa hàng, chỉ có được khi boss rơi.'
+    },
+    'nhan-tru-vat-phap': {
+      id: 'nhan-tru-vat-phap',
+      name: 'Nhẫn Trữ Vật (Pháp phẩm)',
+      type: 'container',
+      quality: 'epic',
+      stackable: false,
+      iconCol: 0,
+      iconRow: 0,
+      desc: 'Nhẫn trữ vật phẩm Pháp phẩm — không bán ở cửa hàng, chỉ có được khi boss rơi.'
+    },
+    'nhan-tru-vat-bao': {
+      id: 'nhan-tru-vat-bao',
+      name: 'Nhẫn Trữ Vật (Bảo phẩm)',
+      type: 'container',
+      quality: 'legend',
+      stackable: false,
+      iconCol: 0,
+      iconRow: 0,
+      desc: 'Nhẫn trữ vật phẩm Bảo phẩm — không bán ở cửa hàng, chỉ có được khi boss rơi.'
     },
     'la-thanh-tuy': {
       id: 'la-thanh-tuy',
@@ -158,6 +198,80 @@
       iconCol: 2,
       iconRow: 1,
       desc: 'Áo vải thô của thợ săn và tiều phu (+2 giáp).'
+    },
+    // Đợt E1 — Bộ cấp phát (issued gear) theo cảnh giới. Khóa giao dịch,
+    // chỉ số ở mức sàn, yếu hơn đồ rơi cùng mốc 15–30%.
+    'thanh-bo-kiem': {
+      id: 'thanh-bo-kiem', name: 'Thanh Bố Kiếm', type: 'gear', slot: 'weapon',
+      atk: 2, quality: 'common', stackable: false, iconCol: 4, iconRow: 0,
+      tier: 1, issued: true, tradeable: false, sellPrice: 1, buybackPrice: 5,
+      desc: 'Kiếm vải thanh đạm tông môn cấp phát (Luyện Khí) (+2 công kích). Khóa giao dịch.'
+    },
+    'thanh-bo-ao': {
+      id: 'thanh-bo-ao', name: 'Thanh Bố Áo', type: 'gear', slot: 'armor',
+      def: 1, quality: 'common', stackable: false, iconCol: 1, iconRow: 6,
+      tier: 1, issued: true, tradeable: false, sellPrice: 1, buybackPrice: 5,
+      desc: 'Áo vải thanh đạm (Luyện Khí) (+1 phòng thủ). Khóa giao dịch.'
+    },
+    'thanh-bo-giay': {
+      id: 'thanh-bo-giay', name: 'Thanh Bố Giày', type: 'gear', slot: 'shoes',
+      def: 1, quality: 'common', stackable: false, iconCol: 2, iconRow: 6,
+      tier: 1, issued: true, tradeable: false, sellPrice: 1, buybackPrice: 5,
+      desc: 'Giày vải thanh đạm (Luyện Khí) (+1 phòng thủ). Khóa giao dịch.'
+    },
+    'thanh-bo-dai': {
+      id: 'thanh-bo-dai', name: 'Thanh Bố Đai', type: 'gear', slot: 'belt',
+      def: 1, quality: 'common', stackable: false, iconCol: 3, iconRow: 6,
+      tier: 1, issued: true, tradeable: false, sellPrice: 1, buybackPrice: 5,
+      desc: 'Đai vải thanh đạm (Luyện Khí) (+1 phòng thủ). Khóa giao dịch.'
+    },
+    'thanh-bo-trang-suc': {
+      id: 'thanh-bo-trang-suc', name: 'Thanh Bố Trang Sức', type: 'gear', slot: 'jewelry',
+      atk: 1, quality: 'common', stackable: false, iconCol: 4, iconRow: 6,
+      tier: 1, issued: true, tradeable: false, sellPrice: 1, buybackPrice: 5,
+      desc: 'Trang sức thanh đạm (Luyện Khí) (+1 công kích). Khóa giao dịch.'
+    },
+    'thanh-bo-phap-khi': {
+      id: 'thanh-bo-phap-khi', name: 'Thanh Bố Pháp Khí', type: 'gear', slot: 'phapKhi',
+      atk: 1, def: 1, quality: 'common', stackable: false, iconCol: 5, iconRow: 6,
+      tier: 1, issued: true, tradeable: false, sellPrice: 1, buybackPrice: 5,
+      desc: 'Pháp khí thanh đạm (Luyện Khí) (+1 công/+1 phòng). Khóa giao dịch.'
+    },
+    'truc-van-kiem': {
+      id: 'truc-van-kiem', name: 'Trúc Văn Kiếm', type: 'gear', slot: 'weapon',
+      atk: 4, quality: 'good', stackable: false, iconCol: 5, iconRow: 0,
+      tier: 2, issued: true, tradeable: false, sellPrice: 1, buybackPrice: 10,
+      desc: 'Kiếm trúc văn (Trúc Cơ) (+4 công kích). Khóa giao dịch.'
+    },
+    'truc-van-ao': {
+      id: 'truc-van-ao', name: 'Trúc Văn Áo', type: 'gear', slot: 'armor',
+      def: 3, quality: 'good', stackable: false, iconCol: 5, iconRow: 4,
+      tier: 2, issued: true, tradeable: false, sellPrice: 1, buybackPrice: 10,
+      desc: 'Áo trúc văn (Trúc Cơ) (+3 phòng thủ). Khóa giao dịch.'
+    },
+    'truc-van-giay': {
+      id: 'truc-van-giay', name: 'Trúc Văn Giày', type: 'gear', slot: 'shoes',
+      def: 2, quality: 'good', stackable: false, iconCol: 0, iconRow: 6,
+      tier: 2, issued: true, tradeable: false, sellPrice: 1, buybackPrice: 10,
+      desc: 'Giày trúc văn (Trúc Cơ) (+2 phòng thủ). Khóa giao dịch.'
+    },
+    'truc-van-dai': {
+      id: 'truc-van-dai', name: 'Trúc Văn Đai', type: 'gear', slot: 'belt',
+      def: 2, quality: 'good', stackable: false, iconCol: 1, iconRow: 6,
+      tier: 2, issued: true, tradeable: false, sellPrice: 1, buybackPrice: 10,
+      desc: 'Đai trúc văn (Trúc Cơ) (+2 phòng thủ). Khóa giao dịch.'
+    },
+    'truc-van-trang-suc': {
+      id: 'truc-van-trang-suc', name: 'Trúc Văn Trang Sức', type: 'gear', slot: 'jewelry',
+      atk: 2, quality: 'good', stackable: false, iconCol: 2, iconRow: 6,
+      tier: 2, issued: true, tradeable: false, sellPrice: 1, buybackPrice: 10,
+      desc: 'Trang sức trúc văn (Trúc Cơ) (+2 công kích). Khóa giao dịch.'
+    },
+    'truc-van-phap-khi': {
+      id: 'truc-van-phap-khi', name: 'Trúc Văn Pháp Khí', type: 'gear', slot: 'phapKhi',
+      atk: 2, def: 2, quality: 'good', stackable: false, iconCol: 3, iconRow: 6,
+      tier: 2, issued: true, tradeable: false, sellPrice: 1, buybackPrice: 10,
+      desc: 'Pháp khí trúc văn (Trúc Cơ) (+2 công/+2 phòng). Khóa giao dịch.'
     },
     'gay-co-thu': {
       id: 'gay-co-thu',
@@ -668,6 +782,7 @@
         { id: 'tim-go-co-thu', chance: 1.0, min: 1, max: 1, isMaterial: true },
         { id: 'linh-chi-rung', chance: 0.50, min: 1, max: 1, isMaterial: true },
         { id: 'linh-thach', chance: 1.0, min: 8, max: 15, isCurrency: true },
+        { id: 'dan-thu', chance: 0.05, min: 1, max: 1 }, // Đợt N2: tinh anh rơi Đan Thú (PROVISIONAL 5%)
         { gearPool: BETTER_GEAR_POOL, chance: 0.35, isGear: true }
       ],
       // Kỹ năng Rễ Trói (Brief §4)
@@ -736,6 +851,7 @@
         { id: 'ngoc-bang-tam', chance: 1.0, min: 1, max: 1, isMaterial: true },
         { id: 'bang-tinh', chance: 0.70, min: 1, max: 1, isMaterial: true },
         { id: 'linh-thach', chance: 1.0, min: 6, max: 10, isCurrency: true },
+        { id: 'dan-thu', chance: 0.05, min: 1, max: 1 }, // Đợt N2: tinh anh rơi Đan Thú (PROVISIONAL 5%)
         { gearPool: BETTER_GEAR_POOL, chance: 0.35, isGear: true }
       ]
     },
@@ -796,6 +912,7 @@
         { id: 'hoa-tinh-tho', chance: 1.0, min: 1, max: 1, isMaterial: true },
         { id: 'da-nung', chance: 0.70, min: 1, max: 1, isMaterial: true },
         { id: 'linh-thach', chance: 1.0, min: 8, max: 12, isCurrency: true },
+        { id: 'dan-thu', chance: 0.05, min: 1, max: 1 }, // Đợt N2: tinh anh rơi Đan Thú (PROVISIONAL 5%)
         { gearPool: BETTER_GEAR_POOL, chance: 0.35, isGear: true }
       ]
     },
@@ -860,6 +977,7 @@
         { id: 'nuoc-oc-dao-tinh-khiet', chance: 1.0, min: 1, max: 1, isMaterial: true },
         { id: 'cat-tinh', chance: 0.70, min: 1, max: 1, isMaterial: true },
         { id: 'linh-thach', chance: 1.0, min: 10, max: 16, isCurrency: true },
+        { id: 'dan-thu', chance: 0.05, min: 1, max: 1 }, // Đợt N2: tinh anh rơi Đan Thú (PROVISIONAL 5%)
         { gearPool: BETTER_GEAR_POOL, chance: 0.35, isGear: true }
       ]
     },
@@ -920,6 +1038,7 @@
         { id: 'loi-huyen-thiet', chance: 1.0, min: 1, max: 1, isMaterial: true },
         { id: 'manh-kiem-gay', chance: 0.70, min: 1, max: 1, isMaterial: true },
         { id: 'linh-thach', chance: 1.0, min: 14, max: 20, isCurrency: true },
+        { id: 'dan-thu', chance: 0.05, min: 1, max: 1 }, // Đợt N2: tinh anh rơi Đan Thú (PROVISIONAL 5%)
         { gearPool: BETTER_GEAR_POOL, chance: 0.40, isGear: true }
       ]
     },
@@ -949,6 +1068,9 @@
         { id: 'nguyen-tinh-moc', chance: 1.0, min: 1, max: 1, isMaterial: true },
         { id: 'tim-go-co-thu', chance: 1.0, min: 2, max: 2, isMaterial: true },
         { id: 'linh-chi-ngan-nam', chance: 0.15, min: 1, max: 1, isMaterial: true },
+        { id: 'nhan-tru-vat-linh', chance: 0.02, min: 1, max: 1 },
+        { id: 'trung-moc', chance: 0.03, min: 1, max: 1 }, // Đợt N2: boss rơi trứng hệ (PROVISIONAL 3%)
+        { id: 'yen-linh-thu', chance: 0.02, min: 1, max: 1 }, // Đợt N2: boss rơi đồ thú (PROVISIONAL 2%)
         { id: 'linh-thach', chance: 1.0, min: 40, max: 80, isCurrency: true }
       ],
       // Chiêu trấn vùng: Rễ Trói Diện Rộng quanh người chơi
@@ -988,6 +1110,9 @@
         { id: 'nguyen-tinh-thuy', chance: 1.0, min: 1, max: 1, isMaterial: true },
         { id: 'bang-tuy', chance: 1.0, min: 1, max: 1, isMaterial: true },
         { id: 'bang-tuy-ngan-nam', chance: 0.15, min: 1, max: 1, isMaterial: true },
+        { id: 'nhan-tru-vat-linh', chance: 0.015, min: 1, max: 1 },
+        { id: 'trung-thuy', chance: 0.03, min: 1, max: 1 }, // Đợt N2: boss rơi trứng hệ (PROVISIONAL 3%)
+        { id: 'chuong-linh-thu', chance: 0.02, min: 1, max: 1 }, // Đợt N2: boss rơi đồ thú (PROVISIONAL 2%)
         { id: 'linh-thach', chance: 1.0, min: 60, max: 110, isCurrency: true }
       ],
       // Chiêu trấn vùng: Bão Tuyết quanh thân khi máu xuống thấp (Hồ sơ 01)
@@ -1030,6 +1155,9 @@
         { id: 'nguyen-tinh-hoa', chance: 1.0, min: 1, max: 1, isMaterial: true },
         { id: 'hoa-tinh-tho', chance: 1.0, min: 1, max: 1, isMaterial: true },
         { id: 'loi-viem-quan', chance: 0.15, min: 1, max: 1, isMaterial: true },
+        { id: 'nhan-tru-vat-phap', chance: 0.015, min: 1, max: 1 },
+        { id: 'trung-hoa', chance: 0.03, min: 1, max: 1 }, // Đợt N2: boss rơi trứng hệ (PROVISIONAL 3%)
+        { id: 'giap-linh-thu', chance: 0.02, min: 1, max: 1 }, // Đợt N2: boss rơi đồ thú (PROVISIONAL 2%)
         { id: 'linh-thach', chance: 1.0, min: 90, max: 160, isCurrency: true }
       ],
       // Chiêu trấn vùng: Cột Dung Nham dựng tại vị trí người chơi
@@ -1067,6 +1195,9 @@
       dropTable: [
         { id: 'nguyen-tinh-tho', chance: 1.0, min: 1, max: 1, isMaterial: true },
         { id: 'dia-tam-thach', chance: 0.15, min: 1, max: 1, isMaterial: true },
+        { id: 'nhan-tru-vat-phap', chance: 0.01, min: 1, max: 1 },
+        { id: 'trung-tho', chance: 0.03, min: 1, max: 1 }, // Đợt N2: boss rơi trứng hệ (PROVISIONAL 3%)
+        { id: 'chuong-linh-thu', chance: 0.02, min: 1, max: 1 }, // Đợt N2: boss rơi đồ thú (PROVISIONAL 2%)
         { id: 'linh-thach', chance: 1.0, min: 150, max: 260, isCurrency: true }
       ],
       // Chiêu trấn vùng: Hố Cát Sụp tại vị trí người chơi, trói chân ngắn
@@ -1105,6 +1236,9 @@
       dropTable: [
         { id: 'nguyen-tinh-kim', chance: 1.0, min: 1, max: 1, isMaterial: true },
         { id: 'mui-kiem-vo-danh', chance: 0.15, min: 1, max: 1, isMaterial: true },
+        { id: 'nhan-tru-vat-bao', chance: 0.008, min: 1, max: 1 },
+        { id: 'trung-kim', chance: 0.03, min: 1, max: 1 }, // Đợt N2: boss rơi trứng hệ (PROVISIONAL 3%)
+        { id: 'yen-linh-thu', chance: 0.02, min: 1, max: 1 }, // Đợt N2: boss rơi đồ thú (PROVISIONAL 2%)
         { id: 'linh-thach', chance: 1.0, min: 220, max: 380, isCurrency: true }
       ],
       // Chiêu trấn vùng: Kiếm Vũ quanh thân ở pha cuối (Hồ sơ 01)

@@ -3030,3 +3030,24 @@ body.photo-mode #toast-container { visibility: hidden; }
   padding: 1px 0;
   border-bottom: 1px dashed rgba(255, 255, 255, 0.07);
 }
+
+/* ============ Đợt N2: Linh Thú ============ */
+.skill-slot:disabled { opacity: 0.45; filter: grayscale(0.6); }
+.pet-combat-btn .pet-combat-glyph { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; color: #ffe9a8; }
+.linh-thu-body { max-height: 62vh; overflow-y: auto; padding: 12px; }
+.lt-section-title { font-weight: 700; color: #ffe9a8; font-size: 13px; letter-spacing: 1px; margin: 14px 0 6px; }
+.lt-section-title:first-child { margin-top: 0; }
+.lt-empty { color: #cbd5e1; font-size: 13px; line-height: 1.5; }
+.lt-pet-row { border: 1px solid rgba(255,233,168,.35); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; cursor: pointer; }
+.lt-pet-row.selected { outline: 2px solid #ffe9a8; background: rgba(255,233,168,.08); }
+.lt-pet-head { font-weight: 700; font-size: 14px; }
+.lt-pet-sub { color: #cbd5e1; font-size: 12.5px; margin-top: 2px; }
+.lt-aff-bar { height: 6px; background: rgba(255,255,255,.15); border-radius: 3px; margin-top: 6px; overflow: hidden; }
+.lt-aff-fill { height: 100%; background: #55d882; }
+.lt-detail { margin-bottom: 8px; }
+.lt-line { font-size: 13px; line-height: 1.6; color: #e2e8f0; }
+.lt-btn-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.lt-btn { font-size: 12.5px; padding: 6px 10px; }
+.lt-gear-slot { display: flex; align-items: center; gap: 8px; width: 100%; }
+.lt-gear-label { font-size: 13px; flex: 1; }
+.lt-egg-row { border: 1px dashed rgba(255,233,168,.35); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; }

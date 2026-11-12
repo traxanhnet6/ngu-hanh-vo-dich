@@ -132,6 +132,20 @@
             </svg>
             <span class="hud-tool-label">Túi [B]</span>
           </button>
+          <button id="btn-linhthu" class="btn wood hud-tool-btn" type="button" aria-label="Linh Thú" title="Bảng Linh Thú">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 8L4 3l5 3"></path>
+              <path d="M18 8l2-5-5 3"></path>
+              <circle cx="12" cy="14" r="7"></circle>
+            </svg>
+            <span class="hud-tool-label">Linh Thú</span>
+          </button>
+          <div id="quick-slots" class="quick-slots">
+            <button class="quick-slot" data-quick="0" type="button" title="Ô dùng nhanh 1">1</button>
+            <button class="quick-slot" data-quick="1" type="button" title="Ô dùng nhanh 2">2</button>
+            <button class="quick-slot" data-quick="2" type="button" title="Ô dùng nhanh 3">3</button>
+            <button class="quick-slot" data-quick="3" type="button" title="Ô dùng nhanh 4">4</button>
+          </div>
           <button id="btn-settings" class="btn wood hud-tool-btn" type="button" aria-label="Cài đặt" title="Cài Đặt">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="3.2"></circle>
@@ -198,6 +212,18 @@
           <div class="skill-cd-overlay"></div>
           <span class="skill-cd-text"></span>
           <span class="skill-name-tag">Dây Leo</span>
+        </button>
+        <button id="btn-thuan-phuc" class="skill-slot pet-combat-btn" type="button" title="Thuần phục">
+          <span class="pet-combat-glyph">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"></circle><circle cx="12" cy="12" r="3.5"></circle></svg>
+          </span>
+          <span class="skill-name-tag">Thuần Phục</span>
+        </button>
+        <button id="btn-hop-kich" class="skill-slot pet-combat-btn" type="button" title="Hợp kích">
+          <span class="pet-combat-glyph">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 5.6L20 10l-5.8 1.4L12 17l-2.2-5.6L4 10l5.8-1.4z"></path></svg>
+          </span>
+          <span class="skill-name-tag">Hợp Kích</span>
         </button>
       </div>
 
@@ -440,6 +466,13 @@
         <div class="setting-item">
           <label>Hướng dẫn tân thủ</label>
           <button id="btn-restart-tutorial" class="btn wood" type="button">Chạy lại hướng dẫn tân thủ</button>
+        </div>
+
+        <div class="settings-section-title">LINH THÚ</div>
+
+        <div class="setting-item">
+          <label>Bảng Linh Thú</label>
+          <button id="btn-open-linhthu-settings" class="btn wood" type="button">Mở Bảng Linh Thú</button>
         </div>
 
         <div class="settings-section-title">HIỂN THỊ &amp; ĐIỀU KHIỂN (BỔ SUNG)</div>
@@ -696,9 +729,42 @@
                 <span class="equip-slot-badge hidden">Đang mặc</span>
               </div>
             </div>
+            <div class="equip-slot-item" id="equip-slot-shoes" data-slot="shoes">
+              <span class="equip-slot-label">GIÀY</span>
+              <div class="equip-slot-box">
+                <div class="equip-slot-icon"></div>
+                <span class="equip-slot-badge hidden">Đang mặc</span>
+              </div>
+            </div>
+            <div class="equip-slot-item" id="equip-slot-belt" data-slot="belt">
+              <span class="equip-slot-label">ĐAI</span>
+              <div class="equip-slot-box">
+                <div class="equip-slot-icon"></div>
+                <span class="equip-slot-badge hidden">Đang mặc</span>
+              </div>
+            </div>
+            <div class="equip-slot-item" id="equip-slot-jewelry" data-slot="jewelry">
+              <span class="equip-slot-label">TRANG SỨC</span>
+              <div class="equip-slot-box">
+                <div class="equip-slot-icon"></div>
+                <span class="equip-slot-badge hidden">Đang mặc</span>
+              </div>
+            </div>
+            <div class="equip-slot-item" id="equip-slot-phapKhi" data-slot="phapKhi">
+              <span class="equip-slot-label">PHÁP KHÍ</span>
+              <div class="equip-slot-box">
+                <div class="equip-slot-icon"></div>
+                <span class="equip-slot-badge hidden">Đang mặc</span>
+              </div>
+            </div>
           </div>
         </div>
 
+        <div id="bag-container-bar" class="bag-container-bar"></div>
+        <div id="bag-breadcrumb" class="bag-breadcrumb"></div>
+        <div id="bag-tabs" class="bag-tabs"></div>
+        <input id="bag-search" class="bag-search" type="text" placeholder="Tìm theo tên / phẩm / hệ..." />
+        <div id="bag-storage-actions" class="bag-storage-actions"></div>
         <div id="bag-grid" class="bag-grid"></div>
 
         <div id="bag-item-info" class="bag-item-info">
@@ -731,8 +797,9 @@
               <button id="btn-card-use" class="btn wood detail-action-btn hidden" type="button">Dùng</button>
               <button id="btn-card-equip" class="btn wood detail-action-btn hidden" type="button">Trang bị</button>
               <button id="btn-card-unequip" class="btn wood detail-action-btn hidden" type="button">Cởi</button>
-              <button id="btn-card-drop" class="btn wood detail-action-btn btn-drop hidden" type="button">Bỏ</button>
-              <button id="btn-card-lock" class="btn wood detail-action-btn hidden" type="button">Khóa</button>
+              <button id="btn-card-drop" class="btn wood detail-action-btn btn-drop hidden" type="button">Bỏ</button>               <button id="btn-card-star" class="btn wood detail-action-btn hidden" type="button">Ghim sao</button>
+               <button id="btn-card-quick" class="btn wood detail-action-btn hidden" type="button">Gắn dùng nhanh</button>
+               <button id="btn-card-lock" class="btn wood detail-action-btn hidden" type="button">Khóa</button>
             </div>
           </div>
         </div>
@@ -841,6 +908,20 @@
         <div class="modal-actions" style="margin-top: 16px; text-align: center;">
           <button id="btn-close-pill-modal" class="btn wood" type="button">Đóng</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Linh Thú (Đợt N2) -->
+  <div id="linh-thu-modal" class="modal-overlay hidden">
+    <div class="panel modal-box linh-thu-box" style="max-width: 560px; width: 94%;">
+      <div class="modal-header">
+        <h2 class="modal-title">BẢNG LINH THÚ</h2>
+        <button id="close-linh-thu-modal" class="btn-close" type="button" aria-label="Đóng">×</button>
+      </div>
+      <div id="linh-thu-body" class="linh-thu-body"></div>
+      <div class="modal-actions" style="margin-top: 12px; text-align: center;">
+        <button id="btn-close-linh-thu-modal" class="btn wood" type="button">Đóng</button>
       </div>
     </div>
   </div>
@@ -977,6 +1058,10 @@
   <script src="js/tieumoc.js"></script>
   <script src="js/dotpha.js"></script>
   <script src="js/kimdan.js"></script>
+  <script src="js/trangbi.js"></script>
+  <script src="js/tui-kho.js"></script>
+  <script src="js/bi-canh.js"></script>
+  <script src="js/linh-thu.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

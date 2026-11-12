@@ -158,7 +158,7 @@
       } else if (typeof require === 'function') {
         try { defs = require('./monsters.js').ITEM_DEFS; } catch (e) {}
       }
-      var eqSlots = ['weapon', 'armor', 'head'];
+      var eqSlots = ['weapon', 'armor', 'head', 'shoes', 'belt', 'jewelry', 'phapKhi'];
       for (var sIdx = 0; sIdx < eqSlots.length; sIdx++) {
         var sKey = eqSlots[sIdx];
         var itemVal = equipment[sKey];
@@ -217,7 +217,11 @@
       equipment: {
         weapon: null,
         armor: null,
-        head: null
+        head: null,
+        shoes: null,
+        belt: null,
+        jewelry: null,
+        phapKhi: null
       },
       quests: {
         talked_linhnhi: false,
@@ -243,13 +247,20 @@
       linhDien: { soilLevel: 0, unlockedPlots: 6, plots: [], spells: {}, soilFertility: 0 },
       // Đợt D2: trạng thái Luyện Đan tương tác. ensureState ở luyendan.js sẽ chuẩn hóa khi nạp.
       luyenDan: { furnaceGrade: 0, proficiency: {}, successes: 0, examsPassed: 0, rank: 0, toxin: 0, recipes: [], availableRecipes: [], fragments: {}, pillGrades: {}, lastGrade: null },
+      // Đợt E1: trạng thái trang bị cấp phát (luân phiên ô, nhiệm vụ bổ sung).
+      trangBi: { nextSlotIndex: 0, issued: [], grantedMilestones: [], supplementary: {}, buybacks: {} },
       revivalPool: 5,
       revivalLastRegen: Date.now(),
       lastSpringUse: 0,
       bag: {
         slots: initialSlots
       },
+      tuiKho: null,
       daily: {},
+      // Đợt E3: trạng thái bí cảnh/sự kiện. ensureState ở bi-canh.js chuẩn hóa khi nạp.
+      biCanh: { currentRun: null, runs: [], rewards: {}, reminders: {}, areaBuffs: {}, combatLogs: {}, troiMoProgress: { floor: 0, completed: false }, nguHanhProgress: { openedGates: [], middleOpened: false } },
+      // Đợt N2: trạng thái Linh Thú. ensureState ở linh-thu.js chuẩn hóa khi nạp.
+      linhThu: { companions: [], mainId: null, eggs: [], barn: [], houseGuardPetId: null, gathered: { items: [], lastCollectMs: Date.now(), daily: { date: '', count: 0 } }, metTrainer: false, firstHoanGiven: false, tamingLog: [], ridingPetId: null, isRiding: false },
       huntChain: {
         count: 0,
         timer: 0
@@ -312,6 +323,8 @@
     var storage = getStorage(customStorage);
     player.lastSaved = Date.now();
 
+    ensureTuiKho(player);
+
     // Đồng bộ lại chỉ số phái sinh (đợt T3: kèm phẩm Kim Đan nếu đã kết đan)
     var stats = deriveStats(player.paths, player.equipment, getKimDanPham(player));
     player.hpMax = stats.hpMax;
@@ -352,11 +365,15 @@
         data.paths = { kim: { tuVi: 0 }, moc: { tuVi: 0 }, thuy: { tuVi: 0 }, hoa: { tuVi: 0 }, tho: { tuVi: 0 } };
       }
       if (!data.equipment) {
-        data.equipment = { weapon: null, armor: null, head: null };
+        data.equipment = { weapon: null, armor: null, head: null, shoes: null, belt: null, jewelry: null, phapKhi: null };
       } else {
         if (data.equipment.weapon === undefined) data.equipment.weapon = null;
         if (data.equipment.armor === undefined) data.equipment.armor = null;
         if (data.equipment.head === undefined) data.equipment.head = null;
+        if (data.equipment.shoes === undefined) data.equipment.shoes = null;
+        if (data.equipment.belt === undefined) data.equipment.belt = null;
+        if (data.equipment.jewelry === undefined) data.equipment.jewelry = null;
+        if (data.equipment.phapKhi === undefined) data.equipment.phapKhi = null;
       }
       if (!data.quests) {
         data.quests = {
@@ -413,6 +430,16 @@
       try { var _ld = require('./linhdien.js'); if (_ld && _ld.ensureState) _ld.ensureState(data); } catch (e) {}
       // Đợt D2: save cũ chưa có Luyện Đan tương tác -> bổ sung mặc định an toàn.
       try { var _ld2 = require('./luyendan.js'); if (_ld2 && _ld2.ensureState) _ld2.ensureState(data); } catch (e) {}
+      // Đợt E1: save cũ chưa có trạng thái trang bị cấp phát -> bổ sung mặc định an toàn.
+      try { var _tb = require('./trangbi.js'); if (_tb && _tb.ensureState) _tb.ensureState(data); } catch (e) {}
+      // Đợt E2: save cũ túi phẳng -> vật chứa mới (migration).
+      try { var _tk = require('./tui-kho.js'); if (_tk && _tk.ensureState) _tk.ensureState(data); } catch (e) {}
+      // Đợt E3: save cũ chưa có trạng thái bí cảnh/sự kiện -> bổ sung mặc định an toàn.
+      try { var _bc = require('./bi-canh.js'); if (_bc && _bc.ensureState) _bc.ensureState(data); } catch (e) {}
+      // Đợt N2: save cũ chưa có trạng thái Linh Thú -> bổ sung mặc định an toàn.
+      // Trình duyệt đi qua global GameLinhThu; Node đi qua require.
+      if (typeof window !== 'undefined' && window.GameLinhThu && window.GameLinhThu.ensureState) { window.GameLinhThu.ensureState(data); }
+      else { try { var _lt = require('./linh-thu.js'); if (_lt && _lt.ensureState) _lt.ensureState(data); } catch (e) {} }
       if (!data.bagLocks || typeof data.bagLocks !== 'object') {
         data.bagLocks = {};
       }
@@ -662,33 +689,77 @@
   /**
    * Trang bị vật phẩm từ ô túi đồ
    */
-  function equipItem(player, slotIndex) {
-    if (!player || !player.bag || !player.bag.slots) return { ok: false, msg: 'Dữ liệu không hợp lệ' };
-    var slotData = player.bag.slots[slotIndex];
-    if (!slotData || !slotData.itemId) return { ok: false, msg: 'Ô trống' };
-
+  // equipItem supports:
+  //   equipItem(player, slotIndex)  -> search all carried containers for gear at that flat index? (legacy)
+  //   equipItem(player, containerId, slotIndex)
+  //   equipItem(player, { containerId, slotIndex })
+  function equipItem(player, a, b) {
+    ensureTuiKho(player);
+    var tk = __tk();
+    var containerId = null;
+    var slotIndex = null;
+    if (typeof a === 'object' && a !== null && !Array.isArray(a)) {
+      containerId = a.containerId || a.container || a.cId;
+      slotIndex = (a.slotIndex !== undefined) ? a.slotIndex : a.slot;
+    } else if (typeof b !== 'undefined') {
+      containerId = a;
+      slotIndex = b;
+    } else if (typeof a === 'number') {
+      // legacy: find first gear across carried containers at flat index? Instead search all slots in order.
+      slotIndex = a;
+    }
+    // resolve container if missing: search carried containers for a slot containing gear
     var defs = null;
-    if (typeof global !== 'undefined' && global.GameMonsters && global.GameMonsters.ITEM_DEFS) {
-      defs = global.GameMonsters.ITEM_DEFS;
-    } else if (typeof window !== 'undefined' && window.GameMonsters && window.GameMonsters.ITEM_DEFS) {
-      defs = window.GameMonsters.ITEM_DEFS;
-    } else if (typeof require === 'function') {
-      try { defs = require('./monsters.js').ITEM_DEFS; } catch (e) {}
-    }
-    var def = defs ? defs[slotData.itemId] : null;
-    if (!def || def.type !== 'gear' || !def.slot) {
-      return { ok: false, msg: 'Vật phẩm không thể trang bị' };
-    }
+    if (typeof global !== 'undefined' && global.GameMonsters && global.GameMonsters.ITEM_DEFS) defs = global.GameMonsters.ITEM_DEFS;
+    else if (typeof window !== 'undefined' && window.GameMonsters && window.GameMonsters.ITEM_DEFS) defs = window.GameMonsters.ITEM_DEFS;
+    else if (typeof require === 'function') try { defs = require('./monsters.js').ITEM_DEFS; } catch (e) {}
 
-    if (!player.equipment) player.equipment = { weapon: null, armor: null, head: null };
+    if (!containerId && tk && player.tuiKho) containerId = player.tuiKho.defaultContainerId;
+    var targetContainer = null;
+    var slotData = null;
+    if (containerId && tk) {
+      targetContainer = tk.getContainer(player, containerId);
+      if (targetContainer) slotData = targetContainer.slots[slotIndex];
+    } else if (tk) {
+      // find first container/slot with gear
+      var carried = tk.carriedContainerIds(player);
+      // if slotIndex provided, try that index in each container
+      for (var ci = 0; ci < carried.length && !slotData; ci++) {
+        var c = tk.getContainer(player, carried[ci]);
+        if (!c) continue;
+        if (slotIndex !== null && slotIndex !== undefined && c.slots[slotIndex]) {
+          var d = defs ? defs[c.slots[slotIndex].itemId] : null;
+          if (d && d.type === 'gear') { targetContainer = c; slotData = c.slots[slotIndex]; containerId = c.id; }
+        }
+      }
+      if (!slotData) {
+        // scan all slots in order
+        for (var ci2 = 0; ci2 < carried.length && !slotData; ci2++) {
+          var c2 = tk.getContainer(player, carried[ci2]);
+          if (!c2) continue;
+          for (var si = 0; si < c2.slots.length; si++) {
+            var s = c2.slots[si];
+            if (!s || tk.isContainerItem(s)) continue;
+            var dd = defs ? defs[s.itemId] : null;
+            if (dd && dd.type === 'gear') { targetContainer = c2; slotData = s; containerId = c2.id; slotIndex = si; break; }
+          }
+        }
+      }
+    }
+    if (!slotData || !slotData.itemId) return { ok: false, msg: 'Ô trống' };
+    var def = defs ? defs[slotData.itemId] : null;
+    if (!def || def.type !== 'gear' || !def.slot) return { ok: false, msg: 'Vật phẩm không thể trang bị' };
+
+    if (!player.equipment) player.equipment = { weapon: null, armor: null, head: null, shoes: null, belt: null, jewelry: null, phapKhi: null };
     var targetSlot = def.slot;
     var oldItemId = player.equipment[targetSlot];
 
     player.equipment[targetSlot] = slotData.itemId;
+    // remove from container
+    if (targetContainer) targetContainer.slots[slotIndex] = null;
+    // old item -> default container
     if (oldItemId) {
-      player.bag.slots[slotIndex] = { itemId: oldItemId, count: 1 };
-    } else {
-      player.bag.slots[slotIndex] = null;
+      if (tk) tk.addItemToPlayer(player, oldItemId, 1);
     }
 
     var stats = deriveStats(player.paths, player.equipment);
@@ -696,45 +767,40 @@
     player.linhLucMax = stats.linhLucMax;
     savePlayer(player);
 
-    return {
-      ok: true,
-      msg: 'Đã trang bị ' + def.name,
-      slot: targetSlot,
-      equippedId: player.equipment[targetSlot],
-      swappedId: oldItemId
-    };
+    return { ok: true, msg: 'Đã trang bị ' + def.name, slot: targetSlot, equippedId: player.equipment[targetSlot], swappedId: oldItemId, containerId: containerId, slotIndex: slotIndex };
   }
 
   /**
    * Cởi trang bị đưa về túi
    */
-  function unequipItem(player, slotName) {
+  function unequipItem(player, slotName, targetContainerId) {
     if (!player || !player.equipment || !player.equipment[slotName]) {
       return { ok: false, msg: 'Không có trang bị ở ô này' };
     }
-    if (!player.bag) player.bag = { slots: new Array(BAG_TOTAL_SLOTS).fill(null) };
-    while (player.bag.slots.length < BAG_TOTAL_SLOTS) player.bag.slots.push(null);
-
-    var emptyIdx = -1;
-    for (var i = 0; i < player.bag.slots.length; i++) {
-      if (!player.bag.slots[i]) { emptyIdx = i; break; }
+    ensureTuiKho(player);
+    var tk = __tk();
+    var itemId = player.equipment[slotName];
+    player.equipment[slotName] = null;
+    // return to default container (or specified)
+    var r;
+    if (targetContainerId && tk) {
+      var c = tk.getContainer(player, targetContainerId);
+      r = tk.addItemToContainer(c, itemId, 1);
+    } else if (tk) {
+      r = tk.addItemToPlayer(player, itemId, 1);
+    } else {
+      r = { success: false };
     }
-    if (emptyIdx === -1) {
+    if (!r || r.success === false) {
+      // revert equip
+      player.equipment[slotName] = itemId;
       return { ok: false, msg: 'Túi đồ đã đầy, không thể cởi trang bị!' };
     }
 
-    var itemId = player.equipment[slotName];
-    player.bag.slots[emptyIdx] = { itemId: itemId, count: 1 };
-    player.equipment[slotName] = null;
-
     var defs = null;
-    if (typeof global !== 'undefined' && global.GameMonsters && global.GameMonsters.ITEM_DEFS) {
-      defs = global.GameMonsters.ITEM_DEFS;
-    } else if (typeof window !== 'undefined' && window.GameMonsters && window.GameMonsters.ITEM_DEFS) {
-      defs = window.GameMonsters.ITEM_DEFS;
-    } else if (typeof require === 'function') {
-      try { defs = require('./monsters.js').ITEM_DEFS; } catch (e) {}
-    }
+    if (typeof global !== 'undefined' && global.GameMonsters && global.GameMonsters.ITEM_DEFS) defs = global.GameMonsters.ITEM_DEFS;
+    else if (typeof window !== 'undefined' && window.GameMonsters && window.GameMonsters.ITEM_DEFS) defs = window.GameMonsters.ITEM_DEFS;
+    else if (typeof require === 'function') try { defs = require('./monsters.js').ITEM_DEFS; } catch (e) {}
     var def = defs ? defs[itemId] : null;
 
     var stats = deriveStats(player.paths, player.equipment);
@@ -742,12 +808,7 @@
     player.linhLucMax = stats.linhLucMax;
     savePlayer(player);
 
-    return {
-      ok: true,
-      msg: 'Đã cởi ' + (def ? def.name : itemId),
-      slot: slotName,
-      bagSlot: emptyIdx
-    };
+    return { ok: true, msg: 'Đã cởi ' + (def ? def.name : itemId), slot: slotName, itemId: itemId, containerId: r.containerId };
   }
 
   /**
@@ -1038,62 +1099,41 @@
    */
   var BAG_TOTAL_SLOTS = 48;
 
+  function __tk() {
+    try {
+      if (typeof global !== 'undefined' && global.GameTuiKho) return global.GameTuiKho;
+      if (typeof window !== 'undefined' && window.GameTuiKho) return window.GameTuiKho;
+      return require('./tui-kho.js');
+    } catch (e) { return null; }
+  }
+  function ensureTuiKho(player) {
+    var tk = __tk();
+    if (tk && tk.ensureState) return tk.ensureState(player);
+    if (!player.tuiKho) player.tuiKho = null;
+    return player.tuiKho;
+  }
   function addItemToBag(player, itemId, count, itemDefs) {
+    ensureTuiKho(player);
+    var tk = __tk();
+    if (tk && tk.addItemToPlayer) {
+      var r = tk.addItemToPlayer(player, itemId, count);
+      // compat: expose slot index-ish
+      if (r && r.success) return { success: true, slot: (typeof r.slot === 'number' ? r.slot : 0), count: r.count, containerId: r.containerId, tempChest: r.tempChest };
+      return { success: false, reason: r ? r.reason : 'full' };
+    }
+    // fallback old
     var cnt = (count !== undefined && count !== null) ? count : 1;
-    if (itemId === 'linh-thach') {
-      player.linhThach = (player.linhThach || 0) + cnt;
-      return { success: true, slot: -1, count: player.linhThach };
-    }
-
-    if (!player.bag) player.bag = { slots: new Array(BAG_TOTAL_SLOTS).fill(null) };
-    while (player.bag.slots.length < BAG_TOTAL_SLOTS) {
-      player.bag.slots.push(null);
-    }
-
-    var defs = itemDefs;
-    if (!defs && typeof global !== 'undefined' && global.GameMonsters) {
-      defs = global.GameMonsters.ITEM_DEFS;
-    }
-    var def = defs ? defs[itemId] : null;
-    var isStackable = def ? !!def.stackable : true;
-
-    // Nếu xếp chồng được, tìm ô đã có cùng itemId
-    if (isStackable) {
-      for (var i = 0; i < player.bag.slots.length; i++) {
-        var s = player.bag.slots[i];
-        if (s && s.itemId === itemId) {
-          s.count += cnt;
-          return { success: true, slot: i, count: s.count };
-        }
-      }
-    }
-
-    // Tìm ô trống đầu tiên
-    for (var j = 0; j < player.bag.slots.length; j++) {
-      if (player.bag.slots[j] === null) {
-        player.bag.slots[j] = {
-          itemId: itemId,
-          count: cnt
-        };
-        return { success: true, slot: j, count: cnt };
-      }
-    }
-
+    if (itemId === 'linh-thach') { player.linhThach = (player.linhThach || 0) + cnt; return { success: true, slot: -1, count: player.linhThach }; }
     return { success: false, reason: 'full' };
   }
 
   function countItemInBag(player, itemId) {
+    ensureTuiKho(player);
+    var tk = __tk();
+    if (tk && tk.countItemInPlayer) return tk.countItemInPlayer(player, itemId);
     if (!player) return 0;
     if (itemId === 'linh-thach') return player.linhThach || 0;
-    if (!player.bag || !player.bag.slots) return 0;
-    var total = 0;
-    for (var i = 0; i < player.bag.slots.length; i++) {
-      var s = player.bag.slots[i];
-      if (s && s.itemId === itemId) {
-        total += (s.count || 1);
-      }
-    }
-    return total;
+    return 0;
   }
 
   function hasItemInBag(player, itemId, count) {
@@ -1102,28 +1142,10 @@
   }
 
   function removeItemFromBag(player, itemId, count) {
-    var cnt = (count !== undefined && count !== null) ? count : 1;
-    if (itemId === 'linh-thach') {
-      if ((player.linhThach || 0) < cnt) return false;
-      player.linhThach -= cnt;
-      return true;
-    }
-    if (!player || !player.bag || !player.bag.slots) return false;
-    if (countItemInBag(player, itemId) < cnt) return false;
-    var remainingToRemove = cnt;
-    for (var i = 0; i < player.bag.slots.length && remainingToRemove > 0; i++) {
-      var s = player.bag.slots[i];
-      if (s && s.itemId === itemId) {
-        if (s.count <= remainingToRemove) {
-          remainingToRemove -= s.count;
-          player.bag.slots[i] = null;
-        } else {
-          s.count -= remainingToRemove;
-          remainingToRemove = 0;
-        }
-      }
-    }
-    return true;
+    ensureTuiKho(player);
+    var tk = __tk();
+    if (tk && tk.removeItemFromPlayer) return tk.removeItemFromPlayer(player, itemId, count);
+    return false;
   }
 
   var StateAPI = {
@@ -1164,6 +1186,21 @@
     ensureV1: ensureV1,
     ensureLinhDien: ensureLinhDien,
     ensureLuyenDan: ensureLuyenDan,
+    ensureTrangBi: function (player) {
+      try {
+        var tb = require('./trangbi.js');
+        if (tb && tb.ensureState) return tb.ensureState(player);
+      } catch (e) {}
+      if (!player.trangBi || typeof player.trangBi !== 'object') player.trangBi = { nextSlotIndex: 0, issued: [], grantedMilestones: [], supplementary: {}, buybacks: {} };
+      return player.trangBi;
+    },
+    ensureTuiKho: function (player) {
+      try {
+        var tk = require('./tui-kho.js');
+        if (tk && tk.ensureState) return tk.ensureState(player);
+      } catch (e) {}
+      return player ? player.tuiKho : null;
+    },
     getKimDanPham: getKimDanPham,
     calcChainBonus: calcChainBonus,
     incrementHuntChain: incrementHuntChain,
@@ -1174,6 +1211,34 @@
     consumeRevivalCharge: consumeRevivalCharge,
     revivePlayer: revivePlayer,
     BAG_TOTAL_SLOTS: BAG_TOTAL_SLOTS,
+    ensureTuiKho: ensureTuiKho,
+    ensureBiCanh: function (player) {
+      try {
+        var bc = require('./bi-canh.js');
+        if (bc && bc.ensureState) return bc.ensureState(player);
+      } catch (e) {}
+      if (!player.biCanh || typeof player.biCanh !== 'object') player.biCanh = { currentRun: null, runs: [], rewards: {}, reminders: {}, areaBuffs: {}, combatLogs: {}, troiMoProgress: { floor: 0, completed: false }, nguHanhProgress: { openedGates: [], middleOpened: false } };
+      return player.biCanh;
+    },
+    ensureLinhThu: function (player) {
+      if (typeof window !== 'undefined' && window.GameLinhThu && window.GameLinhThu.ensureState) return window.GameLinhThu.ensureState(player);
+      try {
+        var lt = require('./linh-thu.js');
+        if (lt && lt.ensureState) return lt.ensureState(player);
+      } catch (e) {}
+      if (!player.linhThu || typeof player.linhThu !== 'object') player.linhThu = { companions: [], mainId: null, eggs: [], barn: [], houseGuardPetId: null, gathered: { items: [], lastCollectMs: Date.now(), daily: { date: '', count: 0 } }, metTrainer: false, firstHoanGiven: false, tamingLog: [], ridingPetId: null, isRiding: false };
+      return player.linhThu;
+    },
+    grantStorageBag: function (player) {
+      var tk = __tk();
+      if (tk && tk.grantStorageContainer) return tk.grantStorageContainer(player);
+      return { ok: false };
+    },
+    grantRing: function (player, grade) {
+      var tk = __tk();
+      if (tk && tk.grantRing) return tk.grantRing(player, grade);
+      return { ok: false };
+    },
     addItemToBag: addItemToBag,
     countItemInBag: countItemInBag,
     hasItemInBag: hasItemInBag,

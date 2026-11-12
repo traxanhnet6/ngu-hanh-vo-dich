@@ -33,6 +33,12 @@
   var SPEED = 138; // Tốc độ di chuyển người chơi (px/s)
   var INTERACTION_RANGE = 48;
 
+  // Đợt N2 Linh Thú: trạng thái chạy của thú đi cùng (không lưu vào save).
+  var petVisual = { x: 0, y: 0, animTime: 0, moving: false, facingLeft: false, init: false };
+  var petSkillCds = {}; // hồi chiêu riêng từng chiêu thú, theo tên chiêu
+  var harmonyCdLeft = 0;
+  var n2AwayGatherDone = false;
+
   var keysDown = {
     up: false,
     down: false,
@@ -2384,6 +2390,12 @@
         case 'arrowright':
           keysDown.right = true;
           break;
+        case 'r':
+          // Đợt N2: phím nhanh cưỡi/xuống thú — không hủy đường đi.
+          e.preventDefault();
+          toggleRideQuick();
+          handled = false;
+          break;
         case ' ':
         case 'e':
           // Phím Space/E = nút hành động theo ngữ cảnh (cùng hành vi với nút trên HUD)
@@ -2721,6 +2733,16 @@
       if ((q.sectStage || 0) === 3) {
         q.sectStage = 4;
         if (!q.mainStage) q.mainStage = 1;
+        // Đợt E2: mở khóa Túi Trữ Vật khi vào tông môn.
+        if (typeof window !== 'undefined' && window.GameTuiKho && window.GameTuiKho.grantStorageContainer) {
+          window.GameTuiKho.grantStorageContainer(player);
+        }
+        // Đợt E1 Lớp 2: kiểm tra thiếu đồ khi nhận nhiệm vụ chính đầu tiên.
+        try {
+          var tbAPI2 = (typeof window !== 'undefined' && window.GameTrangBi) ? window.GameTrangBi : (typeof global !== 'undefined' && global.GameTrangBi ? global.GameTrangBi : (typeof require !== 'undefined' ? require('./trangbi.js') : null));
+          if (tbAPI2 && tbAPI2.onMainQuestReceived) tbAPI2.onMainQuestReceived(player, 1);
+          if (tbAPI2 && tbAPI2.onMainStageAdvanced) tbAPI2.onMainStageAdvanced(player, 1);
+        } catch (e) {}
         player.linhThach = (player.linhThach || 0) + 30;
         if (audioAPI) audioAPI.playChime();
         spawnFloatingText('+30 Linh Thạch', player.x, player.y - 35, '#ffe9a8');
@@ -2817,8 +2839,11 @@
         }
         break;
       case 'notice_board':
-        if (typeof window !== 'undefined' && window.GameUI) {
-          window.GameUI.showToast('Bảng Tông Môn: Sự kiện bí cảnh sẽ mở ở đợt sau.');
+        if (typeof window !== 'undefined' && window.GameBiCanh && window.GameUI) {
+          var nb = window.GameBiCanh.getNoticeBoardData(player);
+          window.GameUI.showToast('Bảng Sự Kiện tuần: sự kiện sắp nhất còn ' + Math.round((nb.countdown || 0) / 60000) + ' phút.');
+        } else if (typeof window !== 'undefined' && window.GameUI) {
+          window.GameUI.showToast('Bảng Sự Kiện tuần');
         }
         break;
       case 'dan_phong':
@@ -2918,6 +2943,22 @@
       if (audioAPI) audioAPI.playPickup();
       groundDrops.splice(i, 1);
       return true;
+    }
+    // Nhẫn Trữ Vật rơi từ boss: chuyển thành vật chứa, không phải vật phẩm thường.
+    if (drop.itemId && drop.itemId.indexOf('nhan-tru-vat-') === 0) {
+      var grade = drop.itemId.replace('nhan-tru-vat-', '');
+      var tkDrop = (typeof window !== 'undefined' && window.GameTuiKho) ? window.GameTuiKho : null;
+      if (tkDrop && tkDrop.grantRing) {
+        var gr = tkDrop.grantRing(player, grade);
+        if (gr && gr.ok) {
+          spawnFloatingText('Nhận ' + (gr.container ? gr.container.name : 'Nhẫn Trữ Vật'), player.x, player.y - 35, '#ffe9a8');
+          if (audioAPI) audioAPI.playChime();
+          if (typeof window !== 'undefined' && window.GameUI) window.GameUI.showToast('Nhận Nhẫn Trữ Vật (' + grade + ') từ boss!');
+          groundDrops.splice(i, 1);
+          if (stateAPI && stateAPI.savePlayer) stateAPI.savePlayer(player);
+          return true;
+        }
+      }
     }
     // Cho vào túi trữ vật (Brief §6)
     var addResult = stateAPI ? stateAPI.addItemToBag(player, drop.itemId, drop.count) : { success: true };
@@ -3882,6 +3923,18 @@
       }
     }
 
+    // Đợt E1 Lớp 3: cảnh báo sàn trang bị khi vào nội dung mốc (không khóa).
+    try {
+      var tbAPI3 = (typeof window !== 'undefined' && window.GameTrangBi) ? window.GameTrangBi : (typeof global !== 'undefined' && global.GameTrangBi ? global.GameTrangBi : (typeof require !== 'undefined' ? require('./trangbi.js') : null));
+      if (tbAPI3 && tbAPI3.checkGearFloor && gateMap && gateMap.minRealmRank) {
+        var minTier = (gateMap.minRealmRank >= 10) ? 2 : 1;
+        var gf = tbAPI3.checkGearFloor(player, minTier);
+        if (gf && gf.below && typeof window !== 'undefined' && window.GameUI) {
+          window.GameUI.showToast('Cảnh báo: lực trang bị dưới sàn mốc — gợi ý lãnh bộ cấp phát.');
+        }
+      }
+    } catch (e) {}
+
     // 3. Lập tuyến di chuyển
     var plan = planTravelRoute(currentMapId, mapId);
     if (!plan || !plan.route || plan.route.length === 0) {
@@ -3968,6 +4021,26 @@
         window.GameUI.showToast(msgNoItem);
       }
       return { ok: false, msg: msgNoItem };
+    }
+
+    // Đợt N2: dùng trứng trong túi = bắt đầu ấp (thẻ chi tiết túi có nút
+    // Dùng; bảng thú cũng có nút Ấp riêng). Trứng rời túi vào danh sách ấp.
+    var n2UseApi = (typeof window !== 'undefined') ? window.GameLinhThu : null;
+    if (n2UseApi && n2UseApi.EGG_MAP && n2UseApi.EGG_MAP[itemId]) {
+      var n2EggState = n2UseApi.ensureState(player);
+      var n2Egg = n2UseApi.startIncubation(n2EggState, itemId, Date.now());
+      if (!n2Egg.ok) {
+        if (typeof window !== 'undefined' && window.GameUI) window.GameUI.showToast(n2Egg.reason);
+        return { ok: false, msg: n2Egg.reason };
+      }
+      stateAPI.removeItemFromBag(player, itemId, 1);
+      stateAPI.savePlayer(player);
+      var n2EggDef = (monstersAPI && monstersAPI.ITEM_DEFS) ? monstersAPI.ITEM_DEFS[itemId] : null;
+      if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.showToast('Đã bắt đầu ấp ' + (n2EggDef ? n2EggDef.name : itemId) + ' — xem tiến độ trong Bảng Linh Thú.');
+        if (window.GameUI.openLinhThu) window.GameUI.openLinhThu();
+      }
+      return { ok: true, msg: 'Đang ấp trứng.' };
     }
 
     var pillElemMap = {
@@ -5013,12 +5086,15 @@
     startTribulation();
 
     player.realm = 'Trúc Cơ Sơ Kỳ';
-    // Đợt T1: đột phá ĐẠI cảnh giới thành công -> mốc tiểu đột phá chuyển
-    // sang giai đoạn Trúc Cơ đầu tiên (mốc 10, trần 1.300/đường).
     if (stateAPI.setMocIndex) stateAPI.setMocIndex(player, 10);
     if (player.quests) {
       player.quests.mainStage = 10;
     }
+    // Đợt E1: đột phá cảnh giới luôn thưởng vũ khí của cảnh giới mới.
+    try {
+      var tbAPI = (typeof window !== 'undefined' && window.GameTrangBi) ? window.GameTrangBi : (typeof global !== 'undefined' && global.GameTrangBi ? global.GameTrangBi : (typeof require !== 'undefined' ? require('./trangbi.js') : null));
+      if (tbAPI && tbAPI.grantBreakthroughWeapon) tbAPI.grantBreakthroughWeapon(player, 2);
+    } catch (e) {}
     stateAPI.savePlayer(player);
 
     if (audioAPI) audioAPI.playChime();
@@ -5216,9 +5292,16 @@
     return { ok: true, msg: successMsg };
   }
 
-  function equipItem(slotIndex) {
+  function equipItem(a, b) {
     if (!stateAPI || !player) return { ok: false, msg: 'Chưa khởi tạo nhân vật' };
-    var res = stateAPI.equipItem(player, slotIndex);
+    var res;
+    if (typeof b !== 'undefined') {
+      res = stateAPI.equipItem(player, a, b);
+    } else if (typeof a === 'object' && a !== null) {
+      res = stateAPI.equipItem(player, a.containerId || a.container || a.cId, a.slotIndex !== undefined ? a.slotIndex : a.slot);
+    } else {
+      res = stateAPI.equipItem(player, a);
+    }
     if (res.ok) {
       if (typeof window !== 'undefined' && window.GameUI) {
         window.GameUI.showToast(res.msg);
@@ -5847,6 +5930,21 @@
 
   function update(dt) {
     if (!player || !mapData) return;
+    // Đợt N2: thú đi cùng (hảo cảm/hồi máu/lột xác) + gom đồ khi vắng (một
+    // lần mỗi lần mở game) + bám đuổi + tự ra chiêu.
+    if (typeof window !== 'undefined' && window.GameLinhThu) {
+      var n2InCombat = (typeof lastCombatTime !== 'undefined') && ((performance.now() - lastCombatTime) < 5000);
+      window.GameLinhThu.update(player, dt, { nowMs: Date.now(), inCombat: n2InCombat });
+      if (!n2AwayGatherDone) {
+        n2AwayGatherDone = true;
+        var n2Gather = window.GameLinhThu.collectAwayGather(player, Date.now());
+        if (n2Gather && n2Gather.added > 0 && typeof window !== 'undefined' && window.GameUI) {
+          window.GameUI.showToast('Linh thú ở nhà đã gom ' + n2Gather.added + ' vật phẩm — nhận trong Bảng Linh Thú.');
+        }
+      }
+    }
+    updatePetVisual(dt);
+    updatePetCombat(dt);
     // Đợt 6 (mục 15, hồ sơ 29): thống kê thời gian chơi
     if (!player.stats) player.stats = { playSec: 0, kills: 0, bossKills: 0, harvests: 0, refines: 0 };
     player.stats.playSec = (player.stats.playSec || 0) + dt;
@@ -5942,6 +6040,13 @@
     // chuyển (PROVISIONAL 30%; 0 khi yên bão hoặc map không có bão). Không
     // đổi logic di chuyển/dẫn đường, chỉ nhân tốc độ.
     currentSpeed = currentSpeed * (1.0 - sandStormWindSlowRatio());
+    // Đợt N2: cưỡi thú ngoài trận tăng tốc (hệ số PROVISIONAL trong
+    // GameLinhThu.rideSpeedFactor); quái đã aggro thì tạm dừng bonus. Nhân
+    // vào currentSpeed chung nên phím/joystick/đường click A*/mũ trượt băng
+    // cùng nhanh lên — hợp đồng trượt băng V1 và logic bám điểm mốc của
+    // đường click giữ nguyên.
+    var n2RideApi = (typeof window !== 'undefined') ? window.GameLinhThu : null;
+    if (n2RideApi) currentSpeed = currentSpeed * n2RideApi.rideSpeedFactor(isPetRidingActive(), anyMonsterAggro());
 
     // Cập nhật hồi phục khí huyết và linh lực theo giây (Brief §5)
     var inCombat = (now - lastCombatTime) < 5000;
@@ -6417,9 +6522,23 @@
       if (m.skillAnimTimer > 0) {
         m.skillAnimTimer = Math.max(0, m.skillAnimTimer - dt);
       }
-      monstersAPI.updateMonster(m, playerPos, dt, {
+      // Đợt N2: quái chọn mục tiêu gần nhất giữa chủ và thú đi cùng (luật
+      // PROVISIONAL). Khi cưỡi, thú ở dưới chủ nên quái luôn nhắm chủ.
+      var n2EffPos = playerPos;
+      var n2Pet = getMainPetAlive();
+      m._n2PetTarget = null;
+      if (n2Pet && petVisual.init && !(player.linhThu && player.linhThu.isRiding)) {
+        var n2DPet = Math.hypot(m.x - petVisual.x, m.y - petVisual.y);
+        var n2DPlayer = Math.hypot(m.x - player.x, m.y - player.y);
+        if (n2DPet < n2DPlayer) {
+          n2EffPos = { x: petVisual.x, y: petVisual.y };
+          m._n2PetTarget = n2Pet.id;
+        }
+      }
+      monstersAPI.updateMonster(m, n2EffPos, dt, {
         onMonsterAttack: function (attacker) {
-          handleMonsterAttackPlayer(attacker);
+          if (attacker._n2PetTarget) handleMonsterAttackPet(attacker);
+          else handleMonsterAttackPlayer(attacker);
         },
         // Đợt V1 chặng 3: truyền đồng hồ nhịp vùng để boss Hỏa đọc lịch
         // chiêu từ nhịp chung (xem monsters.js updateMonster); các boss
@@ -6517,6 +6636,37 @@
     spawnFloatingText('Triệu hồi Thảo Tinh!', elite.x, elite.y - 65, '#ffe9a8');
   }
 
+  // Đợt N2: quái đánh trúng thú đi cùng (mục tiêu gần nhất). Thú có máu
+  // riêng + giáp riêng; gục thì về chuồng dưỡng thương, đang cưỡi thì chủ
+  // rơi xuống đánh bộ tiếp (luật 47§6). Bảo hộ 1 đòn 25% áp như với chủ.
+  function handleMonsterAttackPet(m) {
+    var pet = getMainPetAlive();
+    if (!pet || m._n2PetTarget !== pet.id) { handleMonsterAttackPlayer(m); return; }
+    lastCombatTime = performance.now();
+    var n2Api = (typeof window !== 'undefined') ? window.GameLinhThu : null;
+    var spec = n2Api ? n2Api.species(pet.speciesId) : null;
+    var petElem = spec ? spec.element : 'moc';
+    var def = n2Api ? n2Api.petDefense(pet) : 2;
+    var elemFac = combatAPI ? combatAPI.getElementFactor(m.element, petElem) : 1.0;
+    var dealt = combatAPI ? combatAPI.calcDamage(m.damage, elemFac, def) : m.damage;
+    if (!m.isElite && combatAPI) dealt = combatAPI.applyOneHitProtection(dealt, pet.hpMax);
+    pet.hp = Math.max(0, pet.hp - dealt);
+    if (audioAPI) audioAPI.playHit();
+    spawnDamageNumber(petVisual.x, petVisual.y - 45, Math.round(dealt), 'player_damage', false);
+    if (pet.hp <= 0 && n2Api) {
+      var wasRiding = !!(player.linhThu && player.linhThu.isRiding);
+      n2Api.defeat(pet, Date.now());
+      n2Api.sendToBarn(player.linhThu, pet.id);
+      petVisual.init = false;
+      if (stateAPI) stateAPI.savePlayer(player);
+      if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.showToast(wasRiding
+          ? 'Linh thú gục — bạn rơi xuống đánh bộ, thú đã về chuồng dưỡng thương.'
+          : 'Linh thú gục — đã về chuồng dưỡng thương.');
+      }
+    }
+  }
+
   function handleMonsterAttackPlayer(m) {
     lastCombatTime = performance.now();
     var stats = stateAPI ? stateAPI.deriveStats(player.paths, player.equipment) : { defense: 5 };
@@ -6583,6 +6733,18 @@
     // phải chờ; nay nhãn khớp hạng tại đúng khoảnh khắc cộng tu vi)
     if (stateAPI && stateAPI.syncRealmLabel) stateAPI.syncRealmLabel(player);
     todayData.farmTuVi += gainedTuVi;
+
+    // Đợt N2: thú đi cùng hưởng kinh nghiệm riêng + hảo cảm từ trận đi cùng
+    // (tỉ lệ chia PROVISIONAL) — KHÔNG đẻ thêm tu vi cho chủ.
+    if (typeof window !== 'undefined' && window.GameLinhThu && player.linhThu) {
+      var n2Pet = window.GameLinhThu.getMainPet(player);
+      if (n2Pet && !window.GameLinhThu.isDown(n2Pet)) {
+        var n2Exp = Math.max(1, Math.round(gainedTuVi * window.GameLinhThu.CONSTANTS.PET_EXP_SHARE));
+        var n2Lv = window.GameLinhThu.gainPetExp(n2Pet, n2Exp);
+        window.GameLinhThu.addAffection(n2Pet, window.GameLinhThu.CONSTANTS.AFFECTION_PER_KILL);
+        if (n2Lv.leveled) spawnFloatingText('Linh thú lên cấp ' + n2Pet.level + '!', m.x, m.y - 60, '#ffe9a8');
+      }
+    }
 
     if (player.farmSession) {
       player.farmSession.kills++;
@@ -6762,6 +6924,8 @@
           if (isCrit) dealt *= 1.5;
           monstersAPI.damageMonster(p.target, dealt, player);
           spawnDamageNumber(p.target.x, p.target.y - 40, Math.round(dealt), p.element, isCrit);
+          // Đợt N2: đạn thú (không có skillId) cũng có hiệu ứng trúng đích theo hệ.
+          spawnImpactFx(p.target.x, p.target.y, p.element, null);
           if (p.target.hp <= 0) {
             handleMonsterDeath(p.target);
           }
@@ -7496,6 +7660,19 @@
     }
 
     // Người chơi Hà Nhân
+    // Đợt N2: linh thú đi cùng vẽ bằng sprite thật của loài; khi cưỡi thú
+    // vẽ DƯỚI nhân vật (baseY nhỏ hơn) để chủ ngồi lên lưng.
+    var petForDraw = getMainPetAlive();
+    if (petForDraw && petVisual.init) {
+      (function (petDraw) {
+        var ridingDraw = !!(player.linhThu && player.linhThu.isRiding && player.linhThu.ridingPetId === petDraw.id);
+        entities.push({
+          type: 'linh-thu',
+          baseY: ridingDraw ? player.y - 1 : petVisual.y,
+          draw: function () { drawPet(petDraw); }
+        });
+      })(petForDraw);
+    }
     entities.push({
       type: 'player',
       baseY: player.y,
@@ -7704,6 +7881,334 @@
       }
     }
     return nearest;
+  }
+
+
+  // ================= ĐỢT N2: LINH THÚ ĐI CÙNG =================
+  function getN2Api() {
+    return (typeof window !== 'undefined') ? window.GameLinhThu : null;
+  }
+
+  // Thú chính còn sống và đang đi cùng (không gục, không ở chuồng).
+  function getMainPetAlive() {
+    var n2Api = getN2Api();
+    if (!n2Api || !player || !player.linhThu) return null;
+    var pet = n2Api.getMainPet(player);
+    if (!pet || n2Api.isDown(pet)) return null;
+    return pet;
+  }
+
+  function anyMonsterAggro() {
+    for (var i = 0; i < fieldMonsters.length; i++) {
+      var st = fieldMonsters[i].state;
+      if (st === 'aggro' || st === 'attack') return true;
+    }
+    return false;
+  }
+
+  function isPetRidingActive() {
+    if (!player || !player.linhThu || !player.linhThu.isRiding) return false;
+    var pet = getMainPetAlive();
+    return !!(pet && player.linhThu.ridingPetId === pet.id);
+  }
+
+  // Bám đuổi mượt: thú chạy về điểm đứng sau chủ, dừng êm khi tới gần.
+  // Khi cưỡi, thú ở đúng vị trí chủ (vẽ dưới nhân vật).
+  function updatePetVisual(dt) {
+    var pet = getMainPetAlive();
+    if (!pet) { petVisual.init = false; return; }
+    var riding = !!(player.linhThu && player.linhThu.isRiding && player.linhThu.ridingPetId === pet.id);
+    if (!petVisual.init) {
+      petVisual.x = player.x - 34;
+      petVisual.y = player.y + 24;
+      petVisual.init = true;
+    }
+    var tx = player.x;
+    var ty = player.y;
+    if (!riding) { tx = player.x - 34; ty = player.y + 24; }
+    var dx = tx - petVisual.x;
+    var dy = ty - petVisual.y;
+    var dist = Math.hypot(dx, dy);
+    var prevX = petVisual.x;
+    var prevY = petVisual.y;
+    if (riding) {
+      petVisual.x = tx;
+      petVisual.y = ty;
+    } else if (dist > 8) {
+      var step = Math.min(dist, 260 * dt);
+      petVisual.x += (dx / dist) * step;
+      petVisual.y += (dy / dist) * step;
+    }
+    petVisual.moving = Math.hypot(petVisual.x - prevX, petVisual.y - prevY) > 0.05;
+    if (dx < -2) petVisual.facingLeft = true;
+    else if (dx > 2) petVisual.facingLeft = false;
+    petVisual.animTime += dt;
+  }
+
+  // Mục tiêu của thú: mục tiêu của chủ nếu còn trong tầm, nếu không thì
+  // quái yếu nhất trong tầm.
+  function pickPetTarget() {
+    var n2Api = getN2Api();
+    var range = n2Api ? n2Api.CONSTANTS.PET_RANGE : 320;
+    if (targetMonster && targetMonster.state !== 'dead' && targetMonster.hp > 0) {
+      if (Math.hypot(targetMonster.x - petVisual.x, targetMonster.y - petVisual.y) <= range) return targetMonster;
+    }
+    var weakest = null;
+    for (var i = 0; i < fieldMonsters.length; i++) {
+      var m = fieldMonsters[i];
+      if (m.state === 'dead' || m.hp <= 0) continue;
+      if (Math.hypot(m.x - petVisual.x, m.y - petVisual.y) > range) continue;
+      if (!weakest || m.hp < weakest.hp) weakest = m;
+    }
+    return weakest;
+  }
+
+  // Thú tự ra chiêu theo hồi chiêu riêng của từng chiêu (PROVISIONAL 2,5s).
+  function updatePetCombat(dt) {
+    if (harmonyCdLeft > 0) harmonyCdLeft = Math.max(0, harmonyCdLeft - dt);
+    for (var k in petSkillCds) if (petSkillCds[k] > 0) petSkillCds[k] -= dt;
+    var pet = getMainPetAlive();
+    if (!pet || !petVisual.init) return;
+    var n2Api = getN2Api();
+    if (!n2Api) return;
+    var skills = pet.skills || [];
+    for (var i = 0; i < skills.length; i++) {
+      var name = skills[i];
+      if (!(name in petSkillCds)) petSkillCds[name] = i * 0.6; // so le chiêu mới mở
+      if (petSkillCds[name] > 0) continue;
+      var target = pickPetTarget();
+      if (!target) return;
+      firePetSkill(pet, target, name);
+      petSkillCds[name] = n2Api.CONSTANTS.PET_SKILL_CD;
+      return; // một chiêu mỗi khung hình
+    }
+  }
+
+  // Chiêu thú bay bằng đạn truy đuổi của khung chiêu đã có (projectile
+  // không skillId → nhánh dự phòng trong updateProjectiles giải quyết sát
+  // thương qua combatAPI + damageMonster + VFX theo hệ).
+  function firePetSkill(pet, target, skillName) {
+    var n2Api = getN2Api();
+    if (!n2Api) return;
+    var stats = stateAPI ? stateAPI.deriveStats(player.paths, player.equipment) : { attack: 10 };
+    var spec = n2Api.species(pet.speciesId) || { element: 'moc' };
+    var raw = n2Api.petDamage(pet, stats.attack);
+    projectiles.push({
+      kind: 'pet', skillName: skillName,
+      x: petVisual.x, y: petVisual.y - 25,
+      target: target, speed: 460, raw: raw, element: spec.element, trail: []
+    });
+    spawnReleaseBurst(petVisual.x, petVisual.y - 30, spec.element, 1);
+  }
+
+  // Vẽ thú bằng đúng đường vẽ sprite của loài trong SPECIES: cùng sheet,
+  // cùng hàng khung (0 idle 2 khung, 1 walk 4 khung), cùng alias khóa nạp.
+  // Mốc lột xác thể hiện bằng tỉ lệ vẽ + vòng hào quang (PROVISIONAL).
+  // Không vẽ thanh máu quái.
+  function drawPet(pet) {
+    var n2Api = getN2Api();
+    var spec = monstersAPI ? monstersAPI.SPECIES[pet.speciesId] : null;
+    if (!spec) return;
+    var scale = n2Api ? n2Api.drawScaleForStage(pet.stage) : 1;
+    var halo = n2Api ? n2Api.haloForStage(pet.stage) : 'none';
+    var x = petVisual.x;
+    var y = petVisual.y;
+    var elemColors = { moc: '#8be26b', thuy: '#7fd4ff', hoa: '#ff9a5c', tho: '#e8c56b', kim: '#e8ecf2' };
+    var haloColor = elemColors[spec.element] || '#8be26b';
+
+    if (halo !== 'none') {
+      ctx.save();
+      ctx.strokeStyle = haloColor;
+      ctx.lineWidth = halo === 'glow' ? 2.2 : 1.4;
+      ctx.shadowColor = haloColor;
+      ctx.shadowBlur = qualityShadow(halo === 'glow' ? 12 : 6);
+      ctx.globalAlpha = halo === 'glow' ? 0.9 : 0.55;
+      ctx.beginPath();
+      ctx.ellipse(x, y, Math.max(30, spec.cellW * scale * 0.36), Math.max(11, spec.cellW * scale * 0.11), 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(8, 12, 8, 0.52)';
+    ctx.beginPath();
+    ctx.ellipse(x, y, 31 * scale, 11 * scale, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    var sheetKey = pet.speciesId + '_sheet';
+    var sheet = assets[sheetKey];
+    if (!sheet) {
+      var aliasKey = { thao_tinh: 'thaotinh_sheet', nhen_xanh: 'nhenxanh_sheet', co_thu_yeu: 'cothuye_sheet' }[pet.speciesId];
+      if (aliasKey) sheet = assets[aliasKey];
+    }
+    if (sheet && sheet.complete) {
+      var cellW = spec.cellW;
+      var cellH = spec.cellH;
+      var row = petVisual.moving ? 1 : 0;
+      var col = row === 0 ? Math.floor(petVisual.animTime * 2.5) % 2 : Math.floor(petVisual.animTime * 6.0) % 4;
+      var bobY = row === 0 ? Math.sin(petVisual.animTime * 2.4) * 2.4 : -Math.abs(Math.sin(petVisual.animTime * 6.0)) * 2;
+      var dw = cellW * scale;
+      var dh = cellH * scale;
+      ctx.save();
+      if (petVisual.facingLeft) {
+        ctx.translate(x, y);
+        ctx.scale(-1, 1);
+        ctx.drawImage(sheet, col * cellW, row * cellH, cellW, cellH, -spec.feetOffsetX * scale, -spec.feetOffsetY * scale - bobY, dw, dh);
+      } else {
+        ctx.drawImage(sheet, col * cellW, row * cellH, cellW, cellH, x - spec.feetOffsetX * scale, y - spec.feetOffsetY * scale - bobY, dw, dh);
+      }
+      ctx.restore();
+    }
+
+    if (halo === 'glow') {
+      ctx.save();
+      for (var sp = 0; sp < 3; sp++) {
+        var ang = petVisual.animTime * 0.9 + sp * (Math.PI * 2 / 3);
+        ctx.fillStyle = haloColor;
+        ctx.globalAlpha = 0.75;
+        ctx.beginPath();
+        ctx.arc(x + Math.cos(ang) * 40 * scale, y - 60 * scale + Math.sin(ang * 1.7) * 12, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
+
+  // Trạng thái nút Thuần Phục cho UI (lý do thiếu rõ ràng).
+  function getTameState() {
+    var n2Api = getN2Api();
+    if (!n2Api || !player) return { available: false, reason: 'Chưa sẵn sàng.' };
+    var m = targetMonster;
+    if (!m || m.state === 'dead' || m.hp <= 0) return { available: false, reason: 'Chưa chọn quái.' };
+    var check = n2Api.canTame(m);
+    if (!check.ok) return { available: false, reason: check.reason };
+    var hpRatio = m.hp / m.maxHp;
+    if (hpRatio > n2Api.CONSTANTS.TAME_MAX_HP_RATIO) {
+      return { available: false, reason: 'Quái chưa đủ yếu (còn ' + Math.ceil(hpRatio * 100) + '% máu, cần ≤20%).' };
+    }
+    if (!stateAPI || !stateAPI.hasItemInBag(player, 'linh-thu-hoan', 1)) {
+      return { available: false, reason: 'Thiếu Linh Thú Hoàn (gặp Tuần Thú Sư ở tông môn).' };
+    }
+    var baitId = n2Api.BAIT_MAP[m.element];
+    if (baitId && !stateAPI.hasItemInBag(player, baitId, 1)) {
+      var baitDef = monstersAPI && monstersAPI.ITEM_DEFS ? monstersAPI.ITEM_DEFS[baitId] : null;
+      return { available: false, reason: 'Thiếu mồi hợp hệ: ' + (baitDef ? baitDef.name : baitId) + '.' };
+    }
+    return { available: true, reason: '', monster: m, hpRatio: hpRatio, chance: n2Api.tamingChance(hpRatio, 0, true) };
+  }
+
+  function attemptTame() {
+    var n2Api = getN2Api();
+    if (!n2Api || !player) return { ok: false, msg: 'Chưa sẵn sàng.' };
+    var st = getTameState();
+    if (!st.available) {
+      if (typeof window !== 'undefined' && window.GameUI) window.GameUI.showToast(st.reason);
+      return { ok: false, msg: st.reason };
+    }
+    var m = st.monster;
+    var baitId = n2Api.BAIT_MAP[m.element];
+    // Trừ THẬT Linh Thú Hoàn + mồi khỏi túi trước khi roll — thất bại vẫn mất.
+    stateAPI.removeItemFromBag(player, 'linh-thu-hoan', 1);
+    if (baitId) stateAPI.removeItemFromBag(player, baitId, 1);
+    var rank = (stateAPI && stateAPI.getRealmRank) ? stateAPI.getRealmRank(player) : 1;
+    var res = n2Api.tame(player, m, {
+      hoans: 1, bait: true, hpRatio: st.hpRatio,
+      levelGap: rank - (m.level || 1), roll: Math.random()
+    });
+    if (res.ok) {
+      // Quái biến khỏi bãi, không tính hạ quái/không rơi đồ.
+      var idx = fieldMonsters.indexOf(m);
+      if (idx >= 0) fieldMonsters.splice(idx, 1);
+      if (targetMonster === m) targetMonster = null;
+      if (stateAPI) stateAPI.savePlayer(player);
+      if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.showToast('Thuần phục thành công! ' + ((n2Api.species(m.speciesId) || {}).name || 'Linh thú') + ' đã thành linh thú con.');
+        if (window.GameUI.openLinhThu) window.GameUI.openLinhThu();
+      }
+      return { ok: true, pet: res.pet };
+    }
+    if (stateAPI) stateAPI.savePlayer(player);
+    var msg = res.reason + (res.consumedHoan ? ' Đã mất 1 Linh Thú Hoàn.' : '');
+    if (typeof window !== 'undefined' && window.GameUI) window.GameUI.showToast(msg);
+    return { ok: false, msg: msg };
+  }
+
+  function getHarmonyState() {
+    var n2Api = getN2Api();
+    if (!n2Api || !player) return { ready: false, reason: 'Chưa sẵn sàng.' };
+    var pet = getMainPetAlive();
+    if (!pet) return { ready: false, reason: 'Chưa có thú đi cùng.' };
+    if (!n2Api.canHarmony(pet)) return { ready: false, reason: 'Hảo cảm chưa đủ 60 (đang ' + Math.floor(pet.affection || 0) + ').' };
+    if (harmonyCdLeft > 0) return { ready: false, reason: 'Hợp kích đang hồi (' + Math.ceil(harmonyCdLeft) + 's).', cdLeft: harmonyCdLeft };
+    return { ready: true, reason: '', pet: pet };
+  }
+
+  // Hợp kích: đúng một chiêu ký danh theo cặp hệ thú–chủ, mạnh nhất khi hệ
+  // thú tương sinh đường mạnh nhất của chủ (tính trong GameLinhThu).
+  function harmonyStrike() {
+    var n2Api = getN2Api();
+    if (!n2Api || !player) return { ok: false, msg: 'Chưa sẵn sàng.' };
+    var st = getHarmonyState();
+    if (!st.ready) {
+      if (typeof window !== 'undefined' && window.GameUI) window.GameUI.showToast(st.reason);
+      return { ok: false, msg: st.reason };
+    }
+    var pet = st.pet;
+    var target = null;
+    if (targetMonster && targetMonster.state !== 'dead' && targetMonster.hp > 0) target = targetMonster;
+    else {
+      var best = null;
+      for (var i = 0; i < fieldMonsters.length; i++) {
+        var m = fieldMonsters[i];
+        if (m.state === 'dead' || m.hp <= 0) continue;
+        var d = Math.hypot(m.x - player.x, m.y - player.y);
+        if (d <= 380 && (!best || d < best.d)) best = { m: m, d: d };
+      }
+      target = best ? best.m : null;
+    }
+    if (!target) {
+      if (typeof window !== 'undefined' && window.GameUI) window.GameUI.showToast('Không có mục tiêu trong tầm hợp kích.');
+      return { ok: false, msg: 'Không có mục tiêu.' };
+    }
+    var stats = stateAPI ? stateAPI.deriveStats(player.paths, player.equipment) : { attack: 10 };
+    var ownerElem = n2Api.strongestPath(player);
+    var spec = n2Api.species(pet.speciesId) || { element: 'moc' };
+    var dmg = n2Api.harmonyDamage(pet, stats.attack, ownerElem);
+    var skillName = n2Api.harmonySkillName(spec.element, ownerElem);
+    projectiles.push({
+      kind: 'pet', skillName: skillName, harmony: true,
+      x: petVisual.x, y: petVisual.y - 25,
+      target: target, speed: 560, raw: dmg, element: spec.element, trail: []
+    });
+    spawnReleaseBurst(petVisual.x, petVisual.y - 30, spec.element, 3);
+    spawnFloatingText(skillName + '!', petVisual.x, petVisual.y - 70, '#ffe9a8');
+    harmonyCdLeft = n2Api.CONSTANTS.HARMONY_CD;
+    return { ok: true, skillName: skillName, damage: dmg };
+  }
+
+  // Phím/nút nhanh cưỡi/xuống thú (phím R + nút trong bảng thú).
+  function toggleRideQuick() {
+    var n2Api = getN2Api();
+    if (!n2Api || !player || !player.linhThu) return;
+    var s = n2Api.ensureState(player);
+    if (s.isRiding) {
+      n2Api.dismount(s);
+      if (typeof window !== 'undefined' && window.GameUI) window.GameUI.showToast('Đã xuống thú.');
+    } else {
+      var pet = getMainPetAlive();
+      if (!pet) {
+        if (typeof window !== 'undefined' && window.GameUI) window.GameUI.showToast('Chưa có thú đi cùng để cưỡi.');
+        return;
+      }
+      var rank = (stateAPI && stateAPI.getRealmRank) ? stateAPI.getRealmRank(player) : 1;
+      if (n2Api.mount(s, pet.id, rank)) {
+        if (typeof window !== 'undefined' && window.GameUI) window.GameUI.showToast('Đã cưỡi linh thú — tốc độ tăng ngoài trận.');
+      } else {
+        if (typeof window !== 'undefined' && window.GameUI) window.GameUI.showToast('Chưa cưỡi được: cần Luyện Khí hậu kỳ (rank 7+) và thú khỏe.');
+      }
+    }
+    if (stateAPI) stateAPI.savePlayer(player);
   }
 
   function drawMonster(m) {
@@ -8936,6 +9441,13 @@
     planTravelRoute: planTravelRoute,
     getTravelState: function () { return travelState; },
     useItem: useItem,
+    // Đợt N2: Linh Thú
+    attemptTame: attemptTame,
+    harmonyStrike: harmonyStrike,
+    getTameState: getTameState,
+    getHarmonyState: getHarmonyState,
+    toggleRideQuick: toggleRideQuick,
+    getMainPetAlive: getMainPetAlive,
     tryBreakthrough: tryBreakthrough,
     tryKimDanBreakthrough: tryKimDanBreakthrough,
     startTribulation: startTribulation,

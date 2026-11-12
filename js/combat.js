@@ -117,6 +117,10 @@
       vfx: 'vine_snare'
     }
   };
+  function petSkillDamage(pet, ownerAttack) {
+    var api = (typeof window !== 'undefined' ? window.GameLinhThu : (typeof globalThis !== 'undefined' ? globalThis.GameLinhThu : null));
+    return api && api.petDamage ? api.petDamage(pet, ownerAttack) : 0;
+  }
 
   /**
    * Tỉ lệ hồi phục khí huyết và linh lực theo giây (Brief §5)
@@ -137,5 +141,6 @@
   exports.applyOneHitProtection = applyOneHitProtection;
   exports.SKILLS = SKILLS;
   exports.REGEN = REGEN;
+  exports.petSkillDamage = petSkillDamage;
 
 })(typeof module !== 'undefined' && module.exports ? module.exports : (window.GameCombat = {}));

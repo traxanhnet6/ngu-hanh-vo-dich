@@ -26,6 +26,10 @@
   };
 
   var selectedBagSlot = null;
+  var selectedBagContainerId = null;
+  var currentBagTab = 'all';
+  var currentBagSearch = '';
+  var tuiKhoAPI = null;
 
   /**
    * Khởi tạo giao diện người dùng
@@ -37,6 +41,11 @@
     audioAPI = typeof window !== 'undefined' ? window.GameAudio : null;
     combatAPI = typeof window !== 'undefined' ? window.GameCombat : null;
     monstersAPI = typeof window !== 'undefined' ? window.GameMonsters : null;
+    tuiKhoAPI = typeof window !== 'undefined' ? window.GameTuiKho : null;
+    if (player) {
+      if (stateAPI && stateAPI.ensureTuiKho) stateAPI.ensureTuiKho(player);
+      if (player.tuiKho) selectedBagContainerId = player.tuiKho.defaultContainerId;
+    }
 
     if (typeof document === 'undefined') return;
 
@@ -47,6 +56,7 @@
     }
 
     bindEvents();
+    wireQuickSlots();
     renderRingWidget();
     refreshHUD();
     if (typeof window !== 'undefined' && window.GameLinhDien && window.GameLinhDien.attach) {
@@ -148,6 +158,44 @@
 
     if (btnBag) btnBag.addEventListener('click', toggleBag);
     if (closeBag) closeBag.addEventListener('click', closeBagModal);
+
+    // Đợt N2: nút Linh Thú (HUD) + Thuần Phục/Hợp Kích (cụm chiến đấu) + lối vào từ Cài Đặt.
+    var btnLinhThu = document.getElementById('btn-linhthu');
+    if (btnLinhThu && !btnLinhThu.dataset.wired) {
+      btnLinhThu.dataset.wired = '1';
+      btnLinhThu.addEventListener('click', function () {
+        if (audioAPI) audioAPI.playClick();
+        var m = document.getElementById('linh-thu-modal');
+        if (m && !m.classList.contains('hidden')) closeLinhThu(); else openLinhThu();
+      });
+    }
+    var closeLt = document.getElementById('close-linh-thu-modal');
+    if (closeLt && !closeLt.dataset.wired) { closeLt.dataset.wired = '1'; closeLt.addEventListener('click', closeLinhThu); }
+    var closeLtBtn = document.getElementById('btn-close-linh-thu-modal');
+    if (closeLtBtn && !closeLtBtn.dataset.wired) { closeLtBtn.dataset.wired = '1'; closeLtBtn.addEventListener('click', closeLinhThu); }
+    var btnTame = document.getElementById('btn-thuan-phuc');
+    if (btnTame && !btnTame.dataset.wired) {
+      btnTame.dataset.wired = '1';
+      btnTame.addEventListener('click', function () {
+        if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.attemptTame) window.GameEngine.attemptTame();
+      });
+    }
+    var btnHarm = document.getElementById('btn-hop-kich');
+    if (btnHarm && !btnHarm.dataset.wired) {
+      btnHarm.dataset.wired = '1';
+      btnHarm.addEventListener('click', function () {
+        if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.harmonyStrike) window.GameEngine.harmonyStrike();
+      });
+    }
+    var btnLtSettings = document.getElementById('btn-open-linhthu-settings');
+    if (btnLtSettings && !btnLtSettings.dataset.wired) {
+      btnLtSettings.dataset.wired = '1';
+      btnLtSettings.addEventListener('click', function () {
+        var sm = document.getElementById('settings-modal');
+        if (sm) sm.classList.add('hidden');
+        openLinhThu();
+      });
+    }
 
     // Phím tắt bàn phím: B mở túi, phím số 1..9 tung chiêu theo thứ tự
     // trên thanh kỹ năng của registry (Đợt K1 — không gán cứng id chiêu).
@@ -878,14 +926,103 @@
     if (audioAPI) audioAPI.playClick();
     var bagModal = document.getElementById('bag-modal');
     if (!bagModal) return;
+    if (!tuiKhoAPI && typeof window !== 'undefined') tuiKhoAPI = window.GameTuiKho;
+    if (player && tuiKhoAPI && tuiKhoAPI.ensureState) tuiKhoAPI.ensureState(player);
+    if (!selectedBagContainerId && player && player.tuiKho) selectedBagContainerId = player.tuiKho.defaultContainerId;
     renderBagGrid();
     bagModal.classList.remove('hidden');
+    // Gộp E1+E2+E3+N2: bỏ lệnh gọi wireBagContainerControls (hàm không tồn tại,
+    // renderBagGrid đã dựng và nối thanh vật chứa/tab/tìm kiếm/kho).
+    renderQuickSlots();
   }
 
   function closeBagModal() {
     if (audioAPI) audioAPI.playClick();
     var bagModal = document.getElementById('bag-modal');
     if (bagModal) bagModal.classList.add('hidden');
+  }
+
+  function currentBagContainer() {
+    if (!tuiKhoAPI && typeof window !== 'undefined') tuiKhoAPI = window.GameTuiKho;
+    if (!player || !tuiKhoAPI) return null;
+    tuiKhoAPI.ensureState(player);
+    if (!selectedBagContainerId || !tuiKhoAPI.getContainer(player, selectedBagContainerId)) {
+      selectedBagContainerId = player.tuiKho.defaultContainerId;
+    }
+    return tuiKhoAPI.getContainer(player, selectedBagContainerId);
+  }
+
+  function currentBagSlots() {
+    var c = currentBagContainer();
+    return c ? c.slots : (player && player.bag ? player.bag.slots : []);
+  }
+
+  function renderQuickSlots() {
+    if (!player) return;
+    if (!tuiKhoAPI && typeof window !== 'undefined') tuiKhoAPI = window.GameTuiKho;
+    if (tuiKhoAPI && tuiKhoAPI.ensureState) tuiKhoAPI.ensureState(player);
+    var qs = (tuiKhoAPI && tuiKhoAPI.getQuickSlots) ? tuiKhoAPI.getQuickSlots(player) : [];
+    var defs = (monstersAPI && monstersAPI.ITEM_DEFS) ? monstersAPI.ITEM_DEFS : {};
+    var els = document.querySelectorAll('.quick-slot');
+    for (var i = 0; i < els.length; i++) {
+      (function (el, idx) {
+        el.innerHTML = '';
+        var label = document.createElement('span');
+        label.textContent = String(idx + 1);
+        el.appendChild(label);
+        var q = qs[idx];
+        if (q && tuiKhoAPI.getContainer) {
+          var c = tuiKhoAPI.getContainer(player, q.containerId);
+          var s = c ? c.slots[q.slotIndex] : null;
+          if (s && s.itemId) {
+            var def = defs[s.itemId];
+            if (def) {
+              var icon = document.createElement('div');
+              icon.className = 'quick-slot-icon';
+              icon.style.backgroundImage = "url('assets/art/icons-sheet.png')";
+              icon.style.backgroundPosition = (-(def.iconCol || 0) * 24) + 'px ' + (-(def.iconRow || 0) * 24) + 'px';
+              icon.style.backgroundSize = '144px 192px';
+              icon.style.width = '24px';
+              icon.style.height = '24px';
+              el.appendChild(icon);
+            }
+            el.title = (def ? def.name : s.itemId) + ' x' + (s.count || 1);
+          } else if (tuiKhoAPI.clearQuickSlot) {
+            tuiKhoAPI.clearQuickSlot(player, idx);
+          }
+        }
+      })(els[i], i);
+    }
+  }
+
+  function wireQuickSlots() {
+    var els = document.querySelectorAll('.quick-slot');
+    for (var i = 0; i < els.length; i++) {
+      (function (el, idx) {
+        if (el.dataset.wired) return;
+        el.dataset.wired = '1';
+        el.addEventListener('click', function () {
+          if (!player || !tuiKhoAPI) return;
+          var qs = tuiKhoAPI.getQuickSlots(player);
+          var q = qs[idx];
+          if (!q) { showToast('Ô dùng nhanh trống'); return; }
+          var c = tuiKhoAPI.getContainer(player, q.containerId);
+          var s = c ? c.slots[q.slotIndex] : null;
+          if (!s || !s.itemId) { tuiKhoAPI.clearQuickSlot(player, idx); renderQuickSlots(); return; }
+          var itemId = s.itemId;
+          if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.useItem) {
+            var res = window.GameEngine.useItem(itemId);
+            if (res && res.msg) showToast(res.msg);
+          }
+          var c2 = tuiKhoAPI.getContainer(player, q.containerId);
+          var s2 = c2 ? c2.slots[q.slotIndex] : null;
+          if (!s2 || !s2.itemId) tuiKhoAPI.clearQuickSlot(player, idx);
+          renderQuickSlots();
+          if (stateAPI && stateAPI.savePlayer) stateAPI.savePlayer(player);
+          if (typeof window !== 'undefined' && window.GameUI && window.GameUI.refreshHUD) window.GameUI.refreshHUD();
+        });
+      })(els[i], i);
+    }
   }
 
   function renderBagGrid() {
@@ -895,25 +1032,46 @@
       ltVal.textContent = player.linhThach || 0;
     }
     if (!gridEl || !player) return;
+    if (!tuiKhoAPI && typeof window !== 'undefined') tuiKhoAPI = window.GameTuiKho;
+    if (tuiKhoAPI && tuiKhoAPI.ensureState) tuiKhoAPI.ensureState(player);
 
-    if (!player.bag) player.bag = { slots: new Array(48).fill(null) };
-    while (player.bag.slots.length < 48) player.bag.slots.push(null);
+    var container = currentBagContainer();
+    if (!container) {
+      if (!player.bag) player.bag = { slots: new Array(48).fill(null) };
+      while (player.bag.slots.length < 48) player.bag.slots.push(null);
+      container = { slots: player.bag.slots, id: null };
+    }
+
+    // breadcrumb + container bar
+    renderBagContainerBar();
+    renderBagBreadcrumb();
+    renderBagTabs();
+    renderBagStorageActions();
 
     gridEl.innerHTML = '';
     var defs = monstersAPI ? monstersAPI.ITEM_DEFS : {};
+    var slots = container.slots || [];
 
-    for (var i = 0; i < player.bag.slots.length; i++) {
+    for (var i = 0; i < slots.length; i++) {
       (function (slotIndex) {
-        var slotData = player.bag.slots[slotIndex];
+        var slotData = slots[slotIndex];
         var slotDiv = document.createElement('div');
         slotDiv.className = 'bag-slot';
-        if (selectedBagSlot === slotIndex) slotDiv.classList.add('selected');
+        if (selectedBagSlot === slotIndex && selectedBagContainerId === container.id) slotDiv.classList.add('selected');
 
-        if (slotData && slotData.itemId) {
+        // container item (vật chứa con)
+        var isContainer = !!(tuiKhoAPI && tuiKhoAPI.isContainerItem && tuiKhoAPI.isContainerItem(slotData));
+        if (isContainer) {
+          var child = tuiKhoAPI.getContainer(player, slotData.containerId);
+          slotDiv.classList.add('bag-slot-container');
+          var nameSpan = document.createElement('span');
+          nameSpan.className = 'bag-slot-container-name';
+          nameSpan.textContent = child ? (child.name + ' (' + child.capacity + ')') : 'Vật chứa';
+          slotDiv.appendChild(nameSpan);
+        } else if (slotData && slotData.itemId) {
           var def = defs[slotData.itemId] || { name: slotData.itemId, iconCol: 0, iconRow: 0 };
           var iconDiv = document.createElement('div');
           iconDiv.className = 'bag-slot-icon';
-          // Tọa độ sprite icon: mỗi ô 32px
           var posX = -(def.iconCol || 0) * 32;
           var posY = -(def.iconRow || 0) * 32;
           iconDiv.style.backgroundPosition = posX + 'px ' + posY + 'px';
@@ -925,8 +1083,13 @@
             countSpan.textContent = slotData.count;
             slotDiv.appendChild(countSpan);
           }
-
-          if (player.bagLocks && player.bagLocks[slotIndex]) {
+          if (slotData.starred) {
+            var starSpan = document.createElement('span');
+            starSpan.className = 'bag-slot-star';
+            starSpan.textContent = '★';
+            slotDiv.appendChild(starSpan);
+          }
+          if (slotData.locked || (player.bagLocks && player.bagLocks[slotIndex])) {
             var lockSpan = document.createElement('span');
             lockSpan.className = 'bag-slot-lock';
             lockSpan.textContent = 'KHÓA';
@@ -934,8 +1097,31 @@
           }
         }
 
+        // tab/search filtering (hide non-matching)
+        var visible = true;
+        if (currentBagTab && currentBagTab !== 'all' && slotData && !isContainer) {
+          var def2 = defs[slotData.itemId] || {};
+          var tab = (tuiKhoAPI && tuiKhoAPI.tabOfItem) ? tuiKhoAPI.tabOfItem(def2) : 'material';
+          if (tab !== currentBagTab) visible = false;
+        }
+        if (currentBagSearch && slotData) {
+          var kw = currentBagSearch.toLowerCase();
+          var nm = '';
+          if (isContainer) nm = (tuiKhoAPI.getContainer(player, slotData.containerId) || {}).name || '';
+          else { var d = defs[slotData.itemId] || {}; nm = (d.name || slotData.itemId || '').toLowerCase(); }
+          if (nm.toLowerCase().indexOf(kw) === -1 && (slotData.itemId || '').toLowerCase().indexOf(kw) === -1) visible = false;
+        }
+        if (!visible) slotDiv.style.display = 'none';
+
         slotDiv.addEventListener('click', function () {
+          if (isContainer) {
+            selectedBagContainerId = slotData.containerId;
+            selectedBagSlot = null;
+            renderBagGrid();
+            return;
+          }
           selectedBagSlot = slotIndex;
+          selectedBagContainerId = container.id;
           selectedEquipSlot = null;
           renderBagGrid();
           updateItemInfo(slotData, defs);
@@ -946,6 +1132,107 @@
     }
     renderEquipSlots();
     refreshDetailCard();
+  }
+
+  function renderBagContainerBar() {
+    var bar = document.getElementById('bag-container-bar');
+    if (!bar || !player || !tuiKhoAPI) return;
+    bar.innerHTML = '';
+    var containers = tuiKhoAPI.getCarriedContainers ? tuiKhoAPI.getCarriedContainers(player) : [];
+    // include temp/home/sect as buttons separately
+    for (var i = 0; i < containers.length; i++) {
+      (function (c) {
+        var btn = document.createElement('button');
+        btn.className = 'bag-container-btn' + (selectedBagContainerId === c.id ? ' active' : '');
+        btn.textContent = c.name;
+        btn.addEventListener('click', function () {
+          selectedBagContainerId = c.id;
+          selectedBagSlot = null;
+          renderBagGrid();
+        });
+        bar.appendChild(btn);
+      })(containers[i]);
+    }
+  }
+
+  function renderBagBreadcrumb() {
+    var bc = document.getElementById('bag-breadcrumb');
+    if (!bc || !player || !tuiKhoAPI || !selectedBagContainerId) return;
+    var path = tuiKhoAPI.getBreadcrumb ? tuiKhoAPI.getBreadcrumb(player, selectedBagContainerId) : [selectedBagContainerId];
+    bc.innerHTML = '';
+    var label = document.createElement('span');
+    label.textContent = (path || []).join(' → ');
+    bc.appendChild(label);
+    if (path && path.length > 1) {
+      var back = document.createElement('button');
+      back.className = 'bag-back-btn';
+      back.textContent = '← Túi chính';
+      back.addEventListener('click', function () {
+        if (player && player.tuiKho) {
+          selectedBagContainerId = player.tuiKho.defaultContainerId;
+          selectedBagSlot = null;
+          renderBagGrid();
+        }
+      });
+      bc.appendChild(back);
+    }
+  }
+
+  function renderBagTabs() {
+    var tabsEl = document.getElementById('bag-tabs');
+    if (!tabsEl || !tuiKhoAPI) return;
+    if (tabsEl.dataset.wired !== '1') {
+      tabsEl.dataset.wired = '1';
+    }
+    tabsEl.innerHTML = '';
+    var tabs = tuiKhoAPI.TABS || ['all','gear','fabao','consumable','biphaps','material','quest'];
+    var labels = tuiKhoAPI.TAB_LABELS || {};
+    for (var i = 0; i < tabs.length; i++) {
+      (function (tab) {
+        var btn = document.createElement('button');
+        btn.className = 'bag-tab' + (currentBagTab === tab ? ' active' : '');
+        btn.textContent = labels[tab] || tab;
+        btn.addEventListener('click', function () {
+          currentBagTab = tab;
+          renderBagGrid();
+        });
+        tabsEl.appendChild(btn);
+      })(tabs[i]);
+    }
+    // search input
+    var searchEl = document.getElementById('bag-search');
+    if (searchEl && searchEl.dataset.wired !== '1') {
+      searchEl.dataset.wired = '1';
+      searchEl.addEventListener('input', function () {
+        currentBagSearch = searchEl.value || '';
+        renderBagGrid();
+      });
+    }
+  }
+
+  function renderBagStorageActions() {
+    var el = document.getElementById('bag-storage-actions');
+    if (!el || !player || !tuiKhoAPI) return;
+    el.innerHTML = '';
+    var mapId = (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.getCurrentMapId) ? window.GameEngine.getCurrentMapId() : null;
+    var actions = [];
+    // Rương Tạm: ở trấn/tông môn
+    if (mapId === 'mieu_hoang' || mapId === 'tong-mon') actions.push({ label: 'Rương Tạm', id: player.tuiKho.tempChestId });
+    if (mapId === 'mieu_hoang' || mapId === 'tong-mon') actions.push({ label: 'Kho Động Phủ', id: player.tuiKho.homeStorageId });
+    if (mapId === 'tong-mon') actions.push({ label: 'Kho Tông Môn', id: player.tuiKho.sectStorageId });
+    for (var i = 0; i < actions.length; i++) {
+      (function (a) {
+        var btn = document.createElement('button');
+        btn.className = 'bag-storage-btn';
+        btn.textContent = a.label;
+        btn.addEventListener('click', function () {
+          selectedBagContainerId = a.id;
+          selectedBagSlot = null;
+          renderBagGrid();
+        });
+        el.appendChild(btn);
+      })(actions[i]);
+    }
   }
 
   // ---------- ĐỢT 6: THẺ CHI TIẾT VẬT PHẨM + TRANG BỊ (mục 2 + mục 18) ----------
@@ -974,9 +1261,9 @@
 
   function renderEquipSlots() {
     if (!player) return;
-    if (!player.equipment) player.equipment = { weapon: null, armor: null, head: null };
+    if (!player.equipment) player.equipment = { weapon: null, armor: null, head: null, shoes: null, belt: null, jewelry: null, phapKhi: null };
     var defs = itemDefs();
-    var slots = ['head', 'weapon', 'armor'];
+    var slots = ['head', 'weapon', 'armor', 'shoes', 'belt', 'jewelry', 'phapKhi'];
     for (var i = 0; i < slots.length; i++) {
       (function (slotName) {
         var wrap = document.getElementById('equip-slot-' + slotName);
@@ -1037,9 +1324,12 @@
     if (selectedEquipSlot && player.equipment && player.equipment[selectedEquipSlot]) {
       itemId = player.equipment[selectedEquipSlot];
       equipped = true;
-    } else if (selectedBagSlot !== null && selectedBagSlot !== undefined && player.bag && player.bag.slots[selectedBagSlot]) {
-      itemId = player.bag.slots[selectedBagSlot].itemId;
-      count = player.bag.slots[selectedBagSlot].count || 1;
+    } else if (selectedBagSlot !== null && selectedBagSlot !== undefined) {
+      var _slots = currentBagSlots();
+      if (_slots && _slots[selectedBagSlot]) {
+        itemId = _slots[selectedBagSlot].itemId;
+        count = _slots[selectedBagSlot].count || 1;
+      }
     }
 
     var btnUse = document.getElementById('btn-card-use');
@@ -1077,6 +1367,21 @@
     if (countEl) countEl.textContent = equipped ? 'Đang trang bị' : ('Số lượng: ' + (count || 1));
     var statsEl = document.getElementById('detail-card-stats');
     if (statsEl) statsEl.innerHTML = detailStatsHtml(def, itemId);
+    if (statsEl && def.type === 'gear' && tuiKhoAPI && tuiKhoAPI.compareGear) {
+      var cmp = tuiKhoAPI.compareGear(player, itemId);
+      if (cmp && cmp.ok && cmp.diff) {
+        var cmpHtml = '<div class="detail-compare">';
+        var keys = ['atk','def'];
+        for (var ci = 0; ci < keys.length; ci++) {
+          var k = keys[ci];
+          var d = cmp.diff[k] || 0;
+          var arrow = d > 0 ? '▲' : (d < 0 ? '▼' : '—');
+          cmpHtml += '<div>' + k.toUpperCase() + ' ' + arrow + ' ' + (d > 0 ? '+' : '') + d + '</div>';
+        }
+        cmpHtml += '</div>';
+        statsEl.innerHTML += cmpHtml;
+      }
+    }
     var descEl = document.getElementById('detail-card-desc');
     if (descEl) descEl.textContent = def.desc || '';
 
@@ -1084,8 +1389,8 @@
     if (btnEquip) btnEquip.classList.toggle('hidden', !(def.type === 'gear' && !equipped));
     if (btnUnequip) btnUnequip.classList.toggle('hidden', !equipped);
     // Đợt 6 (mục 15, hồ sơ 25): vật phẩm đã khóa thì không bỏ được
-    var isLocked = !equipped && selectedBagSlot !== null && selectedBagSlot !== undefined &&
-      !!(player.bagLocks && player.bagLocks[selectedBagSlot]);
+    var _curSlot = (selectedBagSlot !== null && selectedBagSlot !== undefined) ? (currentBagSlots() || [])[selectedBagSlot] : null;
+    var isLocked = !equipped && !!(_curSlot && _curSlot.locked) || (!equipped && selectedBagSlot !== null && selectedBagSlot !== undefined && !!(player.bagLocks && player.bagLocks[selectedBagSlot]));
     if (btnDrop) {
       btnDrop.classList.toggle('hidden', !!equipped || def.type === 'currency');
       btnDrop.disabled = isLocked;
@@ -1096,12 +1401,22 @@
       btnLock.classList.toggle('hidden', !!equipped || selectedBagSlot === null || selectedBagSlot === undefined);
       btnLock.textContent = isLocked ? 'Mở khóa' : 'Khóa';
     }
+    var btnStar = document.getElementById('btn-card-star');
+    if (btnStar) {
+      btnStar.classList.toggle('hidden', !!equipped || selectedBagSlot === null || selectedBagSlot === undefined);
+      btnStar.textContent = (_curSlot && _curSlot.starred) ? 'Bỏ ghim' : 'Ghim sao';
+    }
+    var btnQuick = document.getElementById('btn-card-quick');
+    if (btnQuick) {
+      btnQuick.classList.toggle('hidden', !!equipped || selectedBagSlot === null || selectedBagSlot === undefined);
+    }
     disarmDrop();
   }
 
   function afterBagAction() {
     if (stateAPI && player) stateAPI.savePlayer(player);
     renderBagGrid();
+    renderQuickSlots();
     refreshHUD();
   }
 
@@ -1110,8 +1425,10 @@
     if (btnUse && !btnUse.dataset.wired) {
       btnUse.dataset.wired = '1';
       btnUse.addEventListener('click', function () {
-        if (selectedBagSlot === null || !player.bag.slots[selectedBagSlot]) return;
-        var itemId = player.bag.slots[selectedBagSlot].itemId;
+        if (selectedBagSlot === null) return;
+        var _useSlots = currentBagSlots();
+        if (!_useSlots || !_useSlots[selectedBagSlot]) return;
+        var itemId = _useSlots[selectedBagSlot].itemId;
         if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.useItem) {
           var res = window.GameEngine.useItem(itemId);
           if (res && !res.ok && res.msg) showToast(res.msg);
@@ -1125,7 +1442,7 @@
       btnEquip.addEventListener('click', function () {
         if (selectedBagSlot === null) return;
         if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.equipItem) {
-          var res = window.GameEngine.equipItem(selectedBagSlot);
+          var res = window.GameEngine.equipItem(selectedBagContainerId, selectedBagSlot);
           if (res && !res.ok && res.msg) showToast(res.msg);
           if (res && res.ok && res.slot) selectedEquipSlot = res.slot;
         }
@@ -1145,15 +1462,50 @@
         afterBagAction();
       });
     }
+    var btnStar = document.getElementById('btn-card-star');
+    if (btnStar && !btnStar.dataset.wired) {
+      btnStar.dataset.wired = '1';
+      btnStar.addEventListener('click', function () {
+        if (selectedBagSlot === null) return;
+        var _stSlots = currentBagSlots();
+        if (!_stSlots || !_stSlots[selectedBagSlot]) return;
+        var cId = selectedBagContainerId;
+        var nowStarred = !!_stSlots[selectedBagSlot].starred;
+        if (tuiKhoAPI && tuiKhoAPI.setStarred) tuiKhoAPI.setStarred(player, cId, selectedBagSlot, !nowStarred);
+        showToast(!nowStarred ? 'Đã ghim sao' : 'Đã bỏ ghim');
+        afterBagAction();
+      });
+    }
+    var btnQuick = document.getElementById('btn-card-quick');
+    if (btnQuick && !btnQuick.dataset.wired) {
+      btnQuick.dataset.wired = '1';
+      btnQuick.addEventListener('click', function () {
+        if (selectedBagSlot === null) return;
+        if (!tuiKhoAPI) return;
+        var qs = tuiKhoAPI.getQuickSlots(player);
+        var idx = -1;
+        for (var qi = 0; qi < qs.length; qi++) { if (!qs[qi]) { idx = qi; break; } }
+        if (idx === -1) { showToast('4 ô dùng nhanh đã đầy'); return; }
+        var r = tuiKhoAPI.setQuickSlot(player, idx, selectedBagContainerId, selectedBagSlot);
+        if (r && r.ok) showToast('Đã gắn vào ô dùng nhanh ' + (idx + 1));
+        else showToast('Không gắn được ô dùng nhanh');
+        renderQuickSlots();
+        afterBagAction();
+      });
+    }
     var btnLock = document.getElementById('btn-card-lock');
     if (btnLock && !btnLock.dataset.wired) {
       btnLock.dataset.wired = '1';
       btnLock.addEventListener('click', function () {
-        if (selectedBagSlot === null || !player.bag.slots[selectedBagSlot]) return;
+        if (selectedBagSlot === null) return;
+        var _lkSlots = currentBagSlots();
+        if (!_lkSlots || !_lkSlots[selectedBagSlot]) return;
+        var cId = selectedBagContainerId;
+        var nowLocked = !!_lkSlots[selectedBagSlot].locked;
+        if (tuiKhoAPI && tuiKhoAPI.setLocked) tuiKhoAPI.setLocked(player, cId, selectedBagSlot, !nowLocked);
         player.bagLocks = player.bagLocks || {};
-        if (player.bagLocks[selectedBagSlot]) delete player.bagLocks[selectedBagSlot];
-        else player.bagLocks[selectedBagSlot] = true;
-        showToast(player.bagLocks[selectedBagSlot] ? 'Đã khóa vật phẩm — không thể bỏ nhầm' : 'Đã mở khóa vật phẩm');
+        if (nowLocked) delete player.bagLocks[selectedBagSlot]; else player.bagLocks[selectedBagSlot] = true;
+        showToast(!nowLocked ? 'Đã khóa vật phẩm — không thể bỏ nhầm' : 'Đã mở khóa vật phẩm');
         afterBagAction();
       });
     }
@@ -1161,8 +1513,10 @@
     if (btnDrop && !btnDrop.dataset.wired) {
       btnDrop.dataset.wired = '1';
       btnDrop.addEventListener('click', function () {
-        if (selectedBagSlot === null || !player.bag.slots[selectedBagSlot]) return;
-        if (player.bagLocks && player.bagLocks[selectedBagSlot]) {
+        if (selectedBagSlot === null) return;
+        var _lockSlots = currentBagSlots();
+        if (!_lockSlots || !_lockSlots[selectedBagSlot]) return;
+        if ((_lockSlots[selectedBagSlot].locked) || (player.bagLocks && player.bagLocks[selectedBagSlot])) {
           showToast('Vật phẩm đang khóa — mở khóa trước khi bỏ');
           return;
         }
@@ -1176,13 +1530,15 @@
           }, 3000);
           return;
         }
-        var slotData = player.bag.slots[selectedBagSlot];
+        var _dropSlots = currentBagSlots();
+        if (!_dropSlots || !_dropSlots[selectedBagSlot]) return;
+        var slotData = _dropSlots[selectedBagSlot];
         var def = itemDefs()[slotData.itemId];
         if (stateAPI && stateAPI.removeItemFromBag) {
           stateAPI.removeItemFromBag(player, slotData.itemId, 1);
         }
         showToast('Đã bỏ 1 ' + (def ? def.name : slotData.itemId));
-        if (!player.bag.slots[selectedBagSlot]) selectedBagSlot = null;
+        if (!_dropSlots || !_dropSlots[selectedBagSlot]) selectedBagSlot = null;
         afterBagAction();
       });
     }
@@ -1409,6 +1765,7 @@
   function refreshHUD() {
     if (!player) return;
     refreshPortraitHat();
+    refreshPetCombatButtons();
 
     var nameEl = document.getElementById('hud-player-name');
     var realmEl = document.getElementById('hud-player-realm');
@@ -2077,6 +2434,8 @@
       renderDialogueLine();
     } else if (dialogueState.npc && dialogueState.npc.id === 'npc_chapsu' && !dialogueState.choiceShown) {
       showChapsuChoices();
+    } else if (dialogueState.npc && dialogueState.npc.id === 'npc_tuan_thu_su' && !dialogueState.choiceShown) {
+      showTuanThuSuChoices();
     } else {
       closeDialogue();
     }
@@ -2151,6 +2510,98 @@
       });
     }
     mkBtn('Rời đi', function () { closeDialogue(); });
+  }
+
+  // Đợt N2: menu Tuần Thú Sư theo đúng khung menu NPC của Chấp Sự.
+  function showTuanThuSuChoices() {
+    dialogueState.choiceShown = true;
+    var lt = getLinhThuApi();
+    if (lt && player) { var s0 = lt.ensureState(player); s0.metTrainer = true; }
+    var box = document.getElementById('dialogue-choices');
+    if (!box) { closeDialogue(); return; }
+    box.innerHTML = '';
+    box.classList.remove('hidden');
+    var mkBtn = function (label, fn) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn wood dialogue-choice-btn';
+      b.textContent = label;
+      b.addEventListener('click', function (e) {
+        e.stopPropagation();
+        fn();
+      });
+      box.appendChild(b);
+    };
+    mkBtn('Xem Linh Thú', function () {
+      closeDialogue();
+      openLinhThu();
+    });
+    mkBtn('Xem Chuồng Thú', function () {
+      closeDialogue();
+      openLinhThu();
+    });
+    mkBtn('Đổi Đan Thú (2 Linh Chi Rừng + 1 Hoa Giải Độc)', function () {
+      doTrainerExchange('dan-thu');
+      showTuanThuSuChoices();
+    });
+    mkBtn('Đổi Yên Linh Thú (2 Đá Nung + 1 Tơ Nhện Xanh)', function () {
+      doTrainerExchange('yen-linh-thu');
+      showTuanThuSuChoices();
+    });
+    mkBtn('Đổi Chuông Linh Thú (2 Mảnh Kiếm Gãy + 1 Nguyên Tinh Kim)', function () {
+      doTrainerExchange('chuong-linh-thu');
+      showTuanThuSuChoices();
+    });
+    mkBtn('Đổi Giáp Linh Thú (3 Đá Nung + 1 Tim Gỗ Cổ Thụ)', function () {
+      doTrainerExchange('giap-linh-thu');
+      showTuanThuSuChoices();
+    });
+    // Quà gặp đầu: đúng một lần theo cờ firstHoanGiven, đọc qua helper
+    // của mapdata.js (nguồn sự thật duy nhất qua GameLinhThu).
+    var giftAvail = false;
+    try {
+      var md = (typeof window !== 'undefined') ? (window.GameMapData || window.MapData) : null;
+      if (md && md.tuanThuSuFirstGiftAvailable) giftAvail = md.tuanThuSuFirstGiftAvailable(player);
+      else if (lt && player) giftAvail = !lt.ensureState(player).firstHoanGiven;
+    } catch (e) { giftAvail = false; }
+    if (giftAvail) {
+      mkBtn('Nhận Linh Thú Hoàn (quà gặp đầu, 1 lần duy nhất)', function () {
+        var st = lt.ensureState(player);
+        if (st.firstHoanGiven) {
+          showToast('Đã nhận quà gặp đầu rồi.');
+        } else {
+          st.firstHoanGiven = true;
+          if (stateAPI) stateAPI.addItemToBag(player, 'linh-thu-hoan', 1);
+          if (stateAPI) stateAPI.savePlayer(player);
+          showToast('Nhận 1 Linh Thú Hoàn! Đánh quái tới ≤20% máu rồi dùng nút Thuần Phục.');
+          refreshHUD();
+        }
+        showTuanThuSuChoices();
+      });
+    }
+    mkBtn('Rời đi', function () { closeDialogue(); });
+  }
+
+  // Đổi đồ ở Tuần Thú Sư theo công thức PROVISIONAL của GameLinhThu.
+  function doTrainerExchange(itemId) {
+    var lt = getLinhThuApi();
+    if (!lt || !player || !stateAPI) return;
+    var recipe = lt.EXCHANGE_RECIPES[itemId];
+    if (!recipe) return;
+    var defs = (monstersAPI && monstersAPI.ITEM_DEFS) ? monstersAPI.ITEM_DEFS : {};
+    for (var i = 0; i < recipe.length; i++) {
+      if (stateAPI.countItemInBag(player, recipe[i].id) < recipe[i].count) {
+        var d = defs[recipe[i].id];
+        showToast('Thiếu nguyên liệu: ' + (d ? d.name : recipe[i].id) + ' ×' + recipe[i].count);
+        return;
+      }
+    }
+    for (var j = 0; j < recipe.length; j++) stateAPI.removeItemFromBag(player, recipe[j].id, recipe[j].count);
+    stateAPI.addItemToBag(player, itemId, 1);
+    stateAPI.savePlayer(player);
+    var got = defs[itemId];
+    showToast('Đã đổi được ' + (got ? got.name : itemId) + '.');
+    refreshHUD();
   }
 
   function closeDialogue() {
@@ -2649,6 +3100,348 @@
     }
   }
 
+
+  // ================= ĐỢT N2: BẢNG LINH THÚ =================
+  var selectedLinhThuPetId = null;
+  var lastPetBtnRefreshMs = 0;
+  var lastTameBtnState = null;
+  var lastHarmonyBtnState = null;
+  var LT_ELEM_NAMES = { moc: 'Mộc', thuy: 'Thủy', hoa: 'Hỏa', tho: 'Thổ', kim: 'Kim' };
+
+  function getLinhThuApi() {
+    return (typeof window !== 'undefined') ? window.GameLinhThu : null;
+  }
+
+  function ltEl(tag, cls, text) {
+    var el = document.createElement(tag);
+    if (cls) el.className = cls;
+    if (text !== undefined && text !== null) el.textContent = text;
+    return el;
+  }
+
+  function ltActionBtn(label, fn, disabled) {
+    var b = ltEl('button', 'btn wood lt-btn', label);
+    b.type = 'button';
+    if (disabled) b.disabled = true;
+    b.addEventListener('click', function (e) { e.stopPropagation(); fn(); });
+    return b;
+  }
+
+  function ltSaveAndRerender() {
+    if (stateAPI) stateAPI.savePlayer(player);
+    renderLinhThuPanel();
+    refreshHUD();
+  }
+
+  function fmtRemain(ms) {
+    if (ms <= 0) return 'xong';
+    var s = Math.ceil(ms / 1000);
+    var h = Math.floor(s / 3600);
+    var m = Math.floor((s % 3600) / 60);
+    var ss = s % 60;
+    if (h > 0) return h + ' giờ ' + m + ' phút';
+    if (m > 0) return m + ' phút ' + ss + ' giây';
+    return ss + ' giây';
+  }
+
+  function openLinhThu() {
+    var lt = getLinhThuApi();
+    if (!lt || !player) return;
+    lt.ensureState(player);
+    renderLinhThuPanel();
+    var modal = document.getElementById('linh-thu-modal');
+    if (modal) modal.classList.remove('hidden');
+    if (audioAPI) audioAPI.playClick();
+  }
+
+  function closeLinhThu() {
+    var modal = document.getElementById('linh-thu-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  function openSaddlebag() {
+    var lt = getLinhThuApi();
+    if (!lt || !player) return;
+    var pet = lt.getMainPet(player);
+    var check = lt.canOpenSaddlebag(player, pet);
+    if (!check.ok) { showToast(check.reason); return; }
+    var c = lt.ensureSaddlebag(player, pet);
+    if (!c) { showToast('Không mở được túi yên lúc này.'); return; }
+    selectedBagContainerId = c.id;
+    closeLinhThu();
+    openBagModal();
+  }
+
+  function renderLinhThuPanel() {
+    var lt = getLinhThuApi();
+    if (!lt || !player) return;
+    var s = lt.ensureState(player);
+    var body = document.getElementById('linh-thu-body');
+    if (!body) return;
+    body.innerHTML = '';
+    var defs = (monstersAPI && monstersAPI.ITEM_DEFS) ? monstersAPI.ITEM_DEFS : {};
+    var now = Date.now();
+
+    body.appendChild(ltEl('div', 'lt-section-title', 'THÚ ĐI CÙNG (' + s.companions.length + ')'));
+    if (!s.companions.length) {
+      body.appendChild(ltEl('div', 'lt-empty', 'Chưa có linh thú. Đánh quái tới ≤20% máu rồi dùng nút Thuần Phục, hoặc ấp trứng. Gặp Tuần Thú Sư ở tông môn để nhận Linh Thú Hoàn đầu tiên.'));
+    }
+    for (var i = 0; i < s.companions.length; i++) {
+      (function (pet) {
+        var spec = lt.species(pet.speciesId) || { name: pet.speciesId, element: 'moc' };
+        var row = ltEl('div', 'lt-pet-row' + (selectedLinhThuPetId === pet.id ? ' selected' : ''));
+        var down = lt.isDown(pet, now);
+        row.appendChild(ltEl('div', 'lt-pet-head',
+          (s.mainId === pet.id ? '★ ' : '') + spec.name + ' · ' + (LT_ELEM_NAMES[spec.element] || spec.element) +
+          ' · ' + pet.stage + ' · Cấp ' + pet.level + ' · ' + pet.quality +
+          (down ? ' · Dưỡng thương ' + fmtRemain(pet.downUntil - now) : '')));
+        row.appendChild(ltEl('div', 'lt-pet-sub',
+          'Máu ' + Math.ceil(pet.hp) + '/' + pet.hpMax + ' · Công ' + (pet.attack || 0) +
+          ' · Hảo cảm ' + Math.floor(pet.affection || 0) + '/100' +
+          (s.houseGuardPetId === pet.id ? ' · Đang giữ ruộng' : '') +
+          (s.isRiding && s.ridingPetId === pet.id ? ' · Đang cưỡi' : '')));
+        var barWrap = ltEl('div', 'lt-aff-bar');
+        var barFill = ltEl('div', 'lt-aff-fill');
+        barFill.style.width = Math.max(0, Math.min(100, pet.affection || 0)) + '%';
+        barWrap.appendChild(barFill);
+        row.appendChild(barWrap);
+        row.addEventListener('click', function () {
+          selectedLinhThuPetId = pet.id;
+          renderLinhThuPanel();
+        });
+        body.appendChild(row);
+      })(s.companions[i]);
+    }
+
+    var sel = null;
+    for (var si = 0; si < s.companions.length; si++) if (s.companions[si].id === selectedLinhThuPetId) sel = s.companions[si];
+    if (!sel && s.companions.length) sel = s.companions[0];
+    if (sel) {
+      selectedLinhThuPetId = sel.id;
+      var spec2 = lt.species(sel.speciesId) || { name: sel.speciesId, element: 'moc', skills: [] };
+      body.appendChild(ltEl('div', 'lt-section-title', 'CHI TIẾT: ' + spec2.name.toUpperCase()));
+      var detail = ltEl('div', 'lt-detail');
+      detail.appendChild(ltEl('div', 'lt-line', 'Hệ: ' + (LT_ELEM_NAMES[spec2.element] || spec2.element) + ' · Sở trường: ' + (spec2.work || '') + ' · Kinh nghiệm: ' + (sel.exp || 0) + '/' + (sel.level * 10)));
+      var allSkills = spec2.skills || [];
+      var skillLine = 'Chiêu: ';
+      for (var k = 0; k < allSkills.length; k++) {
+        skillLine += (k > 0 ? ', ' : '') + allSkills[k] + ((sel.skills || []).indexOf(allSkills[k]) >= 0 ? '' : ' (khóa)');
+      }
+      detail.appendChild(ltEl('div', 'lt-line', skillLine));
+      detail.appendChild(ltEl('div', 'lt-line', 'Hợp kích: ' + (lt.canHarmony(sel) ? 'SẴN SÀNG (hảo cảm ≥60)' : 'chưa mở (cần hảo cảm 60, đang ' + Math.floor(sel.affection || 0) + ')')));
+      body.appendChild(detail);
+
+      var btnRow = ltEl('div', 'lt-btn-row');
+      var downSel = lt.isDown(sel, now);
+      btnRow.appendChild(ltActionBtn(s.mainId === sel.id ? 'Đang là thú chính' : 'Chọn làm thú chính', function () {
+        if (s.isRiding && s.ridingPetId !== sel.id) lt.dismount(s);
+        if (lt.setMain(s, sel.id)) showToast('Đã chọn ' + spec2.name + ' làm thú chính.');
+        else showToast('Không chọn được (thú đang dưỡng thương).');
+        ltSaveAndRerender();
+      }, s.mainId === sel.id || downSel));
+      var baitId = lt.BAIT_MAP[spec2.element];
+      var baitDef = defs[baitId];
+      btnRow.appendChild(ltActionBtn('Cho ăn (+5 hảo cảm, tốn 1 ' + (baitDef ? baitDef.name : baitId) + ')', function () {
+        if (!stateAPI || stateAPI.countItemInBag(player, baitId) < 1) { showToast('Thiếu ' + (baitDef ? baitDef.name : baitId) + ' để cho ăn.'); return; }
+        stateAPI.removeItemFromBag(player, baitId, 1);
+        lt.feedPet(sel);
+        showToast(spec2.name + ' rất thích! Hảo cảm +' + lt.CONSTANTS.AFFECTION_PER_FEED + '.');
+        ltSaveAndRerender();
+      }, downSel));
+      btnRow.appendChild(ltActionBtn(s.houseGuardPetId === sel.id ? 'Bỏ giữ ruộng' : 'Gán giữ ruộng', function () {
+        if (s.houseGuardPetId === sel.id) lt.setGuard(s, null);
+        else if (lt.setGuard(s, sel.id, Date.now())) showToast(spec2.name + ' sẽ ở nhà giữ ruộng.');
+        else showToast('Không gán được (thú đang dưỡng thương).');
+        ltSaveAndRerender();
+      }, downSel));
+      if (s.isRiding && s.ridingPetId === sel.id) {
+        btnRow.appendChild(ltActionBtn('Xuống thú', function () { lt.dismount(s); showToast('Đã xuống thú.'); ltSaveAndRerender(); }));
+      } else {
+        btnRow.appendChild(ltActionBtn('Cưỡi (cần rank 7+, thú chính)', function () {
+          var rank = (stateAPI && stateAPI.getRealmRank) ? stateAPI.getRealmRank(player) : 1;
+          if (lt.mount(s, sel.id, rank)) showToast('Đã cưỡi ' + spec2.name + ' — tốc độ tăng ngoài trận.');
+          else showToast('Chưa cưỡi được: cần là thú chính, rank 7+ và thú khỏe.');
+          ltSaveAndRerender();
+        }, s.mainId !== sel.id || downSel));
+      }
+      if (downSel) {
+        btnRow.appendChild(ltActionBtn('Hồi phục bằng Đan Thú', function () {
+          if (!stateAPI || stateAPI.countItemInBag(player, 'dan-thu') < 1) { showToast('Thiếu Đan Thú (đổi ở Tuần Thú Sư hoặc rơi từ tinh anh).'); return; }
+          stateAPI.removeItemFromBag(player, 'dan-thu', 1);
+          lt.recover(sel, Date.now(), 'dan-thu');
+          showToast(spec2.name + ' đã hồi phục!');
+          ltSaveAndRerender();
+        }));
+      }
+      btnRow.appendChild(ltActionBtn('Cho vào chuồng', function () {
+        lt.sendToBarn(s, sel.id);
+        selectedLinhThuPetId = null;
+        showToast(spec2.name + ' đã vào chuồng.');
+        ltSaveAndRerender();
+      }));
+      btnRow.appendChild(ltActionBtn('Mở Túi Yên', function () { openSaddlebag(); }, !sel.gear || !sel.gear.saddle || s.mainId !== sel.id));
+      body.appendChild(btnRow);
+
+      body.appendChild(ltEl('div', 'lt-section-title', 'ĐỒ THÚ'));
+      var gearRow = ltEl('div', 'lt-btn-row');
+      var gearSlots = [
+        { slot: 'saddle', label: 'Yên', itemId: 'yen-linh-thu', note: 'túi yên 12 ô' },
+        { slot: 'collar', label: 'Chuông', itemId: 'chuong-linh-thu', note: '+10% sức chiêu' },
+        { slot: 'armor', label: 'Giáp', itemId: 'giap-linh-thu', note: '+5 đỡ đòn, +20 máu' }
+      ];
+      for (var gi = 0; gi < gearSlots.length; gi++) {
+        (function (gs) {
+          var equipped = sel.gear && sel.gear[gs.slot];
+          var gDef = defs[gs.itemId];
+          var wrap = ltEl('div', 'lt-gear-slot');
+          wrap.appendChild(ltEl('span', 'lt-gear-label', gs.label + ': ' + (equipped ? (gDef ? gDef.name : gs.itemId) + ' (' + gs.note + ')' : 'trống')));
+          if (equipped) {
+            wrap.appendChild(ltActionBtn('Tháo', function () {
+              var prev = lt.unequipPetGear(sel, gs.slot);
+              if (prev && stateAPI) stateAPI.addItemToBag(player, prev, 1);
+              ltSaveAndRerender();
+            }));
+          } else {
+            wrap.appendChild(ltActionBtn('Mặc (' + (gDef ? gDef.name : gs.itemId) + ')', function () {
+              if (!stateAPI || stateAPI.countItemInBag(player, gs.itemId) < 1) { showToast('Trong túi không có ' + (gDef ? gDef.name : gs.itemId) + ' (đổi ở Tuần Thú Sư hoặc rơi từ boss).'); return; }
+              stateAPI.removeItemFromBag(player, gs.itemId, 1);
+              var prev2 = lt.equipPetGear(sel, gs.slot, gs.itemId);
+              if (prev2) stateAPI.addItemToBag(player, prev2, 1);
+              ltSaveAndRerender();
+            }));
+          }
+          gearRow.appendChild(wrap);
+        })(gearSlots[gi]);
+      }
+      body.appendChild(gearRow);
+    }
+
+    body.appendChild(ltEl('div', 'lt-section-title', 'TRỨNG ĐANG ẤP (' + s.eggs.length + ')'));
+    if (!s.eggs.length) body.appendChild(ltEl('div', 'lt-empty', 'Chưa có trứng nào đang ấp.'));
+    for (var ei = 0; ei < s.eggs.length; ei++) {
+      (function (egg) {
+        var eggSpec = lt.species(egg.speciesId) || { name: egg.speciesId };
+        var remain = egg.hatchAt - now;
+        var row = ltEl('div', 'lt-egg-row');
+        row.appendChild(ltEl('div', 'lt-line', 'Trứng ' + (LT_ELEM_NAMES[egg.element] || egg.element) + ' → ' + eggSpec.name + ' · Chăm: ' + (egg.cares || 0) + '/3' + (remain > 0 ? ' · Còn ' + fmtRemain(remain) : ' · ĐÃ ĐỦ GIỜ')));
+        var er = ltEl('div', 'lt-btn-row');
+        er.appendChild(ltActionBtn('Chăm (+1, tốn 5 Linh Lực)', function () {
+          var r = lt.careEgg(s, egg.id, player);
+          showToast(r.ok ? 'Đã chăm trứng (' + r.cares + '/3). Chăm đủ 3 lần nở phẩm hiếm.' : r.reason);
+          ltSaveAndRerender();
+        }, (egg.cares || 0) >= 3));
+        er.appendChild(ltActionBtn('Nở', function () {
+          var r2 = lt.hatch(s, egg, Date.now());
+          if (r2.ok) { selectedLinhThuPetId = r2.pet.id; showToast('Trứng đã nở! ' + eggSpec.name + ' (' + r2.pet.quality + ') đã vào danh sách.'); }
+          else showToast(r2.reason);
+          ltSaveAndRerender();
+        }, remain > 0));
+        row.appendChild(er);
+        body.appendChild(row);
+      })(s.eggs[ei]);
+    }
+
+    var bagEggs = [];
+    var eggIds = Object.keys(lt.EGG_MAP);
+    for (var bi = 0; bi < eggIds.length; bi++) {
+      var cnt = stateAPI ? stateAPI.countItemInBag(player, eggIds[bi]) : 0;
+      if (cnt > 0) bagEggs.push({ id: eggIds[bi], count: cnt });
+    }
+    if (bagEggs.length) {
+      body.appendChild(ltEl('div', 'lt-section-title', 'TRỨNG TRONG TÚI'));
+      for (var bj = 0; bj < bagEggs.length; bj++) {
+        (function (be) {
+          var ed = defs[be.id];
+          var row = ltEl('div', 'lt-egg-row');
+          row.appendChild(ltEl('div', 'lt-line', (ed ? ed.name : be.id) + ' ×' + be.count));
+          row.appendChild(ltActionBtn('Ấp (30 phút)', function () {
+            stateAPI.removeItemFromBag(player, be.id, 1);
+            lt.startIncubation(s, be.id, Date.now());
+            showToast('Đã bắt đầu ấp ' + (ed ? ed.name : be.id) + '.');
+            ltSaveAndRerender();
+          }));
+          body.appendChild(row);
+        })(bagEggs[bj]);
+      }
+    }
+
+    body.appendChild(ltEl('div', 'lt-section-title', 'CHUỒNG (' + s.barn.length + ')'));
+    if (!s.barn.length) body.appendChild(ltEl('div', 'lt-empty', 'Chuồng trống. Thú gục sẽ về đây dưỡng thương.'));
+    for (var ci = 0; ci < s.barn.length; ci++) {
+      (function (pet) {
+        var spec = lt.species(pet.speciesId) || { name: pet.speciesId };
+        var down = lt.isDown(pet, now);
+        var row = ltEl('div', 'lt-pet-row');
+        row.appendChild(ltEl('div', 'lt-pet-head', spec.name + ' · ' + pet.stage + ' · Cấp ' + pet.level + (down ? ' · Dưỡng thương ' + fmtRemain(pet.downUntil - now) : ' · Khỏe')));
+        var br = ltEl('div', 'lt-btn-row');
+        br.appendChild(ltActionBtn('Đón về', function () {
+          var r = lt.recallFromBarn(s, pet.id, Date.now());
+          showToast(r.ok ? spec.name + ' đã về đội.' : r.reason);
+          ltSaveAndRerender();
+        }, down));
+        if (down) {
+          br.appendChild(ltActionBtn('Hồi phục bằng Đan Thú', function () {
+            if (!stateAPI || stateAPI.countItemInBag(player, 'dan-thu') < 1) { showToast('Thiếu Đan Thú.'); return; }
+            stateAPI.removeItemFromBag(player, 'dan-thu', 1);
+            lt.recover(pet, Date.now(), 'dan-thu');
+            showToast(spec.name + ' đã hồi phục!');
+            ltSaveAndRerender();
+          }));
+        }
+        row.appendChild(br);
+        body.appendChild(row);
+      })(s.barn[ci]);
+    }
+
+    body.appendChild(ltEl('div', 'lt-section-title', 'THU THẬP KHI VẮNG'));
+    var gathered = (s.gathered && s.gathered.items) || [];
+    if (!gathered.length) {
+      body.appendChild(ltEl('div', 'lt-empty', 'Chưa có gì. Thú ở nhà (trong chuồng hoặc giữ ruộng) gom nguyên liệu theo thời gian vắng, tối đa 20 món/ngày.'));
+    } else {
+      for (var gi2 = 0; gi2 < gathered.length; gi2++) {
+        var gd = defs[gathered[gi2].itemId];
+        body.appendChild(ltEl('div', 'lt-line', (gd ? gd.name : gathered[gi2].itemId) + ' ×' + gathered[gi2].count));
+      }
+      body.appendChild(ltActionBtn('Nhận hết', function () {
+        var items = lt.claimGathered(s);
+        for (var qi = 0; qi < items.length; qi++) if (stateAPI) stateAPI.addItemToBag(player, items[qi].itemId, items[qi].count);
+        showToast('Đã nhận ' + items.length + ' loại vật phẩm thú gom được.');
+        ltSaveAndRerender();
+      }));
+    }
+  }
+
+  // Làm tươi trạng thái nút Thuần Phục/Hợp Kích (giới hạn 4 lần/giây để
+  // khỏi quét túi mỗi khung hình).
+  function refreshPetCombatButtons() {
+    if (typeof document === 'undefined') return;
+    var nowMs = Date.now();
+    if (nowMs - lastPetBtnRefreshMs < 250) return;
+    lastPetBtnRefreshMs = nowMs;
+    var eng = (typeof window !== 'undefined') ? window.GameEngine : null;
+    if (!eng) return;
+    var tameBtn = document.getElementById('btn-thuan-phuc');
+    if (tameBtn && eng.getTameState) {
+      var ts = eng.getTameState();
+      var key = ts.available ? '1' : '0:' + ts.reason;
+      if (key !== lastTameBtnState) {
+        lastTameBtnState = key;
+        tameBtn.disabled = !ts.available;
+        tameBtn.title = ts.available ? ('Thuần phục (tỉ lệ ' + Math.round((ts.chance || 0) * 100) + '%)') : ts.reason;
+      }
+    }
+    var harmBtn = document.getElementById('btn-hop-kich');
+    if (harmBtn && eng.getHarmonyState) {
+      var hs = eng.getHarmonyState();
+      var hkey = hs.ready ? '1' : '0:' + hs.reason;
+      if (hkey !== lastHarmonyBtnState) {
+        lastHarmonyBtnState = hkey;
+        harmBtn.disabled = !hs.ready;
+        harmBtn.title = hs.ready ? 'Hợp kích' : hs.reason;
+      }
+    }
+  }
+
   var UIAPI = {
     init: initUI,
     update: update,
@@ -2669,6 +3462,10 @@
     applyDisplaySettings: applyDisplaySettings,
     setActionMode: setActionMode
   };
+  UIAPI.openLinhThu = openLinhThu;
+  UIAPI.closeLinhThu = closeLinhThu;
+  UIAPI.openSaddlebag = openSaddlebag;
+  UIAPI.renderLinhThuPanel = renderLinhThuPanel;
 
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = UIAPI;
