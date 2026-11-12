@@ -443,6 +443,15 @@
   var ICE_FALL_COOLDOWN_SEC = 3.0; // thời gian chờ tối thiểu giữa 2 lần rơi
   var ICE_SLIDE_SOUND_INTERVAL = 0.5; // nhịp phát tiếng trượt khi đang trượt (giây)
   var slideVel = { x: 0, y: 0 };   // vận tốc trượt hiện tại của người chơi (px/s)
+  // MV1 (parent bổ sung): làm mượt di chuyển nhân vật trên đất thường.
+  // PROVISIONAL (chờ Bui phán cảm giác): tăng tốc 14/s (đạt ~75% tốc độ sau
+  // 0.1s, vẫn nhạy tay), ma sát thả phím 18/s (dừng hẳn trong ~0.15s, không
+  // trượt dài như băng). Không đổi SPEED, không đổi computeSlideVelocity
+  // (hợp đồng test V1 chặng 2 giữ nguyên).
+  var GROUND_ACCEL = 14.0;
+  var GROUND_FRICTION = 18.0;
+  var GROUND_STOP = 4.0;           // dưới 4px/s thì dừng hẳn
+  var groundVel = { x: 0, y: 0 };  // vận tốc đất thường hiện tại (px/s)
   var iceCrack = {};               // trạng thái từng ô nứt: { standTime, brokenUntil, telegraphQueued, stage }
   var iceMapId = null;             // map của trạng thái nứt/trượt đang giữ (đổi map -> reset)
   var lastIceFallClock = -100;     // zoneClock lúc rơi lần gần nhất
@@ -542,6 +551,32 @@
       out.x *= d;
       out.y *= d;
       if (Math.hypot(out.x, out.y) < 1) { out.x = 0; out.y = 0; }
+    }
+    return out;
+  }
+
+  /**
+   * MV1 (parent bổ sung): vận tốc đất thường sau một bước dt, theo cùng mẫu
+   * hàm thuần của computeSlideVelocity (test Node đặt vận tốc qua
+   * Engine.mv1.setVelocity rồi gọi).
+   * - Có điều khiển: tiến dần tới hướng điều khiển x tốc độ theo GROUND_ACCEL.
+   * - Thả phím: giảm theo ma sát GROUND_FRICTION, dưới GROUND_STOP thì dừng.
+   * - Tốc độ không bao giờ vượt speed (tiến tới mục tiêu theo hàm mũ).
+   */
+  function computeGroundVelocity(dt, inputX, inputY, speed) {
+    if (typeof dt !== 'number' || !isFinite(dt) || dt <= 0) {
+      return { x: groundVel.x, y: groundVel.y };
+    }
+    var out = { x: groundVel.x, y: groundVel.y };
+    if (inputX !== 0 || inputY !== 0) {
+      var k = 1 - Math.exp(-GROUND_ACCEL * dt);
+      out.x += (inputX * speed - out.x) * k;
+      out.y += (inputY * speed - out.y) * k;
+    } else {
+      var d = Math.exp(-GROUND_FRICTION * dt);
+      out.x *= d;
+      out.y *= d;
+      if (Math.hypot(out.x, out.y) < GROUND_STOP) { out.x = 0; out.y = 0; }
     }
     return out;
   }
@@ -5940,6 +5975,8 @@
     if (!canMove) {
       slideVel.x = 0;
       slideVel.y = 0;
+      groundVel.x = 0;
+      groundVel.y = 0;
     }
 
     if (canMove) {
@@ -5960,6 +5997,8 @@
         if (onIceNow) {
           // Trên băng: vận tốc tiến dần tới hướng điều khiển (gia tốc
           // ICE_ACCEL), không đặt ngay như đất thường.
+          groundVel.x = 0;
+          groundVel.y = 0;
           var sv = computeSlideVelocity(dt, vx, vy, true, currentSpeed);
           slideVel.x = sv.x;
           slideVel.y = sv.y;
@@ -5982,22 +6021,29 @@
             else player.dir = getDirFromVelocity(vx, vy); // kẹt tường: mặt vẫn theo phím
           }
         } else {
+          // MV1: đất thường dùng vận tốc mượt (tăng tốc/giảm tốc theo hàm mũ),
+          // không đặt ngay như trước; slideVel về 0, tốc độ tối đa giữ nguyên.
           slideVel.x = 0;
           slideVel.y = 0;
-          var stepDist = currentSpeed * dt;
-          var targetX = player.x + vx * stepDist;
-          var targetY = player.y + vy * stepDist;
-
-          if (mapData.isWalkable(targetX, player.y)) {
-            player.x = targetX;
+          var gv = computeGroundVelocity(dt, vx, vy, currentSpeed);
+          groundVel.x = gv.x;
+          groundVel.y = gv.y;
+          var gStepX = player.x + groundVel.x * dt;
+          var gStepY = player.y + groundVel.y * dt;
+          if (mapData.isWalkable(gStepX, player.y)) {
+            player.x = gStepX;
             moved = true;
+          } else {
+            groundVel.x = 0; // đụng tường: dừng thành phần ngang
           }
-          if (mapData.isWalkable(player.x, targetY)) {
-            player.y = targetY;
+          if (mapData.isWalkable(player.x, gStepY)) {
+            player.y = gStepY;
             moved = true;
+          } else {
+            groundVel.y = 0; // đụng tường: dừng thành phần dọc
           }
-
-          player.dir = getDirFromVelocity(vx, vy);
+          if (moved) player.dir = getDirFromVelocity(groundVel.x, groundVel.y);
+          else player.dir = getDirFromVelocity(vx, vy); // kẹt tường: mặt vẫn theo phím
         }
         currentPath = [];
         pendingInteraction = null;
@@ -6006,9 +6052,11 @@
         if (travelState.active) cancelTravel();
       } else if (currentPath.length > 0) {
         // Đường đi tự động (click A*/dẫn đường): giữ nguyên đi chính xác
-        // từng điểm mốc, không áp quán tính — slideVel về 0.
+        // từng điểm mốc, không áp quán tính — slideVel và groundVel về 0.
         slideVel.x = 0;
         slideVel.y = 0;
+        groundVel.x = 0;
+        groundVel.y = 0;
         var targetWP = currentPath[0];
         var dwx = targetWP.x - player.x;
         var dwy = targetWP.y - player.y;
@@ -6063,8 +6111,30 @@
           slideVel.y = 0;
         }
       } else {
+        // MV1: không điều khiển, không đường đi, không trên băng: trượt nốt
+        // đà đất thường rồi dừng hẳn (dừng mềm trong ~0.15s, không khựng).
         slideVel.x = 0;
         slideVel.y = 0;
+        var gv2 = computeGroundVelocity(dt, 0, 0, currentSpeed);
+        groundVel.x = gv2.x;
+        groundVel.y = gv2.y;
+        if (Math.hypot(groundVel.x, groundVel.y) > 0) {
+          var gSlideX = player.x + groundVel.x * dt;
+          var gSlideY = player.y + groundVel.y * dt;
+          if (mapData.isWalkable(gSlideX, player.y)) {
+            player.x = gSlideX;
+            moved = true;
+          } else {
+            groundVel.x = 0;
+          }
+          if (mapData.isWalkable(player.x, gSlideY)) {
+            player.y = gSlideY;
+            moved = true;
+          } else {
+            groundVel.y = 0;
+          }
+          if (moved) player.dir = getDirFromVelocity(groundVel.x, groundVel.y);
+        }
       }
     }
 
@@ -6393,6 +6463,16 @@
           slowDuration: tg.slowDuration || 0,
           color: tg.isBossSkill ? (elemColors[tg.element] || '#c9a0ff') : null
         });
+        // MV1: lớp chuyển động riêng của skill boss, đồng bộ cùng telegraph.
+        // Telegraph vẫn giữ nguyên thời lượng/sát thương; entry này chỉ là VFX.
+        if (tg.isBossSkill && monstersAPI && monstersAPI.SPECIES[m.speciesId]) {
+          var bossFx = monstersAPI.SPECIES[m.speciesId].skillEffect;
+          if (bossFx) visualEffects.push({
+            type: 'boss_skill_fx', effect: bossFx, element: tg.element,
+            x: tg.x, y: tg.y, radius: tg.radius,
+            timer: tg.timer, duration: tg.timer, seed: m.id.length * 0.73
+          });
+        }
         // Boss diễn hoạt ảnh tung chiêu song song với telegraph
         if (tg.isBossSkill) {
           m.skillAnimTimer = 0.85;
@@ -8129,7 +8209,34 @@
     var nowSec = performance.now() / 1000;
     for (var i = 0; i < visualEffects.length; i++) {
       var vfx = visualEffects[i];
-      if (vfx.type === 'slash_crescent') {
+      if (vfx.type === 'boss_skill_fx') {
+        var bp = 1 - (vfx.timer / (vfx.duration || 1));
+        var be = vfx.effect || {};
+        var fade = Math.min(1, bp / 0.18) * Math.min(1, vfx.timer / 0.22);
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, fade) * 0.9;
+        ctx.strokeStyle = be.color || '#fff';
+        ctx.fillStyle = be.core || '#fff';
+        ctx.lineWidth = 3;
+        ctx.shadowColor = be.color || '#fff';
+        ctx.shadowBlur = qualityShadow(12);
+        var rr = (vfx.radius || 70) * (0.35 + bp * 0.65);
+        if (be.shape === 'vine') {
+          for (var vi = 0; vi < 3; vi++) { var va = bp * 7 + vi * 2.1; ctx.beginPath(); ctx.arc(vfx.x, vfx.y, rr * (0.35 + vi * 0.18), va, va + 1.4); ctx.stroke(); }
+        } else if (be.shape === 'ring') {
+          ctx.beginPath(); ctx.arc(vfx.x, vfx.y, rr, bp * 5, bp * 5 + Math.PI * 1.45); ctx.stroke();
+          ctx.beginPath(); ctx.arc(vfx.x, vfx.y, rr * .58, -bp * 4, -bp * 4 + Math.PI * 1.2); ctx.stroke();
+        } else if (be.shape === 'pillar') {
+          for (var pi = 0; pi < 4; pi++) { var px = vfx.x + Math.sin(bp * 9 + pi) * rr * .45; ctx.beginPath(); ctx.moveTo(px, vfx.y + 18); ctx.lineTo(px + Math.sin(pi * 2) * 8, vfx.y - rr * (0.4 + bp)); ctx.stroke(); }
+          ctx.beginPath(); ctx.arc(vfx.x, vfx.y, rr * .28, 0, Math.PI * 2); ctx.fill();
+        } else if (be.shape === 'ripple') {
+          ctx.beginPath(); ctx.ellipse(vfx.x, vfx.y, rr, rr * .42, 0, 0, Math.PI * 2); ctx.stroke();
+          ctx.beginPath(); ctx.ellipse(vfx.x, vfx.y, rr * .62, rr * .25, 0, 0, Math.PI * 2); ctx.stroke();
+        } else {
+          for (var ki = 0; ki < 5; ki++) { var ka = ki * 1.25 + bp * 4; var kx = vfx.x + Math.cos(ka) * rr; var ky = vfx.y + Math.sin(ka) * rr * .5; ctx.beginPath(); ctx.moveTo(kx, ky - 24); ctx.lineTo(kx + Math.cos(ka) * 18, ky + 18); ctx.stroke(); }
+        }
+        ctx.restore();
+      } else if (vfx.type === 'slash_crescent') {
         ctx.save();
         var progress = 1.0 - (vfx.timer / vfx.duration);
         ctx.strokeStyle = 'rgba(255, 245, 190, ' + (1.0 - progress) + ')';
@@ -8929,6 +9036,19 @@
       FALL_DMG: ICE_FALL_DMG,
       FALL_COOLDOWN_SEC: ICE_FALL_COOLDOWN_SEC,
       SLIDE_SOUND_INTERVAL: ICE_SLIDE_SOUND_INTERVAL
+    },
+    // MV1 (parent bổ sung): làm mượt di chuyển nhân vật trên đất thường.
+    mv1: {
+      computeVelocity: computeGroundVelocity,
+      getVelocity: function () { return { x: groundVel.x, y: groundVel.y }; },
+      setVelocity: function (x, y) {
+        groundVel.x = (typeof x === 'number' && isFinite(x)) ? x : 0;
+        groundVel.y = (typeof y === 'number' && isFinite(y)) ? y : 0;
+      },
+      reset: function () { groundVel.x = 0; groundVel.y = 0; },
+      ACCEL: GROUND_ACCEL,
+      FRICTION: GROUND_FRICTION,
+      STOP: GROUND_STOP
     },
     // Đợt V1 chặng 3: cơ chế dung nham Mỏ Lửa (xem khối V1 chặng 3 ở đầu tệp).
     lava: {

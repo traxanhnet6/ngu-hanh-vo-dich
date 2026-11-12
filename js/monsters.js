@@ -1121,6 +1121,28 @@
     }
   };
 
+  // MV1: hồ sơ VFX theo hệ. Đây là dữ liệu chuyển động cho canvas, không tạo
+  // sprite mới; mỗi boss có motif, hình học và vận tốc riêng để nhận diện.
+  var BOSS_SKILL_EFFECTS = {
+    moc:  { id: 'boss-moc-re-xoay', shape: 'vine', motion: 'spiral', color: '#72df78', core: '#d9ff9b', speed: 92, emit: 'player' },
+    thuy: { id: 'boss-thuy-bang-luu', shape: 'ring', motion: 'orbit',  color: '#72d9ff', core: '#e4fbff', speed: 118, emit: 'self' },
+    hoa:  { id: 'boss-hoa-loi-phun', shape: 'pillar', motion: 'rise',   color: '#ff7348', core: '#ffe69a', speed: 140, emit: 'player' },
+    tho:  { id: 'boss-tho-sa-chuong', shape: 'ripple', motion: 'expand', color: '#dcb66a', core: '#fff0b0', speed: 72, emit: 'player' },
+    kim:  { id: 'boss-kim-kiem-vu', shape: 'blade', motion: 'fall',   color: '#d9e7ff', core: '#ffffff', speed: 180, emit: 'self' }
+  };
+  var MONSTER_EFFECTS = {
+    moc: { attack: 'vine-lash', hit: 'leaf-burst' }, thuy: { attack: 'ice-spit', hit: 'frost-pop' },
+    hoa: { attack: 'ember-bite', hit: 'spark-burst' }, tho: { attack: 'stone-swipe', hit: 'dust-pop' },
+    kim: { attack: 'iron-claw', hit: 'metal-flash' }
+  };
+  Object.keys(SPECIES).forEach(function (key) {
+    var s = SPECIES[key];
+    if (!s || !s.element) return;
+    s.attackEffect = (MONSTER_EFFECTS[s.element] || MONSTER_EFFECTS.moc).attack;
+    s.hitEffect = (MONSTER_EFFECTS[s.element] || MONSTER_EFFECTS.moc).hit;
+    if (s.isBoss) s.skillEffect = BOSS_SKILL_EFFECTS[s.element];
+  });
+
   // Bí danh tương thích cho nhiệm vụ và sự kiện
   SPECIES.bang_xa = SPECIES.han_xa;
   SPECIES.boss_bang_xa = SPECIES.boss_han_kinh_giao_vuong;
@@ -1203,6 +1225,10 @@
       homeY: hY,
       dir: 0, // 0: right/down, 1: left... (dùng flipX theo hướng vận tốc)
       facingLeft: false,
+      // MV1: vận tốc liên tục (px/s), tách khỏi tốc độ cân bằng để đổi hướng
+      // và dừng không bị giật ở các tần số khung hình khác nhau.
+      vx: 0,
+      vy: 0,
 
       // Máy trạng thái: roam, aggro, attack, return, hit, dead
       state: opts.state || 'roam',
@@ -1238,6 +1264,27 @@
     };
   }
 
+  // Điều khiển vận tốc theo thời gian thực.  speed vẫn là chỉ số cân bằng;
+  // accel chỉ quyết định cảm giác chuyển động và không thay đổi quãng đường
+  // ở trạng thái ổn định.
+  function steer(m, tx, ty, dt, speed, accel) {
+    var d = Math.hypot(tx, ty);
+    var ux = d > 0.001 ? tx / d : 0;
+    var uy = d > 0.001 ? ty / d : 0;
+    var targetX = ux * speed;
+    var targetY = uy * speed;
+    var blend = 1 - Math.exp(-accel * Math.max(0, dt));
+    m.vx += (targetX - (m.vx || 0)) * blend;
+    m.vy += (targetY - (m.vy || 0)) * blend;
+    m.x += m.vx * dt;
+    m.y += m.vy * dt;
+    if (d > 0.001) m.facingLeft = tx < 0;
+  }
+
+  function brake(m, dt, accel) {
+    steer(m, 0, 0, dt, 0, accel);
+  }
+
   /**
    * Cập nhật máy trạng thái quái vật theo thời gian (dt tính bằng giây)
    */
@@ -1261,6 +1308,7 @@
 
     if (m.state === 'dead') {
       m.deathTimer += dt;
+      brake(m, dt, m.isBoss ? 9 : 14);
       return;
     }
 
@@ -1367,10 +1415,8 @@
           m.state = 'roam';
           m.roamTarget = null;
         } else {
-          var moveStep = m.speed * 1.3 * spdMul * dt;
-          m.x += (dxHome / dHome) * Math.min(moveStep, dHome);
-          m.y += (dyHome / dHome) * Math.min(moveStep, dHome);
-          m.facingLeft = (dxHome < 0);
+          steer(m, dxHome, dyHome, dt, m.speed * 1.3 * spdMul, m.isBoss ? 7 : 12);
+          if (Math.hypot(m.x - m.homeX, m.y - m.homeY) > dHome) { m.x = m.homeX; m.y = m.homeY; }
           m.animRow = 1; // Walk
         }
         break;
@@ -1403,10 +1449,7 @@
             m.roamTarget = null;
             m.roamPauseTimer = 2.0 + Math.random() * 2.0; // Nghỉ 2-4s
           } else {
-            var rstep = (m.speed * 0.5 * spdMul) * dt;
-            m.x += (rx / rd) * Math.min(rstep, rd);
-            m.y += (ry / rd) * Math.min(rstep, rd);
-            m.facingLeft = (rx < 0);
+            steer(m, rx, ry, dt, m.speed * 0.5 * spdMul, m.isBoss ? 6 : 10);
             m.animRow = 1; // Walk
           }
         }
@@ -1420,6 +1463,7 @@
         }
         // Nếu trong tầm đánh -> chuyển attack
         if (distPlayer <= m.attackRange) {
+          brake(m, dt, m.isBoss ? 10 : 16);
           m.state = 'attack';
           break;
         }
@@ -1427,10 +1471,7 @@
         var px = playerPos.x - m.x;
         var py = playerPos.y - m.y;
         if (distPlayer > 0) {
-          var aStep = m.speed * spdMul * dt;
-          m.x += (px / distPlayer) * aStep;
-          m.y += (py / distPlayer) * aStep;
-          m.facingLeft = (px < 0);
+          steer(m, px, py, dt, m.speed * spdMul, m.isBoss ? 5.5 : 11);
         }
         break;
 
@@ -1441,6 +1482,7 @@
           break;
         }
         m.facingLeft = (playerPos.x < m.x);
+        brake(m, dt, m.isBoss ? 10 : 16);
         // Tấn công khi hết cooldown
         if (m.attackTimer <= 0) {
           m.attackTimer = m.attackCd;
@@ -1456,6 +1498,7 @@
         if (m.hitStunTimer <= 0) {
           m.state = 'aggro';
         }
+        brake(m, dt, m.isBoss ? 8 : 13);
         break;
     }
   }
@@ -1553,6 +1596,8 @@
   exports.GEAR_WORSE = GEAR_WORSE;
   exports.GEAR_BETTER = GEAR_BETTER;
   exports.SPECIES = SPECIES;
+  exports.BOSS_SKILL_EFFECTS = BOSS_SKILL_EFFECTS;
+  exports.MONSTER_EFFECTS = MONSTER_EFFECTS;
   exports.rollDrops = rollDrops;
   exports.createMonster = createMonster;
   exports.updateMonster = updateMonster;
