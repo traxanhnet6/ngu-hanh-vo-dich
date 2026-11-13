@@ -4424,3 +4424,101 @@ body.photo-mode #toast-container { visibility: hidden; }
   }
 }
 
+
+/* ================= ĐỢT HUD-TOOLBAR: thanh công cụ thu gọn ================= */
+/* Cụm nút Túi/Cài Đặt/Linh Điền... thu thành thanh công cụ dọc mép phải:
+   mặc định chỉ thấy nút bật/tắt + hàng ô dùng nhanh; bấm nút bật/tắt mở
+   dải nút dọc có nhãn. Vùng đệm của cụm cho bấm xuyên xuống canvas (diệt
+   khuyết tật dải nút ăn bấm có trước). */
+#hud-right-controls {
+  pointer-events: none;
+}
+#hud-right-controls button {
+  pointer-events: auto;
+}
+.hud-tools-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  pointer-events: none;
+}
+.hud-toolbar-toggle {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+}
+.hud-toolbar-toggle svg {
+  display: block;
+}
+.hud-toolbar-toggle .toolbar-icon-close {
+  display: none;
+}
+#hud-toolbar.hud-toolbar-expanded .hud-toolbar-toggle .toolbar-icon-bars {
+  display: none;
+}
+#hud-toolbar.hud-toolbar-expanded .hud-toolbar-toggle .toolbar-icon-close {
+  display: block;
+}
+.hud-toolbar-panel {
+  display: none;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+#hud-toolbar.hud-toolbar-expanded .hud-toolbar-panel {
+  display: flex;
+}
+.hud-toolbar-panel .hud-tool-btn {
+  width: 118px;
+  min-height: 44px;
+  padding: 8px 10px;
+  font-size: 13px;
+  justify-content: flex-start;
+}
+.hud-toolbar-panel .hud-tool-btn svg {
+  flex: none;
+}
+.hud-toolbar-panel .hud-tool-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.quick-slots {
+  display: flex;
+  gap: 4px;
+  pointer-events: none;
+}
+.quick-slot {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  padding: 0;
+  background: rgba(20, 26, 20, 0.88);
+  border: 1px solid #77683c;
+  border-radius: 5px;
+  color: #e8dfc0;
+  font-family: inherit;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.quick-slot > span {
+  position: absolute;
+  top: 1px;
+  left: 3px;
+  font-size: 9px;
+  line-height: 1;
+  color: #c9b88d;
+  z-index: 2;
+}
+.quick-slot-icon {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: auto;
+}

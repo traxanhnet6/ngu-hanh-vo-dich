@@ -171,6 +171,18 @@
       });
     }
 
+    // Đợt HUD-TOOLBAR: nút thu/mở thanh công cụ (mặc định thu gọn).
+    var btnToolbarToggle = document.getElementById('btn-toolbar-toggle');
+    var hudToolbar = document.getElementById('hud-toolbar');
+    if (btnToolbarToggle && hudToolbar && !btnToolbarToggle.dataset.wired) {
+      btnToolbarToggle.dataset.wired = '1';
+      btnToolbarToggle.addEventListener('click', function () {
+        if (audioAPI) audioAPI.playClick();
+        var expanded = hudToolbar.classList.toggle('hud-toolbar-expanded');
+        btnToolbarToggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      });
+    }
+
     // 3. Nút Cài đặt
     var btnSettings = document.getElementById('btn-settings');
     var settingsModal = document.getElementById('settings-modal');
