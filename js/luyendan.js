@@ -646,6 +646,15 @@
     // grade
     var gradeIdx = Math.min(3, Math.floor(score * 3.999));
     if (gradeIdx < 0) gradeIdx = 0;
+    // Đợt DANBOARD-FIX: trần phẩm theo plan (luyện nhanh trần Thượng) —
+    // kẹp TRƯỚC khi tính đan văn/toast để mọi nơi hiển thị nhất quán.
+    // Không có maxGradeIndex thì như cũ.
+    var gradeCapped = false;
+    if (typeof plan.maxGradeIndex === 'number') {
+      var cappedIdx = Math.min(gradeIdx, Math.max(0, Math.floor(plan.maxGradeIndex)));
+      if (cappedIdx < gradeIdx) gradeCapped = true;
+      gradeIdx = cappedIdx;
+    }
     // proficiency can raise max
     // dan van
     var danVan = 0;
@@ -653,6 +662,9 @@
       danVan = Math.max(1, Math.min(recipe.danVanMax || 3, gradeIdx + (score > 0.85 ? 1 : 0)));
     }
     if (kyTranUsed) danVan = Math.min(recipe.danVanMax || 3, danVan + 1);
+    // Đợt DANBOARD-FIX: mẻ bị trần phẩm kẹp thì đan văn tối đa 1 — giữ
+    // đúng hợp đồng cũ của luyện nhanh (trước đây kẹp sau khi trả về).
+    if (gradeCapped) danVan = Math.min(danVan, 1);
 
     var gradeName = GRADE_NAMES[gradeIdx];
 
@@ -673,8 +685,9 @@
     s.pillGrades[pillId] = Math.max(s.pillGrades[pillId] || 0, gradeIdx);
     s.lastGrade = { pillId: pillId, grade: gradeName, danVan: danVan, score: score };
 
-    // alchemist success counter
-    s.successes = (s.successes || 0) + 1;
+    // Đợt DANBOARD: successes chỉ tăng 1 lần/mẻ, tại recordProficiency ở
+    // trên. Dòng tăng thừa ở đây (đếm đôi) đã gỡ — ngưỡng học kỹ năng và
+    // cấp đan sư đọc đúng nghĩa "số mẻ thành công".
     s.lastRefineAt = Date.now();
     if (typeof window !== 'undefined') window.__danLoBurningUntil = Date.now() + 60000;
     getAlchemistRank(player);
@@ -699,20 +712,29 @@
     }
     var recipe = getPillRecipe(pillId);
     if (!recipe) return { ok: false, reason: 'unknown_recipe', msg: 'Không có công thức.' };
-    // force medium/superior max (index 2)
-    var res = refineBatch(player, {
+    // Đợt DANBOARD: luyện nhanh cũng mang theo phẩm chất nhìn trước để
+    // cộng HERBQ như mẻ ván; vắng module dan-ban thì chạy như cũ.
+    var materialQualities = null;
+    try {
+      var db = null;
+      if (typeof window !== 'undefined' && window.GameDanBan) db = window.GameDanBan;
+      else if (typeof global !== 'undefined' && global.GameDanBan) db = global.GameDanBan;
+      else db = require('./dan-ban.js');
+      if (db && db.peekMaterialQualities) materialQualities = db.peekMaterialQualities(player, recipe.materials);
+    } catch (e) { materialQualities = null; }
+    // Trần phẩm Thượng (chỉ số 2): kẹp ngay trong refineBatch qua
+    // plan.maxGradeIndex để đan văn/toast/lastGrade đều nhất quán.
+    var plan = {
       furnaceId: furnaceId || 'dan-phong',
       pillId: pillId,
       materials: recipe.materials.slice(),
       fireElement: recipe.elem,
       heatScore: 0.7,
-      sealTiming: 0.7
-    });
-    if (res.ok) {
-      // cap grade at thuong (2)
-      if (res.gradeIndex > 2) { res.gradeIndex = 2; res.grade = 'thượng'; res.danVan = Math.min(res.danVan, 1); }
-    }
-    return res;
+      sealTiming: 0.7,
+      maxGradeIndex: 2
+    };
+    if (materialQualities) plan.materialQualities = materialQualities;
+    return refineBatch(player, plan);
   }
 
   // ---------------- Consume pill (dan doc) ----------------
@@ -746,6 +768,9 @@
   exports.FURNACES = FURNACES;
   exports.FURNACE_GRADES = FURNACE_GRADES;
   exports.ALCHEMIST_RANKS = ALCHEMIST_RANKS;
+  // Đợt DANBOARD-FIX: xuất ngưỡng cấp để giao diện thi luyện đọc đúng luật.
+  exports.RANK_SUCCESS_THRESHOLDS = RANK_SUCCESS_THRESHOLDS;
+  exports.RANK_EXAM_THRESHOLDS = RANK_EXAM_THRESHOLDS;
   exports.GRADE_NAMES = GRADE_NAMES;
   exports.GRADE_INDEX = GRADE_INDEX;
   exports.PILL_RECIPES = PILL_RECIPES;

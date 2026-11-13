@@ -25,6 +25,11 @@
  *
  * Trạng thái lưu trong player.danPhong, khởi tạo lười để tương thích save cũ.
  * Node-loadable & chạy trên trình duyệt (khuôn mẫu linhdien.js).
+ *
+ * Đợt DANBOARD (2026-11-13, lệnh khẩn của Bui): luyện đan trong modal này
+ * đi qua VÁN 4 BƯỚC (Xếp dược liệu / Chọn lửa / Khống hỏa / Phong đan) nối
+ * vào GameLuyenDan.refineBatch — xem DANBOARD-DESIGN.md. Hai hàm luyện cũ
+ * refine()/refineAux() giữ lại để tương thích nhưng giao diện không gọi nữa.
  */
 
 (function (exports) {
@@ -324,9 +329,10 @@
   // ---------------------------------------------------------------------------
 
   /**
-   * Luyện 1 viên Tu Luyện Đan của hệ elem bằng nguyên liệu trong túi.
-   * Thiếu nguyên liệu hoặc chưa mở khóa vùng: từ chối rõ ràng, không trừ gì.
-   * Túi đầy không nhận nổi đan: hoàn lại nguyên liệu, không mất mát.
+   * Đợt DANBOARD: ĐƯỜNG LUYỆN CŨ — KHÔNG CÒN ĐƯỢC GIAO DIỆN GỌI. Giữ lại để
+   * tương thích API/test cũ. Giao diện Đan Phòng nay chỉ luyện qua ván 4
+   * bước (openBoard -> refineBatch). Hàm này luyện 1 viên Tu Luyện Đan của
+   * hệ elem bằng nguyên liệu trong túi, không tính phẩm/kỹ năng/phẩm chất.
    */
   function refine(player, elem) {
     if (!player) return { ok: false, msg: 'Không tìm thấy người chơi.' };
@@ -379,9 +385,8 @@
   }
 
   /**
-   * Đợt T1: Luyện 1 đan PHỤ TRỢ TẦNG (Tụ Khí Tán / Ngưng Khí Đan) bằng nguyên
-   * liệu — cùng luật với luyện Tu Luyện Đan: thiếu nguyên liệu hoặc chưa mở
-   * vùng thì từ chối rõ ràng không trừ gì; túi đầy thì hoàn nguyên liệu.
+   * Đợt DANBOARD: ĐƯỜNG LUYỆN CŨ — KHÔNG CÒN ĐƯỢC GIAO DIỆN GỌI (xem
+   * refine). Giữ lại để tương thích. Đan phụ trợ nay luyện qua ván.
    */
   function refineAux(player, pillId) {
     if (!player) return { ok: false, msg: 'Không tìm thấy người chơi.' };
@@ -636,6 +641,23 @@
     return row;
   }
 
+  // Đợt DANBOARD: nút luyện nhanh chỉ hiện khi đã mở khóa theo luật D2
+  // (≥ 5 lần dùng phương); vẫn qua refineBatch nên vẫn đếm chuỗi, vẫn áp
+  // buff, vẫn cộng phẩm chất — và bị trần Thượng phẩm.
+  function appendQuickRefineButton(actions, pillId) {
+    var ld = getLuyenDanAPI();
+    if (!ld || !ld.isQuickRefineUnlocked || !ld.quickRefine) return;
+    if (!ld.isQuickRefineUnlocked(livePlayer, pillId)) return;
+    var btnQuick = el('button', 'btn wood danphong-btn danphong-btn-quick', 'Luyện Nhanh (tối đa Thượng phẩm)');
+    btnQuick.type = 'button';
+    btnQuick.addEventListener('click', function () {
+      var res = ld.quickRefine(livePlayer, pillId, 'dan-phong');
+      if (res && !res.ok && res.msg) showToast(res.msg);
+      renderPanel();
+    });
+    actions.appendChild(btnQuick);
+  }
+
   function renderRefineTab(body) {
     var player = livePlayer;
     if (!player) return;
@@ -670,16 +692,17 @@
       if (!unlocked) {
         actions.appendChild(el('span', 'danphong-lock-note', 'Mở ở ' + rankLabel(recipe.minRank)));
       } else {
-        var btnRefine = el('button', 'btn wood danphong-btn danphong-btn-refine', 'Luyện Đan');
+        var btnRefine = el('button', 'btn wood danphong-btn danphong-btn-refine', 'Mở Ván Luyện');
         btnRefine.type = 'button';
-        // Cố ý KHÔNG khóa nút khi thiếu nguyên liệu: người chơi bấm vào phải nhận
-        // được thông báo từ chối rõ ràng (đang có bao nhiêu / cần bao nhiêu) từ
-        // refine() — nút disabled thì bấm không ra thông báo gì cả.
+        // Đợt DANBOARD: luyện đan đi qua ván 4 bước, không còn bấm một cái
+        // thành đan ngay. Cố ý KHÔNG khóa nút khi thiếu nguyên liệu: người
+        // chơi bấm vào phải nhận được thông báo từ chối rõ ràng từ ván.
         btnRefine.addEventListener('click', function () {
-          refine(livePlayer, recipe.elem);
+          openBoard(recipe.pillId);
           renderPanel();
         });
         actions.appendChild(btnRefine);
+        appendQuickRefineButton(actions, recipe.pillId);
 
         var btnUse = el('button', 'btn wood danphong-btn danphong-btn-use', 'Dùng Ngay');
         btnUse.type = 'button';
@@ -731,13 +754,14 @@
       if (!unlocked) {
         actions.appendChild(el('span', 'danphong-lock-note', 'Mở ở ' + rankLabel(recipe.minRank)));
       } else {
-        var btnRefineAux = el('button', 'btn wood danphong-btn danphong-btn-refine-aux', 'Luyện Đan Phụ Trợ');
+        var btnRefineAux = el('button', 'btn wood danphong-btn danphong-btn-refine-aux', 'Mở Ván Luyện');
         btnRefineAux.type = 'button';
         btnRefineAux.addEventListener('click', function () {
-          refineAux(livePlayer, recipe.pillId);
+          openBoard(recipe.pillId);
           renderPanel();
         });
         actions.appendChild(btnRefineAux);
+        appendQuickRefineButton(actions, recipe.pillId);
         var tm = (typeof window !== 'undefined' && window.GameTieuMoc) ? window.GameTieuMoc : null;
         if (tm && tm.openPanel) {
           var btnOpenTm = el('button', 'btn wood danphong-btn danphong-btn-open-tieumoc', 'Mở Bảng Đột Phá');
@@ -755,6 +779,44 @@
       card.appendChild(actions);
       body.appendChild(card);
     });
+
+    // Đợt DANBOARD: thẻ Thanh Độc Đan — công thức có trong PILL_RECIPES của
+    // D2 nhưng trước đây chưa có thẻ luyện. Luyện qua ván như các đan khác.
+    var tdRecipe = boardRecipeFor('thanh-doc-dan');
+    if (tdRecipe) {
+      var tdMats = boardCounts(tdRecipe.materials);
+      var tdMatList = Object.keys(tdMats).map(function (id) { return { itemId: id, count: tdMats[id] }; });
+      var tdMissing = missingList(player, tdMatList);
+      var tdPillCount = countOf(player, 'thanh-doc-dan');
+      var tdCard = el('div', 'danphong-card');
+      var tdHead = el('div', 'danphong-card-head');
+      var tdIcon = el('div', 'danphong-card-icon');
+      setElementIconSprite(tdIcon, getItemDef('thanh-doc-dan'), 40);
+      tdHead.appendChild(tdIcon);
+      var tdTitles = el('div', 'danphong-card-titles');
+      tdTitles.appendChild(el('div', 'danphong-card-name', itemName('thanh-doc-dan')));
+      tdTitles.appendChild(el('div', 'danphong-card-sub', 'Đan giải độc · Trong túi: ' + tdPillCount + ' viên'));
+      tdHead.appendChild(tdTitles);
+      tdCard.appendChild(tdHead);
+      var tdMatsEl = el('div', 'danphong-mats');
+      tdMatList.forEach(function (mat) { tdMatsEl.appendChild(materialLine(player, mat)); });
+      tdCard.appendChild(tdMatsEl);
+      tdCard.appendChild(el('div', 'danphong-source', 'Băng Tinh: Băng Tinh Linh ở Hồ Băng (rơi 50%). Lá Thanh Tụy: Thảo Tinh ở Rừng Độc và luống dược ở Tông Môn.'));
+      var tdActions = el('div', 'danphong-actions');
+      var tdBtn = el('button', 'btn wood danphong-btn danphong-btn-refine', 'Mở Ván Luyện');
+      tdBtn.type = 'button';
+      tdBtn.addEventListener('click', function () {
+        openBoard('thanh-doc-dan');
+        renderPanel();
+      });
+      tdActions.appendChild(tdBtn);
+      appendQuickRefineButton(tdActions, 'thanh-doc-dan');
+      if (tdMissing.length > 0) {
+        tdActions.appendChild(el('span', 'danphong-miss-note', 'Thiếu: ' + tdMissing.join(' · ')));
+      }
+      tdCard.appendChild(tdActions);
+      body.appendChild(tdCard);
+    }
 
     // Thẻ Trúc Cơ Đan — luyện qua đúng hàm của engine (giữ nguyên công thức cũ)
     var tcCard = el('div', 'danphong-card danphong-card-trucco');
@@ -924,6 +986,72 @@
   // Đợt DANSKILL: thẻ KỸ NĂNG LUYỆN ĐAN — học + thi triển 4 kỹ năng luyện
   // đan (GameDanKyNang). Nút luôn bấm được để người chơi nhận thông báo từ
   // chối rõ ràng (cùng quy ước với nút Luyện Đan của thẻ Luyện Đan).
+  // Đợt DANBOARD-FIX: giao diện thi luyện đan sư — takeExam của D2 có sẵn
+  // nhưng 0 nơi gọi nên Ngưng Đan Quyết không thể học qua chơi thật. Khối
+  // này chỉ phơi đúng luật D2 sẵn có (ngưỡng mẻ/bài thi), không bịa thêm
+  // số: nút chỉ mở khi đã đủ mẻ cho cấp kế mà còn thiếu bài thi, nên không
+  // thể bấm spam lên cấp.
+  function examRecipeIdFor(player, ld, rank) {
+    var ids = ['dan-moc', 'dan-thuy', 'dan-hoa', 'dan-tho', 'dan-kim', 'thanh-doc-dan', 'tu-khi-tan', 'ngung-khi-dan'];
+    var db = getDanBanAPI();
+    if (db && db.BOARD_PILL_IDS) ids = db.BOARD_PILL_IDS;
+    var rr = realmRank(player);
+    var picked = 'dan-moc';
+    for (var i = 0; i < ids.length; i++) {
+      var r = ld.getPillRecipe ? ld.getPillRecipe(ids[i]) : null;
+      if (r && rr >= (r.minRealmRank || 0) && rank >= (r.minRank || 0)) picked = ids[i];
+    }
+    return picked;
+  }
+
+  function renderExamBlock(body, player) {
+    var ld = getLuyenDanAPI();
+    if (!ld || !ld.takeExam || !ld.getAlchemistRank) return;
+    var s = ld.ensureState ? ld.ensureState(player) : player.luyenDan;
+    if (!s) return;
+    var rank = ld.getAlchemistRank(player);
+    var rankName = ld.getAlchemistRankName ? ld.getAlchemistRankName(player) : ('Cấp ' + rank);
+    var ranks = ld.ALCHEMIST_RANKS || ['Học đồ', 'Đan sĩ', 'Đan sư', 'Đại đan sư'];
+    var succTh = ld.RANK_SUCCESS_THRESHOLDS || [0, 5, 20, 50];
+    var examTh = ld.RANK_EXAM_THRESHOLDS || [0, 1, 2, 3];
+    var card = el('div', 'danphong-card');
+    var head = el('div', 'danphong-card-head');
+    var titles = el('div', 'danphong-card-titles');
+    titles.appendChild(el('div', 'danphong-card-name', 'Thi Luyện Đan Sư'));
+    titles.appendChild(el('div', 'danphong-card-sub', 'Cấp đan sư: ' + rankName + ' · Mẻ thành công: ' + (s.successes || 0) + ' · Bài thi đạt: ' + (s.examsPassed || 0)));
+    head.appendChild(titles);
+    card.appendChild(head);
+    var actions = el('div', 'danphong-actions');
+    if (rank >= ranks.length - 1) {
+      card.appendChild(el('div', 'danskill-meta', 'Đã đạt cấp đan sư cao nhất.'));
+    } else {
+      var nextRank = rank + 1;
+      var needSucc = succTh[nextRank];
+      var needExam = examTh[nextRank];
+      var examId = examRecipeIdFor(player, ld, rank);
+      var examRecipe = ld.getPillRecipe ? ld.getPillRecipe(examId) : null;
+      card.appendChild(el('div', 'danskill-meta', 'Cấp kế: ' + ranks[nextRank] + ' — cần ' + needSucc + ' mẻ thành công + ' + needExam + ' bài thi đạt. Phương thi: ' + (examRecipe ? examRecipe.name : examId) + '.'));
+      var canExam = (s.successes || 0) >= needSucc && (s.examsPassed || 0) < needExam;
+      var btnExam = el('button', 'btn wood danphong-btn danphong-btn-accept', 'Thi Luyện');
+      btnExam.type = 'button';
+      if (!canExam) btnExam.disabled = true;
+      btnExam.addEventListener('click', function () {
+        var res = ld.takeExam(livePlayer, examId);
+        if (res && res.msg) showToast(res.msg);
+        renderPanel();
+      });
+      actions.appendChild(btnExam);
+      if (!canExam) {
+        var why = (s.successes || 0) < needSucc
+          ? ('Cần thêm ' + (needSucc - (s.successes || 0)) + ' mẻ thành công.')
+          : 'Đã đủ bài thi cho cấp kế — luyện thêm mẻ để mở cấp tiếp theo.';
+        actions.appendChild(el('span', 'danphong-miss-note', why));
+      }
+    }
+    card.appendChild(actions);
+    body.appendChild(card);
+  }
+
   function renderSkillsTab(body) {
     var player = livePlayer;
     if (!player) return;
@@ -945,6 +1073,8 @@
       }).join(' · ');
       body.appendChild(el('div', 'danskill-buff-note', 'Đang chờ mẻ luyện kế tiếp: ' + buffNames + '.'));
     }
+
+    renderExamBlock(body, player);
 
     dk.listSkills().forEach(function (def) {
       var learned = dk.isSkillLearned(player, def.id);
@@ -1006,10 +1136,498 @@
     });
   }
 
+  // =========================================================================
+  // VÁN LUYỆN ĐAN 4 BƯỚC (Đợt DANBOARD — DANBOARD-DESIGN.md)
+  // Luyện đan trong modal Đan Phòng đi qua ván, không còn bấm một cái thành
+  // đan ngay. Ván chỉ sản xuất đầu vào cho GameLuyenDan.refineBatch (nguồn
+  // sự thật duy nhất của điểm/phẩm); mọi luật điểm giữ nguyên D2.
+  // =========================================================================
+
+  var boardState = null; // { pillId, step, chosen[], fireElement, heatLevel, sealPosition, result }
+  var sealTimerId = null;
+  var sealStartMs = 0;
+
+  function getLuyenDanAPI() {
+    if (typeof window !== 'undefined' && window.GameLuyenDan) return window.GameLuyenDan;
+    if (typeof global !== 'undefined' && global.GameLuyenDan) return global.GameLuyenDan;
+    try { return require('./luyendan.js'); } catch (e) { return null; }
+  }
+  function getDanBanAPI() {
+    if (typeof window !== 'undefined' && window.GameDanBan) return window.GameDanBan;
+    if (typeof global !== 'undefined' && global.GameDanBan) return global.GameDanBan;
+    try { return require('./dan-ban.js'); } catch (e) { return null; }
+  }
+  function getDanKyNangAPI() {
+    if (typeof window !== 'undefined' && window.GameDanKyNang) return window.GameDanKyNang;
+    if (typeof global !== 'undefined' && global.GameDanKyNang) return global.GameDanKyNang;
+    try { return require('./dan-ky-nang.js'); } catch (e) { return null; }
+  }
+
+  function stopSealTimer() {
+    if (sealTimerId) { clearInterval(sealTimerId); sealTimerId = null; }
+  }
+
+  function boardRecipeFor(pillId) {
+    var db = getDanBanAPI();
+    if (db && db.boardRecipeList) {
+      var list = db.boardRecipeList();
+      for (var i = 0; i < list.length; i++) if (list[i].pillId === pillId) return list[i];
+    }
+    var ld = getLuyenDanAPI();
+    var r = ld && ld.getPillRecipe ? ld.getPillRecipe(pillId) : null;
+    if (!r) return null;
+    return { pillId: r.id, name: r.name, elem: r.elem, tier: r.tier, minRank: r.minRank || 0,
+      minRealmRank: r.minRealmRank || 0, minFurnace: r.minFurnace || 0,
+      materials: r.materials.slice(), heatDifficulty: r.heatDifficulty, danVanMax: r.danVanMax || 1 };
+  }
+
+  function openBoard(pillId) {
+    var player = livePlayer;
+    if (!player) return;
+    var recipe = boardRecipeFor(pillId);
+    if (!recipe) { showToast('Không có công thức này.'); return; }
+    var ld = getLuyenDanAPI();
+    if (ld && ld.canUseFurnace) {
+      var chk = ld.canUseFurnace(player, 'dan-phong', {});
+      if (!chk.ok) { showToast(chk.msg || 'Chưa dùng được lò.'); return; }
+    }
+    stopSealTimer();
+    boardState = { pillId: pillId, step: 1, chosen: [], fireElement: null, heatLevel: null, sealPosition: null, result: null };
+    currentTab = 'refine';
+  }
+
+  function closeBoard() {
+    stopSealTimer();
+    boardState = null;
+  }
+
+  function boardCounts(materials) {
+    var c = {};
+    for (var i = 0; i < materials.length; i++) c[materials[i]] = (c[materials[i]] || 0) + 1;
+    return c;
+  }
+
+  function boardChosenValid(recipe, chosen) {
+    if (!recipe || chosen.length !== recipe.materials.length) return false;
+    var a = boardCounts(recipe.materials);
+    var b = boardCounts(chosen);
+    for (var k in a) if (a[k] !== b[k]) return false;
+    for (var k2 in b) if (a[k2] !== b[k2]) return false;
+    return true;
+  }
+
+  function boardHeader(body, recipe) {
+    var player = livePlayer;
+    var head = el('div', 'danboard-head');
+    head.appendChild(el('div', 'danboard-title', 'Ván Luyện Đan — ' + itemName(recipe.pillId)));
+    var sub = [];
+    sub.push('Lò: Đan Phòng Tông Môn');
+    var ld = getLuyenDanAPI();
+    if (ld && ld.ensureState) {
+      var s = ld.ensureState(player);
+      sub.push('Đã luyện thành công: ' + (s.successes || 0) + ' mẻ');
+      sub.push('Đan độc: ' + (s.toxin || 0));
+    }
+    var dk = getDanKyNangAPI();
+    if (dk && dk.getActiveBuffs) {
+      var buffs = dk.getActiveBuffs(player);
+      if (buffs.length > 0) {
+        var names = buffs.map(function (b) {
+          var d = dk.getSkillDef(b.skillId);
+          return (d ? d.name : b.skillId) + ' cấp ' + b.level;
+        }).join(' · ');
+        sub.push('Kỹ năng chờ mẻ này: ' + names);
+      }
+    }
+    head.appendChild(el('div', 'danboard-sub', sub.join(' · ')));
+    body.appendChild(head);
+
+    var steps = el('div', 'danboard-steps');
+    var names = ['1. Xếp dược liệu', '2. Chọn lửa', '3. Khống hỏa', '4. Phong đan'];
+    for (var i = 0; i < 4; i++) {
+      var chip = el('span', 'danboard-step-chip' + (boardState.step === i + 1 ? ' active' : '') + (boardState.step > i + 1 ? ' done' : ''), names[i]);
+      steps.appendChild(chip);
+    }
+    body.appendChild(steps);
+  }
+
+  function boardNav(body, opts) {
+    var nav = el('div', 'danphong-actions danboard-nav');
+    if (opts.back) {
+      var btnBack = el('button', 'btn wood danphong-btn', opts.backLabel || 'Quay Lại');
+      btnBack.type = 'button';
+      btnBack.addEventListener('click', function () { boardState.step = opts.back; renderPanel(); });
+      nav.appendChild(btnBack);
+    }
+    var btnCancel = el('button', 'btn wood danphong-btn danphong-btn-danger', 'Hủy Ván');
+    btnCancel.type = 'button';
+    btnCancel.addEventListener('click', function () { closeBoard(); renderPanel(); });
+    nav.appendChild(btnCancel);
+    if (opts.next) {
+      var btnNext = el('button', 'btn wood danphong-btn danphong-btn-refine', opts.nextLabel || 'Tiếp');
+      btnNext.type = 'button';
+      btnNext.addEventListener('click', opts.next);
+      nav.appendChild(btnNext);
+    }
+    body.appendChild(nav);
+  }
+
+  function qualityShortLabel(q) {
+    var hq = (typeof window !== 'undefined' && window.GameHerbQuality) ? window.GameHerbQuality : null;
+    if (hq && hq.getQualityShortLabel) return hq.getQualityShortLabel(q);
+    return ['Hạ', 'Trung', 'Thượng', 'Cực'][Math.max(0, Math.min(3, q || 1))];
+  }
+  function qualityColor(q) {
+    var hq = (typeof window !== 'undefined' && window.GameHerbQuality) ? window.GameHerbQuality : null;
+    if (hq && hq.getQualityColor) return hq.getQualityColor(q);
+    return ['#8b8b8b', '#4f9d69', '#4f83c4', '#b07ad6'][Math.max(0, Math.min(3, q || 1))];
+  }
+
+  function renderBoardStep1(body, recipe) {
+    var player = livePlayer;
+    var db = getDanBanAPI();
+    var peeked = db && db.peekMaterialQualities ? db.peekMaterialQualities(player, recipe.materials) : recipe.materials.map(function () { return 1; });
+    var avgLabel = db && db.qualityLabelFor ? db.qualityLabelFor(peeked) : '';
+
+    body.appendChild(el('div', 'danphong-intro',
+      'Chạm từng dược liệu để bỏ vào lò theo thứ tự. Xếp đúng thứ tự công thức được trọn điểm dược liệu; xếp sai vẫn luyện được nhưng mất nửa điểm (Tịnh Dược Quyết gỡ bớt thiệt hại). Phẩm chất ghi kèm là phẩm của đơn vị sẽ bị trừ khỏi túi.'));
+
+    var needCounts = boardCounts(recipe.materials);
+    var chosenCounts = boardCounts(boardState.chosen);
+
+    var reqTitle = el('div', 'danboard-section-title', 'Dược liệu cần dùng (theo thứ tự công thức)' + (avgLabel ? ' — phẩm dự kiến: ' + avgLabel : ''));
+    body.appendChild(reqTitle);
+    var reqRow = el('div', 'danboard-unit-row');
+    recipe.materials.forEach(function (itemId, idx) {
+      var unit = el('div', 'danboard-unit');
+      var icon = el('div', 'danphong-mat-icon');
+      setElementIconSprite(icon, getItemDef(itemId), 28);
+      unit.appendChild(icon);
+      unit.appendChild(el('span', 'danboard-unit-name', itemName(itemId)));
+      var q = el('span', 'danboard-unit-quality', qualityShortLabel(peeked[idx]));
+      q.style.color = qualityColor(peeked[idx]);
+      unit.appendChild(q);
+      reqRow.appendChild(unit);
+    });
+    body.appendChild(reqRow);
+
+    var seqTitle = el('div', 'danboard-section-title', 'Thứ tự bỏ vào lò (' + boardState.chosen.length + '/' + recipe.materials.length + ') — chạm ô đã xếp để rút ra');
+    body.appendChild(seqTitle);
+    var seqRow = el('div', 'danboard-unit-row');
+    for (var s = 0; s < recipe.materials.length; s++) {
+      (function (slotIdx) {
+        var slot = el('div', 'danboard-slot' + (boardState.chosen[slotIdx] ? ' filled' : ''));
+        if (boardState.chosen[slotIdx]) {
+          var icon2 = el('div', 'danphong-mat-icon');
+          setElementIconSprite(icon2, getItemDef(boardState.chosen[slotIdx]), 28);
+          slot.appendChild(icon2);
+          slot.appendChild(el('span', 'danboard-slot-num', String(slotIdx + 1)));
+          slot.addEventListener('click', function () {
+            boardState.chosen.splice(slotIdx, 1);
+            renderPanel();
+          });
+        } else {
+          slot.appendChild(el('span', 'danboard-slot-num', String(slotIdx + 1)));
+        }
+        seqRow.appendChild(slot);
+      })(s);
+    }
+    body.appendChild(seqRow);
+
+    var pickTitle = el('div', 'danboard-section-title', 'Chạm để bỏ vào lò');
+    body.appendChild(pickTitle);
+    var pickRow = el('div', 'danboard-unit-row');
+    Object.keys(needCounts).forEach(function (itemId) {
+      var have = countOf(player, itemId);
+      var remaining = needCounts[itemId] - (chosenCounts[itemId] || 0);
+      var chip = el('div', 'danboard-pick' + (remaining <= 0 || have < (chosenCounts[itemId] || 0) + 1 ? ' disabled' : ''));
+      var icon3 = el('div', 'danphong-mat-icon');
+      setElementIconSprite(icon3, getItemDef(itemId), 28);
+      chip.appendChild(icon3);
+      chip.appendChild(el('span', 'danboard-unit-name', itemName(itemId)));
+      chip.appendChild(el('span', 'danphong-mat-count' + (have >= needCounts[itemId] ? ' enough' : ' lacking'), have + '/' + needCounts[itemId]));
+      chip.addEventListener('click', function () {
+        var cur = boardCounts(boardState.chosen)[itemId] || 0;
+        if (cur >= needCounts[itemId]) { showToast('Đã xếp đủ ' + itemName(itemId) + ' cho mẻ này.'); return; }
+        if (countOf(livePlayer, itemId) < cur + 1) { showToast('Không đủ ' + itemName(itemId) + ' trong túi.'); return; }
+        boardState.chosen.push(itemId);
+        renderPanel();
+      });
+      pickRow.appendChild(chip);
+    });
+    body.appendChild(pickRow);
+
+    var tools = el('div', 'danphong-actions');
+    var btnAuto = el('button', 'btn wood danphong-btn', 'Xếp Theo Phương');
+    btnAuto.type = 'button';
+    btnAuto.addEventListener('click', function () {
+      boardState.chosen = recipe.materials.slice();
+      renderPanel();
+    });
+    tools.appendChild(btnAuto);
+    var btnClear = el('button', 'btn wood danphong-btn', 'Xóa Hết');
+    btnClear.type = 'button';
+    btnClear.addEventListener('click', function () { boardState.chosen = []; renderPanel(); });
+    tools.appendChild(btnClear);
+    body.appendChild(tools);
+
+    boardNav(body, { nextLabel: 'Tiếp: Chọn Lửa', next: function () {
+      if (!boardChosenValid(recipe, boardState.chosen)) {
+        showToast('Chưa xếp đủ dược liệu cho mẻ này (' + boardState.chosen.length + '/' + recipe.materials.length + ').');
+        return;
+      }
+      var missing = missingList(player, Object.keys(needCounts).map(function (id) { return { itemId: id, count: needCounts[id] }; }));
+      if (missing.length > 0) { showToast('Chưa đủ nguyên liệu: ' + missing.join(' · ') + '.'); return; }
+      boardState.step = 2;
+      renderPanel();
+    } });
+  }
+
+  var SINH_PARENT = { moc: 'thuy', hoa: 'moc', tho: 'hoa', kim: 'tho', thuy: 'kim' };
+
+  function renderBoardStep2(body, recipe) {
+    var db = getDanBanAPI();
+    var order = (db && db.ELEM_ORDER) || ['kim', 'moc', 'thuy', 'hoa', 'tho'];
+    var names = (db && db.ELEM_NAMES) || ELEM_NAMES;
+    body.appendChild(el('div', 'danphong-intro',
+      'Đan hệ ' + names[recipe.elem] + '. Lửa cùng hệ tốt nhất; lửa hệ ' + names[SINH_PARENT[recipe.elem]] + ' (sinh ra hệ đan) cũng tốt; lửa hệ khác kém hẳn.'));
+    var row = el('div', 'danboard-choice-row');
+    order.forEach(function (elem) {
+      var btn = el('button', 'btn wood danphong-btn danboard-elem-btn' + (boardState.fireElement === elem ? ' selected' : ''), names[elem]);
+      btn.type = 'button';
+      btn.addEventListener('click', function () { boardState.fireElement = elem; renderPanel(); });
+      row.appendChild(btn);
+    });
+    body.appendChild(row);
+    boardNav(body, { back: 1, nextLabel: 'Tiếp: Khống Hỏa', next: function () {
+      if (!boardState.fireElement) { showToast('Hãy chọn hệ lửa cho lò.'); return; }
+      boardState.step = 3;
+      renderPanel();
+    } });
+  }
+
+  function renderBoardStep3(body, recipe) {
+    var db = getDanBanAPI();
+    var hint = db && db.heatHintForRecipe ? db.heatHintForRecipe(recipe) : '';
+    body.appendChild(el('div', 'danphong-intro',
+      'Phương này hợp ' + hint + '. Chọn mức lửa — càng gần lửa hợp, điểm nhiệt càng cao. Khống Hỏa Quyết (thẻ Kỹ Năng) tăng thêm điểm nhiệt cho mẻ này.'));
+    var levels = (db && db.HEAT_LEVELS) || [{ level: 1, name: 'Lửa Nhỏ' }, { level: 2, name: 'Lửa Vừa' }, { level: 3, name: 'Lửa Mạnh' }];
+    var row = el('div', 'danboard-choice-row');
+    levels.forEach(function (lv) {
+      var btn = el('button', 'btn wood danphong-btn danboard-heat-btn' + (boardState.heatLevel === lv.level ? ' selected' : ''), lv.name);
+      btn.type = 'button';
+      btn.addEventListener('click', function () { boardState.heatLevel = lv.level; renderPanel(); });
+      row.appendChild(btn);
+    });
+    body.appendChild(row);
+    var dk = getDanKyNangAPI();
+    if (dk && dk.getActiveBuffs) {
+      var buffs = dk.getActiveBuffs(livePlayer);
+      for (var i = 0; i < buffs.length; i++) {
+        if (buffs[i].skillId === 'khong-hoa') {
+          body.appendChild(el('div', 'danskill-buff-note', 'Khống Hỏa Quyết cấp ' + buffs[i].level + ' đang chờ — mẻ này được cộng thêm điểm nhiệt.'));
+        }
+      }
+    }
+    boardNav(body, { back: 2, nextLabel: 'Tiếp: Phong Đan', next: function () {
+      if (!boardState.heatLevel) { showToast('Hãy chọn mức lửa.'); return; }
+      boardState.step = 4;
+      renderPanel();
+    } });
+  }
+
+  function renderBoardStep4(body, recipe) {
+    var db = getDanBanAPI();
+    var names = (db && db.ELEM_NAMES) || ELEM_NAMES;
+    var exactOrder = boardState.chosen.join('|') === recipe.materials.join('|');
+    body.appendChild(el('div', 'danphong-intro',
+      'Dược liệu: ' + (exactOrder ? 'đúng thứ tự phương' : 'chưa đúng thứ tự phương') +
+      ' · Lửa: ' + names[boardState.fireElement] +
+      ' · Mức lửa: ' + ((db && db.HEAT_LEVELS ? db.HEAT_LEVELS[boardState.heatLevel - 1].name : '') || '') +
+      '. Chạm "Phong Đan" đúng lúc vạch quét ở vùng vàng giữa để phong đan trọn vẹn — Ngưng Đan Quyết (thẻ Kỹ Năng) tăng thêm điểm phong đan.'));
+
+    var bar = el('div', 'danboard-seal-bar');
+    bar.id = 'danboard-seal-bar';
+    var zone = el('div', 'danboard-seal-zone');
+    var half = (db && db.SEAL_ZONE_HALF) || 0.15;
+    zone.style.left = ((0.5 - half) * 100) + '%';
+    zone.style.width = (half * 2 * 100) + '%';
+    bar.appendChild(zone);
+    var marker = el('div', 'danboard-seal-marker');
+    marker.id = 'danboard-seal-marker';
+    bar.appendChild(marker);
+    body.appendChild(bar);
+
+    var lockBtn = el('button', 'btn wood danphong-btn danphong-btn-refine danboard-seal-btn', 'Phong Đan — Hoàn Thành Mẻ Luyện');
+    lockBtn.type = 'button';
+    body.appendChild(lockBtn);
+
+    var dk = getDanKyNangAPI();
+    if (dk && dk.getActiveBuffs) {
+      var buffs = dk.getActiveBuffs(livePlayer);
+      for (var i = 0; i < buffs.length; i++) {
+        if (buffs[i].skillId === 'ngung-dan') {
+          body.appendChild(el('div', 'danskill-buff-note', 'Ngưng Đan Quyết cấp ' + buffs[i].level + ' đang chờ — mẻ này được cộng thêm điểm phong đan.'));
+        }
+      }
+    }
+
+    function lockSeal() {
+      var pos = 0.5;
+      if (db && db.markerPositionAt) pos = db.markerPositionAt(Date.now() - sealStartMs);
+      boardState.sealPosition = pos;
+      finishBoardBatch();
+    }
+    lockBtn.addEventListener('click', lockSeal);
+    bar.addEventListener('click', lockSeal);
+
+    // Vạch quét: chỉ cập nhật vị trí phần tử, không vẽ lại modal.
+    stopSealTimer();
+    sealStartMs = Date.now();
+    sealTimerId = setInterval(function () {
+      var mk = document.getElementById('danboard-seal-marker');
+      if (!mk) { stopSealTimer(); return; }
+      var p = db && db.markerPositionAt ? db.markerPositionAt(Date.now() - sealStartMs) : 0.5;
+      mk.style.left = (p * 100) + '%';
+    }, 50);
+
+    boardNav(body, { back: 3 });
+  }
+
+  function finishBoardBatch() {
+    stopSealTimer();
+    var player = livePlayer;
+    var recipe = boardRecipeFor(boardState.pillId);
+    var ld = getLuyenDanAPI();
+    var db = getDanBanAPI();
+    if (!ld || !ld.refineBatch || !db) {
+      boardState.result = { ok: false, reason: 'no_api', msg: 'Mô đun luyện đan chưa sẵn sàng. Hãy tải lại game.' };
+      boardState.step = 'result';
+      renderPanel();
+      return;
+    }
+    var built = db.buildBoardPlan(player, {
+      pillId: boardState.pillId,
+      materials: boardState.chosen.slice(),
+      fireElement: boardState.fireElement,
+      heatLevel: boardState.heatLevel,
+      sealPosition: boardState.sealPosition,
+      nowMs: Date.now()
+    });
+    var res = ld.refineBatch(player, built.plan);
+    res._heatScore = built.heatScore;
+    res._sealTiming = built.sealTiming;
+    res._materialQualities = built.materialQualities;
+    boardState.result = res;
+    boardState.step = 'result';
+    renderPanel();
+  }
+
+  function renderBoardResult(body, recipe) {
+    var player = livePlayer;
+    var res = boardState.result || { ok: false, msg: 'Không có kết quả.' };
+    var card = el('div', 'danphong-card danboard-result');
+    var head = el('div', 'danphong-card-head');
+    var icon = el('div', 'danphong-card-icon');
+    setElementIconSprite(icon, getItemDef(recipe.pillId), 40);
+    head.appendChild(icon);
+    var titles = el('div', 'danphong-card-titles');
+    if (res.ok) {
+      titles.appendChild(el('div', 'danphong-card-name', 'Luyện thành: ' + itemName(recipe.pillId)));
+      titles.appendChild(el('div', 'danphong-card-sub',
+        'Phẩm ' + (res.grade || '') + (res.danVan > 0 ? ' · Đan văn ' + res.danVan + ' vòng' : '') +
+        ' · Điểm mẻ: ' + (typeof res.score === 'number' ? res.score.toFixed(2) : '')));
+    } else if (res.reason === 'slag') {
+      titles.appendChild(el('div', 'danphong-card-name', 'Mẻ hỏng thành đan cặn'));
+      titles.appendChild(el('div', 'danphong-card-sub', 'Điểm mẻ: ' + (typeof res.score === 'number' ? res.score.toFixed(2) : '') + ' — dưới ngưỡng thành đan. Nửa nguyên liệu đã hoàn lại.'));
+    } else {
+      titles.appendChild(el('div', 'danphong-card-name', 'Mẻ luyện không chạy được'));
+      titles.appendChild(el('div', 'danphong-card-sub', res.msg || 'Bị từ chối. Nguyên liệu và buff kỹ năng còn nguyên.'));
+    }
+    head.appendChild(titles);
+    card.appendChild(head);
+
+    var lines = [];
+    if (res._materialQualities) {
+      var db = getDanBanAPI();
+      var lbl = db && db.qualityLabelFor ? db.qualityLabelFor(res._materialQualities) : '';
+      if (lbl) lines.push('Phẩm chất nguyên liệu: ' + lbl + '.');
+    }
+    if (res.appliedSkills && res.appliedSkills.length > 0) {
+      var dk = getDanKyNangAPI();
+      var applied = res.appliedSkills.map(function (a) {
+        var d = dk && dk.getSkillDef ? dk.getSkillDef(a.skillId) : null;
+        return (d ? d.name : a.skillId) + ' cấp ' + a.level;
+      }).join(' · ');
+      lines.push('Kỹ năng đã áp vào mẻ: ' + applied + '.');
+    }
+    if (res.returned && res.returned.length > 0) {
+      lines.push('Hoàn lại: ' + res.returned.map(function (r) { return itemName(r.itemId) + ' ×' + r.count; }).join(' · ') + '.');
+    }
+    var ld = getLuyenDanAPI();
+    if (ld && ld.ensureState) {
+      var s = ld.ensureState(player);
+      lines.push('Đã luyện thành công: ' + (s.successes || 0) + ' mẻ.');
+    }
+    lines.forEach(function (t) { card.appendChild(el('div', 'danphong-source', t)); });
+
+    // Gợi ý chuỗi học: vừa đủ điều kiện học quyết nào thì báo ngay tại đây.
+    var dk2 = getDanKyNangAPI();
+    if (dk2 && res.ok) {
+      dk2.listSkills().forEach(function (def) {
+        if (!dk2.isSkillLearned(player, def.id)) {
+          var cond = dk2.canLearnSkill(player, def.id);
+          if (cond.ok) {
+            card.appendChild(el('div', 'danskill-buff-note', 'Đủ điều kiện học ' + def.name + ' — sang thẻ Kỹ Năng Luyện Đan để học.'));
+          }
+        }
+      });
+    }
+
+    var actions = el('div', 'danphong-actions');
+    var btnAgain = el('button', 'btn wood danphong-btn danphong-btn-refine', 'Luyện Mẻ Nữa');
+    btnAgain.type = 'button';
+    btnAgain.addEventListener('click', function () {
+      var pillId = boardState.pillId;
+      openBoard(pillId);
+      renderPanel();
+    });
+    actions.appendChild(btnAgain);
+    var btnBack = el('button', 'btn wood danphong-btn', 'Về Danh Sách');
+    btnBack.type = 'button';
+    btnBack.addEventListener('click', function () { closeBoard(); renderPanel(); });
+    actions.appendChild(btnBack);
+    card.appendChild(actions);
+    body.appendChild(card);
+  }
+
+  function renderBoardView(body) {
+    var recipe = boardRecipeFor(boardState.pillId);
+    if (!recipe) { closeBoard(); renderRefineTab(body); return; }
+    if (boardState.step === 'result') {
+      boardHeader(body, recipe);
+      renderBoardResult(body, recipe);
+      return;
+    }
+    boardHeader(body, recipe);
+    if (boardState.step === 1) renderBoardStep1(body, recipe);
+    else if (boardState.step === 2) renderBoardStep2(body, recipe);
+    else if (boardState.step === 3) renderBoardStep3(body, recipe);
+    else if (boardState.step === 4) renderBoardStep4(body, recipe);
+    else { boardState.step = 1; renderBoardStep1(body, recipe); }
+  }
+
+  // Đợt DANBOARD-FIX: đổi khung nhìn (thẻ/bước ván) thì cuộn về đầu để
+  // phần đầu nội dung không bị cắt; vẽ lại cùng khung nhìn thì giữ vị trí.
+  var lastRenderKey = '';
+
   function renderPanel() {
     if (typeof document === 'undefined') return;
     if (!livePlayer) return;
     ensureState(livePlayer);
+    // Đợt DANBOARD: vẽ lại modal thì dừng vạch quét cũ; bước phong đan sẽ
+    // khởi động lại vạch khi nó được vẽ.
+    stopSealTimer();
 
     var tabRefine = document.getElementById('danphong-tab-refine');
     var tabBoard = document.getElementById('danphong-tab-board');
@@ -1020,10 +1638,15 @@
 
     var body = document.getElementById('danphong-body');
     if (!body) return;
+    var renderKey = currentTab + '|' + (boardState ? (boardState.pillId + ':' + boardState.step) : '');
+    var viewChanged = renderKey !== lastRenderKey;
+    lastRenderKey = renderKey;
     body.innerHTML = '';
     if (currentTab === 'board') renderBoardTab(body);
     else if (currentTab === 'skills') renderSkillsTab(body);
+    else if (boardState) renderBoardView(body);
     else renderRefineTab(body);
+    if (viewChanged) body.scrollTop = 0;
   }
 
   function openPanel(tab) {
@@ -1037,6 +1660,7 @@
 
   function closePanel() {
     if (typeof document === 'undefined') return;
+    stopSealTimer();
     var modal = document.getElementById('danphong-modal');
     if (modal) modal.classList.add('hidden');
   }
@@ -1121,6 +1745,10 @@
   exports.closePanel = closePanel;
   exports.renderPanel = renderPanel;
   exports.isPanelOpen = isPanelOpen;
+  // Đợt DANBOARD: ván luyện đan 4 bước
+  exports.openBoard = openBoard;
+  exports.closeBoard = closeBoard;
+  exports.boardRecipeFor = boardRecipeFor;
 
 })(typeof module !== 'undefined' && module.exports ? module.exports : (window.GameDanPhong = {}));
 

@@ -718,6 +718,18 @@
       iconRow: 2,
       desc: 'Đan dược chứa thổ khí tinh khiết, khi dùng tăng 20 tu vi hệ Thổ.'
     },
+    // Đợt DANBOARD-FIX: Thanh Độc Đan có công thức D2 + thẻ ván nhưng chưa
+    // có mục ITEM_DEFS nên giao diện hiện id thô. Icon tái dùng ô đan Thủy
+    // (sheet 6x8 đã kín, không còn ô trống có hình) — icon riêng là nợ hình.
+    'thanh-doc-dan': {
+      id: 'thanh-doc-dan',
+      name: 'Thanh Độc Đan',
+      type: 'consumable',
+      stackable: true,
+      iconCol: 2,
+      iconRow: 2,
+      desc: 'Đan dược giải độc, giảm 40 đan độc khi dùng. Luyện tại Đan Phòng Tông Môn.'
+    },
     'truc-co-dan': {
       id: 'truc-co-dan',
       name: 'Trúc Cơ Đan',
