@@ -2105,9 +2105,17 @@
   // ---------- ĐỢT LINHME-MAP: THANH KỸ NĂNG RUỘNG & THỈNH GIÁO PHÁP QUYẾT ----------
   var lastFarmBarRefresh = 0;
 
-  function updateFarmSkillBar(visible) {
+  // PLOTFIELD: chế độ thanh kỹ năng ruộng — 'farm' (Ruộng Linh Mễ, gọi
+  // castFarmSpell) hoặc 'linhdien' (Ruộng Linh Điền, gọi castSpell). Chế độ
+  // giữ nguyên khi gọi không kèm mode (làm mới đếm ngược, sau khi cast).
+  var farmSkillBarMode = 'farm';
+  var farmSkillBarVisible = false;
+
+  function updateFarmSkillBar(visible, mode) {
     var bar = document.getElementById('farm-skill-bar');
     if (!bar) return;
+    if (mode === 'farm' || mode === 'linhdien') farmSkillBarMode = mode;
+    farmSkillBarVisible = !!visible;
     if (!visible) {
       bar.classList.add('hidden');
       return;
@@ -2122,6 +2130,7 @@
     var spells = farmApi.listFarmSpells ? farmApi.listFarmSpells() : [];
     var now = Date.now();
     slotsEl.innerHTML = '';
+    var barMode = farmSkillBarMode;
 
     for (var i = 0; i < spells.length; i++) {
       var sp = spells[i];
@@ -2157,9 +2166,25 @@
         btn.appendChild(cdEl);
       }
 
-      (function (spellId) {
+      (function (spellId, spellName) {
         btn.addEventListener('click', function () {
-          var res = farmApi.castFarmSpell(player, spellId, Date.now());
+          var res;
+          if (barMode === 'linhdien') {
+            // PLOTFIELD: thi triển lên 12 ô Linh Điền — chỉ khi còn đứng gần
+            // ruộng (kiểm tra lại tại thời điểm bấm, phòng thanh cũ còn hiện).
+            var eng = (typeof window !== 'undefined') ? window.GameEngine : null;
+            if (eng && eng.isNearLinhDienField && !eng.isNearLinhDienField()) {
+              if (showToast) showToast('Phải đứng tại ruộng Linh Điền mới thi triển được.');
+              updateFarmSkillBar(false);
+              return;
+            }
+            var ldApi = (typeof window !== 'undefined') ? window.GameLinhDien : null;
+            if (!ldApi || !ldApi.castSpell) return;
+            var targetPlot = (eng && eng.getLastLinhDienPlot) ? eng.getLastLinhDienPlot() : -1;
+            res = ldApi.castSpell(player, spellId, targetPlot >= 0 ? targetPlot : null, Date.now());
+          } else {
+            res = farmApi.castFarmSpell(player, spellId, Date.now());
+          }
           // Móc VFX theo bậc (như nút thi triển của Linh Điền).
           if (typeof window !== 'undefined' && window.GameVFX && window.GameVFX.onSpellCast) {
             try { window.GameVFX.onSpellCast(res); } catch (e) {}
@@ -2168,13 +2193,13 @@
           if (res.ok) {
             if (audioAPI && audioAPI.playChime) audioAPI.playChime();
             if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.spawnFloatingText) {
-              window.GameEngine.spawnFloatingText(res.name + '!', player.x, player.y - 40, '#7ce898');
+              window.GameEngine.spawnFloatingText((res.name || spellName) + '!', player.x, player.y - 40, '#7ce898');
             }
           }
           updateFarmSkillBar(true);
           refreshHUD();
         });
-      })(sp.id);
+      })(sp.id, sp.name);
 
       slotsEl.appendChild(btn);
     }
@@ -3466,7 +3491,9 @@
     // Làm mới thanh pháp quyết canh tác mỗi giây khi ở map ruộng để đếm
     // ngược hồi chiêu chạy và nút mở lại khi hết hồi chiêu (trước đây thanh
     // chỉ vẽ lại khi đổi map/bấm cast nên đếm ngược đóng băng, nút khóa cứng).
-    if (mapData && mapData.id === 'ruong-linh-me') {
+    // PLOTFIELD: làm mới cả khi thanh đang hiện ở chế độ Linh Điền (đứng gần
+    // ruộng Miếu Hoang); updateFarmSkillBar(true) giữ nguyên chế độ hiện tại.
+    if ((mapData && mapData.id === 'ruong-linh-me') || (farmSkillBarVisible && farmSkillBarMode === 'linhdien')) {
       var nowMs = Date.now();
       if (nowMs - lastFarmBarRefresh >= 1000) {
         lastFarmBarRefresh = nowMs;
@@ -3679,6 +3706,15 @@
         startElderDemoUI();
       });
     }
+    // PLOTFIELD: đường nhanh tới ruộng Linh Điền từ thoại Trưởng Lão (người dạy ruộng).
+    mkBtn('Dẫn đường tới Linh Điền', function () {
+      closeDialogue();
+      var eng = (typeof window !== 'undefined') ? window.GameEngine : null;
+      var center = (ld && ld.FIELD_CENTER) ? ld.FIELD_CENTER : { x: 1395, y: 1020 };
+      if (eng && eng.startAutoPathTo) {
+        eng.startAutoPathTo('mieu_hoang', center.x, center.y, 90, 'Linh Điền');
+      }
+    });
     mkBtn('Rời đi', function () { closeDialogue(); });
   }
 

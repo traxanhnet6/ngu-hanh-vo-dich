@@ -66,9 +66,105 @@
     }
   };
 
+  // ---------------------------------------------------------------------------
+  // ĐỢT PLOTFIELD (Bui 16:10 2026-11-13): ruộng Linh Điền 12 ô TRÊN MAP Miếu
+  // Hoang (map id 'mieu_hoang'). Hình học đã khảo sát thật trên nền map +
+  // va chạm (xem PLOTFIELD-DESIGN.md §1): đồng cỏ đông-nam, 4 cột × 3 hàng,
+  // gốc (1260,940), bước 90×80. Id ô = chỉ số player.linhDien.plots.
+  // ---------------------------------------------------------------------------
+  var FIELD_MAP_ID = 'mieu_hoang';
+  var FIELD_PLOTS_CONFIG = (function () {
+    var cfgs = [];
+    for (var r = 0; r < 3; r++) {
+      for (var c = 0; c < 4; c++) {
+        cfgs.push({ id: r * 4 + c, row: r, col: c, x: 1260 + c * 90, y: 940 + r * 80, radius: 32 });
+      }
+    }
+    return cfgs;
+  })();
+  var FIELD_CENTER = { x: 1395, y: 1020 };
+  var FIELD_SKILL_RADIUS = 260; // hiện thanh kỹ năng khi cách tâm ruộng ≤ bán kính này
+  var FIELD_SIGN = { x: 1210, y: 890 }; // bia đá "Linh Điền" vẽ bằng mã
+
+  function getFieldPlotsConfig() { return FIELD_PLOTS_CONFIG; }
+  function getFieldCenter() { return FIELD_CENTER; }
+
   var livePlayer = null;
   var refreshTimer = null;
   var selectedPlotIndex = null;
+
+  // ---------------------------------------------------------------------------
+  // GIAI ĐOẠN 2 (PLOTFIX): thẻ ô vẽ theo luống ngoài map Tông Môn.
+  // Hình cây dùng bộ HERB-REDRAW đã được Bui duyệt (2 giống x 3 giai đoạn x
+  // 4 trạng thái, 8 khung/giai đoạn @8fps, khung 140x112, chân y=108).
+  // Nền luống cắt từ nền V7 map Tông Môn (assets/art/herb-redraw/bed-soil.png).
+  // Trạng thái hiển thị khi dính nhiều uế cùng lúc: bệnh > sâu > cỏ (tag chữ
+  // vẫn hiện đủ cả ba; chỉ hình vẽ lấy một trạng thái ưu tiên).
+  // ---------------------------------------------------------------------------
+  var HERB_REDRAW_SET = { 'la-thanh-tuy': 'thanhtuy', 'linh-chi-rung': 'linhchi' };
+  var HERB_REDRAW_STAGES = ['seed', 'young', 'mature'];
+  var HERB_REDRAW_STATES = ['clean', 'weed', 'bug', 'disease'];
+  var herbFrameTimer = null;
+  var herbFrameIndex = 0;
+  var herbFramesPreloaded = false;
+
+  function herbRedrawState(view) {
+    if (view.disease) return 'disease';
+    if (view.pest) return 'bug';
+    if (view.weed) return 'weed';
+    return 'clean';
+  }
+
+  function herbRedrawSrc(itemId, stage, state, frame) {
+    var set = HERB_REDRAW_SET[itemId] || 'thanhtuy';
+    var st = HERB_REDRAW_STAGES[stage] || 'seed';
+    return 'assets/art/herb-redraw/' + set + '-' + st + '-' + state + '-f0' + frame + '.png';
+  }
+
+  function herbReadySrc(itemId) {
+    return 'assets/art/herb-redraw/' + (HERB_REDRAW_SET[itemId] || 'thanhtuy') + '-ready.png';
+  }
+
+  // Nạp trước toàn bộ khung một lần khi mở modal lần đầu để vòng 8fps không
+  // chớp khung (192 khung + 2 hình chín, ~2,7 MB, trình duyệt tự cache).
+  function preloadHerbFrames() {
+    if (herbFramesPreloaded) return;
+    herbFramesPreloaded = true;
+    if (typeof Image === 'undefined') return;
+    var sets = ['thanhtuy', 'linhchi'];
+    for (var a = 0; a < sets.length; a++) {
+      for (var b = 0; b < HERB_REDRAW_STAGES.length; b++) {
+        for (var c = 0; c < HERB_REDRAW_STATES.length; c++) {
+          for (var f = 0; f < 8; f++) {
+            var im = new Image();
+            im.src = 'assets/art/herb-redraw/' + sets[a] + '-' + HERB_REDRAW_STAGES[b] + '-' + HERB_REDRAW_STATES[c] + '-f0' + f + '.png';
+          }
+        }
+      }
+      var rd = new Image();
+      rd.src = 'assets/art/herb-redraw/' + sets[a] + '-ready.png';
+    }
+  }
+
+  // Một timer chung 125ms (8fps) chỉ chạy khi modal đang mở; mỗi lần dựng
+  // lại lưới (1s) các thẻ mới lấy đúng khung hiện tại nên chuyển động liền mạch.
+  function startHerbFrameTimer() {
+    if (typeof document === 'undefined') return;
+    if (herbFrameTimer) { clearInterval(herbFrameTimer); herbFrameTimer = null; }
+    herbFrameTimer = setInterval(function () {
+      var modal = document.getElementById('linhdien-modal');
+      if (!modal || modal.classList.contains('hidden')) { stopHerbFrameTimer(); return; }
+      herbFrameIndex = (herbFrameIndex + 1) % 8;
+      var imgs = document.querySelectorAll('#linhdien-grid img.plot-herb-anim');
+      for (var i = 0; i < imgs.length; i++) {
+        imgs[i].src = herbRedrawSrc(imgs[i].getAttribute('data-herb-item'), parseInt(imgs[i].getAttribute('data-herb-stage'), 10), imgs[i].getAttribute('data-herb-state'), herbFrameIndex);
+      }
+    }, 125);
+  }
+
+  function stopHerbFrameTimer() {
+    if (herbFrameTimer) { clearInterval(herbFrameTimer); herbFrameTimer = null; }
+  }
 
   // ---------------------------------------------------------------------------
   // API helpers
@@ -1166,6 +1262,7 @@
 
       var card = document.createElement('div');
       card.className = 'seed-card' + (canPlant && soilOk ? '' : ' disabled');
+      card.setAttribute('data-item-id', itemId);
 
       var iconEl = document.createElement('div');
       iconEl.className = 'seed-card-icon';
@@ -1197,33 +1294,110 @@
       actionEl.type = 'button';
       actionEl.textContent = (canPlant && soilOk) ? 'Gieo' : (soilOk ? 'Hết giống' : 'Thiếu cấp đất');
       if (!(canPlant && soilOk)) actionEl.disabled = true;
-      else {
-        actionEl.addEventListener('click', function (e) {
-          e.stopPropagation();
-          if (selectedPlotIndex === null) return;
-          var res = plant(player, selectedPlotIndex, itemId);
-          if (typeof window !== 'undefined' && window.GameUI && window.GameUI.showToast) window.GameUI.showToast(res.msg);
-          closeSeedSelector();
-          renderPanel();
-        });
-      }
+      // PLOTFIX: không gắn listener riêng — cú bấm ủy quyền qua #seed-list trong attach()
+      // (danh sách dựng lại mỗi giây, listener trên thẻ con dễ bị nuốt khi bấm đúng biên dựng lại).
 
       card.appendChild(iconEl);
       card.appendChild(infoEl);
       card.appendChild(actionEl);
 
-      if (canPlant && soilOk) {
-        card.addEventListener('click', function () {
-          if (selectedPlotIndex === null) return;
-          var res = plant(player, selectedPlotIndex, itemId);
-          if (typeof window !== 'undefined' && window.GameUI && window.GameUI.showToast) window.GameUI.showToast(res.msg);
-          closeSeedSelector();
-          renderPanel();
-        });
-      }
+      listEl.appendChild(card);
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // ĐỢT PLOTFIELD: bảng chọn giống TRÊN MAP (mở từ bấm ô trống tại ruộng).
+  // Bảng chọn giống cũ nằm trong cửa sổ (chỉ xem) nên không dùng lại được.
+  // Luật khóa thẻ giống hệt renderSeedList: đủ giống trong túi + đủ cấp đất.
+  // ---------------------------------------------------------------------------
+  var fieldSelectedPlotIndex = null;
+
+  function openFieldSeedPanel(plotIndex) {
+    if (typeof document === 'undefined') return;
+    fieldSelectedPlotIndex = plotIndex;
+    var panel = document.getElementById('linhdien-field-seed-panel');
+    if (!panel) return;
+    var numEl = document.getElementById('field-selected-plot-num');
+    if (numEl) numEl.textContent = (plotIndex + 1);
+    panel.classList.remove('hidden');
+    renderFieldSeedList();
+  }
+
+  function closeFieldSeedPanel() {
+    if (typeof document === 'undefined') return;
+    fieldSelectedPlotIndex = null;
+    var panel = document.getElementById('linhdien-field-seed-panel');
+    if (panel) panel.classList.add('hidden');
+  }
+
+  function renderFieldSeedList() {
+    if (typeof document === 'undefined') return;
+    var listEl = document.getElementById('field-seed-list');
+    if (!listEl) return;
+    listEl.innerHTML = '';
+    var st = getStateAPI();
+    var player = livePlayer;
+    var keys = Object.keys(PLANTABLE);
+    keys.forEach(function (itemId) {
+      var plantDef = PLANTABLE[itemId];
+      var itemDef = getItemDef(itemId);
+      var inBag = (st && player) ? st.countItemInBag(player, itemId) : 0;
+      var canPlant = inBag >= (plantDef.seedCost || 1);
+      var soilOk = (player && (player.linhDien.soilLevel || 0) >= (plantDef.minSoilLevel || 0));
+
+      var card = document.createElement('div');
+      card.className = 'seed-card' + (canPlant && soilOk ? '' : ' disabled');
+      card.setAttribute('data-item-id', itemId);
+
+      var iconEl = document.createElement('div');
+      iconEl.className = 'seed-card-icon';
+      setElementIconSprite(iconEl, itemDef, 36);
+
+      var infoEl = document.createElement('div');
+      infoEl.className = 'seed-card-info';
+
+      var nameRow = document.createElement('div');
+      nameRow.className = 'seed-card-name-row';
+      var nameEl = document.createElement('span');
+      nameEl.className = 'seed-card-name';
+      nameEl.textContent = plantDef.name;
+      var bagEl = document.createElement('span');
+      bagEl.className = 'seed-card-bag-count' + (canPlant ? ' has-stock' : ' out-of-stock');
+      bagEl.textContent = 'Trong túi: ' + inBag;
+      nameRow.appendChild(nameEl);
+      nameRow.appendChild(bagEl);
+
+      var detailRow = document.createElement('div');
+      detailRow.className = 'seed-card-details';
+      detailRow.textContent = 'Lớn: ' + formatRemainTime(plantDef.growSec) + ' · Thu: ' + plantDef.yieldCount + ' phần · Cấp đất: ' + SOIL_LEVELS[plantDef.minSoilLevel || 0].name;
+
+      infoEl.appendChild(nameRow);
+      infoEl.appendChild(detailRow);
+
+      var actionEl = document.createElement('button');
+      actionEl.className = 'btn wood seed-plant-btn' + (canPlant && soilOk ? '' : ' disabled');
+      actionEl.type = 'button';
+      actionEl.textContent = (canPlant && soilOk) ? 'Gieo' : (soilOk ? 'Hết giống' : 'Thiếu cấp đất');
+      if (!(canPlant && soilOk)) actionEl.disabled = true;
+      // Không gắn listener riêng — ủy quyền qua #field-seed-list trong attach().
+
+      card.appendChild(iconEl);
+      card.appendChild(infoEl);
+      card.appendChild(actionEl);
 
       listEl.appendChild(card);
     });
+  }
+
+  function goToFieldQuickPath() {
+    closePanel();
+    closeFieldSeedPanel();
+    var eng = (typeof window !== 'undefined') ? window.GameEngine : null;
+    if (eng && eng.startAutoPathTo) {
+      eng.startAutoPathTo(FIELD_MAP_ID, FIELD_CENTER.x, FIELD_CENTER.y, 90, 'Linh Điền');
+    } else if (typeof window !== 'undefined' && window.GameUI && window.GameUI.showToast) {
+      window.GameUI.showToast('Chưa dẫn đường được, hãy đi bộ tới đồng cỏ đông-nam Miếu Hoang.');
+    }
   }
 
   function renderSpellsBar() {
@@ -1306,23 +1480,15 @@
         } else {
           btn.classList.add('spell-ready');
           statusEl.className += ' status-ready';
-          statusEl.textContent = 'Thi triển';
+          // PLOTFIELD: cửa sổ chỉ xem — không thi triển từ đây. Bấm chỉ hướng
+          // dẫn tới ruộng; thi triển thật qua thanh kỹ năng khi đứng tại ruộng.
+          statusEl.textContent = 'Tại ruộng';
+          btn.title = def.name + ': ra ruộng Linh Điền để thi triển.';
           btn.addEventListener('click', function (e) {
             e.stopPropagation();
-            var res = castSpell(livePlayer, sid, selectedPlotIndex);
-            // Ghi chú hội tụ Parent (2026-11-13 01:05): Giữ lại kết quả thi triển (kèm level)
-            // cho đợt VFX hiệu ứng theo bậc cắm vào, không để rơi kết quả.
-            exports.lastCastResult = res;
-            if (typeof window !== 'undefined' && window.GameVFX && window.GameVFX.onSpellCast) {
-              try { window.GameVFX.onSpellCast(res); } catch (e) {}
-            }
             if (typeof window !== 'undefined' && window.GameUI && window.GameUI.showToast) {
-              window.GameUI.showToast(res.msg);
+              window.GameUI.showToast(def.name + ' chỉ thi triển được tại ruộng Linh Điền. Bấm "Đi nhanh tới Linh Điền" để tới ruộng.');
             }
-            if (res.ok && typeof window !== 'undefined' && window.GameAudio && window.GameAudio.playChime) {
-              window.GameAudio.playChime();
-            }
-            renderPanel();
           });
         }
       }
@@ -1411,11 +1577,16 @@
         if (view.state === 'empty') {
           badgeEl2.textContent = 'Trống';
           badgeEl2.className += ' badge-empty';
-          var emptyPrompt = document.createElement('div');
-          emptyPrompt.className = 'plot-empty-prompt';
-          emptyPrompt.innerHTML = '<div class="empty-soil-mound"></div><div class="empty-hint">+ Chạm để gieo</div>';
-          bodyEl2.appendChild(emptyPrompt);
-          plotEl.addEventListener('click', function () { openSeedSelector(plotIndex); });
+          // GIAI ĐOẠN 2: miếng đất luống cắt từ nền V7 thay gò đất CSS.
+          var emptyBed = document.createElement('div');
+          emptyBed.className = 'plot-bed-visual plot-bed-empty';
+          var emptyHint = document.createElement('div');
+          emptyHint.className = 'empty-hint';
+          // PLOTFIELD: cửa sổ chỉ xem — không gieo từ đây.
+          emptyHint.textContent = 'Trống — tới ruộng để gieo';
+          emptyBed.appendChild(emptyHint);
+          bodyEl2.appendChild(emptyBed);
+          // PLOTFIX: không gắn listener riêng — cú bấm ủy quyền qua #linhdien-grid trong attach().
         } else if (view.state === 'growing') {
           var stageLabels = ['Mầm', 'Cây non', 'Trưởng thành'];
           badgeEl2.textContent = stageLabels[view.stage] || 'Đang lớn';
@@ -1430,21 +1601,20 @@
             headEl2.appendChild(needSkillBadge);
           }
 
+          // GIAI ĐOẠN 2: cây HERB-REDRAW động 8 khung trên nền luống V7.
+          // Giai đoạn lớn lấy từ view.stage (0 mầm / 1 non / 2 trưởng thành);
+          // trạng thái lấy theo ưu tiên bệnh > sâu > cỏ; timer chung đổi khung.
           var visualWrap = document.createElement('div');
-          visualWrap.className = 'plot-herb-visual-wrap';
-          if (view.itemId === 'la-thanh-tuy') {
-            var imgEl = document.createElement('img');
-            imgEl.className = 'plot-herb-img stage-' + view.stage;
-            imgEl.src = 'assets/art/herb-la-thanh-tuy.png';
-            imgEl.alt = plantDef ? plantDef.name : 'Lá Thanh Tụy';
-            visualWrap.appendChild(imgEl);
-          } else {
-            var spriteEl = document.createElement('div');
-            spriteEl.className = 'plot-herb-sprite stage-' + view.stage;
-            var itemDef = getItemDef(view.itemId);
-            setElementIconSprite(spriteEl, itemDef, 56);
-            visualWrap.appendChild(spriteEl);
-          }
+          visualWrap.className = 'plot-bed-visual';
+          var herbState = herbRedrawState(view);
+          var imgEl = document.createElement('img');
+          imgEl.className = 'plot-herb-img plot-herb-anim';
+          imgEl.setAttribute('data-herb-item', view.itemId);
+          imgEl.setAttribute('data-herb-stage', view.stage);
+          imgEl.setAttribute('data-herb-state', herbState);
+          imgEl.src = herbRedrawSrc(view.itemId, view.stage, herbState, herbFrameIndex);
+          imgEl.alt = plantDef ? plantDef.name : 'Cây linh dược';
+          visualWrap.appendChild(imgEl);
           var herbNameEl = document.createElement('div');
           herbNameEl.className = 'plot-herb-name';
           herbNameEl.textContent = plantDef ? plantDef.name : view.itemId;
@@ -1510,57 +1680,40 @@
             bodyEl2.appendChild(tagsWrap);
           }
 
-            plotEl.addEventListener('click', function () {
-            if (typeof window !== 'undefined' && window.GameUI && window.GameUI.showToast) {
-              var toastMsg = herbNameEl.textContent + ' đang lớn: ' + Math.floor(view.progress * 100) + '% (còn ' + formatRemainTime(view.remainSec) + ').';
-              if (view.needSkill) toastMsg += ' Đang cần dùng pháp quyết chăm sóc!';
-              else toastMsg += ' Cần skill sau ' + view.skillRemainSec + 's.';
-              window.GameUI.showToast(toastMsg);
-            }
-          });
+          // PLOTFIX: không gắn listener riêng — cú bấm ủy quyền qua #linhdien-grid trong attach().
         } else if (view.state === 'ready' || view.state === 'withered') {
           badgeEl2.textContent = view.state === 'withered' ? 'Héo' : 'Chín';
           badgeEl2.className += view.state === 'withered' ? ' badge-withered' : ' badge-ready';
 
+          // GIAI ĐOẠN 2: chín = hình chín HERB-REDRAW + phát sáng + nhịp đập;
+          // héo = cây trưởng thành đứng yên, không phát sáng (phân biệt rõ với chín).
           var readyVisual = document.createElement('div');
-          readyVisual.className = 'plot-herb-visual-wrap ready-glow';
-          if (view.itemId === 'la-thanh-tuy') {
-            var readyImg = document.createElement('img');
-            readyImg.className = 'plot-herb-img stage-2 ready-pulse';
-            readyImg.src = 'assets/art/herb-la-thanh-tuy.png';
-            readyImg.alt = plantDef ? plantDef.name : 'Lá Thanh Tụy';
-            readyVisual.appendChild(readyImg);
+          readyVisual.className = 'plot-bed-visual' + (view.state === 'ready' ? ' ready-glow' : '');
+          var readyImg = document.createElement('img');
+          if (view.state === 'ready') {
+            readyImg.className = 'plot-herb-img ready-pulse';
+            readyImg.src = herbReadySrc(view.itemId);
           } else {
-            var readySprite = document.createElement('div');
-            readySprite.className = 'plot-herb-sprite stage-2 ready-pulse';
-            var readyDef = getItemDef(view.itemId);
-            setElementIconSprite(readySprite, readyDef, 56);
-            readyVisual.appendChild(readySprite);
+            readyImg.className = 'plot-herb-img';
+            readyImg.src = herbRedrawSrc(view.itemId, 2, 'clean', 0);
           }
+          readyImg.alt = plantDef ? plantDef.name : 'Cây linh dược';
+          readyVisual.appendChild(readyImg);
           var readyNameEl = document.createElement('div');
           readyNameEl.className = 'plot-herb-name ready-gold';
           readyNameEl.textContent = (plantDef ? plantDef.name : view.itemId) + ' · ' + (view.grade || '');
 
-          var harvestBtn = document.createElement('button');
-          harvestBtn.className = 'btn wood btn-harvest-plot';
-          harvestBtn.type = 'button';
+          // PLOTFIELD: cửa sổ chỉ xem — không còn nút Thu Hoạch; chỉ hiện dòng
+          // thông tin hướng dẫn tới ruộng. Thu hoạch thật bằng cách bấm ô trên map.
+          var harvestHint = document.createElement('div');
+          harvestHint.className = 'plot-harvest-hint';
           var yieldCnt = plantDef ? plantDef.yieldCount : 1;
           if (view.state === 'withered') yieldCnt = Math.max(1, yieldCnt - 1);
-          harvestBtn.textContent = 'Thu Hoạch (+' + yieldCnt + ')';
-
-          var doHarvest = function (e) {
-            if (e) e.stopPropagation();
-            var res = harvest(livePlayer, plotIndex);
-            if (typeof window !== 'undefined' && window.GameUI && window.GameUI.showToast) window.GameUI.showToast(res.msg);
-            if (typeof window !== 'undefined' && window.GameAudio && window.GameAudio.playChime) window.GameAudio.playChime();
-            renderPanel();
-          };
-          harvestBtn.addEventListener('click', doHarvest);
-          plotEl.addEventListener('click', doHarvest);
+          harvestHint.textContent = (view.state === 'withered' ? 'Héo' : 'Chín') + ' — tới ruộng để thu hoạch (+' + yieldCnt + ')';
 
           bodyEl2.appendChild(readyVisual);
           bodyEl2.appendChild(readyNameEl);
-          bodyEl2.appendChild(harvestBtn);
+          bodyEl2.appendChild(harvestHint);
         }
 
         plotEl.appendChild(bodyEl2);
@@ -1581,6 +1734,8 @@
     closeSeedSelector();
     modal.classList.remove('hidden');
     renderPanel();
+    preloadHerbFrames();
+    startHerbFrameTimer();
     if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
     refreshTimer = setInterval(function () {
       if (!modal || modal.classList.contains('hidden')) { clearInterval(refreshTimer); refreshTimer = null; return; }
@@ -1593,6 +1748,7 @@
     var modal = document.getElementById('linhdien-modal');
     if (modal) modal.classList.add('hidden');
     closeSeedSelector();
+    stopHerbFrameTimer();
     if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
   }
 
@@ -1619,6 +1775,100 @@
     if (modal && !modal.dataset.wired) {
       modal.dataset.wired = '1';
       modal.addEventListener('click', function (e) { if (e.target === modal) closePanel(); });
+    }
+    // PLOTFIELD: nút "Đi nhanh tới Linh Điền" trong cửa sổ chỉ xem.
+    var btnQuickPath = document.getElementById('btn-linhdien-quickpath');
+    if (btnQuickPath && !btnQuickPath.dataset.wired) {
+      btnQuickPath.dataset.wired = '1';
+      btnQuickPath.addEventListener('click', function () { goToFieldQuickPath(); });
+    }
+    // PLOTFIELD: bảng chọn giống trên map — nút đóng + ủy quyền bấm thẻ giống
+    // qua #field-seed-list (cha tĩnh, cùng mẫu PLOTFIX).
+    var btnCloseFieldPanel = document.getElementById('close-field-seed-panel');
+    if (btnCloseFieldPanel && !btnCloseFieldPanel.dataset.wired) {
+      btnCloseFieldPanel.dataset.wired = '1';
+      btnCloseFieldPanel.addEventListener('click', function (e) { e.stopPropagation(); closeFieldSeedPanel(); });
+    }
+    var fieldSeedListEl = document.getElementById('field-seed-list');
+    if (fieldSeedListEl && !fieldSeedListEl.dataset.plotfieldWired) {
+      fieldSeedListEl.dataset.plotfieldWired = '1';
+      fieldSeedListEl.addEventListener('click', function (e) {
+        var card = (e.target && e.target.closest) ? e.target.closest('.seed-card') : null;
+        if (!card || !livePlayer || fieldSelectedPlotIndex === null) return;
+        var itemId = card.getAttribute('data-item-id');
+        if (!itemId) return;
+        var plantDef = PLANTABLE[itemId];
+        if (!plantDef) return;
+        var st = getStateAPI();
+        var inBag = st ? st.countItemInBag(livePlayer, itemId) : 0;
+        var canPlant = inBag >= (plantDef.seedCost || 1);
+        var soilOk = (livePlayer.linhDien.soilLevel || 0) >= (plantDef.minSoilLevel || 0);
+        if (!(canPlant && soilOk)) return;
+        var res = plant(livePlayer, fieldSelectedPlotIndex, itemId);
+        if (typeof window !== 'undefined' && window.GameUI && window.GameUI.showToast) window.GameUI.showToast(res.msg);
+        if (res.ok && typeof window !== 'undefined' && window.GameEngine && window.GameEngine.spawnFloatingText) {
+          var cfg = FIELD_PLOTS_CONFIG[fieldSelectedPlotIndex];
+          if (cfg) window.GameEngine.spawnFloatingText('Đã gieo!', cfg.x, cfg.y - 20, '#7ce898');
+        }
+        closeFieldSeedPanel();
+      });
+    }
+    // PLOTFIX: ủy quyền cú bấm thẻ ô + thẻ giống qua phần tử cha tĩnh (#linhdien-grid, #seed-list).
+    // Lưới dựng lại toàn bộ mỗi 1s (renderPanel), listener gắn trên thẻ con có thể bị nuốt khi cú bấm
+    // rơi đúng biên dựng lại; listener trên cha tĩnh không bao giờ bị thay nên không mất cú bấm.
+    // Hành vi từng trạng thái giữ nguyên hệt như listener cũ (chỉ tính lại view tại thời điểm bấm).
+    var gridEl = document.getElementById('linhdien-grid');
+    if (gridEl && !gridEl.dataset.plotfixWired) {
+      gridEl.dataset.plotfixWired = '1';
+      gridEl.addEventListener('click', function (e) {
+        var card = (e.target && e.target.closest) ? e.target.closest('.linhdien-plot-card') : null;
+        if (!card || !livePlayer) return;
+        var plotIndex = parseInt(card.getAttribute('data-plot-index'), 10);
+        if (isNaN(plotIndex)) return;
+        if (!isPlotUnlocked(livePlayer, plotIndex)) return; // ô khóa: im lặng như trước
+        var view = plotView(livePlayer, plotIndex, Date.now());
+        var plantDef = view.itemId ? PLANTABLE[view.itemId] : null;
+        // PLOTFIELD: cửa sổ chỉ xem — mọi thao tác (gieo/thu hoạch) chỉ làm
+        // được tại ruộng trên map. Bấm thẻ chỉ hiện thông tin/hướng dẫn.
+        if (view.state === 'empty') {
+          if (typeof window !== 'undefined' && window.GameUI && window.GameUI.showToast) {
+            window.GameUI.showToast('Ô #' + (plotIndex + 1) + ' đang trống. Ra ruộng Linh Điền để gieo trồng (bấm "Đi nhanh tới Linh Điền").');
+          }
+        } else if (view.state === 'growing') {
+          if (typeof window !== 'undefined' && window.GameUI && window.GameUI.showToast) {
+            var herbName = plantDef ? plantDef.name : view.itemId;
+            var toastMsg = herbName + ' đang lớn: ' + Math.floor(view.progress * 100) + '% (còn ' + formatRemainTime(view.remainSec) + ').';
+            if (view.needSkill) toastMsg += ' Đang cần dùng pháp quyết chăm sóc!';
+            else toastMsg += ' Cần skill sau ' + view.skillRemainSec + 's.';
+            window.GameUI.showToast(toastMsg);
+          }
+        } else if (view.state === 'ready' || view.state === 'withered') {
+          if (typeof window !== 'undefined' && window.GameUI && window.GameUI.showToast) {
+            window.GameUI.showToast('Ô #' + (plotIndex + 1) + ' đã ' + (view.state === 'withered' ? 'héo' : 'chín') + '. Ra ruộng Linh Điền để thu hoạch (bấm "Đi nhanh tới Linh Điền").');
+          }
+        }
+      });
+    }
+    var seedListEl = document.getElementById('seed-list');
+    if (seedListEl && !seedListEl.dataset.plotfixWired) {
+      seedListEl.dataset.plotfixWired = '1';
+      seedListEl.addEventListener('click', function (e) {
+        var card = (e.target && e.target.closest) ? e.target.closest('.seed-card') : null;
+        if (!card || !livePlayer || selectedPlotIndex === null) return;
+        var itemId = card.getAttribute('data-item-id');
+        if (!itemId) return;
+        var plantDef = PLANTABLE[itemId];
+        if (!plantDef) return;
+        var st = getStateAPI();
+        var inBag = st ? st.countItemInBag(livePlayer, itemId) : 0;
+        var canPlant = inBag >= (plantDef.seedCost || 1);
+        var soilOk = (livePlayer.linhDien.soilLevel || 0) >= (plantDef.minSoilLevel || 0);
+        if (!(canPlant && soilOk)) return; // thẻ bị khóa/hết giống: im lặng như trước
+        var res = plant(livePlayer, selectedPlotIndex, itemId);
+        if (typeof window !== 'undefined' && window.GameUI && window.GameUI.showToast) window.GameUI.showToast(res.msg);
+        closeSeedSelector();
+        renderPanel();
+      });
     }
     if (!document.body.dataset.linhdienEscWired) {
       document.body.dataset.linhdienEscWired = '1';
@@ -1712,5 +1962,20 @@
   exports.openPanel = openPanel;
   exports.closePanel = closePanel;
   exports.renderPanel = renderPanel;
+
+  // PLOTFIELD: hình học ruộng trên map + hình cây dùng lại cho engine vẽ.
+  exports.FIELD_MAP_ID = FIELD_MAP_ID;
+  exports.FIELD_PLOTS_CONFIG = FIELD_PLOTS_CONFIG;
+  exports.FIELD_CENTER = FIELD_CENTER;
+  exports.FIELD_SKILL_RADIUS = FIELD_SKILL_RADIUS;
+  exports.FIELD_SIGN = FIELD_SIGN;
+  exports.getFieldPlotsConfig = getFieldPlotsConfig;
+  exports.getFieldCenter = getFieldCenter;
+  exports.openFieldSeedPanel = openFieldSeedPanel;
+  exports.closeFieldSeedPanel = closeFieldSeedPanel;
+  exports.goToFieldQuickPath = goToFieldQuickPath;
+  exports.herbRedrawSrc = herbRedrawSrc;
+  exports.herbRedrawState = herbRedrawState;
+  exports.herbReadySrc = herbReadySrc;
 
 })(typeof module !== 'undefined' && module.exports ? module.exports : (window.GameLinhDien = {}));

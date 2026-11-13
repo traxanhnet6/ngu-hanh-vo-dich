@@ -327,6 +327,14 @@
   for (var hmh = 0; hmh < HARVEST_NODES_MIEU_HOANG.length; hmh++) {
     forceWalkable(collisionGridMieu, HARVEST_NODES_MIEU_HOANG[hmh].x, HARVEST_NODES_MIEU_HOANG[hmh].y);
   }
+  // PLOTFIELD: ép 12 tâm ô Linh Điền thành đi được (tọa độ trùng
+  // FIELD_PLOTS_CONFIG trong js/linhdien.js — nguồn thật duy nhất; sao chép
+  // tại đây vì lưới va chạm dựng trong mapdata, trước khi linhdien nạp).
+  for (var pfr = 0; pfr < 3; pfr++) {
+    for (var pfc = 0; pfc < 4; pfc++) {
+      forceWalkable(collisionGridMieu, 1260 + pfc * 90, 940 + pfr * 80);
+    }
+  }
 
   var MAP_MIEU_HOANG = {
     id: 'mieu_hoang',

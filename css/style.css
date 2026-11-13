@@ -4689,3 +4689,116 @@ body.photo-mode #toast-container { visibility: hidden; }
   bottom: 0;
   margin: auto;
 }
+
+/* ================= ĐỢT PLOTFIX2 (2026-11-13): rebase PLOTFIX lên HEAD live 2d30289 ================= */
+/* Chỉ mang phần còn cần sau khi live đã có thanh công cụ thu gọn (8bee5c4):
+   - Bảng nhiệm vụ + hàng zoom: vùng trống cho bấm xuyên xuống canvas (18/32 ô ruộng Linh Mễ
+     từng bị đè); chỉ phần tử tương tác thật nhận bấm trở lại.
+   - BỎ các dòng pointer-events cho #hud-right-controls/.hud-tools-row/#quick-slots (toolbar đã tự xử lý)
+     và BỎ khối Fix 3 (.hud-tools-row flex/wrap) — xung đột với căn mép phải của toolbar. */
+#quest-panel,
+.hud-zoom-row {
+  pointer-events: none;
+}
+#quest-panel-header,
+#btn-auto-path,
+.hud-zoom-row button {
+  pointer-events: auto;
+}
+/* ================= ĐỢT PLOTFIX GIAI ĐOẠN 2: thẻ ô giống luống ngoài map ================= */
+/* Thẻ ô trong modal Linh Điền dùng cùng ngôn ngữ hình với 4 luống ngoài map Tông Môn:
+   miếng đất luống cắt từ nền V7 + cây HERB-REDRAW theo đúng giai đoạn/trạng thái.
+   Khung hình 140x112, chân y=108; thẻ 2 cột ở 390px cho khung ~149px — gần 1:1. */
+.plot-bed-visual {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 140 / 112;
+  background-image: url('../assets/art/herb-redraw/bed-soil.png');
+  background-size: cover;
+  background-position: center;
+  border: 1px solid #4a3b28;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+/* Cây ngồi trên luống: chân khung trùng đáy miếng đất, bóng ellipse đã nướng sẵn trong hình. */
+.plot-bed-visual .plot-herb-img {
+  position: absolute;
+  left: 50%;
+  bottom: 1px;
+  width: 94%;
+  max-width: none;
+  max-height: none;
+  transform: translateX(-50%);
+  filter: none;
+  transition: none;
+}
+/* Nhịp đập khi chín: giữ nguyên tâm X (keyframes gốc scale() sẽ nuốt translateX). */
+.plot-bed-visual .ready-pulse {
+  animation: linhdien-bed-pulse 1.8s infinite alternate ease-in-out;
+}
+@keyframes linhdien-bed-pulse {
+  0% { transform: translateX(-50%) scale(0.97); }
+  100% { transform: translateX(-50%) scale(1.03); }
+}
+/* Ô trống: miếng đất luống + gợi ý ở giữa, chữ có bóng để đọc rõ trên nền đất. */
+.plot-bed-visual.plot-bed-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.plot-bed-empty .empty-hint {
+  color: #e8dfc0;
+  font-weight: 700;
+  text-shadow: 0 1px 3px #000, 0 0 6px #000;
+}
+
+/* ==========================================================================
+   ĐỢT PLOTFIELD (Bui 16:10 2026-11-13): cửa sổ Linh Điền chỉ xem + bảng
+   chọn giống trên map + nút đường nhanh. Chỉ thêm luật mới, không sửa luật cũ.
+   ========================================================================== */
+
+/* Nút "Đi nhanh tới Linh Điền" trong cửa sổ chỉ xem. */
+.linhdien-quickpath-btn {
+  display: block;
+  width: 100%;
+  margin: 8px 0 4px;
+  padding: 9px 10px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* Dòng thông tin thay nút Thu Hoạch trên thẻ chín/héo (chỉ xem). */
+.plot-harvest-hint {
+  margin-top: 6px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(20, 14, 8, 0.55);
+  color: #ffd98a;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* Bảng chọn giống trên map: tấm dưới màn hình, nổi trên canvas. */
+.linhdien-field-seed-panel {
+  position: fixed;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  z-index: 3200;
+  width: min(560px, calc(100vw - 24px));
+  max-height: 46vh;
+  overflow-y: auto;
+  padding: 10px 12px 12px;
+  border: 2px solid #c5a059;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #3a2d1c, #241a10);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  color: #e8dfc0;
+  pointer-events: auto;
+}
+
+.linhdien-field-seed-panel.hidden {
+  display: none;
+}

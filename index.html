@@ -1006,12 +1006,14 @@
       </div>
       <div class="linhdien-body">
         <div class="linhdien-intro">Mảnh linh điền riêng sau Miếu Hoang — đất lành nuôi dưỡng linh thảo trời đất.</div>
+        <!-- PLOTFIELD: bảng chỉ xem — nút đường nhanh tới ruộng -->
+        <button id="btn-linhdien-quickpath" class="btn wood linhdien-quickpath-btn" type="button">Đi nhanh tới Linh Điền</button>
 
         <!-- Hàng pháp quyết linh điền (Đợt SPELLS) -->
         <div class="linhdien-spells-section">
           <div class="linhdien-spells-header">
             <span class="linhdien-spells-title">PHÁP QUYẾT LINH ĐIỀN</span>
-            <span class="linhdien-spells-sub">Thi triển tốn Linh Lực, có thời gian hồi chiêu</span>
+            <span class="linhdien-spells-sub">Chỉ xem tại đây — thi triển tại ruộng Linh Điền</span>
           </div>
           <div id="linhdien-spells-bar" class="linhdien-spells-bar">
             <!-- 4 nút pháp quyết render bởi GameLinhDien -->
@@ -1033,6 +1035,16 @@
         <div id="seed-list" class="seed-list"></div>
       </div>
     </div>
+  </div>
+
+  <!-- PLOTFIELD: bảng chọn giống TRÊN MAP (mở từ bấm ô trống tại ruộng Linh Điền) -->
+  <div id="linhdien-field-seed-panel" class="linhdien-field-seed-panel hidden">
+    <div class="seed-selector-header">
+      <span class="seed-selector-title">CHỌN GIỐNG GIEO TRỒNG (Ô #<span id="field-selected-plot-num">1</span>)</span>
+      <button id="close-field-seed-panel" class="btn-close" type="button" aria-label="Đóng bảng chọn">×</button>
+    </div>
+    <div class="seed-selector-tip">Chỉ gieo được dược liệu đang có trong túi trữ vật (tiêu hao 1 làm giống).</div>
+    <div id="field-seed-list" class="seed-list"></div>
   </div>
 
   <!-- Modal Đan Phòng + Bảng Nhiệm Vụ Thu Thập (Đợt DANPHONG) -->

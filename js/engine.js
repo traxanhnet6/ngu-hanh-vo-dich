@@ -2710,6 +2710,38 @@
       }
     }
 
+    // 3c. Đợt PLOTFIELD: Click vào ô Linh Điền trên map Miếu Hoang
+    // (GameLinhDien). Cùng chuẩn neo như §3b: ≤60px thì hành động ngay,
+    // xa hơn thì đi tới tâm ô rồi hành động khi tới nơi.
+    if (currentMapId === 'mieu_hoang') {
+      var ldApiClick = (typeof window !== 'undefined') ? window.GameLinhDien : null;
+      if (ldApiClick && ldApiClick.getFieldPlotsConfig) {
+        var ldConfigs = ldApiClick.getFieldPlotsConfig();
+        for (var lpi = 0; lpi < ldConfigs.length; lpi++) {
+          var lcfg = ldConfigs[lpi];
+          var lr = lcfg.radius || 32;
+          if (Math.hypot(worldX - lcfg.x, worldY - lcfg.y) <= lr) {
+            lastLinhDienPlotTouched = lpi; // đích mặc định cho Thôi Sinh
+            var distToLdPlot = Math.hypot(player.x - lcfg.x, player.y - lcfg.y);
+            if (distToLdPlot <= 60) {
+              currentPath = [];
+              pendingInteraction = null;
+              if (player) player.path = currentPath;
+              executeLinhDienPlotClick(lpi, lcfg);
+            } else {
+              (function (targetLpi, targetLcfg) {
+                triggerPathTo(targetLcfg.x, targetLcfg.y, {
+                  type: 'linhdien_plot',
+                  onArrive: function () { executeLinhDienPlotClick(targetLpi, targetLcfg); }
+                });
+              })(lpi, lcfg);
+            }
+            return;
+          }
+        }
+      }
+    }
+
     // 4. Click vào Interactable
     if (mapData.interactables && mapData.interactables.length > 0) {
       for (var i = 0; i < mapData.interactables.length; i++) {
@@ -3892,6 +3924,7 @@
       }
       return;
     }
+    autoPath.customTarget = null; // PLOTFIELD: dẫn nhiệm vụ và dẫn tùy chỉnh không chạy cùng lúc
     autoPath.active = true;
     autoPath.autoStarted = !!autoStarted;
     autoPath.lastLegAt = 0;
@@ -3905,9 +3938,39 @@
     }
   }
 
+  // PLOTFIELD: dẫn đường tới đích tùy chọn (không phải đích nhiệm vụ) bằng
+  // đúng cơ chế Tự Tìm Đường sẵn có (chặng + cổng + truyền tống). Trả về true
+  // nếu bắt đầu dẫn, false nếu đã ở đích hoặc thiếu dữ liệu.
+  function startAutoPathTo(mapId, x, y, radius, label) {
+    if (!player || !mapId || x === undefined || y === undefined) return false;
+    if (mapId === currentMapId && Math.hypot(player.x - x, player.y - y) <= (radius || 32)) {
+      if (typeof window !== 'undefined' && window.GameUI && window.GameUI.showToast) {
+        window.GameUI.showToast('Bạn đang ở ' + (label || 'đích đến') + '.');
+      }
+      return false;
+    }
+    autoPath.customTarget = { stepId: 'custom', mapId: mapId, kind: 'point', x: x, y: y, radius: radius || 32, label: label || 'đích đến' };
+    autoPath.active = true;
+    autoPath.autoStarted = false;
+    autoPath.lastLegAt = 0;
+    autoPath.combatStamp = lastCombatTime;
+    targetMonster = null;
+    if (typeof window !== 'undefined' && window.GameUI && window.GameUI.syncAutoPathButton) {
+      window.GameUI.syncAutoPathButton();
+    }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('autopath_started'));
+    }
+    if (typeof window !== 'undefined' && window.GameUI && window.GameUI.showToast) {
+      window.GameUI.showToast('Đang dẫn đường tới ' + (label || 'đích đến') + '...');
+    }
+    return true;
+  }
+
   function cancelAutoPath(clearPath) {
     autoPath.active = false;
     autoPath.autoStarted = false;
+    autoPath.customTarget = null; // PLOTFIELD: hủy dẫn đường thì xóa cả đích tùy chỉnh
     if (clearPath) {
       currentPath = [];
       pendingInteraction = null;
@@ -3917,6 +3980,33 @@
       window.GameUI.syncAutoPathButton();
     }
   }
+
+  // PLOTFIELD: thanh kỹ năng hiện ở Miếu Hoang chỉ khi đứng gần ruộng Linh
+  // Điền. Kiểm tra thưa (400ms) + chỉ gọi UI khi trạng thái đổi, tránh dựng
+  // lại nút mỗi khung hình.
+  var linhDienBarState = null;
+  var lastLinhDienBarCheck = 0;
+  function isNearLinhDienField() {
+    if (!player || currentMapId !== 'mieu_hoang') return false;
+    var ldApi = (typeof window !== 'undefined') ? window.GameLinhDien : null;
+    var center = (ldApi && ldApi.FIELD_CENTER) ? ldApi.FIELD_CENTER : { x: 1395, y: 1020 };
+    var radius = (ldApi && ldApi.FIELD_SKILL_RADIUS) ? ldApi.FIELD_SKILL_RADIUS : 260;
+    return Math.hypot(player.x - center.x, player.y - center.y) <= radius;
+  }
+  function updateLinhDienSkillBarVisibility() {
+    if (currentMapId !== 'mieu_hoang') { linhDienBarState = null; return; }
+    var now = performance.now();
+    if (now - lastLinhDienBarCheck < 400) return;
+    lastLinhDienBarCheck = now;
+    var near = isNearLinhDienField();
+    var state = near ? 'linhdien' : 'hidden';
+    if (state === linhDienBarState) return;
+    linhDienBarState = state;
+    if (typeof window !== 'undefined' && window.GameUI && window.GameUI.updateFarmSkillBar) {
+      window.GameUI.updateFarmSkillBar(near, 'linhdien');
+    }
+  }
+  function getLastLinhDienPlot() { return lastLinhDienPlotTouched; }
 
   function failAutoPath(msg) {
     cancelAutoPath(true);
@@ -3936,7 +4026,10 @@
   function updateAutoPath() {
     if (!autoPath.active || !player || !mapData) return;
     if (mapFade.alpha > 0) return; // Đang chuyển cảnh: chờ sang hẳn bản đồ mới
-    var info = getQuestTargetInfo();
+    // PLOTFIELD: đích dẫn đường tùy chỉnh (vd: nút "Đi nhanh tới Linh Điền")
+    // ưu tiên hơn đích nhiệm vụ; hình dạng info = đích 'point' nên toàn bộ
+    // logic chặng/cổng/truyền tống bên dưới chạy y hệt, không đổi.
+    var info = autoPath.customTarget || getQuestTargetInfo();
     if (!info || info.stepId === 'done') { cancelAutoPath(false); return; }
     var now = performance.now();
 
@@ -3944,7 +4037,16 @@
       var dest = resolveQuestDestination(info);
       if (!dest) { failAutoPath('Mục tiêu chưa xuất hiện, hãy thử lại sau.'); return; }
       var d = Math.hypot(player.x - dest.x, player.y - dest.y);
-      if (d <= dest.radius) { cancelAutoPath(false); return; } // Đã tới nơi: dừng cạnh mục tiêu, không tự mở thoại
+      if (d <= dest.radius) {
+        // Đã tới nơi: dừng cạnh mục tiêu, không tự mở thoại. Đích tùy chỉnh
+        // thì báo rõ tên đích (PLOTFIELD); đích nhiệm vụ giữ im lặng như cũ.
+        var customLabel = autoPath.customTarget ? autoPath.customTarget.label : null;
+        cancelAutoPath(false);
+        if (customLabel && typeof window !== 'undefined' && window.GameUI && window.GameUI.showToast) {
+          window.GameUI.showToast('Đã tới ' + customLabel + '.');
+        }
+        return;
+      }
     }
 
     if (lastCombatTime > autoPath.combatStamp) {
@@ -4140,8 +4242,11 @@
         window.GameMusic.setMap(targetMapId);
       }
       // Đợt LINHME-MAP: Bật/tắt thanh kỹ năng ruộng theo map hiện tại
+      // PLOTFIELD: truyền rõ chế độ 'farm' để thanh không kẹt ở chế độ
+      // 'linhdien' sau khi rời Miếu Hoang; đặt lại trạng thái kiểm tra gần ruộng.
+      linhDienBarState = null;
       if (typeof window !== 'undefined' && window.GameUI && window.GameUI.updateFarmSkillBar) {
-        window.GameUI.updateFarmSkillBar(targetMapId === 'ruong-linh-me');
+        window.GameUI.updateFarmSkillBar(targetMapId === 'ruong-linh-me', 'farm');
       }
       var mapHolder = (typeof window !== 'undefined' && window.GameMapData) ? window.GameMapData : (mapData && mapData.maps ? mapData : null);
       if (mapHolder && mapHolder.getMap) {
@@ -6709,6 +6814,7 @@
 
     // Tự tìm đường theo nhiệm vụ + đồng bộ nút hành động theo ngữ cảnh
     updateAutoPath();
+    updateLinhDienSkillBarVisibility(); // PLOTFIELD: thanh kỹ năng ruộng Linh Điền theo khoảng cách
     updateTravel();
     var actx = computeActionContext();
     if (actx.mode !== currentActionMode) {
@@ -8349,6 +8455,10 @@
       if (currentMapId === 'ruong-linh-me') {
         drawTongMonFarmPlots(nowSecH);
       }
+      // PLOTFIELD: Vẽ 12 ô Linh Điền trên map Miếu Hoang
+      if (currentMapId === 'mieu_hoang') {
+        drawLinhDienFieldPlots(nowSecH);
+      }
     }
 
     // 4c. (Đợt N1) Vẽ các điểm hành nghề: icon vật phẩm rơi chính + quầng
@@ -9665,6 +9775,116 @@
     }
   }
 
+  // PLOTFIELD: cache hình lười cho ruộng Linh Điền (nạp khi vẽ lần đầu, vẽ
+  // chỉ khi ảnh đã nạp xong — cổng naturalWidth như cổng minimap).
+  var linhDienFieldImgCache = {};
+  function getLinhDienFieldImg(src) {
+    if (!src || typeof Image === 'undefined') return null;
+    var img = linhDienFieldImgCache[src];
+    if (!img) {
+      img = new Image();
+      img.src = src;
+      linhDienFieldImgCache[src] = img;
+    }
+    return (img.complete && img.naturalWidth > 0) ? img : null;
+  }
+
+  // PLOTFIELD: vẽ 12 ô Linh Điền trên map Miếu Hoang. Dùng lại 100% hình
+  // HERB-REDRAW đã duyệt (nền luống bed-soil.png + khung cây động 8fps, cùng
+  // ngôn ngữ thẻ GĐ2 trong cửa sổ). Bia đá vẽ bằng mã theo mẫu "Bia Nông".
+  function drawLinhDienFieldPlots(nowSec) {
+    if (currentMapId !== 'mieu_hoang' || !player) return;
+    var ldApi = (typeof window !== 'undefined') ? window.GameLinhDien : null;
+    if (!ldApi || !ldApi.getFieldPlotsConfig) return;
+    var configs = ldApi.getFieldPlotsConfig();
+    var flourish = getSettingsCached().flourishEffects !== false;
+    var nowMs = Date.now();
+    var frame = Math.floor((nowSec || 0) * 8) % 8;
+    var bedImg = getLinhDienFieldImg('assets/art/herb-redraw/bed-soil.png');
+
+    // Bia đá "Linh Điền" phía tây-bắc ruộng (vẽ bằng mã, không tệp hình mới).
+    var sign = ldApi.FIELD_SIGN || { x: 1210, y: 890 };
+    ctx.save();
+    ctx.fillStyle = '#655848';
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(sign.x, sign.y, 52, 32, 4); else ctx.rect(sign.x, sign.y, 52, 32);
+    ctx.fill();
+    ctx.strokeStyle = '#c5a059';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.fillStyle = '#f5e4b8';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.fillText('Linh Điền', sign.x + 2, sign.y + 20);
+    ctx.restore();
+
+    for (var i = 0; i < configs.length; i++) {
+      var cfg = configs[i];
+      var cx = cfg.x;
+      var cy = cfg.y;
+      var unlocked = ldApi.isPlotUnlocked ? ldApi.isPlotUnlocked(player, i) : true;
+      var view = ldApi.plotView(player, i, nowMs);
+
+      ctx.save();
+      // Nền luống (120×83 → ~76×52, tâm hơi dưới tâm ô).
+      if (bedImg) {
+        ctx.globalAlpha = unlocked ? 1 : 0.45;
+        ctx.drawImage(bedImg, cx - 38, cy - 20, 76, 52);
+        ctx.globalAlpha = 1;
+      } else {
+        ctx.fillStyle = unlocked ? 'rgba(28, 20, 14, 0.50)' : 'rgba(28, 20, 14, 0.25)';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + 6, 34, 16, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (!unlocked) { ctx.restore(); continue; }
+
+      if (view.state === 'empty') {
+        // Dấu "+" mờ nhịp nhàng gợi bấm.
+        var pulse = flourish ? (0.45 + 0.35 * Math.sin(nowSec * 2.5 + i)) : 0.6;
+        ctx.globalAlpha = pulse;
+        ctx.fillStyle = '#f5e4b8';
+        ctx.font = 'bold 20px sans-serif';
+        ctx.fillText('+', cx - 7, cy + 8);
+        ctx.globalAlpha = 1;
+      } else if (view.state === 'growing' || view.state === 'withered') {
+        var state = (ldApi.herbRedrawState) ? ldApi.herbRedrawState(view) : 'clean';
+        var src = (ldApi.herbRedrawSrc) ? ldApi.herbRedrawSrc(view.itemId, view.stage, state, frame) : null;
+        var img = src ? getLinhDienFieldImg(src) : null;
+        if (img) {
+          // Khung 140×112, chân y=108 → vẽ tỉ lệ 0.55, chân tại (cx, cy+14).
+          var dw = 140 * 0.55, dh = 112 * 0.55;
+          ctx.globalAlpha = (view.state === 'withered') ? 0.55 : 1;
+          ctx.drawImage(img, cx - 70 * 0.55, (cy + 14) - 108 * 0.55, dw, dh);
+          ctx.globalAlpha = 1;
+        }
+        if (view.state === 'withered') {
+          ctx.fillStyle = 'rgba(200, 60, 40, 0.9)';
+          ctx.font = 'bold 10px sans-serif';
+          ctx.fillText('Héo', cx - 9, cy - 34);
+        }
+      } else if (view.state === 'ready') {
+        var bob = flourish ? Math.sin(nowSec * 3.5 + i * 0.7) * 3 : 0;
+        var grad = ctx.createRadialGradient(cx, cy - 14 + bob, 2, cx, cy - 14 + bob, 26);
+        grad.addColorStop(0, 'rgba(255, 220, 80, 0.55)');
+        grad.addColorStop(1, 'rgba(255, 220, 80, 0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(cx, cy - 14 + bob, 26, 0, Math.PI * 2);
+        ctx.fill();
+        var readySrc = (ldApi.herbReadySrc) ? ldApi.herbReadySrc(view.itemId) : null;
+        var readyImg = readySrc ? getLinhDienFieldImg(readySrc) : null;
+        if (readyImg) {
+          var rdw = 140 * 0.55, rdh = 112 * 0.55;
+          ctx.drawImage(readyImg, cx - 70 * 0.55, (cy + 14 + bob) - 108 * 0.55, rdw, rdh);
+        }
+        ctx.fillStyle = '#ffd700';
+        ctx.font = 'bold 10px sans-serif';
+        ctx.fillText('Chín', cx - 9, cy - 34 + bob);
+      }
+      ctx.restore();
+    }
+  }
+
   function executePlotClick(plotIdx, plotCfg) {
     if (!player) return;
     var farmApi = (typeof window !== 'undefined') ? window.GameTongMonFarm : null;
@@ -9716,6 +9936,64 @@
       }
       if (typeof window !== 'undefined' && window.GameUI) {
         window.GameUI.showToast('Ô đất ' + (plotIdx + 1) + ': ' + view.name + ' đang lớn, còn ' + view.remainSec + ' giây.');
+      }
+    }
+  }
+
+  // PLOTFIELD: ô Linh Điền được bấm gần nhất — đích mặc định cho Thôi Sinh
+  // khi thi triển từ thanh kỹ năng tại ruộng (-1 = chưa bấm ô nào).
+  var lastLinhDienPlotTouched = -1;
+
+  // PLOTFIELD: hành động khi bấm ô Linh Điền trên map Miếu Hoang. Cùng bảng
+  // trạng thái như cửa sổ cũ: trống → bảng chọn giống; đang lớn chưa tưới →
+  // tưới; đang lớn đã tưới → toast thông tin; chín/héo → thu hoạch.
+  function executeLinhDienPlotClick(plotIdx, plotCfg) {
+    if (!player) return;
+    var ldApi = (typeof window !== 'undefined') ? window.GameLinhDien : null;
+    if (!ldApi) return;
+    if (ldApi.isPlotUnlocked && !ldApi.isPlotUnlocked(player, plotIdx)) {
+      var cond = (ldApi.getPlotUnlockCondition) ? ldApi.getPlotUnlockCondition(player, plotIdx) : 'Ô đất còn khóa.';
+      if (typeof window !== 'undefined' && window.GameUI) window.GameUI.showToast('Ô đất còn khóa: ' + cond);
+      return;
+    }
+    var view = ldApi.plotView(player, plotIdx, Date.now());
+
+    if (view.state === 'ready' || view.state === 'withered') {
+      var hRes = ldApi.harvest(player, plotIdx);
+      if (hRes.ok) {
+        if (audioAPI && audioAPI.playChime) audioAPI.playChime();
+        var plantDef = (ldApi.PLANTABLE && hRes.itemId) ? ldApi.PLANTABLE[hRes.itemId] : null;
+        spawnFloatingText('+' + hRes.count + ' ' + (plantDef ? plantDef.name : ''), plotCfg.x, plotCfg.y - 25, '#ffd700');
+        if (typeof window !== 'undefined' && window.GameUI) {
+          window.GameUI.showToast(hRes.msg);
+          window.GameUI.refreshHUD();
+        }
+      } else if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.showToast(hRes.msg);
+      }
+      return;
+    }
+
+    if (view.state === 'empty') {
+      if (ldApi.openFieldSeedPanel) ldApi.openFieldSeedPanel(plotIdx);
+      return;
+    }
+
+    if (view.state === 'growing') {
+      if (!view.watered) {
+        var wRes = ldApi.waterPlot(player, plotIdx);
+        if (wRes.ok) {
+          if (audioAPI && audioAPI.playClick) audioAPI.playClick();
+          spawnFloatingText('Đã tưới nước!', plotCfg.x, plotCfg.y - 20, '#64c8ff');
+          if (typeof window !== 'undefined' && window.GameUI) window.GameUI.showToast(wRes.msg);
+          return;
+        }
+      }
+      if (typeof window !== 'undefined' && window.GameUI) {
+        var gDef = (ldApi.PLANTABLE && view.itemId) ? ldApi.PLANTABLE[view.itemId] : null;
+        var gMsg = 'Ô đất ' + (plotIdx + 1) + ': ' + (gDef ? gDef.name : '') + ' đang lớn ' + Math.floor(view.progress * 100) + '%, còn ' + view.remainSec + ' giây.';
+        if (view.needSkill) gMsg += ' Đang cần dùng pháp quyết chăm sóc!';
+        window.GameUI.showToast(gMsg);
       }
     }
   }
@@ -10838,6 +11116,10 @@
     startAutoQuestPath: startAutoQuestPath,
     toggleAutoQuestPath: toggleAutoQuestPath,
     cancelAutoPath: function () { cancelAutoPath(true); },
+    // PLOTFIELD: dẫn đường tới đích tùy chọn + trạng thái ruộng Linh Điền.
+    startAutoPathTo: startAutoPathTo,
+    isNearLinhDienField: isNearLinhDienField,
+    getLastLinhDienPlot: getLastLinhDienPlot,
     isAutoPathActive: function () { return autoPath.active; },
     hasQuestTarget: function () { return getQuestTargetInfo() !== null && getQuestTargetInfo().stepId !== 'done'; },
     travelToMap: travelToMap,
