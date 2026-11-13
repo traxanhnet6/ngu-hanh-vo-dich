@@ -855,7 +855,7 @@
   }
 
   function applyZoom(z) {
-    var nz = Math.max(0.75, Math.min(1.5, Math.round(z * 100) / 100));
+    var nz = Math.max(0.5, Math.min(1.5, Math.round(z * 100) / 100)); // ZOOMWIDE: mức thu nhỏ tối thiểu 0.75 -> 0.5
     if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.setUserZoom) {
       nz = window.GameEngine.setUserZoom(nz);
     }

@@ -2431,7 +2431,7 @@
   function setUserZoom(f) {
     var val = Number(f);
     if (!isFinite(val)) val = 1.0;
-    userZoom = Math.max(0.75, Math.min(1.5, Math.round(val * 100) / 100));
+    userZoom = Math.max(0.5, Math.min(1.5, Math.round(val * 100) / 100)); // ZOOMWIDE: mức thu nhỏ tối thiểu 0.75 -> 0.5 để nhìn map rộng hơn
     resizeCanvas();
     return userZoom;
   }
