@@ -200,6 +200,43 @@
       y: 490,
       radius: 48,
       action: 'temple_door'
+    },
+    // Đợt N1: điểm hành nghề — tọa độ theo N1-DESIGN.md §3.3, đã kiểm lưới
+    // va chạm bằng Node (ô đi lại được, không chồng vùng bấm NPC/cổng).
+    {
+      id: 'gather_wood_mieu_1',
+      label: 'Đốn Củi',
+      x: 480,
+      y: 720,
+      radius: 48,
+      action: 'n1_gather',
+      nodeId: 'gather_wood_mieu_1'
+    },
+    {
+      id: 'gather_mine_mieu_1',
+      label: 'Đào Khoáng',
+      x: 1050,
+      y: 350,
+      radius: 48,
+      action: 'n1_gather',
+      nodeId: 'gather_mine_mieu_1'
+    },
+    {
+      id: 'gather_fish_mieu_1',
+      label: 'Câu Cá',
+      x: 250,
+      y: 860,
+      radius: 48,
+      action: 'n1_gather',
+      nodeId: 'gather_fish_mieu_1'
+    },
+    {
+      id: 'interact_board_town',
+      label: 'Bảng Treo Thưởng',
+      x: 580,
+      y: 490,
+      radius: 48,
+      action: 'board_town'
     }
   ];
 
@@ -544,7 +581,37 @@
     isWalkable: isWalkableRungDoc,
     keyAnchors: RUNG_DOC_KEY_ANCHORS,
     npcs: [],
-    interactables: [],
+    // Đợt N1: điểm hành nghề (thiết kế §3.3, đã kiểm lưới va chạm).
+    interactables: [
+      {
+        id: 'gather_wood_rd_1',
+        label: 'Đốn Củi',
+        x: 820,
+        y: 550,
+        radius: 48,
+        action: 'n1_gather',
+        nodeId: 'gather_wood_rd_1'
+      },
+      {
+        // Đợt N1FIX (§8.3): Trầm Hương Cổ Thụ — điểm cấp 3 rơi Gỗ Trầm Hương.
+        id: 'gather_wood_rd_2',
+        label: 'Đốn Củi',
+        x: 1100,
+        y: 600,
+        radius: 48,
+        action: 'n1_gather',
+        nodeId: 'gather_wood_rd_2'
+      },
+      {
+        id: 'gather_fish_rd_1',
+        label: 'Câu Cá',
+        x: 1360,
+        y: 960,
+        radius: 48,
+        action: 'n1_gather',
+        nodeId: 'gather_fish_rd_1'
+      }
+    ],
     harvestNodes: HARVEST_NODES_RUNG_DOC,
     zoneHazards: ZONE_HAZARDS_RUNG_DOC, // Đợt V1 chặng 1: trũng sương độc (3 vị trí luân phiên) + Hoa Giải Độc ở mép trũng
     monsterPacks: RUNG_DOC_PACKS,
@@ -680,6 +747,16 @@
       target: { x: 470, y: 625 },
       targetMap: 'ruong-linh-me',
       targetSpawn: { x: 120, y: 420 }
+    },
+    {
+      // Đợt DANMAP: Cổng vào Phòng Luyện Đan (gian phòng riêng ở Tông Môn)
+      id: 'exit_to_phong_luyen_dan',
+      name: 'Đan Phòng',
+      rect: { x: 820, y: 535, w: 60, h: 50 },
+      chipLabel: 'Đan Phòng',
+      target: { x: 850, y: 560 },
+      targetMap: 'phong-luyen-dan',
+      targetSpawn: { x: 800, y: 700 }
     }
   ];
 
@@ -936,14 +1013,16 @@
       action: 'notice_board'
     },
     {
-      // Đợt DANPHONG: Lò Đan của Đan Phòng đặt ở khu dược, cạnh Vườn Linh Dược
+      // Đợt DANMAP: Cửa vào Phòng Luyện Đan đặt ở khu dược, cạnh Vườn Linh Dược
       // và Dược Sư (745,610) — điểm đứng (850,560) đã kiểm đi lại được.
       id: 'interact_dan_phong',
-      label: 'Đan Phòng',
+      label: 'Vào Đan Phòng',
       x: 850,
       y: 560,
-      radius: 50,
-      action: 'dan_phong'
+      radius: 48,
+      action: 'door_enter',
+      targetMap: 'phong-luyen-dan',
+      targetSpawn: { x: 800, y: 700 }
     },
     {
       id: 'interact_rest_inn',
@@ -1009,6 +1088,46 @@
       y: 700,
       radius: 56,
       action: 'locked_arena'
+    },
+    // Đợt N1: điểm hành nghề + lò rèn + bảng đơn hàng. Lò rèn KHÔNG đặt ở
+    // (1040,680) như thiết kế §4.1 vì điểm đó nằm trong vùng bấm của NPC
+    // Chấp Sự (x 1008..1081, y 615..755) — bấm vào sẽ mở thoại thay vì mở
+    // lò; dời sang (1120,620), đã kiểm lưới va chạm + vùng bấm. Bảng đơn
+    // KHÔNG đặt ở (920,700) như thiết kế §7.1 vì chồng vùng bấm Bảng Thông
+    // Cáo (880,700); dời sang (960,790), vẫn cạnh bảng cũ.
+    {
+      id: 'gather_wood_tm_1',
+      label: 'Đốn Củi',
+      x: 350,
+      y: 850,
+      radius: 48,
+      action: 'n1_gather',
+      nodeId: 'gather_wood_tm_1'
+    },
+    {
+      id: 'gather_fish_tm_1',
+      label: 'Câu Cá',
+      x: 650,
+      y: 1120,
+      radius: 48,
+      action: 'n1_gather',
+      nodeId: 'gather_fish_tm_1'
+    },
+    {
+      id: 'interact_lo_ren',
+      label: 'Lò Rèn',
+      x: 1120,
+      y: 620,
+      radius: 50,
+      action: 'lo_ren'
+    },
+    {
+      id: 'interact_bang_don_hang',
+      label: 'Bảng Đơn Hàng',
+      x: 960,
+      y: 790,
+      radius: 44,
+      action: 'bang_don_hang'
     }
   ];
 
@@ -1344,6 +1463,228 @@
     exits: EXITS_DAI_DIEN,
     collisionGrid: collisionGridDaiDien,
     isWalkable: isWalkableDaiDien
+  };
+
+  // ============================================================
+  // MAP: PHÒNG LUYỆN ĐAN — NỘI THẤT (1200 x 800) (Đợt DANMAP)
+  // Theo lệnh Bui 03:29 & 03:31 ngày 2026-11-13 (DANMAP)
+  // và chỉ thị 04:25 ngày 2026-11-13 (DANMAP-WIDE):
+  // Map luyện đan là GIAN PHÒNG nội thất rộng hơn (1600x800 PROVISIONAL),
+  // ghép hình Đan Lô đã duyệt (532x706, hiển thị 213x282, pivot chân).
+  // ============================================================
+
+  var SPAWN_PHONG_LUYEN_DAN = {
+    x: 800,
+    y: 700
+  };
+
+  var ZONES_PHONG_LUYEN_DAN = [
+    {
+      id: 'phong_luyen_dan',
+      name: 'Phòng Luyện Đan',
+      desc: 'Nơi đệ tử tông môn khai lò luyện đan, hấp thu địa mạch linh hỏa.',
+      rect: { x: 0, y: 0, w: 1600, h: 800 }
+    }
+  ];
+
+  var EXITS_PHONG_LUYEN_DAN = [
+    {
+      id: 'exit_to_tong_mon',
+      name: 'Sơn Môn',
+      rect: { x: 765, y: 755, w: 70, h: 45 },
+      chipLabel: null,
+      target: { x: 800, y: 770 },
+      targetMap: 'tong-mon',
+      targetSpawn: { x: 850, y: 590 }
+    }
+  ];
+
+  var NPCS_PHONG_LUYEN_DAN = [
+    {
+      id: 'npc_dandong',
+      name: 'Tiểu Đan Đồng',
+      asset: 'assets/art/npc-duocsu.png',
+      originalW: 240,
+      originalH: 560,
+      w: 50,
+      h: 110,
+      x: 420,
+      y: 220,
+      feetX: 445,
+      feetY: 330,
+      baseY: 330,
+      collisionRadius: 14,
+      standTile: { x: 445, y: 350 },
+      questGate: null,
+      dialogueDefault: [
+        'Đan đạo huyền diệu, hỏa hầu là cốt tủy! Sư huynh/sư tỉ hãy tới Đan Lô ở giữa phòng để khai lò luyện đan.',
+        'Luyện đan phải chú ý tương sinh ngũ hành: Mộc sinh Hỏa, Hỏa sinh Thổ, Thổ sinh Kim, Kim sinh Thủy, Thủy sinh Mộc.',
+        'Nếu ăn nhiều Tu Luyện Đan sẽ tích tụ Đan Độc trong kinh mạch. Ngươi có thể sang Bồ Đoàn góc Tây để tịnh tọa tiêu độc, hoặc uống Thanh Độc Đan!'
+      ]
+    }
+  ];
+
+  var STAND_OBJECTS_PHONG_LUYEN_DAN = [
+    {
+      id: 'standee_dan_lo',
+      asset: 'assets/art/danlo-cold.png',
+      burningAsset: 'assets/art/danlo-burning.png',
+      originalW: 532,
+      originalH: 706,
+      w: 213,
+      h: 282,
+      x: 694,
+      y: 155,
+      baseY: 430,
+      feetX: 800,
+      feetY: 430,
+      baseRect: { x: 740, y: 405, w: 120, h: 40 },
+      groundEllipse: { cx: 800, cy: 423.8, rx: 97.6, ry: 6 }
+    }
+  ];
+
+  var INTERACTABLES_PHONG_LUYEN_DAN = [
+    {
+      id: 'interact_dan_lo',
+      label: 'Đan Lô Tông Môn',
+      x: 800,
+      y: 430,
+      standPoint: { x: 800, y: 455 },
+      radius: 65,
+      action: 'dan_lo',
+      furnaceId: 'dan-phong',
+      desc: 'Đan Lô môn phái — linh hỏa ổn định, tăng tỉ lệ thành công khi luyện đan.'
+    },
+    {
+      id: 'interact_danphong_board',
+      label: 'Bảng Nhiệm Vụ',
+      x: 1320,
+      y: 300,
+      radius: 50,
+      action: 'danphong_board',
+      desc: 'Bảng nhiệm vụ thu thập thảo dược và nguyên liệu đan phòng.'
+    },
+    {
+      id: 'interact_bodoan_danphong',
+      label: 'Bồ Đoàn Tiêu Độc',
+      x: 260,
+      y: 300,
+      radius: 50,
+      action: 'detox_mat',
+      desc: 'Tịnh tọa tịnh tâm, giải trừ đan độc tích tụ.'
+    },
+    {
+      id: 'interact_door_exit',
+      label: 'Ra Sơn Môn',
+      x: 800,
+      y: 770,
+      radius: 48,
+      action: 'door_exit',
+      targetMap: 'tong-mon',
+      targetSpawn: { x: 850, y: 590 }
+    }
+  ];
+
+  var SCENERY_OBSTACLES_PHONG_LUYEN_DAN = [
+    // Biên tường phòng (chừa khe cửa Nam x: 765..835)
+    { rect: { x: 0, y: 0, w: 1600, h: 100 } },
+    { rect: { x: 0, y: 0, w: 60, h: 800 } },
+    { rect: { x: 1540, y: 0, w: 60, h: 800 } },
+    { rect: { x: 0, y: 755, w: 765, h: 45 } },
+    { rect: { x: 835, y: 755, w: 765, h: 45 } },
+    // Kệ thảo dược phía Tây Bắc
+    { rect: { x: 100, y: 110, w: 160, h: 60 } },
+    // Giá đan phương phía Đông Bắc
+    { rect: { x: 1340, y: 110, w: 160, h: 60 } },
+    // Bệ đá Đan Lô ở trung tâm phòng
+    { rect: { x: 740, y: 405, w: 120, h: 40 } }
+  ];
+
+  function isWalkablePhongLuyenDan(x, y) {
+    if (x < 10 || x > 1600 - 10 || y < 10 || y > 800 - 10) {
+      var inExit = false;
+      for (var e = 0; e < EXITS_PHONG_LUYEN_DAN.length; e++) {
+        var er = EXITS_PHONG_LUYEN_DAN[e].rect;
+        if (x >= er.x && x <= er.x + er.w && y >= er.y && y <= er.y + er.h) {
+          inExit = true;
+          break;
+        }
+      }
+      if (!inExit) return false;
+    }
+
+    for (var j = 0; j < SCENERY_OBSTACLES_PHONG_LUYEN_DAN.length; j++) {
+      var obs = SCENERY_OBSTACLES_PHONG_LUYEN_DAN[j];
+      if (obs.rect) {
+        var inExitZone = false;
+        for (var k = 0; k < EXITS_PHONG_LUYEN_DAN.length; k++) {
+          var exr = EXITS_PHONG_LUYEN_DAN[k].rect;
+          if (x >= exr.x && x <= exr.x + exr.w && y >= exr.y && y <= exr.y + exr.h) {
+            inExitZone = true;
+            break;
+          }
+        }
+        if (!inExitZone && x >= obs.rect.x && x <= obs.rect.x + obs.rect.w &&
+            y >= obs.rect.y && y <= obs.rect.y + obs.rect.h) {
+          return false;
+        }
+      } else if (obs.r) {
+        var ox = x - obs.x;
+        var oy = y - obs.y;
+        if (ox * ox + oy * oy <= obs.r * obs.r) return false;
+      }
+    }
+
+    // NPC Tiểu Đan Đồng
+    for (var n = 0; n < NPCS_PHONG_LUYEN_DAN.length; n++) {
+      var npc = NPCS_PHONG_LUYEN_DAN[n];
+      var ndx = x - npc.feetX;
+      var ndy = y - npc.feetY;
+      if (ndx * ndx + ndy * ndy <= npc.collisionRadius * npc.collisionRadius) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  var collisionGridPhongLuyenDan = buildGrid(1600, 800, isWalkablePhongLuyenDan);
+  forceWalkable(collisionGridPhongLuyenDan, SPAWN_PHONG_LUYEN_DAN.x, SPAWN_PHONG_LUYEN_DAN.y);
+  for (var epld = 0; epld < EXITS_PHONG_LUYEN_DAN.length; epld++) {
+    forceWalkable(collisionGridPhongLuyenDan, EXITS_PHONG_LUYEN_DAN[epld].target.x, EXITS_PHONG_LUYEN_DAN[epld].target.y);
+  }
+  for (var npld = 0; npld < NPCS_PHONG_LUYEN_DAN.length; npld++) {
+    forceWalkable(collisionGridPhongLuyenDan, NPCS_PHONG_LUYEN_DAN[npld].standTile.x, NPCS_PHONG_LUYEN_DAN[npld].standTile.y);
+  }
+  for (var ipld = 0; ipld < INTERACTABLES_PHONG_LUYEN_DAN.length; ipld++) {
+    // Đợt COLLISION-FIX: điểm tương tác có standPoint (Đan Lô) thì mở ô của
+    // điểm đứng, KHÔNG mở ô của điểm neo — điểm neo lò (800,430) nằm trong
+    // rect bệ lò, mở ô đó sẽ đục lỗ cho nhân vật chui vào trong lò.
+    var itpld = INTERACTABLES_PHONG_LUYEN_DAN[ipld];
+    var sp = itpld.standPoint || itpld;
+    forceWalkable(collisionGridPhongLuyenDan, sp.x, sp.y);
+  }
+
+  var MAP_PHONG_LUYEN_DAN = {
+    id: 'phong-luyen-dan',
+    name: 'Phòng Luyện Đan',
+    width: 1600,
+    height: 800,
+    gridSize: GRID_SIZE,
+    cols: Math.ceil(1600 / GRID_SIZE),
+    rows: Math.ceil(800 / GRID_SIZE),
+    bgImage: 'assets/art/map-dan-phong-bg.png',
+    spawn: SPAWN_PHONG_LUYEN_DAN,
+    standees: STAND_OBJECTS_PHONG_LUYEN_DAN,
+    npcs: NPCS_PHONG_LUYEN_DAN,
+    interactables: INTERACTABLES_PHONG_LUYEN_DAN,
+    harvestNodes: [],
+    monsterPacks: [],
+    zones: ZONES_PHONG_LUYEN_DAN,
+    obstacles: SCENERY_OBSTACLES_PHONG_LUYEN_DAN,
+    exits: EXITS_PHONG_LUYEN_DAN,
+    collisionGrid: collisionGridPhongLuyenDan,
+    isWalkable: isWalkablePhongLuyenDan
   };
 
   // ============================================================
@@ -1939,7 +2280,18 @@
     isWalkable: isWalkableHoBang,
     keyAnchors: HO_BANG_KEY_ANCHORS,
     npcs: [],
-    interactables: [],
+    // Đợt N1: điểm hành nghề (thiết kế §3.3, đã kiểm lưới va chạm).
+    interactables: [
+      {
+        id: 'gather_fish_hb_1',
+        label: 'Câu Cá',
+        x: 140,
+        y: 680,
+        radius: 48,
+        action: 'n1_gather',
+        nodeId: 'gather_fish_hb_1'
+      }
+    ],
     harvestNodes: HARVEST_NODES_HO_BANG,
     zoneHazards: ZONE_HAZARDS_HO_BANG, // Đợt V1 chặng 2: mặt băng trượt (1) + ô băng nứt (6)
     monsterPacks: HO_BANG_PACKS,
@@ -2081,7 +2433,27 @@
     isWalkable: isWalkableMoLua,
     keyAnchors: MO_LUA_KEY_ANCHORS,
     npcs: [],
-    interactables: [],
+    // Đợt N1: điểm hành nghề (thiết kế §3.3, đã kiểm lưới va chạm).
+    interactables: [
+      {
+        id: 'gather_mine_ml_1',
+        label: 'Đào Khoáng',
+        x: 640,
+        y: 500,
+        radius: 48,
+        action: 'n1_gather',
+        nodeId: 'gather_mine_ml_1'
+      },
+      {
+        id: 'gather_mine_ml_2',
+        label: 'Đào Khoáng',
+        x: 1440,
+        y: 700,
+        radius: 48,
+        action: 'n1_gather',
+        nodeId: 'gather_mine_ml_2'
+      }
+    ],
     harvestNodes: HARVEST_NODES_MO_LUA,
     zoneHazards: ZONE_HAZARDS_MO_LUA, // Đợt V1 chặng 3: 4 họng phun dung nham theo nhịp chung với boss Hỏa
     monsterPacks: MO_LUA_PACKS,
@@ -2397,7 +2769,18 @@
     isWalkable: isWalkableKiemTrung,
     keyAnchors: KIEM_TRUNG_KEY_ANCHORS,
     npcs: [],
-    interactables: [],
+    // Đợt N1: điểm hành nghề (thiết kế §3.3, đã kiểm lưới va chạm).
+    interactables: [
+      {
+        id: 'gather_mine_kt_1',
+        label: 'Đào Khoáng',
+        x: 440,
+        y: 760,
+        radius: 48,
+        action: 'n1_gather',
+        nodeId: 'gather_mine_kt_1'
+      }
+    ],
     harvestNodes: HARVEST_NODES_KIEM_TRUNG,
     zoneHazards: ZONE_HAZARDS_KIEM_TRUNG, // Đợt V1 chặng 5: 2 làn kiếm khí quét + 8 điểm rơi kiếm vũ
     swordStorm: { enabled: true },
@@ -2604,6 +2987,10 @@
     'rung-doc': MAP_RUNG_DOC,
     'tong-mon': MAP_TONG_MON,
     'dai-dien': MAP_DAI_DIEN,
+    'phong-luyen-dan': MAP_PHONG_LUYEN_DAN,
+    'phong_luyen_dan': MAP_PHONG_LUYEN_DAN,
+    'dan-phong': MAP_PHONG_LUYEN_DAN,
+    'dan_phong': MAP_PHONG_LUYEN_DAN,
     'son-coc': MAP_SON_COC,
     'dai-truyen-tong': MAP_DAI_TRUYEN_TONG,
     'ruong-linh-me': MAP_RUONG_LINH_ME,
@@ -2690,6 +3077,7 @@
       if (id === 'rung_doc' || id === 'rung-doc') return MAP_RUNG_DOC;
       if (id === 'tong_mon' || id === 'tong-mon') return MAP_TONG_MON;
       if (id === 'dai_dien' || id === 'dai-dien') return MAP_DAI_DIEN;
+      if (id === 'phong-luyen-dan' || id === 'phong_luyen_dan' || id === 'dan-phong' || id === 'dan_phong' || id === 'dan-phong-map') return MAP_PHONG_LUYEN_DAN;
       if (id === 'son_coc' || id === 'son-coc') return MAP_SON_COC;
       if (id === 'dai_truyen_tong' || id === 'dai-truyen-tong') return MAP_DAI_TRUYEN_TONG;
       if (id === 'ruong_linh_me' || id === 'ruong-linh-me' || id === 'ruong_linhme') {

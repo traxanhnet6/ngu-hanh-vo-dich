@@ -769,7 +769,9 @@
     var def = getItemDef(itemId);
     if (!def || def.type !== 'gear' || !def.slot) return { ok: false, msg: 'Không phải trang bị.' };
     var slot = def.slot;
-    var equippedId = player.equipment ? player.equipment[slot] : null;
+    var equippedVal = player.equipment ? player.equipment[slot] : null;
+    // Đợt N1STATS: ô trang bị có thể là object N1 — lấy id trước khi tra định nghĩa.
+    var equippedId = (equippedVal && typeof equippedVal === 'object') ? equippedVal.id : equippedVal;
     var equippedDef = equippedId ? getItemDef(equippedId) : null;
     var diff = {};
     var keys = ['atk', 'def', 'hp', 'linhLuc'];

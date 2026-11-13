@@ -178,6 +178,11 @@
     return (def.costMP || 10) + Math.max(0, lvl - 1) * 2;
   }
 
+  // Bí danh cho giao diện hội tụ (ui.js gọi getSpellCastCost).
+  function getSpellCastCost(player, spellId) {
+    return getFarmSpellCost(player, spellId);
+  }
+
   // ---------------------------------------------------------------------------
   // 3b. SÂU BỆNH CỎ DẠI NGẪU NHIÊN TRÊN RUỘNG (mirror đợt PEST — Bui 03:07)
   // Cùng tỉ lệ/cửa sổ/lây lan với PEST trong js/linhdien.js. PROVISIONAL.
@@ -757,10 +762,10 @@
   }
 
   /**
-   * Thỉnh giáo học pháp quyết từ Dược Sư Tông Môn theo điều kiện môn quy.
-   * LƯU Ý HỘI TỤ (Bui 01:32): giao diện không còn gọi đường này — 4 pháp quyết
-   * chỉ học qua Trưởng Lão Dược Điền + nhiệm vụ nhập tông. Giữ hàm vì API/test
-   * cũ còn dùng; không mở đường học mới từ hàm này.
+   * HỘI TỤ (lệnh Bui 01:32): 4 pháp quyết CHỈ học qua Trưởng Lão Dược Điền +
+   * nhiệm vụ nhập tông (ELDER), miễn phí, cả 4 một lúc. Dược Sư không dạy
+   * quyết nữa (giữ vai giao dịch hạt giống/việc tông). Hàm này giữ lại để
+   * mọi nơi gọi cũ nhận đúng hướng dẫn, không trừ Linh Thạch, không mở khóa.
    */
   function learnSpellFromTeacher(player, spellId) {
     if (!player) return { ok: false, msg: 'Chưa có nhân vật.' };
@@ -772,39 +777,7 @@
       return { ok: false, msg: 'Đạo hữu đã học thành thạo ' + def.name + ' rồi.' };
     }
 
-    var rank = getRealmRank(player);
-    var req = def.learnReq;
-    if (rank < req.realmRank) {
-      return { ok: false, msg: 'Cảnh giới chưa đủ (yêu cầu ' + req.desc + ').' };
-    }
-
-    var completedQuests = 0;
-    if (player.sectQuests && player.sectQuests.completedCount) {
-      var qkeys = Object.keys(player.sectQuests.completedCount);
-      for (var q = 0; q < qkeys.length; q++) {
-        completedQuests += player.sectQuests.completedCount[qkeys[q]] || 0;
-      }
-    }
-    if (completedQuests < req.sectQuestCount) {
-      return { ok: false, msg: 'Chưa đủ cống hiến việc tông (cần hoàn thành ít nhất ' + req.sectQuestCount + ' việc).' };
-    }
-
-    if (req.costLT > 0) {
-      if ((player.linhThach || 0) < req.costLT) {
-        return { ok: false, msg: 'Thiếu Linh Thạch thỉnh giáo (cần ' + req.costLT + ' LT).' };
-      }
-      player.linhThach -= req.costLT;
-    }
-
-    player.linhDien.spells[spellId].learned = true;
-    var st = getStateAPI();
-    if (st && st.savePlayer) st.savePlayer(player);
-
-    return {
-      ok: true,
-      msg: 'Dược Sư đã truyền thụ bí kíp ' + def.name + ' cho đạo hữu!',
-      spellId: spellId
-    };
+    return { ok: false, code: 'learn_via_elder', msg: 'Hãy bái kiến Trưởng Lão Dược Điền tại Ruộng Linh Mễ tông môn để lĩnh ngộ ' + def.name + ' (nhiệm vụ nhập tông, miễn phí).' };
   }
 
   /**
@@ -818,7 +791,7 @@
     if (!def) return { ok: false, msg: 'Pháp quyết không hợp lệ.' };
 
     if (!isSpellLearned(player, spellId)) {
-      return { ok: false, code: 'not_learned', msg: 'Chưa học ' + def.name + '! Hãy bái kiến Trưởng Lão Dược Điền tại Ruộng Linh Mễ để học.' };
+      return { ok: false, code: 'not_learned', msg: 'Chưa học ' + def.name + '! Hãy bái kiến Trưởng Lão Dược Điền tại Ruộng Linh Mễ tông môn để lĩnh ngộ.' };
     }
 
     var spState = player.linhDien.spells[spellId];
@@ -918,6 +891,17 @@
       st.addTuViCapped(player, def.tuViElem, (def.tuViAmount || 1) * (spState.level || 1));
     }
 
+    // Lưu vết lastCast cho VFX theo bậc (như castSpell của Linh Điền).
+    if (player.linhDien) {
+      player.linhDien.lastCast = {
+        spellId: spellId,
+        level: spState.level,
+        uses: spState.uses,
+        affected: affectedCount,
+        at: now
+      };
+    }
+
     // Âm thanh pháp quyết (cùng bộ SFX-INTEGRATE với castSpell)
     var audio = (typeof window !== 'undefined' && window.GameAudio) || (typeof global !== 'undefined' && global.GameAudio) || null;
     if (audio) {
@@ -941,6 +925,9 @@
       spellId: spellId,
       name: def.name,
       affected: affectedCount,
+      uses: spState.uses,
+      level: spState.level,
+      cost: cost,
       cooldownUntil: spState.cooldownUntil,
       msg: 'Thi triển ' + def.name + ' thành công! ' + effectDesc
     };
@@ -1042,9 +1029,20 @@
       }
     }
 
-    // Thưởng cống hiến (Hội tụ E4)
+    // Thưởng cống hiến (Hội tụ E4): ghi vào hệ cống hiến chuẩn của E4
+    // (player.questState.sect.contribution + lifetimeContribution, nơi Tiệm
+    // Cống Hiến đọc) và giữ gương player.congHien cho tương thích cũ.
     if (def.congHien > 0) {
       player.congHien = (player.congHien || 0) + def.congHien;
+      var qAPI = null;
+      if (typeof window !== 'undefined' && window.GameQuests) qAPI = window.GameQuests;
+      else if (typeof global !== 'undefined' && global.GameQuests) qAPI = global.GameQuests;
+      else { try { qAPI = require('./quests.js'); } catch (e) { qAPI = null; } }
+      if (qAPI && qAPI.ensureQuestState) qAPI.ensureQuestState(player);
+      if (player.questState && player.questState.sect) {
+        player.questState.sect.contribution = (player.questState.sect.contribution || 0) + def.congHien;
+        player.questState.sect.lifetimeContribution = (player.questState.sect.lifetimeContribution || 0) + def.congHien;
+      }
     }
 
     // Đánh dấu hoàn thành
@@ -1087,6 +1085,7 @@
   exports.getFarmSpells = getFarmSpells;
   exports.getSpellDef = getSpellDef;
   exports.getFarmSpellCost = getFarmSpellCost;
+  exports.getSpellCastCost = getSpellCastCost;
   exports.listFarmSpells = listFarmSpells;
   exports.isSpellLearned = isSpellLearned;
   exports.learnSpell = learnSpell;

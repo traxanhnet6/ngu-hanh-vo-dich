@@ -10,6 +10,17 @@
   var player = null;
   var mapData = null;
   var stateAPI = null;
+
+  // Đợt N1STATS: ô trang bị có thể là chuỗi id (cũ) hoặc object N1
+  // { id, quality, refineLevel, affixes, crafter } — mọi chỗ tra id phải
+  // qua hàm này (gương của GameState.equipmentIdOf, tránh phụ thuộc thứ
+  // tự nạp module).
+  function equipmentIdOf(value) {
+    if (!value) return null;
+    if (typeof value === 'string') return value;
+    if (typeof value === 'object' && typeof value.id === 'string') return value.id;
+    return null;
+  }
   var audioAPI = null;
   var pathfinder = null;
   var combatAPI = null;
@@ -1827,6 +1838,12 @@
   var assets = {};
   var assetsLoaded = false;
   var harvestReadyTimes = {};
+  // Đợt N1: thời điểm sẵn sàng lại của điểm hành nghề (giây theo Date.now,
+  // cùng đồng hồ với GameN1.executeGatherAction — khác harvestReadyTimes
+  // dùng performance.now, không dùng chung).
+  // Đợt N1FIX (§8.5): hồi chiêu nay LƯU BỀN trong player.n1GatherReadyTimes
+  // (save); biến này chỉ còn là dự phòng khi chưa có player/store.
+  var n1ReadyTimes = {};
 
   // Đợt CHARINTEG 2026-11-09: bộ nhân vật Hà Nhân SINH HÌNH đã được duyệt
   // ghép (Idle 8 hướng × 6 khung + Walk 8 hướng × 8 khung, atlas 2048×2048
@@ -1948,9 +1965,9 @@
     if (!dest || !player || !player.equipment || !player.equipment.weapon) return;
     var sheet = assets.icons_sheet;
     if (!sheet || !sheet.complete || !sheet.naturalWidth) return;
-    var def = (monstersAPI && monstersAPI.ITEM_DEFS) ? monstersAPI.ITEM_DEFS[player.equipment.weapon] : null;
+    var def = (monstersAPI && monstersAPI.ITEM_DEFS) ? monstersAPI.ITEM_DEFS[equipmentIdOf(player.equipment.weapon)] : null;
     if (!def || typeof def.iconCol !== 'number' || typeof def.iconRow !== 'number') return;
-    var icon = HH_WEAPON_ICON[player.equipment.weapon] || HH_WEAPON_ICON_DEFAULT;
+    var icon = HH_WEAPON_ICON[equipmentIdOf(player.equipment.weapon)] || HH_WEAPON_ICON_DEFAULT;
     var blade = HH_WEAPON_BLADE[dirName];
     if (typeof blade !== 'number') return;
     // Đợt SWINGFIX: đang trong nhịp vung đòn thường thì góc lưỡi đi theo
@@ -2108,7 +2125,10 @@
       'assets/art/fx-kiep-van4-xa.png',
       'assets/art/fx-kiep-van4-bung.png',
       'assets/art/fx-kiep-van4-gan-1.png',
-      'assets/art/fx-kiep-van4-gan-2.png'
+      'assets/art/fx-kiep-van4-gan-2.png',
+      // Đợt DANMAP-WIDE: Đan Lô môn phái vòng 1 đã duyệt (532x706, 2 trạng thái nguội & cháy)
+      'assets/art/danlo-cold.png',
+      'assets/art/danlo-burning.png'
     ];
 
     var holder = (typeof window !== 'undefined' && window.GameMapData) ? window.GameMapData : (mapData && mapData.maps ? mapData : null);
@@ -2120,6 +2140,9 @@
         for (var s = 0; s < m.standees.length; s++) {
           if (m.standees[s].asset && urls.indexOf(m.standees[s].asset) === -1) {
             urls.push(m.standees[s].asset);
+          }
+          if (m.standees[s].burningAsset && urls.indexOf(m.standees[s].burningAsset) === -1) {
+            urls.push(m.standees[s].burningAsset);
           }
         }
       }
@@ -2659,7 +2682,12 @@
             executeInteractableAction(it);
           } else {
             (function (targetIt) {
-              triggerPathTo(targetIt.x, targetIt.y, {
+              // Đợt COLLISION-FIX: điểm tương tác có standPoint (Đan Lô) thì
+              // dẫn tới điểm đứng, không dẫn tới điểm neo trong bệ lò —
+              // gương đúng logic standTile của NPC ở §2 bên trên.
+              var destX = (targetIt.standPoint && targetIt.standPoint.x !== undefined) ? targetIt.standPoint.x : targetIt.x;
+              var destY = (targetIt.standPoint && targetIt.standPoint.y !== undefined) ? targetIt.standPoint.y : targetIt.y;
+              triggerPathTo(destX, destY, {
                 type: 'interactable',
                 onArrive: function () { executeInteractableAction(targetIt); }
               });
@@ -2716,7 +2744,7 @@
   // "nhập Thanh Vân Tông mà chưa thấy nhiệm vụ cấp kiếm ở đầu".
   function playerOwnsSword() {
     if (!player) return false;
-    if (player.equipment && player.equipment.weapon === STARTER_SWORD_ID) return true;
+    if (player.equipment && equipmentIdOf(player.equipment.weapon) === STARTER_SWORD_ID) return true;
     if (player.bag && player.bag.slots) {
       for (var i = 0; i < player.bag.slots.length; i++) {
         var s = player.bag.slots[i];
@@ -2764,6 +2792,13 @@
 
   function handleNpcTalked(npcId) {
     if (!player || !player.quests) return;
+    // Đợt E4: Kích hoạt hook nhiệm vụ dạng dữ liệu (quests.js)
+    var qAPI = (typeof window !== 'undefined' && window.GameQuests)
+      ? window.GameQuests
+      : (typeof global !== 'undefined' && global.GameQuests ? global.GameQuests : (typeof require !== 'undefined' ? (function () { try { return require('./quests.js'); } catch (e) { return null; } })() : null));
+    if (qAPI && qAPI.onNpcTalked) {
+      qAPI.onNpcTalked(player, npcId);
+    }
     var q = player.quests;
     if (npcId === 'npc_linhnhi') {
       if (!q.talked_linhnhi) {
@@ -2941,11 +2976,86 @@
           window.GameUI.showToast('Bảng Sự Kiện tuần');
         }
         break;
+      case 'board_town':
+        if (typeof window !== 'undefined' && window.GameUI && window.GameUI.openBountyBoardModal) {
+          window.GameUI.openBountyBoardModal('board_town');
+        }
+        break;
+      case 'board_sect':
+        if (typeof window !== 'undefined' && window.GameUI && window.GameUI.openBountyBoardModal) {
+          window.GameUI.openBountyBoardModal('board_sect');
+        }
+        break;
+      case 'dan_lo':
+        // Đợt DANMAP: Đan Lô riêng trên map Phòng Luyện Đan
+        // Tới gần + tương tác mở bảng Luyện Đan đúng lò môn phái (furnace: 'dan-phong')
       case 'dan_phong':
         // Đợt DANPHONG: Lò Đan ở khu dược Tông Môn — mở bảng Đan Phòng (thẻ Luyện Đan)
         if (typeof window !== 'undefined' && window.GameDanPhong && window.GameDanPhong.openPanel) {
           window.GameDanPhong.openPanel('refine');
         }
+        if (typeof window !== 'undefined' && window.GameUI && window.GameUI.showToast) {
+          window.GameUI.showToast('Đan Lô Tông Môn — Linh hỏa ổn định, mở lò luyện đan');
+        }
+        break;
+      case 'danphong_board':
+        // Đợt DANMAP: Bảng Nhiệm Vụ Đan Phòng
+        if (typeof window !== 'undefined' && window.GameDanPhong && window.GameDanPhong.openPanel) {
+          window.GameDanPhong.openPanel('board');
+        }
+        break;
+      case 'detox_mat':
+        // Đợt DANMAP: Bồ Đoàn Tịnh Tâm — tiêu độc đan (D2 detoxRest)
+        var ldAPI = (typeof window !== 'undefined' && window.GameLuyenDan) ? window.GameLuyenDan : null;
+        if (ldAPI && ldAPI.detoxRest) {
+          var beforeD = ldAPI.getDanDoc ? ldAPI.getDanDoc(player) : 0;
+          ldAPI.detoxRest(player, 120);
+          var afterD = ldAPI.getDanDoc ? ldAPI.getDanDoc(player) : 0;
+          if (beforeD > 0) {
+            spawnFloatingText('Đan độc -' + (beforeD - afterD), player.x, player.y - 35, '#86efac');
+            if (audioAPI) audioAPI.playChime();
+            if (typeof window !== 'undefined' && window.GameUI) {
+              window.GameUI.showToast('Tịnh tọa bồ đoàn: Đan độc đã tiêu tán (còn ' + afterD + ')');
+            }
+          } else {
+            if (typeof window !== 'undefined' && window.GameUI) {
+              window.GameUI.showToast('Kinh mạch thanh tịnh, không có đan độc');
+            }
+          }
+        } else {
+          if (typeof window !== 'undefined' && window.GameUI) {
+            window.GameUI.showToast('Bồ đoàn tịnh tâm tu luyện');
+          }
+        }
+        break;
+      case 'door_exit':
+        if (it.targetMap) {
+          switchMap(it.targetMap, it.targetSpawn || { x: 850, y: 590 });
+        }
+        break;
+      case 'dan_phong':
+        // Đợt DANPHONG / DANMAP: Lò Đan ở khu dược Tông Môn — mở bảng Đan Phòng hoặc chuyển vào map
+        if (it && it.targetMap) {
+          switchMap(it.targetMap, it.targetSpawn || { x: 600, y: 700 });
+        } else if (typeof window !== 'undefined' && window.GameDanPhong && window.GameDanPhong.openPanel) {
+          window.GameDanPhong.openPanel('refine');
+        }
+        break;
+      case 'lo_ren':
+        // Đợt N1: Lò Rèn Tông Môn — mở bảng Luyện Khí (thẻ Luyện Khí)
+        if (typeof window !== 'undefined' && window.GameN1UI && window.GameN1UI.openPanel) {
+          window.GameN1UI.openPanel('forge');
+        }
+        break;
+      case 'bang_don_hang':
+        // Đợt N1: Bảng Đơn Hàng NPC — mở bảng Luyện Khí (thẻ Đơn Hàng)
+        if (typeof window !== 'undefined' && window.GameN1UI && window.GameN1UI.openPanel) {
+          window.GameN1UI.openPanel('orders');
+        }
+        break;
+      case 'n1_gather':
+        // Đợt N1: điểm hành nghề trên map thật
+        executeN1Gather(it);
         break;
       case 'practice_dummy':
         var stats = stateAPI ? stateAPI.deriveStats(player.paths, player.equipment) : { attack: 10 };
@@ -2979,6 +3089,48 @@
     }
   }
 
+  // ============================================================
+  // Đợt N1: THU THẬP TẠI ĐIỂM HÀNH NGHỀ (đốn củi / đào khoáng / câu cá)
+  // Đợt N1FIX (§8.5): hồi chiêu lưu bền trong player.n1GatherReadyTimes.
+  // ============================================================
+  // Store hồi chiêu đang dùng: bền trong save khi có player, lùi về biến
+  // phiên khi chưa có player/store (khung hình đầu, trước khi nạp save).
+  function n1ReadyTimesStore() {
+    if (typeof player !== 'undefined' && player && player.n1GatherReadyTimes &&
+        typeof player.n1GatherReadyTimes === 'object') {
+      return player.n1GatherReadyTimes;
+    }
+    return n1ReadyTimes;
+  }
+
+  function executeN1Gather(it) {
+    if (!it || !player) return;
+    if (typeof window === 'undefined' || !window.GameN1 || !window.GameN1.executeGatherAction) return;
+    // Không truyền tracker: module tự dùng store bền player.n1GatherReadyTimes
+    // (ensureState chạy bên trong executeGatherAction trước khi đọc store).
+    var res = window.GameN1.executeGatherAction(player, it.nodeId);
+    if (!res || !res.ok) {
+      if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.showToast((res && res.msg) || 'Không thu thập được.');
+      }
+      return;
+    }
+    for (var i = 0; i < (res.items || []).length; i++) {
+      var g = res.items[i];
+      spawnFloatingText('+' + g.count + ' ' + g.name, player.x, player.y - 35 - i * 18, '#7ce898');
+    }
+    if (res.expResult) {
+      spawnFloatingText('+' + (res.expResult.gainedExp || 0) + ' EXP ' + (res.expResult.profName || ''), player.x, player.y - 60, '#ffe9a8');
+      if (res.expResult.leveledUp && typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.showToast('Nghề ' + (res.expResult.profName || '') + ' lên cấp ' + res.expResult.currentLevel + '!');
+      }
+    }
+    if (audioAPI) audioAPI.playPickup();
+    if (typeof window !== 'undefined' && window.GameUI) {
+      window.GameUI.refreshHUD();
+    }
+  }
+
   function executeHarvestNode(node) {
     if (!node || !player) return;
     var nowSec = performance.now() / 1000;
@@ -3007,6 +3159,19 @@
       var name = def ? def.name : (node.name || node.itemId);
       spawnFloatingText('+' + countItem + ' ' + name, player.x, player.y - 35, '#7ce898');
     }
+
+    // Đợt N1: hái dược liệu sẵn có cũng luyện nghề Hái Thuốc (thiết kế
+    // §3.3 — nghề này không có điểm N1 riêng). Chỉ cộng EXP, không đổi
+    // lượng đồ, hồi chiêu hay âm thanh của điểm hái. Chỉ báo khi lên cấp.
+    try {
+      var herbExp = { 'la-thanh-tuy': 15, 'hoa-giai-doc': 15, 'bang-tinh': 25, 'linh-chi-rung': 25 };
+      if (herbExp[node.itemId] && typeof window !== 'undefined' && window.GameN1 && window.GameN1.addProfessionExp) {
+        var herbRes = window.GameN1.addProfessionExp(player, 'herbalism', herbExp[node.itemId]);
+        if (herbRes && herbRes.leveledUp && window.GameUI) {
+          window.GameUI.showToast('Nghề Hái Thuốc lên cấp ' + herbRes.currentLevel + '!');
+        }
+      }
+    } catch (e) {}
 
     // Đợt V1 chặng 1: hái Hoa Giải Độc có âm riêng (chuông nhẹ), các điểm
     // hái khác giữ âm nhặt thường.
@@ -3247,6 +3412,18 @@
         title: 'Học Thuật Trồng Dược',
         desc: 'Tới Ruộng Linh Mễ ở Tông Môn bái kiến Trưởng Lão Dược Điền để học 4 pháp quyết.'
       };
+    }
+
+    // Đợt E4: Ưu tiên nhiệm vụ ghim từ hệ thống nhiệm vụ dạng dữ liệu (quests.js)
+    var qAPI = (typeof window !== 'undefined' && window.GameQuests)
+      ? window.GameQuests
+      : (typeof global !== 'undefined' && global.GameQuests ? global.GameQuests : (typeof require !== 'undefined' ? (function () { try { return require('./quests.js'); } catch (e) { return null; } })() : null));
+    if (qAPI && qAPI.getPinnedQuest) {
+      var pinned = qAPI.getPinnedQuest(pl);
+      if (pinned && pinned.def && (pinned.def.type === 'bounty_town' || pinned.def.type === 'bounty_sect')) {
+        var qTarget = qAPI.getTrackedTargetInfo(pl);
+        if (qTarget) return qTarget;
+      }
     }
 
     // Đợt DANPHONG: nhiệm vụ BẢNG THU THẬP đang được theo dõi — dẫn đường
@@ -6940,6 +7117,14 @@
       }
     }
 
+    // Đợt E4: Cập nhật nhiệm vụ dạng dữ liệu (quests.js)
+    var qAPI2 = (typeof window !== 'undefined' && window.GameQuests)
+      ? window.GameQuests
+      : (typeof global !== 'undefined' && global.GameQuests ? global.GameQuests : (typeof require !== 'undefined' ? (function () { try { return require('./quests.js'); } catch (e) { return null; } })() : null));
+    if (qAPI2 && qAPI2.onMonsterKilled) {
+      qAPI2.onMonsterKilled(player, m);
+    }
+
     // Thống kê cá nhân (Đợt 6 - mục 15, hồ sơ 29 mục 5)
     if (!player.stats) player.stats = { playSec: 0, kills: 0, bossKills: 0, harvests: 0, refines: 0 };
     player.stats.kills = (player.stats.kills || 0) + 1;
@@ -7261,6 +7446,387 @@
     }
   }
 
+  // ============================================================
+  // Đợt DANMAP: TRẠNG THÁI & VẼ THỦ TỤC PHÒNG LUYỆN ĐAN & ĐAN LÔ
+  // ============================================================
+  function isDanLoBurning() {
+    if (typeof window !== 'undefined' && window.__danLoBurningUntil && Date.now() < window.__danLoBurningUntil) {
+      return true;
+    }
+    if (player && player.luyenDan && player.luyenDan.lastRefineAt) {
+      if (Date.now() - player.luyenDan.lastRefineAt < 60000) return true;
+    }
+    return false;
+  }
+
+  function drawPhongLuyenDanProceduralBg(ctx, w, h) {
+    var nowSec = performance.now() / 1000;
+    ctx.save();
+
+    // 1. Sàn phòng: gạch lát đá sẫm màu cổ kính
+    ctx.fillStyle = '#1e1814';
+    ctx.fillRect(0, 0, w, h);
+
+    // Kẻ lưới gạch lát sàn (60x60 px) với vân đá
+    ctx.strokeStyle = 'rgba(60, 48, 38, 0.45)';
+    ctx.lineWidth = 1.5;
+    for (var gx = 60; gx < w - 60; gx += 60) {
+      ctx.beginPath();
+      ctx.moveTo(gx, 100);
+      ctx.lineTo(gx, 755);
+      ctx.stroke();
+    }
+    for (var gy = 120; gy < 755; gy += 60) {
+      ctx.beginPath();
+      ctx.moveTo(60, gy);
+      ctx.lineTo(w - 60, gy);
+      ctx.stroke();
+    }
+
+    // 2. Tường phòng (Nội thất khép kín)
+    // Tường Bắc (y: 0..100): Vách gỗ trầm hương son đỏ viền vàng
+    var wallNorthGrad = ctx.createLinearGradient(0, 0, 0, 100);
+    wallNorthGrad.addColorStop(0, '#150d0a');
+    wallNorthGrad.addColorStop(0.7, '#2c1810');
+    wallNorthGrad.addColorStop(1, '#422416');
+    ctx.fillStyle = wallNorthGrad;
+    ctx.fillRect(0, 0, w, 100);
+
+    // Phào chân tường Bắc viền vàng đồng
+    ctx.fillStyle = '#6a4a28';
+    ctx.fillRect(0, 96, w, 5);
+    ctx.fillStyle = '#a67c42';
+    ctx.fillRect(0, 99, w, 2);
+
+    // Tường Tây (x: 0..60) và Đông (x: w-60..w)
+    var wallSideGrad = ctx.createLinearGradient(0, 0, 60, 0);
+    wallSideGrad.addColorStop(0, '#150d0a');
+    wallSideGrad.addColorStop(1, '#2c1810');
+    ctx.fillStyle = wallSideGrad;
+    ctx.fillRect(0, 100, 60, 655);
+
+    var wallEastGrad = ctx.createLinearGradient(w - 60, 0, w, 0);
+    wallEastGrad.addColorStop(0, '#2c1810');
+    wallEastGrad.addColorStop(1, '#150d0a');
+    ctx.fillStyle = wallEastGrad;
+    ctx.fillRect(w - 60, 100, 60, 655);
+
+    // Tường Nam (y: 755..800) với ô cửa ở giữa
+    var midX = Math.round(w / 2);
+    var doorLeft = midX - 35;
+    var doorWidth = 70;
+    var doorRight = doorLeft + doorWidth;
+    ctx.fillStyle = '#24140e';
+    ctx.fillRect(0, 755, doorLeft, 45);
+    ctx.fillRect(doorRight, 755, w - doorRight, 45);
+    // Ngưỡng cửa Nam (Threshold) lát đá hoa cương xám
+    ctx.fillStyle = '#4a443e';
+    ctx.fillRect(doorLeft, 755, doorWidth, 45);
+    ctx.strokeStyle = '#8a7a6a';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(doorLeft, 755, doorWidth, 45);
+
+    // Hoành phi thư pháp tường Bắc: "ĐAN PHÒNG TÔNG MÔN"
+    ctx.fillStyle = '#221108';
+    ctx.fillRect(midX - 100, 20, 200, 44);
+    ctx.strokeStyle = '#c69c4c';
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(midX - 100, 20, 200, 44);
+    ctx.font = 'bold 16px "Be Vietnam Pro", serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#f5d68b';
+    ctx.fillText('ĐAN ĐẠO THÔNG THIÊN', midX, 48);
+
+    // Kệ thảo dược góc Tây Bắc (x: 100, y: 110, w: 160, h: 60)
+    ctx.fillStyle = '#3a2216';
+    ctx.fillRect(100, 110, 160, 60);
+    ctx.strokeStyle = '#6d4529';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(100, 110, 160, 60);
+    ctx.font = '11px sans-serif';
+    ctx.fillStyle = '#c7ab7c';
+    ctx.fillText('Kệ Thảo Dược', 180, 145);
+
+    // Giá đan phương góc Đông Bắc (x: w - 260, y: 110, w: 160, h: 60)
+    var shelfEastX = w - 260;
+    ctx.fillStyle = '#3a2216';
+    ctx.fillRect(shelfEastX, 110, 160, 60);
+    ctx.strokeStyle = '#6d4529';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(shelfEastX, 110, 160, 60);
+    ctx.font = '11px sans-serif';
+    ctx.fillStyle = '#c7ab7c';
+    ctx.fillText('Giá Đan Phương', shelfEastX + 80, 145);
+
+    // Bồ Đoàn góc Tây (x: 260, y: 300)
+    var boDoanX = 260, boDoanY = 300;
+    ctx.save();
+    ctx.fillStyle = 'rgba(10, 10, 10, 0.4)';
+    ctx.beginPath();
+    ctx.ellipse(boDoanX, boDoanY + 8, 28, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
+    var matGrad = ctx.createRadialGradient(boDoanX, boDoanY, 5, boDoanX, boDoanY, 26);
+    matGrad.addColorStop(0, '#8c7d52');
+    matGrad.addColorStop(0.7, '#635532');
+    matGrad.addColorStop(1, '#483c20');
+    ctx.fillStyle = matGrad;
+    ctx.beginPath();
+    ctx.ellipse(boDoanX, boDoanY, 26, 14, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#b89b4b';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.font = '10px sans-serif';
+    ctx.fillStyle = '#ebd698';
+    ctx.fillText('Bồ Đoàn', boDoanX, boDoanY + 4);
+    ctx.restore();
+
+    // Bảng Nhiệm Vụ góc Đông (x: 1320, y: 300)
+    var boardX = (w >= 1600 ? 1320 : 960), boardY = 300;
+    ctx.save();
+    ctx.fillStyle = 'rgba(10, 10, 10, 0.4)';
+    ctx.beginPath();
+    ctx.ellipse(boardX, boardY + 14, 26, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#4c2e1b';
+    ctx.fillRect(boardX - 25, boardY - 30, 50, 40);
+    ctx.strokeStyle = '#a4783c';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(boardX - 25, boardY - 30, 50, 40);
+    ctx.fillStyle = '#e85c32';
+    ctx.fillRect(boardX - 18, boardY - 20, 16, 20);
+    ctx.fillStyle = '#e5bc3b';
+    ctx.fillRect(boardX + 2, boardY - 20, 16, 20);
+    ctx.font = '10px sans-serif';
+    ctx.fillStyle = '#fcefc7';
+    ctx.fillText('Bảng Vụ', boardX, boardY + 28);
+    ctx.restore();
+
+    // 3. Đan Đài trung tâm (Pháp trận Bát Quái / Ngũ Hành phát sáng dưới bệ lò)
+    var cx = midX, cy = 400;
+    var glowPulse = 0.85 + Math.sin(nowSec * 1.8) * 0.15;
+    var auraGrad = ctx.createRadialGradient(cx, cy, 30, cx, cy, 140);
+    auraGrad.addColorStop(0, 'rgba(235, 120, 30, ' + (0.28 * glowPulse).toFixed(3) + ')');
+    auraGrad.addColorStop(0.5, 'rgba(180, 80, 20, ' + (0.16 * glowPulse).toFixed(3) + ')');
+    auraGrad.addColorStop(1, 'rgba(40, 20, 10, 0)');
+    ctx.fillStyle = auraGrad;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 140, 75, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(212, 164, 76, 0.55)';
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 120, 64, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.strokeStyle = 'rgba(180, 110, 40, 0.4)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 96, 50, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    var elemColors = ['#e8a838', '#58ba68', '#4aa8e8', '#e85538', '#c49058'];
+    for (var ei = 0; ei < 5; ei++) {
+      var ea = (ei * 2 * Math.PI / 5) - Math.PI / 2;
+      var ex = cx + Math.cos(ea) * 108;
+      var ey = cy + Math.sin(ea) * 58;
+      ctx.fillStyle = elemColors[ei];
+      ctx.beginPath();
+      ctx.arc(ex, ey, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+
+  function drawDanLoProcedural(ctx, x, y, w, h, feetX, feetY, isBurning) {
+    var nowSec = performance.now() / 1000;
+    ctx.save();
+
+    var cx = feetX || (x + w / 2);
+    var cy = feetY || (y + h);
+
+    // 1. Bóng đổ tiếp đất mềm nướng hình ellipse (DANLO-DESIGN §3)
+    ctx.fillStyle = 'rgba(10, 15, 10, 0.45)';
+    ctx.beginPath();
+    ctx.ellipse(cx + 4, cy + 3, 75, 20, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Quầng sáng ấm dưới chân lò khi đang cháy
+    if (isBurning) {
+      var pulse = 0.8 + Math.sin(nowSec * 5) * 0.2;
+      var fireGlow = ctx.createRadialGradient(cx, cy, 10, cx, cy, 95);
+      fireGlow.addColorStop(0, 'rgba(255, 140, 40, ' + (0.55 * pulse).toFixed(3) + ')');
+      fireGlow.addColorStop(0.6, 'rgba(230, 70, 20, ' + (0.25 * pulse).toFixed(3) + ')');
+      fireGlow.addColorStop(1, 'rgba(200, 50, 10, 0)');
+      ctx.fillStyle = fireGlow;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, 95, 32, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 2. Bệ đá tròn (Stone Dais): Bệ đá xám khớp nền môn phái (#9a9a94)
+    var daisGrad = ctx.createLinearGradient(cx - 70, cy - 24, cx + 70, cy + 4);
+    daisGrad.addColorStop(0, '#5a5a54');
+    daisGrad.addColorStop(0.5, '#8e8e86');
+    daisGrad.addColorStop(1, '#4e4e48');
+    ctx.fillStyle = daisGrad;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy - 4, 68, 18, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#aaaaa0';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // 3. Ba chân thú vững chãi (Tripod Beast Legs)
+    var legGrad = ctx.createLinearGradient(cx - 50, cy - 70, cx + 50, cy);
+    legGrad.addColorStop(0, '#4a341b');
+    legGrad.addColorStop(0.5, '#7a572d');
+    legGrad.addColorStop(1, '#3b2812');
+    ctx.fillStyle = legGrad;
+    ctx.strokeStyle = '#946f3d';
+    ctx.lineWidth = 1.8;
+
+    // Chân trái
+    ctx.beginPath();
+    ctx.moveTo(cx - 42, cy - 75);
+    ctx.quadraticCurveTo(cx - 58, cy - 40, cx - 48, cy - 12);
+    ctx.lineTo(cx - 36, cy - 12);
+    ctx.quadraticCurveTo(cx - 42, cy - 45, cx - 28, cy - 70);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Chân phải
+    ctx.beginPath();
+    ctx.moveTo(cx + 42, cy - 75);
+    ctx.quadraticCurveTo(cx + 58, cy - 40, cx + 48, cy - 12);
+    ctx.lineTo(cx + 36, cy - 12);
+    ctx.quadraticCurveTo(cx + 42, cy - 45, cx + 28, cy - 70);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Chân giữa (ở trước)
+    ctx.beginPath();
+    ctx.moveTo(cx - 10, cy - 70);
+    ctx.quadraticCurveTo(cx - 14, cy - 35, cx - 8, cy - 8);
+    ctx.lineTo(cx + 8, cy - 8);
+    ctx.quadraticCurveTo(cx + 14, cy - 35, cx + 10, cy - 70);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // 4. Thân Đỉnh Đồng (Belly of Cauldron): Đồng cổ #6b4f2a - #8a6b3a
+    var bellyY = cy - 90;
+    var bellyGrad = ctx.createRadialGradient(cx - 16, bellyY - 14, 12, cx, bellyY, 68);
+    bellyGrad.addColorStop(0, '#b8894d');
+    bellyGrad.addColorStop(0.45, '#7d582c');
+    bellyGrad.addColorStop(0.85, '#523819');
+    bellyGrad.addColorStop(1, '#38240d');
+    ctx.fillStyle = bellyGrad;
+    ctx.beginPath();
+    ctx.ellipse(cx, bellyY, 62, 46, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#cda158';
+    ctx.lineWidth = 2.4;
+    ctx.stroke();
+
+    // Họa tiết gỉ đồng xanh nhạt (#5f7d6b) và hoa văn thao thiết ở bụng lò
+    ctx.strokeStyle = 'rgba(95, 125, 107, 0.65)';
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.arc(cx - 24, bellyY + 4, 14, 0, Math.PI * 1.4);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx + 24, bellyY + 4, 14, Math.PI * 0.6, Math.PI * 2);
+    ctx.stroke();
+
+    // Vành đồng sáng ở vai miệng lò
+    var rimGrad = ctx.createLinearGradient(cx - 55, bellyY - 35, cx + 55, bellyY - 35);
+    rimGrad.addColorStop(0, '#66451e');
+    rimGrad.addColorStop(0.5, '#e0b467');
+    rimGrad.addColorStop(1, '#5c3d18');
+    ctx.fillStyle = rimGrad;
+    ctx.beginPath();
+    ctx.ellipse(cx, bellyY - 36, 54, 14, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#ffd782';
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
+
+    // 5. Hai quai vòng hai bên vai lò
+    ctx.strokeStyle = '#b08444';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.arc(cx - 62, bellyY - 26, 16, Math.PI * 0.6, Math.PI * 1.8);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx + 62, bellyY - 26, 16, -Math.PI * 0.8, Math.PI * 0.4);
+    ctx.stroke();
+
+    // 6. Nắp vòm (Tiered Dome Lid)
+    var lidY = bellyY - 48;
+    var lidGrad = ctx.createRadialGradient(cx - 10, lidY - 16, 8, cx, lidY, 44);
+    lidGrad.addColorStop(0, '#b8894d');
+    lidGrad.addColorStop(0.6, '#6e4c23');
+    lidGrad.addColorStop(1, '#422c12');
+    ctx.fillStyle = lidGrad;
+    ctx.beginPath();
+    ctx.ellipse(cx, lidY, 44, 22, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#cda158';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Núm nắp hình linh thú / kỳ lân nhỏ
+    ctx.fillStyle = '#dfaf5b';
+    ctx.beginPath();
+    ctx.ellipse(cx, lidY - 22, 10, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#ffe49e';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Khe thoát khói trên nắp
+    ctx.fillStyle = isBurning ? '#ffaa33' : '#221508';
+    ctx.beginPath(); ctx.ellipse(cx - 18, lidY - 6, 6, 2.5, -0.2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx + 18, lidY - 6, 6, 2.5, 0.2, 0, Math.PI * 2); ctx.fill();
+
+    // 7. Hiệu ứng ngọn lửa và khói khi đang cháy (Burning State)
+    if (isBurning) {
+      var fTime = nowSec * 7;
+      for (var fi = 0; fi < 5; fi++) {
+        var fx = cx + (fi - 2) * 20;
+        var fH = 26 + Math.sin(fTime + fi * 1.5) * 12;
+        var fGrad = ctx.createLinearGradient(fx, bellyY + 20, fx, bellyY + 20 - fH);
+        fGrad.addColorStop(0, 'rgba(255, 60, 10, 0.9)');
+        fGrad.addColorStop(0.5, 'rgba(255, 170, 30, 0.85)');
+        fGrad.addColorStop(1, 'rgba(255, 240, 120, 0)');
+        ctx.fillStyle = fGrad;
+        ctx.beginPath();
+        ctx.moveTo(fx - 12, bellyY + 16);
+        ctx.quadraticCurveTo(fx + Math.sin(fTime + fi) * 6, bellyY + 16 - fH * 0.6, fx, bellyY + 16 - fH);
+        ctx.quadraticCurveTo(fx - Math.sin(fTime + fi) * 6, bellyY + 16 - fH * 0.6, fx + 12, bellyY + 16);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      for (var si = 0; si < 3; si++) {
+        var sx = cx + (si - 1) * 14 + Math.sin(nowSec * 2 + si) * 8;
+        var sy = lidY - 26 - (nowSec * 28 + si * 18) % 45;
+        var sAlpha = Math.max(0, 0.5 - (lidY - 26 - sy) / 45);
+        ctx.fillStyle = 'rgba(220, 200, 240, ' + sAlpha.toFixed(3) + ')';
+        ctx.beginPath();
+        ctx.arc(sx, sy, 7 + (lidY - 26 - sy) * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    ctx.restore();
+  }
+
   function render() {
     if (!ctx || !canvas) return;
 
@@ -7285,10 +7851,18 @@
     // 1. Vẽ ảnh nền bản đồ hiện tại (Brief §2: 1920x1280)
     // Ruộng Linh Mễ vẽ nền thủ tục — phải rẽ trước nhánh ảnh chung vì
     // bgImage null rơi về assets.map_bg (nền Miếu Hoang, luôn nạp sẵn).
+    // Đợt DANMAP: Phòng Luyện Đan vẽ nền thủ tục nội thất gian phòng nếu chưa có ảnh PNG
     var bgImg = assets[mapData.bgImage] || (mapData.id === 'rung-doc' ? assets.map_rung_doc_bg : assets.map_bg);
     if (mapData.id === 'ruong-linh-me' || currentMapId === 'ruong-linh-me') {
       drawRuongLinhMeProceduralBg(ctx, mapData.width, mapData.height, nowSecH);
-    } else if (bgImg && bgImg.complete) {
+    } else if (mapData.id === 'phong-luyen-dan' || currentMapId === 'phong-luyen-dan') {
+      var pldImg = assets[mapData.bgImage];
+      if (pldImg && pldImg.complete && pldImg.naturalWidth > 0) {
+        ctx.drawImage(pldImg, 0, 0, mapData.width, mapData.height);
+      } else {
+        drawPhongLuyenDanProceduralBg(ctx, mapData.width, mapData.height);
+      }
+    } else if (bgImg && bgImg.complete && bgImg.naturalWidth > 0) {
       ctx.drawImage(bgImg, 0, 0, mapData.width, mapData.height);
     }
 
@@ -7735,6 +8309,60 @@
       }
     }
 
+    // 4c. (Đợt N1) Vẽ các điểm hành nghề: icon vật phẩm rơi chính + quầng
+    // sáng khi sẵn sàng, chấm mờ khi đang hồi chiêu. Hình điểm riêng chưa
+    // có — dùng chung icon vật phẩm trong icons-sheet (ghi nợ hình).
+    if (mapData.interactables && typeof window !== 'undefined' && window.GameN1 && window.GameN1.getGatherNodeById) {
+      var nowSecN1 = Date.now() / 1000;
+      for (var ni = 0; ni < mapData.interactables.length; ni++) {
+        var nit = mapData.interactables[ni];
+        if (nit.action !== 'n1_gather' || !nit.nodeId) continue;
+        var n1node = null;
+        try { n1node = window.GameN1.getGatherNodeById(nit.nodeId); } catch (e) { n1node = null; }
+        if (!n1node) continue;
+        var n1Ready = nowSecN1 >= (n1ReadyTimesStore()[nit.nodeId] || 0);
+        if (n1Ready) {
+          var bobN = Math.sin(nowSecN1 * 3 + ni) * 3;
+          if (currentQuality !== 'thap') {
+            ctx.save();
+            var gradN = ctx.createRadialGradient(nit.x, nit.y - 12 + bobN, 2, nit.x, nit.y - 12 + bobN, 18);
+            gradN.addColorStop(0, 'rgba(255, 233, 168, 0.45)');
+            gradN.addColorStop(1, 'rgba(255, 233, 168, 0)');
+            ctx.fillStyle = gradN;
+            ctx.beginPath();
+            ctx.arc(nit.x, nit.y - 12 + bobN, 18, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
+          var iconImgN = assets['assets/art/icons-sheet.png'] || assets.icons_sheet;
+          var firstDrop = (n1node.drops && n1node.drops[0]) ? n1node.drops[0].itemId : null;
+          if (iconImgN && iconImgN.complete && firstDrop) {
+            var defN = (monstersAPI && monstersAPI.ITEM_DEFS) ? monstersAPI.ITEM_DEFS[firstDrop] : null;
+            var colN = defN ? (defN.iconCol || 0) : 0;
+            var rowN = defN ? (defN.iconRow || 0) : 0;
+            ctx.drawImage(iconImgN, colN * 32, rowN * 32, 32, 32, nit.x - 12, nit.y - 24 + bobN, 24, 24);
+          }
+          ctx.save();
+          ctx.font = 'bold 12px "Noto Serif", serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = 'rgba(10, 12, 8, 0.8)';
+          ctx.strokeText(n1node.name, nit.x, nit.y + 16);
+          ctx.fillStyle = '#ffe9a8';
+          ctx.fillText(n1node.name, nit.x, nit.y + 16);
+          ctx.restore();
+        } else {
+          ctx.save();
+          ctx.fillStyle = 'rgba(160, 140, 90, 0.35)';
+          ctx.beginPath();
+          ctx.arc(nit.x, nit.y, 4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+    }
+
     // 5. Thu thập toàn bộ thực thể hiển thị và sắp xếp chiều sâu Painter's Algorithm
     var entities = [];
 
@@ -7747,16 +8375,27 @@
             baseY: std.baseY,
             draw: function () {
               var sImg = assets[std.asset] || (std.id === 'fallen_log_1' ? assets.fallen_log : (std.id === 'broadleaf_1' || std.id === 'broadleaf_2' || std.id === 'broadleaf_3' ? assets.broadleaf_tree : assets[std.id]));
-              if (std.trunk) {
-                ctx.save();
-                ctx.fillStyle = 'rgba(10, 15, 10, 0.35)';
-                ctx.beginPath();
-                ctx.ellipse(std.trunk.x, std.trunk.y + 4, std.trunk.r * 2.0, std.trunk.r * 1.0, 0, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.restore();
-              }
-              if (sImg && sImg.complete) {
-                ctx.drawImage(sImg, std.x, std.y, std.w, std.h);
+              if (std.id === 'standee_dan_lo') {
+                var isBurning = isDanLoBurning();
+                var danloAsset = isBurning ? (std.burningAsset || 'assets/art/danlo-burning.png') : (std.asset || 'assets/art/danlo-cold.png');
+                var dImg = assets[danloAsset] || assets[std.asset];
+                if (dImg && dImg.complete && dImg.naturalWidth > 0) {
+                  ctx.drawImage(dImg, std.x, std.y, std.w, std.h);
+                } else {
+                  drawDanLoProcedural(ctx, std.x, std.y, std.w, std.h, std.feetX, std.feetY, isBurning);
+                }
+              } else {
+                if (std.trunk) {
+                  ctx.save();
+                  ctx.fillStyle = 'rgba(10, 15, 10, 0.35)';
+                  ctx.beginPath();
+                  ctx.ellipse(std.trunk.x, std.trunk.y + 4, std.trunk.r * 2.0, std.trunk.r * 1.0, 0, 0, Math.PI * 2);
+                  ctx.fill();
+                  ctx.restore();
+                }
+                if (sImg && sImg.complete && sImg.naturalWidth > 0) {
+                  ctx.drawImage(sImg, std.x, std.y, std.w, std.h);
+                }
               }
             }
           });
@@ -7857,7 +8496,7 @@
         ctx.fill();
         ctx.restore();
 
-        var isHat = player && player.equipment && player.equipment.head === 'non-la' && getSettingsCached().hideHat !== true;
+        var isHat = player && player.equipment && equipmentIdOf(player.equipment.head) === 'non-la' && getSettingsCached().hideHat !== true;
         var hatWalk = assets.hanhan_hat_walk;
         var hatIdle = assets.hanhan_hat_idle;
 
@@ -9869,9 +10508,11 @@
       for (var j = 0; j < mapData.interactables.length; j++) {
         var it = mapData.interactables[j];
         if (it.action === 'door_enter') {
-          // Đợt 6: biển cửa ghi đúng đích — cửa vào Đại Điện ghi "Đại Điện", cửa ra trong điện ghi "Ra Sơn Môn"
+          // Đợt 6 & DANMAP: biển cửa ghi đúng đích
           if (it.targetMap === 'dai-dien') {
             signs.push({ x: it.x + 118, y: it.y - 40, label: 'Đại Điện', kind: 'plaque' });
+          } else if (it.targetMap === 'phong-luyen-dan' || it.targetMap === 'dan-phong') {
+            signs.push({ x: it.x, y: it.y - 40, label: 'Đan Phòng', kind: 'plaque' });
           } else {
             signs.push({ x: it.x, y: it.y - 46, label: 'Ra ' + destName(it.targetMap), kind: 'plaque' });
           }
@@ -9879,8 +10520,21 @@
           signs.push({ x: it.x, y: it.y - 46, label: 'Ra Sơn Môn', kind: 'plaque' });
         } else if (it.action === 'open_teleport') {
           signs.push({ x: it.x, y: it.y - 96, label: 'Đài Truyền Tống', kind: 'plaque' });
+        } else if (it.action === 'lo_ren') {
+          // Đợt N1: biển tên lò rèn (chưa có hình lò riêng — ghi nợ hình).
+          signs.push({ x: it.x, y: it.y - 46, label: 'Lò Rèn', kind: 'plaque' });
+        } else if (it.action === 'bang_don_hang') {
+          // Đợt N1: biển tên bảng đơn hàng (chưa có hình bảng riêng — ghi nợ hình).
+          signs.push({ x: it.x, y: it.y - 46, label: 'Bảng Đơn Hàng', kind: 'plaque' });
         }
       }
+    }
+    // Đợt DANMAP-WIDE: biển chỉ dẫn trong Phòng Luyện Đan (map 1600x800)
+    if (mapData.id === 'phong-luyen-dan' || currentMapId === 'phong-luyen-dan') {
+      signs.push({ x: 800, y: 75, label: 'ĐAN PHÒNG', kind: 'plaque' });
+      signs.push({ x: 800, y: 350, label: 'Đan Lô', kind: 'plaque' });
+      signs.push({ x: 1320, y: 240, label: 'Nhiệm Vụ', kind: 'plaque' });
+      signs.push({ x: 260, y: 240, label: 'Tiêu Độc', kind: 'plaque' });
     }
     // Đài Truyền Tống: bia đá ghi từng điểm đến quanh đài (thấy trước khi dùng)
     if (mapData.id === 'dai-truyen-tong' || currentMapId === 'dai-truyen-tong') {
@@ -10117,6 +10771,7 @@
     resolveQuestDestination: resolveQuestDestination,
     findRoute: findRoute,
     findGuidanceHop: findGuidanceHop,
+    collectGateSigns: collectGateSigns,
     getFieldMonsters: function () { return fieldMonsters; },
     // Kiểm chứng sprite quái nạp đúng khóa (bắt lỗi lệch khóa nạp/tra cứu như Đợt 3)
     getMonsterSheetStatus: function () {

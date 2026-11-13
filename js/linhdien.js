@@ -779,9 +779,16 @@
     if (typeof stepIndex !== 'number' || stepIndex < 0 || stepIndex >= ELDER_DEMO_STEPS.length) return null;
     var step = ELDER_DEMO_STEPS[stepIndex];
     var now = (nowMs !== undefined && nowMs !== null) ? nowMs : Date.now();
+    // HỘI TỤ (tích hợp 2026-11-13): level của demo là BẬC thành thạo 1/2/3;
+    // ánh xạ SPELLFX: bậc 1 = cấp 1–2, bậc 2 = cấp 3–4, bậc 3 = cấp 5+.
+    // fxLevel là cấp đại diện (1/3/5) để lớp VFX chọn đúng bộ hiệu ứng theo
+    // bậc; level giữ nguyên 1/2/3 cho tương thích test + hiển thị bậc.
+    var fxLevel = step.level >= 3 ? 5 : (step.level === 2 ? 3 : 1);
     var castInfo = {
       spellId: step.spellId,
       level: step.level,
+      tier: step.level,
+      fxLevel: fxLevel,
       caster: 'npc_truonglao_duocdien',
       mapId: 'ruong-linh-me',
       x: 225,

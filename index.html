@@ -44,6 +44,7 @@
       </div>
 
       <div class="start-footer">
+        <button id="btn-start-intro" class="btn wood small" type="button">Xem Mở Đầu</button>
         <button id="btn-start-settings" class="btn wood small" type="button">Cài Đặt</button>
         <p class="note">Dữ liệu nhân vật và cài đặt được lưu trực tiếp trên trình duyệt.</p>
       </div>
@@ -478,6 +479,11 @@
         </div>
 
         <div class="setting-item">
+          <label>Cốt truyện mở đầu</label>
+          <button id="btn-replay-intro" class="btn wood" type="button">Xem lại cốt truyện mở đầu</button>
+        </div>
+
+        <div class="setting-item">
           <label>Hướng dẫn tân thủ</label>
           <button id="btn-restart-tutorial" class="btn wood" type="button">Chạy lại hướng dẫn tân thủ</button>
         </div>
@@ -710,74 +716,107 @@
   <!-- Modal Túi Trữ Vật (Brief §6: 8x6 = 48 ô) -->
   <div id="bag-modal" class="modal-overlay hidden">
     <div class="panel modal-box bag-box">
-      <div class="modal-header">
-        <h2 class="modal-title">TÚI TRỮ VẬT</h2>
-        <div class="bag-header-currency">
-          <span>Linh Thạch: <b id="bag-linh-thach-val" class="gold-text">0</b></span>
-          <button id="btn-sort-bag" class="btn wood hud-mini-btn" type="button" title="Gộp chồng và xếp theo phẩm">Sắp xếp</button>
+      <div class="modal-header bag-header">
+        <div class="bag-header-top">
+          <h2 class="modal-title">TÚI TRỮ VẬT</h2>
+          <button id="close-bag-modal" class="btn-close" type="button">×</button>
         </div>
-        <button id="close-bag-modal" class="btn-close" type="button">×</button>
+        <div class="bag-header-tools">
+          <button id="btn-bag-giftcode" class="btn wood bag-header-btn" type="button" title="Mở ô nhập mã quà tặng trong Cài Đặt">Gift Code</button>
+          <span class="bag-header-chip">Linh Thạch: <b id="bag-linh-thach-val" class="gold-text">0</b></span>
+          <span class="bag-header-chip">Ô: <b id="bag-slot-usage">0 / 48</b></span>
+          <button id="btn-sort-bag" class="btn wood bag-header-btn" type="button" title="Gộp chồng và xếp theo phẩm">Sắp xếp</button>
+        </div>
       </div>
       <div class="bag-body">
+        <div id="bag-fn-row" class="bag-fn-row">
+          <button class="bag-fn-btn active" type="button" data-bag-fn="gear">Trang Bị</button>
+          <button class="bag-fn-btn" type="button" data-bag-fn="skills">Sổ Chiêu</button>
+          <button class="bag-fn-btn" type="button" data-bag-fn="linhdien">Linh Điền</button>
+          <button class="bag-fn-btn" type="button" data-bag-fn="linhthu">Linh Thú</button>
+          <button class="bag-fn-btn" type="button" data-bag-fn="settings">Cài Đặt</button>
+        </div>
+
         <div class="bag-equipment-section">
           <div class="equip-section-title">TRANG BỊ ĐANG MẶC</div>
-          <div class="bag-equipment-row">
-            <div class="equip-slot-item" id="equip-slot-head" data-slot="head">
-              <span class="equip-slot-label">ĐẦU</span>
-              <div class="equip-slot-box">
-                <div class="equip-slot-icon"></div>
-                <span class="equip-slot-badge hidden">Đang mặc</span>
+          <div class="bag-equipment-stage">
+            <div class="equip-col">
+              <div class="equip-slot-item" id="equip-slot-head" data-slot="head">
+                <div class="equip-slot-box">
+                  <div class="equip-slot-icon"></div>
+                  <span class="equip-slot-badge hidden">Đang mặc</span>
+                </div>
+                <span class="equip-slot-label">ĐẦU</span>
+              </div>
+              <div class="equip-slot-item" id="equip-slot-weapon" data-slot="weapon">
+                <div class="equip-slot-box">
+                  <div class="equip-slot-icon"></div>
+                  <span class="equip-slot-badge hidden">Đang mặc</span>
+                </div>
+                <span class="equip-slot-label">VŨ KHÍ</span>
+              </div>
+              <div class="equip-slot-item" id="equip-slot-armor" data-slot="armor">
+                <div class="equip-slot-box">
+                  <div class="equip-slot-icon"></div>
+                  <span class="equip-slot-badge hidden">Đang mặc</span>
+                </div>
+                <span class="equip-slot-label">GIÁP</span>
               </div>
             </div>
-            <div class="equip-slot-item" id="equip-slot-weapon" data-slot="weapon">
-              <span class="equip-slot-label">VŨ KHÍ</span>
-              <div class="equip-slot-box">
-                <div class="equip-slot-icon"></div>
-                <span class="equip-slot-badge hidden">Đang mặc</span>
+
+            <div class="equip-center">
+              <div class="equip-slot-item" id="equip-slot-phapKhi" data-slot="phapKhi">
+                <div class="equip-slot-box">
+                  <div class="equip-slot-icon"></div>
+                  <span class="equip-slot-badge hidden">Đang mặc</span>
+                </div>
+                <span class="equip-slot-label">PHÁP KHÍ</span>
               </div>
+              <div id="bag-equip-avatar" class="equip-avatar" aria-hidden="true"></div>
+              <div id="bag-equip-name" class="equip-avatar-name">Hà Nhân</div>
             </div>
-            <div class="equip-slot-item" id="equip-slot-armor" data-slot="armor">
-              <span class="equip-slot-label">GIÁP</span>
-              <div class="equip-slot-box">
-                <div class="equip-slot-icon"></div>
-                <span class="equip-slot-badge hidden">Đang mặc</span>
+
+            <div class="equip-col">
+              <div class="equip-slot-item" id="equip-slot-shoes" data-slot="shoes">
+                <div class="equip-slot-box">
+                  <div class="equip-slot-icon"></div>
+                  <span class="equip-slot-badge hidden">Đang mặc</span>
+                </div>
+                <span class="equip-slot-label">GIÀY</span>
               </div>
-            </div>
-            <div class="equip-slot-item" id="equip-slot-shoes" data-slot="shoes">
-              <span class="equip-slot-label">GIÀY</span>
-              <div class="equip-slot-box">
-                <div class="equip-slot-icon"></div>
-                <span class="equip-slot-badge hidden">Đang mặc</span>
+              <div class="equip-slot-item" id="equip-slot-belt" data-slot="belt">
+                <div class="equip-slot-box">
+                  <div class="equip-slot-icon"></div>
+                  <span class="equip-slot-badge hidden">Đang mặc</span>
+                </div>
+                <span class="equip-slot-label">ĐAI</span>
               </div>
-            </div>
-            <div class="equip-slot-item" id="equip-slot-belt" data-slot="belt">
-              <span class="equip-slot-label">ĐAI</span>
-              <div class="equip-slot-box">
-                <div class="equip-slot-icon"></div>
-                <span class="equip-slot-badge hidden">Đang mặc</span>
-              </div>
-            </div>
-            <div class="equip-slot-item" id="equip-slot-jewelry" data-slot="jewelry">
-              <span class="equip-slot-label">TRANG SỨC</span>
-              <div class="equip-slot-box">
-                <div class="equip-slot-icon"></div>
-                <span class="equip-slot-badge hidden">Đang mặc</span>
-              </div>
-            </div>
-            <div class="equip-slot-item" id="equip-slot-phapKhi" data-slot="phapKhi">
-              <span class="equip-slot-label">PHÁP KHÍ</span>
-              <div class="equip-slot-box">
-                <div class="equip-slot-icon"></div>
-                <span class="equip-slot-badge hidden">Đang mặc</span>
+              <div class="equip-slot-item" id="equip-slot-jewelry" data-slot="jewelry">
+                <div class="equip-slot-box">
+                  <div class="equip-slot-icon"></div>
+                  <span class="equip-slot-badge hidden">Đang mặc</span>
+                </div>
+                <span class="equip-slot-label">TRANG SỨC</span>
               </div>
             </div>
           </div>
         </div>
 
+        <div id="bag-stat-row" class="bag-stat-row">
+          <div class="bag-stat"><span>Công</span><b id="bag-stat-atk">0</b></div>
+          <div class="bag-stat"><span>HP</span><b id="bag-stat-hp">0</b></div>
+          <div class="bag-stat"><span>Linh lực</span><b id="bag-stat-mp">0</b></div>
+          <div class="bag-stat"><span>Phòng thủ</span><b id="bag-stat-def">0</b></div>
+          <div class="bag-stat"><span>Bạo kích</span><b id="bag-stat-crit">0%</b></div>
+          <div class="bag-stat"><span>Hồi phục</span><b id="bag-stat-regen">0/s</b></div>
+        </div>
+
+        <div class="bag-tool-row">
+          <div id="bag-tabs" class="bag-tabs"></div>
+          <input id="bag-search" class="bag-search" type="text" placeholder="Tìm theo tên / phẩm / hệ..." />
+        </div>
         <div id="bag-container-bar" class="bag-container-bar"></div>
         <div id="bag-breadcrumb" class="bag-breadcrumb"></div>
-        <div id="bag-tabs" class="bag-tabs"></div>
-        <input id="bag-search" class="bag-search" type="text" placeholder="Tìm theo tên / phẩm / hệ..." />
         <div id="bag-storage-actions" class="bag-storage-actions"></div>
         <div id="bag-grid" class="bag-grid"></div>
 
@@ -994,9 +1033,33 @@
       <div class="danphong-tabs">
         <button id="danphong-tab-refine" class="btn wood danphong-tab active" type="button">Luyện Đan</button>
         <button id="danphong-tab-board" class="btn wood danphong-tab" type="button">Nhiệm Vụ Thu Thập</button>
+        <button id="danphong-tab-skills" class="btn wood danphong-tab" type="button">Kỹ Năng Luyện Đan</button>
       </div>
       <div id="danphong-body" class="danphong-body">
-        <!-- Nội dung hai thẻ render bởi GameDanPhong -->
+        <!-- Nội dung ba thẻ render bởi GameDanPhong -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Lò Rèn + Sổ Luyện Khí + Đơn Hàng + Nghề (Đợt N1) -->
+  <div id="n1-modal" class="modal-overlay hidden">
+    <div class="panel modal-box n1-box">
+      <div class="modal-header">
+        <div class="danphong-header-title-wrap">
+          <h2 class="modal-title">LÒ RÈN &amp; ĐƠN HÀNG</h2>
+          <span class="danphong-sub-badge">Luyện Khí — Sổ Bản Vẽ — Cải Tạo — Đơn Hàng — Nghề</span>
+        </div>
+        <button id="close-n1-modal" class="btn-close" type="button" aria-label="Đóng">×</button>
+      </div>
+      <div class="danphong-tabs n1-tabs">
+        <button id="n1-tab-forge" class="btn wood danphong-tab active" type="button" data-n1-action="tab" data-tab="forge">Luyện Khí</button>
+        <button id="n1-tab-book" class="btn wood danphong-tab" type="button" data-n1-action="tab" data-tab="book">Sổ Vẽ</button>
+        <button id="n1-tab-gear" class="btn wood danphong-tab" type="button" data-n1-action="tab" data-tab="gear">Cải Tạo</button>
+        <button id="n1-tab-orders" class="btn wood danphong-tab" type="button" data-n1-action="tab" data-tab="orders">Đơn Hàng</button>
+        <button id="n1-tab-profs" class="btn wood danphong-tab" type="button" data-n1-action="tab" data-tab="profs">Nghề</button>
+      </div>
+      <div id="n1-body" class="danphong-body n1-body">
+        <!-- Nội dung năm thẻ render bởi GameN1UI -->
       </div>
     </div>
   </div>
@@ -1149,6 +1212,34 @@
     </div>
   </div>
 
+  <!-- Lớp phủ Phân Cảnh Mở Đầu (Intro Cutscene Overlay) -->
+  <div id="intro-overlay" class="intro-overlay hidden">
+    <div id="intro-bg" class="intro-bg"></div>
+    <div class="intro-vignette"></div>
+
+    <div class="intro-header">
+      <span id="intro-progress-tag" class="intro-badge">MỞ ĐẦU — Cảnh 1/5</span>
+      <button id="btn-skip-intro" class="intro-skip-btn" type="button">Bỏ qua</button>
+    </div>
+
+    <div class="intro-dialog-container">
+      <div id="intro-portrait-wrap" class="intro-portrait-wrap">
+        <img id="intro-portrait" class="intro-portrait" src="assets/chars/hanhan-face.png" alt="Nhân vật">
+      </div>
+      <div class="intro-content-box">
+        <div class="intro-speaker-row">
+          <span id="intro-speaker" class="intro-speaker">Người Kể Chuyện</span>
+          <span id="intro-scene-title" class="intro-scene-title">Miếu Hoang Núi Tuyết</span>
+        </div>
+        <div id="intro-text" class="intro-text"></div>
+        <div class="intro-controls">
+          <button id="btn-intro-prev" class="btn wood intro-btn" type="button">Trước</button>
+          <button id="btn-intro-next" class="btn btn-main intro-btn" type="button">Tiếp Theo</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Lớp phủ Hướng Dẫn Tân Thủ (Tutorial Overlay) -->
   <div id="tutorial-overlay" class="tutorial-overlay hidden">
     <div id="tutorial-spotlight" class="tutorial-spotlight"></div>
@@ -1164,11 +1255,45 @@
     </div>
   </div>
 
+  <!-- Modal Bảng Treo Thưởng (Đợt E4: Bảng Trấn & Bảng Tông Môn) -->
+  <div id="bounty-modal" class="modal-overlay hidden">
+    <div class="panel modal-box bounty-box">
+      <div class="modal-header">
+        <div class="danphong-header-title-wrap">
+          <h2 id="bounty-modal-title" class="modal-title">BẢNG TREO THƯỞNG</h2>
+          <span id="bounty-modal-sub" class="danphong-sub-badge">Nhiệm vụ lặp lại kiếm Linh Thạch và Điểm Cống Hiến</span>
+        </div>
+        <button id="close-bounty-modal" class="btn-close" type="button" aria-label="Đóng">×</button>
+      </div>
+      <div id="bounty-modal-body" class="bounty-body">
+        <!-- Render bởi GameUI -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Tiệm Cống Hiến Tông Môn (Đợt E4: Hồ sơ 02§3.1, 22) -->
+  <div id="sect-shop-modal" class="modal-overlay hidden">
+    <div class="panel modal-box sect-shop-box">
+      <div class="modal-header">
+        <div class="danphong-header-title-wrap">
+          <h2 class="modal-title">CHẤP SỰ ĐƯỜNG — TIỆM CỐNG HIẾN & ĐỔI NGUYÊN TÁN</h2>
+          <span id="sect-shop-sub" class="danphong-sub-badge">Chức vụ tông môn & đặc quyền đổi vật phẩm Trúc Cơ</span>
+        </div>
+        <button id="close-sect-shop-modal" class="btn-close" type="button" aria-label="Đóng">×</button>
+      </div>
+      <div id="sect-shop-header-status" class="sect-shop-status-banner"></div>
+      <div id="sect-shop-body" class="sect-shop-body">
+        <!-- Render bởi GameUI -->
+      </div>
+    </div>
+  </div>
+
   <!-- Script tags theo thứ tự độc lập -> phụ thuộc -->
   <script src="js/state.js"></script>
   <script src="js/combat.js"></script>
   <script src="js/skills.js"></script>
   <script src="js/monsters.js"></script>
+  <script src="js/quests.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/music.js"></script>
   <script src="js/voice.js"></script>
@@ -1183,6 +1308,7 @@
   <script src="js/linhdien.js"></script>
   <script src="js/danphong.js"></script>
   <script src="js/luyendan.js"></script>
+  <script src="js/dan-ky-nang.js"></script>
   <script src="js/zonequests.js"></script>
   <script src="js/tieumoc.js"></script>
   <script src="js/dotpha.js"></script>
@@ -1191,6 +1317,9 @@
   <script src="js/tui-kho.js"></script>
   <script src="js/bi-canh.js"></script>
   <script src="js/linh-thu.js"></script>
+  <script src="js/nghe-luyenkhi.js"></script>
+  <script src="js/nghe-luyenkhi-ui.js"></script>
+  <script src="js/intro.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

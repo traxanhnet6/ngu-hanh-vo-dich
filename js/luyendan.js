@@ -145,6 +145,13 @@
     if (typeof global !== 'undefined' && global.GameMonsters) return global.GameMonsters;
     try { return require('./monsters.js'); } catch (e) { return null; }
   }
+  // Đợt DANSKILL: phân giải module kỹ năng luyện đan có lính gác — module
+  // vắng mặt (cây chưa gộp đợt) thì refineBatch chạy như cũ, không đổi gì.
+  function getDanKyNangAPI() {
+    if (typeof window !== 'undefined' && window.GameDanKyNang) return window.GameDanKyNang;
+    if (typeof global !== 'undefined' && global.GameDanKyNang) return global.GameDanKyNang;
+    try { return require('./dan-ky-nang.js'); } catch (e) { return null; }
+  }
   function getItemDef(itemId) {
     var m = getMonstersAPI();
     if (m && m.ITEM_DEFS && m.ITEM_DEFS[itemId]) return m.ITEM_DEFS[itemId];
@@ -561,6 +568,14 @@
       }
     }
 
+    // Đợt DANSKILL: buff kỹ năng luyện đan cho mẻ kế tiếp. Chỉ tới đây (đã
+    // qua mọi kiểm tra) mới tiêu buff — mẻ bị từ chối không mất buff.
+    var skillBuffs = { heatBonus: 0, orderBonus: 0, sealBonus: 0, applied: [] };
+    var dkAPI = getDanKyNangAPI();
+    if (dkAPI && dkAPI.consumeBuffs) {
+      skillBuffs = dkAPI.consumeBuffs(player, plan.nowMs);
+    }
+
     // fire match
     var fire = plan.fireElement || plan.fire || recipe.elem;
     var fireScore = 0;
@@ -571,15 +586,18 @@
     // heat
     var heatInput = (typeof plan.heatScore === 'number') ? plan.heatScore : (typeof plan.heat === 'number' ? plan.heat : 0.5);
     heatInput = Math.max(0, Math.min(1, heatInput));
+    heatInput = Math.max(0, Math.min(1, heatInput + (skillBuffs.heatBonus || 0))); // DANSKILL: Khống Hỏa Quyết
     var gradeInfo = getFurnaceGrade(player);
     var effHeat = Math.min(1, heatInput * (furnace.heatStability || 1) * (gradeInfo.heatRetention || 1) + proficiencyBonus(player, pillId) * 0.5);
 
     // seal
     var sealInput = (typeof plan.sealTiming === 'number') ? plan.sealTiming : (typeof plan.seal === 'number' ? plan.seal : 0.5);
     sealInput = Math.max(0, Math.min(1, sealInput));
+    sealInput = Math.max(0, Math.min(1, sealInput + (skillBuffs.sealBonus || 0))); // DANSKILL: Ngưng Đan Quyết
     var sealScore = sealInput >= 0.8 ? 1.0 : sealInput;
 
     var orderScore = mv.orderScore;
+    if (!mv.exactOrder && skillBuffs.orderBonus) orderScore = Math.min(1, orderScore + skillBuffs.orderBonus); // DANSKILL: Tịnh Dược Quyết
     var profBonus = proficiencyBonus(player, pillId);
 
     var score = fireScore * 0.1 + effHeat * 0.4 + sealScore * 0.3 + orderScore * 0.2 + profBonus;
@@ -622,7 +640,7 @@
         returned.push({ itemId: it, count: retCount });
       }
       recordProficiency(player, pillId, false);
-      return { ok: false, reason: 'slag', msg: 'Mẻ hỏng thành đan cặn.', score: score, returned: returned };
+      return { ok: false, reason: 'slag', msg: 'Mẻ hỏng thành đan cặn.', score: score, returned: returned, appliedSkills: skillBuffs.applied };
     }
 
     // grade
@@ -657,6 +675,8 @@
 
     // alchemist success counter
     s.successes = (s.successes || 0) + 1;
+    s.lastRefineAt = Date.now();
+    if (typeof window !== 'undefined') window.__danLoBurningUntil = Date.now() + 60000;
     getAlchemistRank(player);
 
     if (!player.stats) player.stats = { playSec: 0, kills: 0, bossKills: 0, harvests: 0, refines: 0 };
@@ -669,7 +689,7 @@
     showToast(msgOk);
     refreshHUD();
 
-    return { ok: true, pillId: pillId, grade: gradeName, gradeIndex: gradeIdx, danVan: danVan, score: score, materialQuality: materialQ, materialQualityName: materialQualityLabel(materialQ), kyTranUsed: kyTranUsed, msg: msgOk };
+    return { ok: true, pillId: pillId, grade: gradeName, gradeIndex: gradeIdx, danVan: danVan, score: score, materialQuality: materialQ, materialQualityName: materialQualityLabel(materialQ), kyTranUsed: kyTranUsed, appliedSkills: skillBuffs.applied, msg: msgOk };
   }
 
   function quickRefine(player, pillId, furnaceId) {

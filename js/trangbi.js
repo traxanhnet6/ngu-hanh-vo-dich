@@ -181,9 +181,17 @@
   }
 
   // Lớp 2: kiểm tra thiếu đồ
+  // Đợt N1STATS: ô trang bị có thể là object N1 — lấy id trước khi tra bậc.
+  function equipmentIdOf(value) {
+    if (!value) return null;
+    if (typeof value === 'string') return value;
+    if (typeof value === 'object' && typeof value.id === 'string') return value.id;
+    return null;
+  }
+
   function isSlotMissing(player, slot, tier) {
     if (!player || !player.equipment) return true;
-    var itemId = player.equipment[slot];
+    var itemId = equipmentIdOf(player.equipment[slot]);
     if (!itemId) return true;
     var it = itemTier(itemId);
     // thấp hơn sàn quá 2 bậc: itemTier < tier - 1 (cách >=2)
@@ -273,7 +281,7 @@
     var total = 0;
     for (var i = 0; i < SLOTS.length; i++) {
       var sl = SLOTS[i];
-      var id = player.equipment[sl];
+      var id = equipmentIdOf(player.equipment[sl]);
       if (id) {
         var d = defs ? defs[id] : null;
         if (d) {
@@ -283,7 +291,7 @@
       }
     }
     // head
-    var hid = player.equipment.head;
+    var hid = equipmentIdOf(player.equipment.head);
     if (hid) {
       var hd = defs ? defs[hid] : null;
       if (hd) {
@@ -323,7 +331,7 @@
       var set = getIssuedSet(minTier);
       for (var i = 0; i < SLOTS.length; i++) {
         var sl = SLOTS[i];
-        var id = player.equipment ? player.equipment[sl] : null;
+        var id = player.equipment ? equipmentIdOf(player.equipment[sl]) : null;
         var it = id ? itemTier(id) : 0;
         if (!id || it < minTier - 1) suggestions.push(set[sl]);
       }

@@ -28,6 +28,10 @@
 
     renderStartScreen(charList, activeCharName);
 
+    if (window.GameIntro && window.GameIntro.init) {
+      window.GameIntro.init();
+    }
+
     // Đợt 3 (Note 8): áp cài đặt hiển thị đã lưu ngay khi mở trang (cỡ HUD, cỡ nút
     // chạm, chất lượng đồ họa) + đăng ký service worker tối thiểu cho PWA
     // (pass-through, không cache — xem sw.js).
@@ -65,7 +69,30 @@
           });
           stateAPI.savePlayer(player);
         }
-        launchGame(player);
+
+        var introAPI = window.GameIntro;
+        if (introAPI && introAPI.shouldShowIntroForPlayer && introAPI.shouldShowIntroForPlayer(player)) {
+          if (screenStart) screenStart.classList.add('hidden');
+          introAPI.startIntro(player, function () {
+            launchGame(player);
+          }, false);
+        } else {
+          launchGame(player);
+        }
+      });
+    }
+
+    // Xử lý nút xem mở đầu ở màn hình bắt đầu
+    var btnStartIntro = document.getElementById('btn-start-intro');
+    if (btnStartIntro) {
+      btnStartIntro.addEventListener('click', function () {
+        if (audioAPI) audioAPI.playClick();
+        if (window.GameIntro) {
+          var nameInput = document.getElementById('input-char-name');
+          var charName = (nameInput && nameInput.value.trim()) || activeCharName || 'Hà Nhân';
+          var mockPlayer = { name: charName };
+          window.GameIntro.startIntro(mockPlayer, function () {}, true);
+        }
       });
     }
 
@@ -99,7 +126,15 @@
               player = stateAPI.createPlayer(targetName);
               stateAPI.savePlayer(player);
             }
-            launchGame(player);
+            var introAPI = window.GameIntro;
+            if (introAPI && introAPI.shouldShowIntroForPlayer && introAPI.shouldShowIntroForPlayer(player)) {
+              if (screenStart) screenStart.classList.add('hidden');
+              introAPI.startIntro(player, function () {
+                launchGame(player);
+              }, false);
+            } else {
+              launchGame(player);
+            }
           };
         }
 

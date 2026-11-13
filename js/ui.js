@@ -13,6 +13,38 @@
   var combatAPI = null;
   var monstersAPI = null;
 
+  // Đợt N1STATS: ô trang bị có thể là chuỗi id (cũ) hoặc object N1
+  // { id, quality, refineLevel, affixes, crafter } — mọi chỗ tra id phải
+  // qua hàm này (gương của GameState.equipmentIdOf).
+  function equipmentIdOf(value) {
+    if (!value) return null;
+    if (typeof value === 'string') return value;
+    if (typeof value === 'object' && typeof value.id === 'string') return value.id;
+    return null;
+  }
+
+  // Tên phẩm rèn (gương QUALITY_RANKS.name của module N1) + thoát HTML
+  // cho tên người chế tác (tên người chơi, không tin cậy khi chèn HTML).
+  var N1_QUALITY_NAMES = { ha: 'Hạ phẩm', trung: 'Trung phẩm', thuong: 'Thượng phẩm', cuc: 'Cực phẩm' };
+  function escapeHtmlText(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  // Khối dữ liệu N1 cho thẻ đồ đang mặc: phẩm, tinh luyện, dòng phụ, ký tên.
+  function equipN1Html(eq) {
+    if (!eq || typeof eq !== 'object') return '';
+    var lines = [];
+    lines.push('<div class="detail-stat-line">Phẩm rèn: <b>' + (N1_QUALITY_NAMES[eq.quality] || 'Hạ phẩm') + '</b></div>');
+    if (eq.refineLevel) lines.push('<div class="detail-stat-line">Tinh luyện: <b>+' + eq.refineLevel + '</b></div>');
+    var affixes = Array.isArray(eq.affixes) ? eq.affixes : [];
+    for (var i = 0; i < affixes.length; i++) {
+      var a = affixes[i];
+      if (!a) continue;
+      lines.push('<div class="detail-stat-line">' + escapeHtmlText(a.name || 'Dòng phụ') + ' <b>+' + (a.value || 0) + (a.unit || '') + '</b></div>');
+    }
+    if (eq.crafter) lines.push('<div class="detail-stat-line">[Chế tác: ' + escapeHtmlText(eq.crafter) + ']</div>');
+    return lines.join('');
+  }
+
   var minimapCanvas = null;
   var minimapCtx = null;
   var minimapBgImg = null;
@@ -74,6 +106,9 @@
     if (typeof window !== 'undefined' && window.GameKimDan && window.GameKimDan.attach) {
       window.GameKimDan.attach(playerObj);
     }
+    if (typeof window !== 'undefined' && window.GameN1UI && window.GameN1UI.attach) {
+      window.GameN1UI.attach(playerObj);
+    }
     // Đợt LINHME: Khởi tạo dữ liệu Vườn Linh Mễ và Thức Ăn Buff
     if (typeof window !== 'undefined' && window.GameTongMonFarm && window.GameTongMonFarm.ensureState) {
       window.GameTongMonFarm.ensureState(playerObj);
@@ -87,8 +122,12 @@
     if (!mapData) return;
     if (currentMinimapMapId !== mapData.id) {
       currentMinimapMapId = mapData.id;
-      minimapBgImg = new Image();
-      minimapBgImg.src = mapData.bgImage;
+      if (mapData.bgImage) {
+        minimapBgImg = new Image();
+        minimapBgImg.src = mapData.bgImage;
+      } else {
+        minimapBgImg = null;
+      }
       var lbl = document.getElementById('minimap-label');
       if (lbl) {
         lbl.textContent = mapData.name || 'Miếu Hoang';
@@ -165,6 +204,45 @@
 
     if (btnBag) btnBag.addEventListener('click', toggleBag);
     if (closeBag) closeBag.addEventListener('click', closeBagModal);
+
+    // BAGLAYOUT: hàng nút chức năng + Gift Code trong đầu bảng túi.
+    // Mọi nút gọi đúng chức năng đã có, không thêm luồng mới.
+    var bagFnRow = document.getElementById('bag-fn-row');
+    if (bagFnRow && !bagFnRow.dataset.wired) {
+      bagFnRow.dataset.wired = '1';
+      bagFnRow.addEventListener('click', function (e) {
+        var btn = e.target && e.target.closest ? e.target.closest('.bag-fn-btn') : null;
+        if (!btn) return;
+        var fn = btn.getAttribute('data-bag-fn');
+        if (fn === 'gear') {
+          var sec = document.querySelector('.bag-equipment-section');
+          if (sec && sec.scrollIntoView) sec.scrollIntoView({ block: 'nearest' });
+          return;
+        }
+        if (fn === 'skills') { closeBagModal(); openCharPanel(); return; }
+        if (fn === 'linhdien') {
+          closeBagModal();
+          var ld = document.getElementById('btn-linhdien');
+          if (ld) ld.click();
+          return;
+        }
+        if (fn === 'linhthu') { closeBagModal(); openLinhThu(); return; }
+        if (fn === 'settings') { closeBagModal(); openSettingsModal(); return; }
+      });
+    }
+    var bagGiftBtn = document.getElementById('btn-bag-giftcode');
+    if (bagGiftBtn && !bagGiftBtn.dataset.wired) {
+      bagGiftBtn.dataset.wired = '1';
+      bagGiftBtn.addEventListener('click', function () {
+        closeBagModal();
+        openSettingsModal();
+        var input = document.getElementById('giftcode-input');
+        if (input) {
+          if (input.scrollIntoView) input.scrollIntoView({ block: 'center' });
+          setTimeout(function () { try { input.focus(); } catch (err) {} }, 60);
+        }
+      });
+    }
 
     // Đợt N2: nút Linh Thú (HUD) + Thuần Phục/Hợp Kích (cụm chiến đấu) + lối vào từ Cài Đặt.
     var btnLinhThu = document.getElementById('btn-linhthu');
@@ -364,6 +442,7 @@
     initJoystick();
     wireSettingsExtras();
     wireQuestToggle();
+    wireBountyModals();
     startClockAndIdleWatch();
 
     // Đợt LINHME: Canh tác Linh Mễ, Đổi thức ăn, Việc vụ Tông Môn
@@ -931,8 +1010,20 @@
     }
   }
 
-  // ---------- ĐỢT 6: MỞ LẠI HƯỚNG DẪN + XÓA NHÂN VẬT (mục 15/16) ----------
+  // ---------- ĐỢT 6: MỞ LẠI HƯỚNG DẪN + XÓA NHÂN VẬT (mục 15/16) + XEM LẠI MỞ ĐẦU ----------
   function wireTutorialAndDelete() {
+    var btnReplayIntro = document.getElementById('btn-replay-intro');
+    if (btnReplayIntro && !btnReplayIntro.dataset.wired) {
+      btnReplayIntro.dataset.wired = '1';
+      btnReplayIntro.addEventListener('click', function () {
+        var sm = document.getElementById('settings-modal');
+        if (sm) sm.classList.add('hidden');
+        if (typeof window !== 'undefined' && window.GameIntro) {
+          window.GameIntro.startIntro(player, function () {}, true);
+        }
+      });
+    }
+
     var btnTut = document.getElementById('btn-restart-tutorial');
     if (btnTut && !btnTut.dataset.wired) {
       btnTut.dataset.wired = '1';
@@ -1105,6 +1196,8 @@
     renderBagTabs();
     renderBagStorageActions();
 
+    updateBagSlotUsage(container);
+
     gridEl.innerHTML = '';
     var defs = monstersAPI ? monstersAPI.ITEM_DEFS : {};
     var slots = container.slots || [];
@@ -1153,6 +1246,19 @@
             lockSpan.className = 'bag-slot-lock';
             lockSpan.textContent = 'KHÓA';
             slotDiv.appendChild(lockSpan);
+          }
+          // Đợt N1FIX (§8.6): chip dữ liệu N1 của đồ rèn (+N tinh luyện hoặc
+          // phẩm ngắn) + viền nhuốm màu phẩm. Không đổi kích thước ô/lưới.
+          if (def.type === 'gear') {
+            var chipTxt = n1ChipText(slotData);
+            if (chipTxt) {
+              var n1Span = document.createElement('span');
+              n1Span.className = 'bag-slot-n1';
+              n1Span.textContent = chipTxt;
+              slotDiv.appendChild(n1Span);
+            }
+            var n1d = describeN1SlotSafe(slotData);
+            if (n1d && n1d.quality) slotDiv.classList.add('n1-q-' + n1d.quality);
           }
         }
 
@@ -1329,11 +1435,16 @@
         if (!wrap) return;
         var iconEl = wrap.querySelector('.equip-slot-icon');
         var badgeEl = wrap.querySelector('.equip-slot-badge');
-        var itemId = player.equipment[slotName];
+        var boxEl = wrap.querySelector('.equip-slot-box');
+        var itemId = equipmentIdOf(player.equipment[slotName]);
         var def = itemId ? defs[itemId] : null;
         if (iconEl) {
-          if (def) setIconSprite(iconEl, def, 32);
+          if (def) setIconSprite(iconEl, def, 38);
           else { iconEl.style.backgroundImage = 'none'; }
+        }
+        // BAGLAYOUT: viền ô theo đúng thang phẩm của game (ô trống viền mờ).
+        if (boxEl) {
+          boxEl.className = 'equip-slot-box' + (def ? ' equipped quality-' + (def.quality || 'common') : '');
         }
         if (badgeEl) badgeEl.classList.toggle('hidden', !def);
         wrap.classList.toggle('selected', selectedEquipSlot === slotName);
@@ -1348,6 +1459,84 @@
         }
       })(slots[i]);
     }
+    updateBagStats();
+    var nameEl = document.getElementById('bag-equip-name');
+    if (nameEl) nameEl.textContent = player.name || 'Hà Nhân';
+  }
+
+  // BAGLAYOUT: hàng chỉ số trong túi — đọc đúng nguồn số đã có của Bảng Nhân
+  // Vật (stateAPI.deriveStats gồm cả trang bị đang mặc), không đổi công thức.
+  function updateBagStats() {
+    if (!player || !stateAPI || !stateAPI.deriveStats) return;
+    var stats = stateAPI.deriveStats(player.paths, player.equipment);
+    var values = {
+      'bag-stat-atk': stats.attack,
+      'bag-stat-hp': stats.hpMax,
+      'bag-stat-mp': stats.linhLucMax,
+      'bag-stat-def': stats.defense,
+      'bag-stat-crit': stats.critRate + '%',
+      'bag-stat-regen': stats.regenRate + '/s'
+    };
+    Object.keys(values).forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.textContent = values[id];
+    });
+  }
+
+  // BAGLAYOUT: số ô đã dùng / tổng ô của vật chứa đang mở.
+  function updateBagSlotUsage(container) {
+    var el = document.getElementById('bag-slot-usage');
+    if (!el) return;
+    var slots = (container && container.slots) || [];
+    var used = 0;
+    for (var i = 0; i < slots.length; i++) {
+      var s = slots[i];
+      if (s && (s.itemId || s.containerId)) used++;
+    }
+    el.textContent = used + ' / ' + slots.length;
+  }
+
+  // Đợt N1FIX (§8.6): dữ liệu N1 của đồ rèn trong túi. Màu phẩm dùng chung
+  // thang HERBQ để khi gộp không lệch (Hạ xám, Trung xanh lá, Thượng xanh
+  // dương, Cực tím). Đồ đang mặc không có dữ liệu N1 (chỉ lưu id — §8.1,
+  // đợt N1STATS), nên khối này chỉ hiện cho ô trong túi.
+  var N1_QUALITY_COLORS = { ha: '#8b8b8b', trung: '#4f9d69', thuong: '#4f83c4', cuc: '#b07ad6' };
+  var N1_QUALITY_SHORT = { ha: 'Hạ', trung: 'Trung', thuong: 'Thượng', cuc: 'Cực' };
+
+  function n1Esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function describeN1SlotSafe(slot) {
+    if (typeof window !== 'undefined' && window.GameN1 && window.GameN1.describeN1Slot) {
+      try { return window.GameN1.describeN1Slot(slot); } catch (e) { return null; }
+    }
+    return null;
+  }
+
+  function detailN1Html(slot) {
+    var d = describeN1SlotSafe(slot);
+    if (!d) return '';
+    var color = N1_QUALITY_COLORS[d.quality] || N1_QUALITY_COLORS.ha;
+    var h = '<div class="detail-n1">';
+    h += '<div class="detail-stat-line">Phẩm rèn: <b style="color:' + color + '">' + n1Esc(d.qualityName) + '</b></div>';
+    if (d.refineLevel > 0) h += '<div class="detail-stat-line">Tinh luyện: <b>+' + d.refineLevel + '</b></div>';
+    for (var i = 0; i < d.affixLines.length; i++) {
+      h += '<div class="detail-stat-line detail-n1-affix">' + n1Esc(d.affixLines[i]) + '</div>';
+    }
+    if (d.crafter) h += '<div class="detail-stat-line">[Chế tác: ' + n1Esc(d.crafter) + ']</div>';
+    h += '</div>';
+    return h;
+  }
+
+  function n1ChipText(slot) {
+    var d = describeN1SlotSafe(slot);
+    if (!d) return null;
+    if (d.refineLevel > 0) return '+' + d.refineLevel;
+    if (d.quality && d.quality !== 'ha') return N1_QUALITY_SHORT[d.quality] || d.quality;
+    return null;
   }
 
   function detailStatsHtml(def, itemId) {
@@ -1380,14 +1569,19 @@
     var itemId = null;
     var count = null;
     var equipped = false;
+    var selectedSlot = null;
+    var equippedData = null;
     if (selectedEquipSlot && player.equipment && player.equipment[selectedEquipSlot]) {
-      itemId = player.equipment[selectedEquipSlot];
+      var eqVal = player.equipment[selectedEquipSlot];
+      itemId = equipmentIdOf(eqVal);
+      equippedData = (eqVal && typeof eqVal === 'object') ? eqVal : null;
       equipped = true;
     } else if (selectedBagSlot !== null && selectedBagSlot !== undefined) {
       var _slots = currentBagSlots();
       if (_slots && _slots[selectedBagSlot]) {
-        itemId = _slots[selectedBagSlot].itemId;
-        count = _slots[selectedBagSlot].count || 1;
+        selectedSlot = _slots[selectedBagSlot];
+        itemId = selectedSlot.itemId;
+        count = selectedSlot.count || 1;
       }
     }
 
@@ -1426,6 +1620,7 @@
     if (countEl) countEl.textContent = equipped ? 'Đang trang bị' : ('Số lượng: ' + (count || 1));
     var statsEl = document.getElementById('detail-card-stats');
     if (statsEl) statsEl.innerHTML = detailStatsHtml(def, itemId);
+    if (statsEl && equipped && equippedData) statsEl.innerHTML += equipN1Html(equippedData);
     if (statsEl && def.type === 'gear' && tuiKhoAPI && tuiKhoAPI.compareGear) {
       var cmp = tuiKhoAPI.compareGear(player, itemId);
       if (cmp && cmp.ok && cmp.diff) {
@@ -1440,6 +1635,10 @@
         cmpHtml += '</div>';
         statsEl.innerHTML += cmpHtml;
       }
+    }
+    // Đợt N1FIX (§8.6): khối dữ liệu N1 của đồ rèn (chỉ ô trong túi).
+    if (statsEl && !equipped && selectedSlot && def.type === 'gear') {
+      statsEl.innerHTML += detailN1Html(selectedSlot);
     }
     var descEl = document.getElementById('detail-card-desc');
     if (descEl) descEl.textContent = def.desc || '';
@@ -1663,9 +1862,10 @@
     if (!farmApi || !player) return;
 
     farmApi.ensureState(player);
+    // Hội tụ PEST: tick lây lan khi modal ruộng mở (cùng nhịp Linh Điền).
+    if (farmApi.checkFarmPestSpread) farmApi.checkFarmPestSpread(player, Date.now());
     var pConfigs = farmApi.getPlotsConfig();
     var now = Date.now();
-    if (farmApi.checkFarmPestSpread) farmApi.checkFarmPestSpread(player, now);
     var html = '';
 
     // Hàng Pháp Quyết Canh Tác (4 Kỹ Năng)
@@ -1683,8 +1883,9 @@
       var cdRemain = (spState && spState.cooldownUntil && spState.cooldownUntil > now)
         ? Math.ceil((spState.cooldownUntil - now) / 1000)
         : 0;
-      var btnDisable = !learned || cdRemain > 0 || (player.linhLuc || 0) < (farmApi.getFarmSpellCost ? farmApi.getFarmSpellCost(player, sp.id) : sp.costMP);
-      var btnText = sp.name + ' (' + (farmApi.getFarmSpellCost ? farmApi.getFarmSpellCost(player, sp.id) : sp.costMP) + ' MP)';
+      var castCost = farmApi.getSpellCastCost ? farmApi.getSpellCastCost(player, sp.id) : sp.costMP;
+      var btnDisable = !learned || cdRemain > 0 || (player.linhLuc || 0) < castCost;
+      var btnText = sp.name + ' (' + castCost + ' LL)';
       if (!learned) btnText += ' [Chưa học]';
       else if (cdRemain > 0) btnText += ' [' + cdRemain + 's]';
 
@@ -1769,6 +1970,10 @@
       btn.addEventListener('click', function () {
         var sid = btn.getAttribute('data-spell');
         var res = farmApi.castFarmSpell(player, sid, Date.now());
+        // Móc VFX theo bậc (như nút thi triển của Linh Điền).
+        if (typeof window !== 'undefined' && window.GameVFX && window.GameVFX.onSpellCast) {
+          try { window.GameVFX.onSpellCast(res); } catch (e) {}
+        }
         if (showToast) showToast(res.msg);
         if (res.ok && audioAPI && audioAPI.playChime) audioAPI.playChime();
         renderTongMonFarmModal();
@@ -1913,8 +2118,8 @@
       var cdRemain = (spState && spState.cooldownUntil && spState.cooldownUntil > now)
         ? Math.ceil((spState.cooldownUntil - now) / 1000)
         : 0;
-      var curCost = farmApi.getFarmSpellCost ? farmApi.getFarmSpellCost(player, sp.id) : sp.costMP;
-      var disabled = !learned || cdRemain > 0 || (player.linhLuc || 0) < curCost;
+      var barCost = farmApi.getSpellCastCost ? farmApi.getSpellCastCost(player, sp.id) : sp.costMP;
+      var disabled = !learned || cdRemain > 0 || (player.linhLuc || 0) < barCost;
 
       var btn = document.createElement('button');
       btn.className = 'farm-skill-btn' + (disabled ? ' disabled' : '');
@@ -1930,7 +2135,7 @@
 
       var costEl = document.createElement('div');
       costEl.className = 'farm-skill-cost';
-      costEl.textContent = learned ? (curCost + 'MP') : 'Khóa';
+      costEl.textContent = learned ? (barCost + 'LL') : 'Khóa';
       btn.appendChild(costEl);
 
       if (cdRemain > 0) {
@@ -1943,6 +2148,10 @@
       (function (spellId) {
         btn.addEventListener('click', function () {
           var res = farmApi.castFarmSpell(player, spellId, Date.now());
+          // Móc VFX theo bậc (như nút thi triển của Linh Điền).
+          if (typeof window !== 'undefined' && window.GameVFX && window.GameVFX.onSpellCast) {
+            try { window.GameVFX.onSpellCast(res); } catch (e) {}
+          }
           if (showToast) showToast(res.msg);
           if (res.ok) {
             if (audioAPI && audioAPI.playChime) audioAPI.playChime();
@@ -1972,6 +2181,9 @@
     if (modal) modal.classList.add('hidden');
   }
 
+  // HỘI TỤ (lệnh Bui 01:32): modal này chỉ XEM trạng thái 4 pháp quyết —
+  // học duy nhất qua Trưởng Lão Dược Điền + nhiệm vụ nhập tông, không bán
+  // bằng Linh Thạch nữa.
   function renderFarmSpellLearnModal() {
     var listEl = document.getElementById('farm-spell-learn-list');
     if (!listEl) return;
@@ -1984,18 +2196,23 @@
     for (var i = 0; i < spells.length; i++) {
       var sp = spells[i];
       var learned = farmApi.isSpellLearned(player, sp.id);
-      var curCostLearn = farmApi.getFarmSpellCost ? farmApi.getFarmSpellCost(player, sp.id) : sp.costMP;
+      var spState = (player.linhDien && player.linhDien.spells) ? player.linhDien.spells[sp.id] : null;
+      var cost = farmApi.getSpellCastCost ? farmApi.getSpellCastCost(player, sp.id) : sp.costMP;
+      var levelTxt = (spState && spState.level) ? ('Cấp ' + spState.level) : 'Cấp 1';
+      var usesTxt = (spState && spState.uses) ? (' · đã thi ' + spState.uses + ' lần') : '';
 
       html += '<div class="farm-spell-learn-item">';
       html += '  <div style="flex:1;">';
-      html += '    <div style="font-size:14px; font-weight:700; color:#ffd700;">' + sp.icon + ' ' + sp.name + ' <span style="font-size:11px; color:#7fd2ff;">(' + curCostLearn + ' MP, hồi ' + sp.cooldownSec + 's)</span></div>';
+      html += '    <div style="font-size:14px; font-weight:700; color:#ffd700;">' + sp.icon + ' ' + sp.name + ' <span style="font-size:11px; color:#7fd2ff;">(' + cost + ' LL, hồi ' + sp.cooldownSec + 's)</span></div>';
       html += '    <div style="font-size:12px; color:#cbd5e1; margin-top:3px;">' + sp.desc + '</div>';
       html += '  </div>';
-      html += '  <div>';
+      html += '  <div style="text-align:right;">';
       if (learned) {
         html += '    <span style="color:#58b858; font-weight:bold; font-size:13px;">Đã Lĩnh Ngộ</span>';
+        html += '    <div style="font-size:11px; color:#94a3b8; margin-top:3px;">' + levelTxt + usesTxt + '</div>';
       } else {
-        html += '    <span style="color:#ffe9a8; font-size:12px;">Bái kiến Trưởng Lão Dược Điền tại Ruộng Linh Mễ để học</span>';
+        html += '    <span style="color:#ffb84d; font-weight:bold; font-size:12px;">Chưa học</span>';
+        html += '    <div style="font-size:11px; color:#94a3b8; margin-top:3px;">Học qua Trưởng Lão Dược Điền<br>(nhiệm vụ nhập tông, miễn phí)</div>';
       }
       html += '  </div>';
       html += '</div>';
@@ -2226,6 +2443,254 @@
     if (descEl) descEl.textContent = (def ? def.desc : '') + ' (Số lượng: ' + (slotData.count || 1) + ')';
   }
 
+  // ---------- ĐỢT E4: BẢNG TREO THƯỞNG 2 BẢNG + TIỆM CỐNG HIẾN TÔNG MÔN ----------
+
+  function openBountyBoardModal(boardId) {
+    var modal = document.getElementById('bounty-modal');
+    if (!modal) return;
+    var titleEl = document.getElementById('bounty-modal-title');
+    var subEl = document.getElementById('bounty-modal-sub');
+    var bodyEl = document.getElementById('bounty-modal-body');
+    if (!bodyEl) return;
+
+    var isSect = (boardId === 'board_sect');
+    if (titleEl) titleEl.textContent = isSect ? 'BẢNG TREO THƯỞNG TÔNG MÔN' : 'BẢNG TREO THƯỞNG TRẤN';
+    if (subEl) subEl.textContent = isSect ? 'Nhiệm vụ tông môn — Thưởng Linh Thạch & Điểm Cống Hiến' : 'Nhiệm vụ lặp lại — Thưởng Linh Thạch hỗ trợ tu sĩ';
+
+    var qAPI = (typeof window !== 'undefined' && window.GameQuests) ? window.GameQuests : null;
+    if (!qAPI) return;
+
+    var quests = qAPI.getBoardQuests(player, boardId);
+    bodyEl.innerHTML = '';
+
+    if (quests.length === 0) {
+      bodyEl.innerHTML = '<div style="padding:20px;text-align:center;color:#aaa;">Không có nhiệm vụ nào trên bảng lúc này.</div>';
+    } else {
+      for (var i = 0; i < quests.length; i++) {
+        (function (item) {
+          var def = item.def;
+          var status = item.status;
+          var card = document.createElement('div');
+          card.className = 'bounty-card ' + status;
+
+          var info = document.createElement('div');
+          info.className = 'bounty-info';
+
+          var title = document.createElement('div');
+          title.className = 'bounty-title';
+          title.textContent = def.title;
+
+          var desc = document.createElement('div');
+          desc.className = 'bounty-desc';
+          desc.textContent = def.desc;
+
+          var meta = document.createElement('div');
+          meta.className = 'bounty-meta';
+          var rewText = [];
+          if (def.rewards && def.rewards.linhThach) rewText.push('<span class="reward-lt">+' + def.rewards.linhThach + ' LT</span>');
+          if (def.rewards && def.rewards.sectContribution) rewText.push('<span class="reward-sect">+' + def.rewards.sectContribution + ' Cống Hiến</span>');
+          meta.innerHTML = rewText.join(' · ');
+
+          // Tiến độ nếu đang làm
+          if (item.progress && def.objectives) {
+            var progTexts = [];
+            for (var j = 0; j < def.objectives.length; j++) {
+              var obj = def.objectives[j];
+              var oP = item.progress.objectives && item.progress.objectives[obj.id];
+              var cur = oP ? oP.current : 0;
+              progTexts.push('Tiến độ: ' + cur + '/' + obj.needed);
+            }
+            if (progTexts.length > 0) {
+              var pDiv = document.createElement('div');
+              pDiv.style.fontSize = '11px';
+              pDiv.style.color = status === 'ready_to_turn_in' ? '#ffd700' : '#88e0ef';
+              pDiv.textContent = progTexts.join(', ');
+              meta.appendChild(pDiv);
+            }
+          }
+
+          info.appendChild(title);
+          info.appendChild(desc);
+          info.appendChild(meta);
+          card.appendChild(info);
+
+          // Nút hành động
+          var actWrap = document.createElement('div');
+          actWrap.style.display = 'flex';
+          actWrap.style.gap = '6px';
+          actWrap.style.alignItems = 'center';
+
+          if (status === 'available') {
+            var btnAccept = document.createElement('button');
+            btnAccept.type = 'button';
+            btnAccept.className = 'btn wood';
+            btnAccept.textContent = 'Nhận Việc';
+            btnAccept.addEventListener('click', function () {
+              var r = qAPI.acceptQuest(player, def.id);
+              if (r && r.msg) showToast(r.msg);
+              openBountyBoardModal(boardId);
+              refreshHUD();
+            });
+            actWrap.appendChild(btnAccept);
+          } else if (status === 'ready_to_turn_in') {
+            var btnTurnIn = document.createElement('button');
+            btnTurnIn.type = 'button';
+            btnTurnIn.className = 'btn gold';
+            btnTurnIn.textContent = 'Trả Việc';
+            btnTurnIn.addEventListener('click', function () {
+              var r = qAPI.turnInQuest(player, def.id);
+              if (r && r.msg) showToast(r.msg);
+              openBountyBoardModal(boardId);
+              refreshHUD();
+            });
+            actWrap.appendChild(btnTurnIn);
+          } else if (status === 'in_progress') {
+            var spanProg = document.createElement('span');
+            spanProg.style.fontSize = '12px';
+            spanProg.style.color = '#88e0ef';
+            spanProg.textContent = 'Đang làm';
+            actWrap.appendChild(spanProg);
+
+            var btnAbandon = document.createElement('button');
+            btnAbandon.type = 'button';
+            btnAbandon.className = 'btn wood';
+            btnAbandon.style.fontSize = '11px';
+            btnAbandon.textContent = 'Hủy';
+            btnAbandon.addEventListener('click', function () {
+              qAPI.abandonQuest(player, def.id);
+              openBountyBoardModal(boardId);
+              refreshHUD();
+            });
+            actWrap.appendChild(btnAbandon);
+          } else if (status === 'on_cooldown') {
+            var spanCd = document.createElement('span');
+            spanCd.style.fontSize = '12px';
+            spanCd.style.color = '#ff9800';
+            spanCd.textContent = 'Hồi (' + item.remainCooldownSec + 's)';
+            actWrap.appendChild(spanCd);
+          } else if (status === 'locked') {
+            var spanLock = document.createElement('span');
+            spanLock.style.fontSize = '11px';
+            spanLock.style.color = '#e57373';
+            spanLock.textContent = item.msg || 'Chưa mở';
+            actWrap.appendChild(spanLock);
+          } else if (status === 'completed') {
+            var spanDone = document.createElement('span');
+            spanDone.style.fontSize = '12px';
+            spanDone.style.color = '#81c784';
+            spanDone.textContent = 'Đã xong';
+            actWrap.appendChild(spanDone);
+          }
+
+          card.appendChild(actWrap);
+          bodyEl.appendChild(card);
+        })(quests[i]);
+      }
+    }
+
+    modal.classList.remove('hidden');
+  }
+
+  function closeBountyBoardModal() {
+    var modal = document.getElementById('bounty-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  function openSectShopModal() {
+    var modal = document.getElementById('sect-shop-modal');
+    if (!modal) return;
+    var statusEl = document.getElementById('sect-shop-header-status');
+    var bodyEl = document.getElementById('sect-shop-body');
+    if (!bodyEl) return;
+
+    var qAPI = (typeof window !== 'undefined' && window.GameQuests) ? window.GameQuests : null;
+    if (!qAPI) return;
+
+    var qs = player && player.questState ? player.questState : qAPI.ensureQuestState(player);
+    var sect = qs.sect || { rank: 1, contribution: 0, lifetimeContribution: 0 };
+    var rankInfo = qAPI.getSectRankInfo(sect.rank || 1);
+
+    if (statusEl) {
+      statusEl.innerHTML = '<span>Chức vụ: <b>' + rankInfo.name + '</b> (Bậc ' + (sect.rank || 1) + ')</span>' +
+        '<span>Điểm Cống Hiến: <b>' + (sect.contribution || 0) + '</b> (Trọn đời: ' + (sect.lifetimeContribution || 0) + ')</span>' +
+        '<span>Linh Thạch: <b>' + (player ? (player.linhThach || 0) : 0) + '</b></span>';
+    }
+
+    var items = qAPI.getSectShopItems(player);
+    bodyEl.innerHTML = '';
+
+    for (var i = 0; i < items.length; i++) {
+      (function (it) {
+        var card = document.createElement('div');
+        card.className = 'sect-shop-card';
+
+        var info = document.createElement('div');
+        info.className = 'sect-shop-info';
+
+        var title = document.createElement('div');
+        title.className = 'sect-shop-title';
+        title.textContent = it.name;
+
+        var desc = document.createElement('div');
+        desc.className = 'sect-shop-desc';
+        desc.textContent = it.desc;
+
+        var meta = document.createElement('div');
+        meta.className = 'sect-shop-meta';
+        var priceHtml = 'Giá: <span class="reward-sect">' + it.costContribution + ' Cống Hiến</span> + <span class="reward-lt">' + it.costLinhThach + ' LT</span>';
+        if (it.hasDiscount) {
+          priceHtml += ' <span style="color:#ffd700;font-size:10px;background:#4a3800;padding:1px 4px;border-radius:3px;">-20% Chân Truyền</span>';
+        }
+        meta.innerHTML = priceHtml;
+
+        info.appendChild(title);
+        info.appendChild(desc);
+        info.appendChild(meta);
+        card.appendChild(info);
+
+        var btnBuy = document.createElement('button');
+        btnBuy.type = 'button';
+        if (it.canBuy) {
+          btnBuy.className = 'btn wood';
+          btnBuy.textContent = 'Đổi Vật Phẩm';
+          btnBuy.addEventListener('click', function () {
+            var r = qAPI.buySectShopItem(player, it.itemId);
+            if (r && r.msg) showToast(r.msg);
+            openSectShopModal();
+            refreshHUD();
+          });
+        } else {
+          btnBuy.className = 'btn wood disabled';
+          btnBuy.disabled = true;
+          btnBuy.textContent = it.lockReason || 'Không thể đổi';
+        }
+
+        card.appendChild(btnBuy);
+        bodyEl.appendChild(card);
+      })(items[i]);
+    }
+
+    modal.classList.remove('hidden');
+  }
+
+  function closeSectShopModal() {
+    var modal = document.getElementById('sect-shop-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  function wireBountyModals() {
+    var closeBountyBtn = document.getElementById('close-bounty-modal');
+    if (closeBountyBtn && !closeBountyBtn.dataset.wired) {
+      closeBountyBtn.dataset.wired = '1';
+      closeBountyBtn.addEventListener('click', closeBountyBoardModal);
+    }
+    var closeSectShopBtn = document.getElementById('close-sect-shop-modal');
+    if (closeSectShopBtn && !closeSectShopBtn.dataset.wired) {
+      closeSectShopBtn.dataset.wired = '1';
+      closeSectShopBtn.addEventListener('click', closeSectShopModal);
+    }
+  }
+
   /**
    * Hiển thị bảng gục ngã (Death Modal)
    */
@@ -2375,7 +2840,7 @@
     var el = document.getElementById('hud-portrait');
     if (!el || !player) return;
     var s = stateAPI ? stateAPI.loadSettings() : null;
-    var wearing = player.equipment && player.equipment.head === 'non-la' && !(s && s.hideHat);
+    var wearing = player.equipment && equipmentIdOf(player.equipment.head) === 'non-la' && !(s && s.hideHat);
     if (wearing) {
       if (hatFaceProbe === null) {
         hatFaceProbe = 'loading';
@@ -2801,6 +3266,49 @@
         }
       } else {
         distEl.textContent = 'Tự do rèn luyện';
+      }
+    }
+
+    // Đợt E4: Hiển thị danh sách các nhiệm vụ đang theo dõi (tối đa 5)
+    var qAPI = (typeof window !== 'undefined' && window.GameQuests) ? window.GameQuests : null;
+    if (qAPI && player && player.questState) {
+      var trackedList = qAPI.getTrackedQuests(player);
+      var trackedContainer = document.getElementById('quest-tracked-list');
+      if (!trackedContainer) {
+        var body = document.querySelector('#quest-panel .quest-body');
+        if (body) {
+          trackedContainer = document.createElement('div');
+          trackedContainer.id = 'quest-tracked-list';
+          trackedContainer.style.marginTop = '6px';
+          trackedContainer.style.borderTop = '1px dashed #66522c';
+          trackedContainer.style.paddingTop = '4px';
+          body.appendChild(trackedContainer);
+        }
+      }
+      if (trackedContainer) {
+        if (trackedList.length > 1) {
+          trackedContainer.innerHTML = '';
+          for (var tIdx = 0; tIdx < trackedList.length; tIdx++) {
+            (function (tItem) {
+              var tDiv = document.createElement('div');
+              tDiv.style.fontSize = '11px';
+              tDiv.style.cursor = 'pointer';
+              tDiv.style.padding = '2px 0';
+              tDiv.style.color = tItem.isPinned ? '#ffd700' : '#aaa';
+              tDiv.textContent = (tItem.isPinned ? '📌 ' : '▫ ') + tItem.def.title;
+              tDiv.title = 'Bấm để ghim dẫn đường';
+              tDiv.addEventListener('click', function (e) {
+                e.stopPropagation();
+                qAPI.setPinned(player, tItem.def.id);
+                updateQuestPanel();
+              });
+              trackedContainer.appendChild(tDiv);
+            })(trackedList[tIdx]);
+          }
+          trackedContainer.classList.remove('hidden');
+        } else {
+          trackedContainer.innerHTML = '';
+        }
       }
     }
   }
@@ -3304,7 +3812,28 @@
       });
       mkBtn('Vào Đan Phòng (Luyện Đan)', function () {
         closeDialogue();
-        if (dp.openPanel) dp.openPanel('refine');
+        if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.switchMap) {
+          window.GameEngine.switchMap('phong-luyen-dan', { x: 800, y: 700 });
+        } else if (dp.openPanel) {
+          dp.openPanel('refine');
+        }
+      });
+    }
+    // Đợt LINHME: Việc vụ Tông Môn (Linh Mễ) tại Chấp Sự
+    mkBtn('Việc Vụ Tông Môn (Linh Mễ)', function () {
+      closeDialogue();
+      openSectQuestModal();
+    });
+
+    // Đợt E4: Bảng Treo Thưởng Tông Môn & Tiệm Cống Hiến (Hồ sơ 02§3.1, 22)
+    if (player && player.quests && (player.quests.sectStage || 0) >= 4) {
+      mkBtn('Bảng Treo Thưởng Tông Môn', function () {
+        closeDialogue();
+        openBountyBoardModal('board_sect');
+      });
+      mkBtn('Tiệm Cống Hiến & Đổi Nguyên Tán', function () {
+        closeDialogue();
+        openSectShopModal();
       });
     }
     // Đợt LINHME: Việc vụ Tông Môn (Linh Mễ) tại Chấp Sự
@@ -3351,6 +3880,44 @@
     });
     mkBtn('Rời đi', function () { closeDialogue(); });
   }
+
+  // Đợt LINHME: Lựa chọn dịch vụ của Dược Sư (Vườn Linh Mễ, Việc Tông, Đổi Thức Ăn)
+  function showDuocSuChoices() {
+    dialogueState.choiceShown = true;
+    var box = document.getElementById('dialogue-choices');
+    if (!box) { closeDialogue(); return; }
+    box.innerHTML = '';
+    box.classList.remove('hidden');
+    var mkBtn = function (label, fn) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn wood dialogue-choice-btn';
+      b.textContent = label;
+      b.addEventListener('click', function (e) {
+        e.stopPropagation();
+        fn();
+      });
+      box.appendChild(b);
+    };
+    mkBtn('Vườn Linh Mễ Tông Môn (32 Ô Đất)', function () {
+      closeDialogue();
+      openTongMonFarmModal();
+    });
+    mkBtn('Xem Pháp Quyết Canh Tác (4 Kỹ Năng)', function () {
+      closeDialogue();
+      openFarmSpellLearnModal();
+    });
+    mkBtn('Việc Vụ Tông Môn (Canh Tác Linh Mễ)', function () {
+      closeDialogue();
+      openSectQuestModal();
+    });
+    mkBtn('Đổi Linh Thực / Thức Ăn Hồi Phục', function () {
+      closeDialogue();
+      openFoodExchangeModal();
+    });
+    mkBtn('Rời đi', function () { closeDialogue(); });
+  }
+
 
   // Đợt N2: menu Tuần Thú Sư theo đúng khung menu NPC của Chấp Sự.
   function showTuanThuSuChoices() {
@@ -3590,8 +4157,8 @@
     if (modal) modal.classList.add('hidden');
   }
 
-  // Đợt 6 (mục 11): lưới 10 bản đồ trong bản đồ tổng quan — chạm để di chuyển qua mạng cổng/Đài Truyền Tống
-  var OVERVIEW_MAP_IDS = ['mieu_hoang', 'rung-doc', 'tong-mon', 'dai-dien', 'dai-truyen-tong', 'son-coc', 'ho-bang', 'mo-lua', 'hoang-mac', 'kiem-trung'];
+  // Đợt 6 (mục 11) & DANMAP: lưới bản đồ trong bản đồ tổng quan — chạm để di chuyển qua mạng cổng/Đài Truyền Tống
+  var OVERVIEW_MAP_IDS = ['mieu_hoang', 'rung-doc', 'tong-mon', 'dai-dien', 'phong-luyen-dan', 'dai-truyen-tong', 'son-coc', 'ho-bang', 'mo-lua', 'hoang-mac', 'kiem-trung'];
 
   function renderOverviewGrid() {
     var grid = document.getElementById('overview-map-grid');
@@ -4307,6 +4874,7 @@
   UIAPI.closeLinhThu = closeLinhThu;
   UIAPI.openSaddlebag = openSaddlebag;
   UIAPI.renderLinhThuPanel = renderLinhThuPanel;
+  UIAPI.sortBag = sortBag;
   // Đợt LINHME: Vườn Linh Mễ, Đổi Thức Ăn, Việc Vụ Tông
   UIAPI.openTongMonFarmModal = openTongMonFarmModal;
   UIAPI.closeTongMonFarmModal = closeTongMonFarmModal;
@@ -4318,7 +4886,10 @@
   UIAPI.updateFarmSkillBar = updateFarmSkillBar;
   UIAPI.openFarmSpellLearnModal = openFarmSpellLearnModal;
   UIAPI.closeFarmSpellLearnModal = closeFarmSpellLearnModal;
-  UIAPI.sortBag = sortBag;
+  UIAPI.openBountyBoardModal = openBountyBoardModal;
+  UIAPI.closeBountyBoardModal = closeBountyBoardModal;
+  UIAPI.openSectShopModal = openSectShopModal;
+  UIAPI.closeSectShopModal = closeSectShopModal;
 
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = UIAPI;

@@ -366,6 +366,9 @@
 
     if (!player.stats) player.stats = { playSec: 0, kills: 0, bossKills: 0, harvests: 0, refines: 0 };
     player.stats.refines = (player.stats.refines || 0) + 1;
+    if (!player.luyenDan) player.luyenDan = {};
+    player.luyenDan.lastRefineAt = Date.now();
+    if (typeof window !== 'undefined') window.__danLoBurningUntil = Date.now() + 60000;
     st.savePlayer(player);
 
     var msgOk = 'Luyện thành công 1 ' + itemName(recipe.pillId) + '! Dùng đan để tăng 20 tu vi ' + ELEM_NAMES[elem] + '.';
@@ -417,6 +420,9 @@
 
     if (!player.stats) player.stats = { playSec: 0, kills: 0, bossKills: 0, harvests: 0, refines: 0 };
     player.stats.refines = (player.stats.refines || 0) + 1;
+    if (!player.luyenDan) player.luyenDan = {};
+    player.luyenDan.lastRefineAt = Date.now();
+    if (typeof window !== 'undefined') window.__danLoBurningUntil = Date.now() + 60000;
     st.savePlayer(player);
 
     var msgOk = 'Luyện thành công 1 ' + itemName(recipe.pillId) + '! ' + recipe.usedAt + ' — mở bảng Đột Phá Tiểu Mốc (gặp Chấp Sự) để dùng.';
@@ -915,6 +921,91 @@
     });
   }
 
+  // Đợt DANSKILL: thẻ KỸ NĂNG LUYỆN ĐAN — học + thi triển 4 kỹ năng luyện
+  // đan (GameDanKyNang). Nút luôn bấm được để người chơi nhận thông báo từ
+  // chối rõ ràng (cùng quy ước với nút Luyện Đan của thẻ Luyện Đan).
+  function renderSkillsTab(body) {
+    var player = livePlayer;
+    if (!player) return;
+    var dk = (typeof window !== 'undefined' && window.GameDanKyNang) ? window.GameDanKyNang : null;
+    if (!dk) {
+      body.appendChild(el('div', 'danphong-intro', 'Kỹ năng luyện đan chưa sẵn sàng. Hãy tải lại game.'));
+      return;
+    }
+    dk.ensureState(player);
+
+    body.appendChild(el('div', 'danphong-intro',
+      'Kỹ năng luyện đan: học bằng thành tích luyện đan + Linh Thạch, thi triển tốn linh lực và có hồi chiêu, lên cấp bằng số lần dùng. Ba kỹ năng đầu tăng sức cho mẻ luyện kế tiếp (ván luyện đan); Thanh Độc Quyết giải đan độc ngay lập tức.'));
+
+    var buffs = dk.getActiveBuffs(player);
+    if (buffs.length > 0) {
+      var buffNames = buffs.map(function (b) {
+        var d = dk.getSkillDef(b.skillId);
+        return (d ? d.name : b.skillId) + ' cấp ' + b.level;
+      }).join(' · ');
+      body.appendChild(el('div', 'danskill-buff-note', 'Đang chờ mẻ luyện kế tiếp: ' + buffNames + '.'));
+    }
+
+    dk.listSkills().forEach(function (def) {
+      var learned = dk.isSkillLearned(player, def.id);
+      var level = dk.skillLevel(player, def.id);
+      var sp = player.luyenDan.skills[def.id];
+      var uses = sp ? (sp.uses || 0) : 0;
+      var cost = dk.skillCost(def.id, level);
+      var cdLeftSec = Math.ceil(dk.skillCooldownLeftMs(player, def.id) / 1000);
+
+      var card = el('div', 'danphong-card' + (learned ? '' : ' locked'));
+      var head = el('div', 'danphong-card-head');
+      var titles = el('div', 'danphong-card-titles');
+      titles.appendChild(el('div', 'danphong-card-name', def.name));
+      titles.appendChild(el('div', 'danphong-card-sub',
+        'Hệ ' + ELEM_NAMES[def.element] + ' · ' + (learned ? ('Cấp ' + level + ' · Đã dùng ' + uses + ' lần') : 'Chưa học')));
+      head.appendChild(titles);
+      card.appendChild(head);
+      card.appendChild(el('div', 'danphong-source', def.desc));
+      card.appendChild(el('div', 'danskill-effect', 'Hiệu quả: ' + dk.skillEffectText(def.id, level)));
+      card.appendChild(el('div', 'danskill-meta',
+        'Phí: ' + cost + ' linh lực (linh lực hiện có: ' + (player.linhLuc || 0) + '/' + (player.linhLucMax || 0) + ')' +
+        ' · Hồi chiêu: ' + def.baseCooldownSec + ' giây' +
+        (cdLeftSec > 0 ? ' · Còn hồi chiêu: ' + cdLeftSec + ' giây' : '')));
+
+      var actions = el('div', 'danphong-actions');
+      if (!learned) {
+        var cond = dk.canLearnSkill(player, def.id);
+        var btnLearn = el('button', 'btn wood danphong-btn danphong-btn-accept', 'Học (' + def.learnFeeLT + ' Linh Thạch)');
+        btnLearn.type = 'button';
+        btnLearn.addEventListener('click', function () {
+          var res = dk.learnSkill(livePlayer, def.id);
+          if (res && !res.ok && res.msg) showToast(res.msg);
+          renderPanel();
+        });
+        actions.appendChild(btnLearn);
+        if (!cond.ok && cond.missing && cond.missing.length > 0) {
+          actions.appendChild(el('span', 'danphong-miss-note', 'Cần: ' + cond.missing.join(' · ')));
+        } else {
+          actions.appendChild(el('span', 'danphong-miss-note', 'Đủ điều kiện học.'));
+        }
+      } else {
+        var btnCast = el('button', 'btn wood danphong-btn danphong-btn-refine',
+          cdLeftSec > 0 ? ('Hồi Chiêu (' + cdLeftSec + ' giây)') : ('Thi Triển (' + cost + ' linh lực)'));
+        btnCast.type = 'button';
+        btnCast.addEventListener('click', function () {
+          var res = dk.castSkill(livePlayer, def.id);
+          if (res && !res.ok && res.msg) showToast(res.msg);
+          renderPanel();
+        });
+        actions.appendChild(btnCast);
+        if (def.buffKind) {
+          var hasBuff = false;
+          for (var i = 0; i < buffs.length; i++) if (buffs[i].skillId === def.id) hasBuff = true;
+          if (hasBuff) actions.appendChild(el('span', 'danphong-miss-note', 'Đã thi triển — chờ mẻ luyện kế tiếp.'));
+        }
+      }
+      card.appendChild(actions);
+      body.appendChild(card);
+    });
+  }
+
   function renderPanel() {
     if (typeof document === 'undefined') return;
     if (!livePlayer) return;
@@ -924,11 +1015,14 @@
     var tabBoard = document.getElementById('danphong-tab-board');
     if (tabRefine) tabRefine.classList.toggle('active', currentTab === 'refine');
     if (tabBoard) tabBoard.classList.toggle('active', currentTab === 'board');
+    var tabSkills = document.getElementById('danphong-tab-skills');
+    if (tabSkills) tabSkills.classList.toggle('active', currentTab === 'skills');
 
     var body = document.getElementById('danphong-body');
     if (!body) return;
     body.innerHTML = '';
     if (currentTab === 'board') renderBoardTab(body);
+    else if (currentTab === 'skills') renderSkillsTab(body);
     else renderRefineTab(body);
   }
 
@@ -936,7 +1030,7 @@
     if (typeof document === 'undefined') return;
     var modal = document.getElementById('danphong-modal');
     if (!modal) return;
-    if (tab === 'board' || tab === 'refine') currentTab = tab;
+    if (tab === 'board' || tab === 'refine' || tab === 'skills') currentTab = tab;
     modal.classList.remove('hidden');
     renderPanel();
   }
@@ -977,6 +1071,11 @@
     if (tabBoard && !tabBoard.dataset.wired) {
       tabBoard.dataset.wired = '1';
       tabBoard.addEventListener('click', function () { currentTab = 'board'; renderPanel(); });
+    }
+    var tabSkills = document.getElementById('danphong-tab-skills');
+    if (tabSkills && !tabSkills.dataset.wired) {
+      tabSkills.dataset.wired = '1';
+      tabSkills.addEventListener('click', function () { currentTab = 'skills'; renderPanel(); });
     }
 
     var modal = document.getElementById('danphong-modal');

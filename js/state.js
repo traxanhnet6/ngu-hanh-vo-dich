@@ -102,6 +102,101 @@
     return harmonyDetail(paths).hh;
   }
 
+  // ==========================================================================
+  // Đợt N1STATS: trang bị mang dữ liệu N1 (phẩm / tinh luyện / dòng phụ /
+  // ký tên). player.equipment[slot] có thể là:
+  //   - chuỗi id (bản lưu cũ, hoặc đồ chưa qua migration) -> hành vi cũ
+  //   - object { id, quality, refineLevel, affixes, crafter, craftedAt? }
+  // Mọi nơi đọc equipment phải đi qua equipmentIdOf để lấy id.
+  // ==========================================================================
+  var EQUIPMENT_SLOTS = ['weapon', 'armor', 'head', 'shoes', 'belt', 'jewelry', 'phapKhi'];
+
+  // Hệ số phẩm — GƯƠNG của QUALITY_RANKS.statMultiplier trong module N1
+  // (js/nghe-luyenkhi.js); test n1-equip-stats khóa hai bảng này bằng nhau
+  // để chống lệch. Đồ Hạ phẩm / không ghi phẩm -> hệ số 1.0 (giữ nguyên
+  // chỉ số cũ tuyệt đối).
+  var N1_QUALITY_MULT = { ha: 1.0, trung: 1.15, thuong: 1.35, cuc: 1.6 };
+
+  // SỐ TẠM (PROVISIONAL, đợt N1STATS — chưa từng có trong module N1, đừng
+  // trích dẫn ngược là "số của N1"): mỗi cấp tinh luyện +8% chỉ số nền
+  // của món đồ (atk/def theo ITEM_DEFS), cộng dồn tuyến tính, trần +10.
+  var N1_REFINE_BONUS_PER_LEVEL = 0.08;
+
+  function equipmentIdOf(value) {
+    if (!value) return null;
+    if (typeof value === 'string') return value;
+    if (typeof value === 'object' && typeof value.id === 'string') return value.id;
+    return null;
+  }
+
+  function copyAffixes(affixes) {
+    var out = [];
+    if (Array.isArray(affixes)) {
+      for (var i = 0; i < affixes.length; i++) {
+        var a = affixes[i];
+        if (a && typeof a === 'object') {
+          out.push({ id: a.id, name: a.name, type: a.type, value: a.value, unit: a.unit, element: a.element });
+        }
+      }
+    }
+    return out;
+  }
+
+  // Chuẩn hóa một giá trị ô trang bị thành object N1 đầy đủ (hoặc null).
+  // Chuỗi id cũ -> object mặc định (Hạ phẩm, +0, không dòng, không ký
+  // tên): deriveStats cho object mặc định này BẰNG HỆT đường chuỗi cũ.
+  function normalizeEquipmentValue(value) {
+    if (!value) return null;
+    if (typeof value === 'string') {
+      return { id: value, refineLevel: 0, quality: 'ha', affixes: [], crafter: '' };
+    }
+    if (typeof value !== 'object' || Array.isArray(value)) return null;
+    var id = equipmentIdOf(value);
+    if (!id) return null;
+    var out = {
+      id: id,
+      refineLevel: (typeof value.refineLevel === 'number' && isFinite(value.refineLevel))
+        ? Math.max(0, Math.floor(value.refineLevel)) : 0,
+      quality: (typeof value.quality === 'string' && value.quality) ? value.quality : 'ha',
+      affixes: copyAffixes(value.affixes),
+      crafter: (typeof value.crafter === 'string') ? value.crafter : ''
+    };
+    if (value.craftedAt !== undefined) out.craftedAt = value.craftedAt;
+    return out;
+  }
+
+  // Dựng object trang bị từ một ô túi (ô túi dùng trường itemId, object
+  // trang bị dùng trường id; các trường N1 trên ô được chép sâu, không
+  // chia sẻ tham chiếu mảng affixes với ô túi).
+  function equipmentObjectFromSlot(slotData) {
+    var out = {
+      id: slotData.itemId,
+      refineLevel: (typeof slotData.refineLevel === 'number' && isFinite(slotData.refineLevel))
+        ? Math.max(0, Math.floor(slotData.refineLevel)) : 0,
+      quality: (typeof slotData.quality === 'string' && slotData.quality) ? slotData.quality : 'ha',
+      affixes: copyAffixes(slotData.affixes),
+      crafter: (typeof slotData.crafter === 'string') ? slotData.crafter : ''
+    };
+    if (slotData.craftedAt !== undefined) out.craftedAt = slotData.craftedAt;
+    return out;
+  }
+
+  // Ghi dữ liệu N1 của một object trang bị trở lại ô túi vừa nhận đồ
+  // (đồ rèn có stackLimit 1 nên ô nhận luôn là ô mới, ghi đè an toàn).
+  function stampN1DataToBagSlot(player, addRes, eqVal) {
+    if (!addRes || !addRes.containerId || typeof addRes.slot !== 'number') return;
+    if (!eqVal || typeof eqVal !== 'object') return;
+    if (!player.tuiKho || !player.tuiKho.containers) return;
+    var c = player.tuiKho.containers[addRes.containerId];
+    var slot = c && c.slots && c.slots[addRes.slot];
+    if (!slot) return;
+    slot.quality = (typeof eqVal.quality === 'string' && eqVal.quality) ? eqVal.quality : 'ha';
+    slot.refineLevel = (typeof eqVal.refineLevel === 'number' && isFinite(eqVal.refineLevel)) ? eqVal.refineLevel : 0;
+    slot.affixes = copyAffixes(eqVal.affixes);
+    slot.crafter = (typeof eqVal.crafter === 'string') ? eqVal.crafter : '';
+    if (eqVal.craftedAt !== undefined) slot.craftedAt = eqVal.craftedAt;
+  }
+
   /**
    * Dẫn xuất chỉ số nhân vật từ 5 trụ ngũ hành (theo hồ sơ 49):
    * - Thổ: Khí huyết & phòng thủ (tăng hpMax vượt trội)
@@ -158,15 +253,45 @@
       } else if (typeof require === 'function') {
         try { defs = require('./monsters.js').ITEM_DEFS; } catch (e) {}
       }
-      var eqSlots = ['weapon', 'armor', 'head', 'shoes', 'belt', 'jewelry', 'phapKhi'];
+      // Đợt N1STATS: ô trang bị có thể là chuỗi id (cũ) hoặc object N1.
+      // Chuỗi -> hành vi cũ y hệt. Object -> chỉ số nền (atk/def theo
+      // ITEM_DEFS) nhân hệ số phẩm x hệ số tinh luyện; dòng phụ cộng
+      // PHẲNG (giá trị dòng đã theo phẩm lúc sinh, không nhân lại);
+      // ký tên chỉ để hiển thị, không cộng số. Object mặc định (Hạ
+      // phẩm, +0, không dòng) cho kết quả BẰNG HỆT đường chuỗi cũ.
+      var eqSlots = EQUIPMENT_SLOTS;
       for (var sIdx = 0; sIdx < eqSlots.length; sIdx++) {
         var sKey = eqSlots[sIdx];
-        var itemVal = equipment[sKey];
-        if (itemVal) {
-          var itemDef = (typeof itemVal === 'string' && defs) ? defs[itemVal] : (typeof itemVal === 'object' ? itemVal : null);
+        var eqObj = equipment[sKey];
+        if (typeof eqObj === 'string') {
+          var itemDef = (defs && defs[eqObj]) ? defs[eqObj] : null;
           if (itemDef) {
             if (typeof itemDef.atk === 'number') attack += itemDef.atk;
             if (typeof itemDef.def === 'number') defense += itemDef.def;
+          }
+        } else if (eqObj && typeof eqObj === 'object') {
+          var refineLevel = (typeof eqObj.refineLevel === 'number' && isFinite(eqObj.refineLevel))
+            ? Math.max(0, Math.floor(eqObj.refineLevel)) : 0;
+          var mult = (N1_QUALITY_MULT[eqObj.quality] || 1.0) * (1 + N1_REFINE_BONUS_PER_LEVEL * refineLevel);
+          var eqDef = (eqObj.id && defs) ? defs[eqObj.id] : null;
+          if (eqDef) {
+            if (typeof eqDef.atk === 'number') attack += Math.round(eqDef.atk * mult);
+            if (typeof eqDef.def === 'number') defense += Math.round(eqDef.def * mult);
+          }
+          var affixes = Array.isArray(eqObj.affixes) ? eqObj.affixes : [];
+          for (var a = 0; a < affixes.length; a++) {
+            var affix = affixes[a];
+            if (!affix || typeof affix !== 'object') continue;
+            var v = (typeof affix.value === 'number' && isFinite(affix.value)) ? affix.value : 0;
+            if (affix.type === 'atk') attack += v;
+            else if (affix.type === 'def') defense += v;
+            else if (affix.type === 'hp') hpMax += Math.round(v);
+            else if (affix.type === 'linhLuc') linhLucMax += Math.round(v);
+            else if (affix.type === 'crit') critRate = +(critRate + v).toFixed(1);
+            else if (affix.type === 'hpRegen') regenRate = +(regenRate + v).toFixed(1);
+            // dodge / pierce / fireDmg / block: deriveStats hiện không có
+            // kênh cho 4 loại dòng này — dòng vẫn lưu trữ, chưa cộng số
+            // (điểm hở, ghi trong N1STATS-REPORT.md).
           }
         }
       }
@@ -202,7 +327,7 @@
     var initialSlots = new Array(48).fill(null);
     initialSlots[0] = { itemId: 'non-la', count: 1 };
 
-    return {
+    var playerObj = {
       name: charName,
       x: options.x !== undefined ? options.x : 560,
       y: options.y !== undefined ? options.y : 620,
@@ -256,11 +381,35 @@
         slots: initialSlots
       },
       tuiKho: null,
+      introSeen: false,
       daily: {},
       // Đợt E3: trạng thái bí cảnh/sự kiện. ensureState ở bi-canh.js chuẩn hóa khi nạp.
       biCanh: { currentRun: null, runs: [], rewards: {}, reminders: {}, areaBuffs: {}, combatLogs: {}, troiMoProgress: { floor: 0, completed: false }, nguHanhProgress: { openedGates: [], middleOpened: false } },
       // Đợt N2: trạng thái Linh Thú. ensureState ở linh-thu.js chuẩn hóa khi nạp.
       linhThu: { companions: [], mainId: null, eggs: [], barn: [], houseGuardPetId: null, gathered: { items: [], lastCollectMs: Date.now(), daily: { date: '', count: 0 } }, metTrainer: false, firstHoanGiven: false, tamingLog: [], ridingPetId: null, isRiding: false },
+      // Đợt N1: Nghề Sinh Nhai + Luyện Khí/Bản Vẽ + Bảng Đơn Hàng NPC
+      professions: {
+        woodcutting: { level: 1, exp: 0, totalActions: 0 },
+        mining:      { level: 1, exp: 0, totalActions: 0 },
+        herbalism:   { level: 1, exp: 0, totalActions: 0 },
+        fishing:     { level: 1, exp: 0, totalActions: 0 }
+      },
+      luyenKhi: {
+        recipes: ['bp_kiem_thanh_bo', 'bp_ao_thanh_bo'],
+        proficiency: {},
+        history: [],
+        stats: { totalForged: 0, totalRefined: 0, totalRerolled: 0, totalDismantled: 0, totalTransferred: 0 }
+      },
+      npcOrders: null,
+      // Đợt E4: trạng thái nhiệm vụ dạng dữ liệu (quests.js)
+      questState: {
+        active: {},
+        completed: {},
+        trackedQuestIds: [],
+        pinnedQuestId: null,
+        dailyCompletions: { date: new Date().toISOString().slice(0, 10), counts: {} },
+        sect: { contribution: 0, lifetimeContribution: 0, rank: 1, rankName: 'Ngoại Môn Đệ Tử' }
+      },
       huntChain: {
         count: 0,
         timer: 0
@@ -269,6 +418,12 @@
       createdAt: Date.now(),
       lastSaved: Date.now()
     };
+    if (typeof window !== 'undefined' && window.GameQuests && window.GameQuests.ensureQuestState) {
+      window.GameQuests.ensureQuestState(playerObj);
+    } else {
+      try { var _qs = require('./quests.js'); if (_qs && _qs.ensureQuestState) _qs.ensureQuestState(playerObj); } catch (e) {}
+    }
+    return playerObj;
   }
 
   /**
@@ -311,7 +466,8 @@
       zoom: 1.0,
       display: { zoom: 1.0 },
       tutorialStep: 1,
-      tutorialDone: false
+      tutorialDone: false,
+      introSeen: false
     };
   }
 
@@ -367,13 +523,22 @@
       if (!data.equipment) {
         data.equipment = { weapon: null, armor: null, head: null, shoes: null, belt: null, jewelry: null, phapKhi: null };
       } else {
-        if (data.equipment.weapon === undefined) data.equipment.weapon = null;
-        if (data.equipment.armor === undefined) data.equipment.armor = null;
-        if (data.equipment.head === undefined) data.equipment.head = null;
-        if (data.equipment.shoes === undefined) data.equipment.shoes = null;
-        if (data.equipment.belt === undefined) data.equipment.belt = null;
-        if (data.equipment.jewelry === undefined) data.equipment.jewelry = null;
-        if (data.equipment.phapKhi === undefined) data.equipment.phapKhi = null;
+        // Đợt N1STATS: chuẩn hóa TỪNG ô trang bị, chạy lại an toàn mỗi lần
+        // nạp. Chuỗi id cũ -> object mặc định (Hạ phẩm, +0, không dòng,
+        // không ký tên) — không mất đồ, không đổi chỉ số vì object mặc
+        // định cho hệ số 1.0. Object đã có -> giữ nguyên dữ liệu, chỉ bù
+        // trường thiếu. Giá trị lạ (không phải chuỗi/object) -> ô trống.
+        var eq = data.equipment;
+        for (var ei = 0; ei < EQUIPMENT_SLOTS.length; ei++) {
+          var sName = EQUIPMENT_SLOTS[ei];
+          var sVal = eq[sName];
+          if (sVal === undefined || sVal === null) { eq[sName] = null; continue; }
+          if (typeof sVal === 'string' || (typeof sVal === 'object' && !Array.isArray(sVal))) {
+            eq[sName] = normalizeEquipmentValue(sVal);
+          } else {
+            eq[sName] = null;
+          }
+        }
       }
       if (!data.quests) {
         data.quests = {
@@ -442,6 +607,15 @@
       // Trình duyệt đi qua global GameLinhThu; Node đi qua require.
       if (typeof window !== 'undefined' && window.GameLinhThu && window.GameLinhThu.ensureState) { window.GameLinhThu.ensureState(data); }
       else { try { var _lt = require('./linh-thu.js'); if (_lt && _lt.ensureState) _lt.ensureState(data); } catch (e) {} }
+      // Đợt N1: save cũ chưa có Nghề Sinh Nhai + Luyện Khí + Đơn Hàng NPC -> bổ sung mặc định an toàn.
+      if (typeof window !== 'undefined' && window.GameN1 && window.GameN1.ensureState) { window.GameN1.ensureState(data); }
+      else { try { var _n1 = require('./nghe-luyenkhi.js'); if (_n1 && _n1.ensureState) _n1.ensureState(data); } catch (e) {} }
+      // Đợt E4: save cũ chưa có questState -> migrate sang dữ liệu mới.
+      if (typeof window !== 'undefined' && window.GameQuests && window.GameQuests.ensureQuestState) {
+        window.GameQuests.ensureQuestState(data);
+      } else {
+        try { var _qs2 = require('./quests.js'); if (_qs2 && _qs2.ensureQuestState) _qs2.ensureQuestState(data); } catch (e) {}
+      }
       if (!data.bagLocks || typeof data.bagLocks !== 'object') {
         data.bagLocks = {};
       }
@@ -754,14 +928,26 @@
 
     if (!player.equipment) player.equipment = { weapon: null, armor: null, head: null, shoes: null, belt: null, jewelry: null, phapKhi: null };
     var targetSlot = def.slot;
-    var oldItemId = player.equipment[targetSlot];
+    var oldVal = player.equipment[targetSlot];
+    var oldId = equipmentIdOf(oldVal);
 
-    player.equipment[targetSlot] = slotData.itemId;
+    // Đợt N1STATS: mặc cả object dữ liệu, không chỉ chuỗi id — phẩm,
+    // tinh luyện, dòng phụ, ký tên của ô túi đi theo lên người.
+    player.equipment[targetSlot] = equipmentObjectFromSlot(slotData);
     // remove from container
     if (targetContainer) targetContainer.slots[slotIndex] = null;
-    // old item -> default container
-    if (oldItemId) {
-      if (tk) tk.addItemToPlayer(player, oldItemId, 1);
+    // old item -> default container, KÈM dữ liệu N1 của nó
+    if (oldId) {
+      var back = null;
+      if (tk) back = tk.addItemToPlayer(player, oldId, 1);
+      if (!back || back.success === false) {
+        // Túi đầy: hoàn tác toàn bộ — đồ mới về lại ô cũ, đồ cũ về lại
+        // người (bản cũ im lặng làm mất đồ cũ trong trường hợp này).
+        if (targetContainer) targetContainer.slots[slotIndex] = slotData;
+        player.equipment[targetSlot] = oldVal;
+        return { ok: false, msg: 'Túi đồ đã đầy, không thể đổi trang bị!' };
+      }
+      stampN1DataToBagSlot(player, back, oldVal);
     }
 
     var stats = deriveStats(player.paths, player.equipment);
@@ -769,7 +955,7 @@
     player.linhLucMax = stats.linhLucMax;
     savePlayer(player);
 
-    return { ok: true, msg: 'Đã trang bị ' + def.name, slot: targetSlot, equippedId: player.equipment[targetSlot], swappedId: oldItemId, containerId: containerId, slotIndex: slotIndex };
+    return { ok: true, msg: 'Đã trang bị ' + def.name, slot: targetSlot, equippedId: slotData.itemId, swappedId: oldId, containerId: containerId, slotIndex: slotIndex };
   }
 
   /**
@@ -781,21 +967,30 @@
     }
     ensureTuiKho(player);
     var tk = __tk();
-    var itemId = player.equipment[slotName];
+    // Đợt N1STATS: giữ cả object (dữ liệu N1) để ghi trả về túi; id
+    // chuỗi chỉ dùng để tra định nghĩa vật phẩm.
+    var eqVal = player.equipment[slotName];
+    var itemId = equipmentIdOf(eqVal);
+    if (!itemId) {
+      player.equipment[slotName] = null;
+      return { ok: false, msg: 'Không có trang bị ở ô này' };
+    }
     player.equipment[slotName] = null;
     // return to default container (or specified)
     var r;
     if (targetContainerId && tk) {
       var c = tk.getContainer(player, targetContainerId);
       r = tk.addItemToContainer(c, itemId, 1);
+      if (r && r.success) stampN1DataToBagSlot(player, { containerId: targetContainerId, slot: r.slot }, eqVal);
     } else if (tk) {
       r = tk.addItemToPlayer(player, itemId, 1);
+      if (r && r.success) stampN1DataToBagSlot(player, r, eqVal);
     } else {
       r = { success: false };
     }
     if (!r || r.success === false) {
       // revert equip
-      player.equipment[slotName] = itemId;
+      player.equipment[slotName] = eqVal;
       return { ok: false, msg: 'Túi đồ đã đầy, không thể cởi trang bị!' };
     }
 
@@ -980,6 +1175,13 @@
     if (room <= 0) return 0;
     var added = Math.min(effective, room);
     player.paths[elem].tuVi = cur + added;
+    if (added > 0) {
+      if (typeof window !== 'undefined' && window.GameQuests && window.GameQuests.onTuViChanged) {
+        window.GameQuests.onTuViChanged(player);
+      } else {
+        try { var _qs = require('./quests.js'); if (_qs && _qs.onTuViChanged) _qs.onTuViChanged(player); } catch (e) {}
+      }
+    }
     return added;
   }
 
@@ -1120,7 +1322,14 @@
     if (tk && tk.addItemToPlayer) {
       var r = tk.addItemToPlayer(player, itemId, count, itemDefs, extra);
       // compat: expose slot index-ish
-      if (r && r.success) return { success: true, slot: (typeof r.slot === 'number' ? r.slot : 0), count: r.count, containerId: r.containerId, tempChest: r.tempChest };
+      if (r && r.success) {
+        if (typeof window !== 'undefined' && window.GameQuests && window.GameQuests.onItemCollected) {
+          window.GameQuests.onItemCollected(player, itemId, count);
+        } else {
+          try { var _qs = require('./quests.js'); if (_qs && _qs.onItemCollected) _qs.onItemCollected(player, itemId, count); } catch (e) {}
+        }
+        return { success: true, slot: (typeof r.slot === 'number' ? r.slot : 0), count: r.count, containerId: r.containerId, tempChest: r.tempChest };
+      }
       return { success: false, reason: r ? r.reason : 'full' };
     }
     // fallback old
@@ -1253,7 +1462,10 @@
     hasItemInBag: hasItemInBag,
     removeItemFromBag: removeItemFromBag,
     equipItem: equipItem,
-    unequipItem: unequipItem
+    unequipItem: unequipItem,
+    // Đợt N1STATS: đọc id + chuẩn hóa giá trị ô trang bị (chuỗi cũ/object N1)
+    equipmentIdOf: equipmentIdOf,
+    normalizeEquipmentValue: normalizeEquipmentValue
   };
 
   if (typeof module !== 'undefined' && module.exports) {

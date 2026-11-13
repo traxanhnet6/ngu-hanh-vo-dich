@@ -124,6 +124,12 @@
     try { return require('./monsters.js'); } catch (e) { return null; }
   }
 
+  function getQuestsAPI() {
+    if (typeof window !== 'undefined' && window.GameQuests) return window.GameQuests;
+    if (typeof global !== 'undefined' && global.GameQuests) return global.GameQuests;
+    try { return require('./quests.js'); } catch (e) { return null; }
+  }
+
   function ensureZQState(player) {
     var st = getStateAPI();
     if (st && st.ensureV1) {
@@ -197,6 +203,15 @@
     player.v1.zoneQuests.activeQuestId = questId;
     player.v1.zoneQuests.tracked = true;
 
+    // Đợt E4: đồng bộ trạng thái sang questState
+    var qAPI = getQuestsAPI();
+    if (qAPI && qAPI.ensureQuestState) {
+      qAPI.ensureQuestState(player);
+      if (!qAPI.isQuestActive(player, questId)) {
+        qAPI.acceptQuest(player, questId);
+      }
+    }
+
     var st = getStateAPI();
     if (st && st.savePlayer) st.savePlayer(player);
 
@@ -250,6 +265,17 @@
     }
 
     // Đợt ELDER (Bui 01:32 & Chốt 01:52): Dẫn Linh Quyết chuyển hội tụ về Trưởng Lão Dược Điền tại Ruộng Linh Mễ
+    // Đợt E4: đồng bộ trạng thái sang questState
+    var qAPI2 = getQuestsAPI();
+    if (qAPI2 && qAPI2.ensureQuestState) {
+      qAPI2.ensureQuestState(player);
+      if (player.questState && player.questState.active && player.questState.active[def.id]) {
+        delete player.questState.active[def.id];
+      }
+      if (player.questState && player.questState.completed) {
+        player.questState.completed[def.id] = { completedAt: Date.now(), count: 1 };
+      }
+    }
 
     if (st && st.savePlayer) st.savePlayer(player);
 

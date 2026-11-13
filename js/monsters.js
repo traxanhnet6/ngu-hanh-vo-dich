@@ -744,6 +744,180 @@
       iconCol: 1,
       iconRow: 0,
       desc: 'Viên đan ngưng tụ linh khí thành hình (hồ sơ 06 — đan phụ trợ tầng): tiêu hao 1 viên khi đột phá tiểu mốc từ tầng 7 lên tầng 8. Luyện tại Đan Phòng Tông Môn.'
+    },
+    // ========================================================================
+    // ĐỢT N1: VẬT PHẨM NGHỀ SINH NHAI + LUYỆN KHÍ + BẢN VẼ
+    // ========================================================================
+    'canh-go-muc': {
+      id: 'canh-go-muc',
+      name: 'Cành Gỗ Mục',
+      type: 'material',
+      stackable: true,
+      iconCol: 0,
+      iconRow: 4,
+      desc: 'Cành cây khô mục rụng ven rừng, dùng đun lò hoặc chế tác phôi cán kiếm sơ cấp.'
+    },
+    'go-thiet-moc': {
+      id: 'go-thiet-moc',
+      name: 'Gỗ Thiết Mộc',
+      type: 'material',
+      stackable: true,
+      iconCol: 1,
+      iconRow: 4,
+      desc: 'Gỗ từ thân cổ thụ đanh cứng như sắt, nguyên liệu chế tạo trang bị Trúc Cơ.'
+    },
+    'go-tram-huong': {
+      id: 'go-tram-huong',
+      name: 'Gỗ Trầm Hương',
+      type: 'material',
+      stackable: true,
+      iconCol: 2,
+      iconRow: 4,
+      desc: 'Gỗ tỏa hương trầm thơm ngát, ngưng tụ linh khí ngàn năm, dùng chế tác pháp khí cao cấp.'
+    },
+    'quang-dong-tho': {
+      id: 'quang-dong-tho',
+      name: 'Quặng Đồng Thô',
+      type: 'material',
+      stackable: true,
+      iconCol: 3,
+      iconRow: 4,
+      desc: 'Quặng đồng tự nhiên đào từ vỉa đá, dùng rèn bộ trang bị Thanh Bố sơ cấp.'
+    },
+    'quang-sat-huyen': {
+      id: 'quang-sat-huyen',
+      name: 'Quặng Sắt Huyền',
+      type: 'material',
+      stackable: true,
+      iconCol: 4,
+      iconRow: 4,
+      desc: 'Quặng sắt thẫm màu ẩn chứa huyền khí, dùng rèn binh khí giáp trụ Trúc Văn.'
+    },
+    'tinh-thiet-tho': {
+      id: 'tinh-thiet-tho',
+      name: 'Tinh Thiết Thô',
+      type: 'material',
+      stackable: true,
+      iconCol: 5,
+      iconRow: 4,
+      desc: 'Khối tinh thiết đã trải qua linh khí tôi luyện tự nhiên, cực kỳ cứng rắn.'
+    },
+    'ca-linh-ngu': {
+      id: 'ca-linh-ngu',
+      name: 'Cá Linh Ngư',
+      type: 'material',
+      stackable: true,
+      iconCol: 0,
+      iconRow: 5,
+      desc: 'Cá linh bơi lội dưới suối trong lành, thịt thơm ngọt chứa linh khí, nguyên liệu giao hàng NPC.'
+    },
+    'ca-han-bang': {
+      id: 'ca-han-bang',
+      name: 'Cá Hàn Băng',
+      type: 'material',
+      stackable: true,
+      iconCol: 1,
+      iconRow: 5,
+      desc: 'Loài cá sống dưới đáy hồ băng giá rét, vây cá lạnh buốt, dùng tẩy luyện linh tính trang bị.'
+    },
+    'vay-ca-linh': {
+      id: 'vay-ca-linh',
+      name: 'Vảy Cá Linh',
+      type: 'material',
+      stackable: true,
+      iconCol: 2,
+      iconRow: 5,
+      desc: 'Lớp vảy cá linh ngư óng ánh, nhẹ và dai, dùng làm phụ liệu rèn giáp tăng né tránh.'
+    },
+    'da-tay-luyen': {
+      id: 'da-tay-luyen',
+      name: 'Đá Tẩy Luyện',
+      type: 'consumable',
+      stackable: true,
+      iconCol: 3,
+      iconRow: 5,
+      desc: 'Viên đá huyền bí có khả năng thanh tẩy và làm mới các dòng thuộc tính ẩn của trang bị.'
+    },
+    'bp_kiem_thanh_bo': {
+      id: 'bp_kiem_thanh_bo',
+      name: 'Bản vẽ Kiếm Thanh Bố',
+      type: 'material',
+      stackable: true,
+      iconCol: 4,
+      iconRow: 5,
+      desc: 'Bản vẽ chi tiết cách rèn Kiếm Thanh Bố tại Lò Rèn.'
+    },
+    'bp_ao_thanh_bo': {
+      id: 'bp_ao_thanh_bo',
+      name: 'Bản vẽ Áo Thanh Bố',
+      type: 'material',
+      stackable: true,
+      iconCol: 5,
+      iconRow: 5,
+      desc: 'Bản vẽ may dệt Áo Thanh Bố tại Lò Rèn.'
+    },
+    'bp_giay_thanh_bo': {
+      id: 'bp_giay_thanh_bo',
+      name: 'Bản vẽ Giày Thanh Bố',
+      type: 'material',
+      stackable: true,
+      iconCol: 0,
+      iconRow: 6,
+      desc: 'Bản vẽ đóng Giày Thanh Bố tại Lò Rèn.'
+    },
+    'bp_dai_thanh_bo': {
+      id: 'bp_dai_thanh_bo',
+      name: 'Bản vẽ Đai Thanh Bố',
+      type: 'material',
+      stackable: true,
+      iconCol: 1,
+      iconRow: 6,
+      desc: 'Bản vẽ bện Đai Thanh Bố tại Lò Rèn.'
+    },
+    'bp_phap_khi_dong': {
+      id: 'bp_phap_khi_dong',
+      name: 'Bản vẽ Bát Quái Kính Đồng',
+      type: 'material',
+      stackable: true,
+      iconCol: 2,
+      iconRow: 6,
+      desc: 'Bản vẽ đúc Bát Quái Kính Đồng tại Lò Rèn.'
+    },
+    'bp_kiem_truc_van': {
+      id: 'bp_kiem_truc_van',
+      name: 'Bản vẽ Trúc Văn Kiếm',
+      type: 'material',
+      stackable: true,
+      iconCol: 3,
+      iconRow: 6,
+      desc: 'Bản vẽ rèn Trúc Văn Kiếm sắc bén bậc Trúc Cơ.'
+    },
+    'bp_giap_truc_van': {
+      id: 'bp_giap_truc_van',
+      name: 'Bản vẽ Trúc Văn Giáp',
+      type: 'material',
+      stackable: true,
+      iconCol: 4,
+      iconRow: 6,
+      desc: 'Bản vẽ rèn Trúc Văn Giáp kiên cố bậc Trúc Cơ.'
+    },
+    'tho-nguyen-tan': {
+      id: 'tho-nguyen-tan',
+      name: 'Thổ Nguyên Tán',
+      type: 'material',
+      stackable: true,
+      iconCol: 4,
+      iconRow: 4,
+      desc: 'Bột linh dược tụ Thổ hành tinh hoa (hồ sơ 02§3.1), đổi bằng điểm cống hiến tại Chấp Sự Đường, dùng để luyện Trúc Cơ Đan.'
+    },
+    'kim-nguyen-tan': {
+      id: 'kim-nguyen-tan',
+      name: 'Kim Nguyên Tán',
+      type: 'material',
+      stackable: true,
+      iconCol: 5,
+      iconRow: 4,
+      desc: 'Bột linh dược tụ Kim hành tinh hoa (hồ sơ 02§3.1), đổi bằng điểm cống hiến tại Chấp Sự Đường, dùng để luyện Trúc Cơ Đan.'
     }
   };
 

@@ -92,7 +92,7 @@
     },
     // — Tông môn: hùng tráng, quãng rộng, chuông điểm, trống nhẹ —
     sect: {
-      id: 'sect', bpm: 64, gain: 1.0,
+      id: 'sect', bpm: 64, gain: 0.8,
       rhythm: [0, 2, 4, 6], leadChance: 0.9, walkMax: 4,
       melLow: 5, melHigh: 13, arp: false,
       padChords: [[0, 3, 5, 7], [2, 5, 7, 10], [4, 7, 9, 12], [3, 5, 8, 10]], padBars: 2,
@@ -202,7 +202,7 @@
       bell: 0, bird: [10, 24], insect: [2, 5], rustle: [5, 12], flap: 0, wood: 0
     },
     sect: {
-      wind: 0.7, windFreq: 1000, stream: 0,
+      wind: 0.5, windFreq: 1000, stream: 0,
       bell: [22, 42], bird: 0, insect: 0, rustle: 0, flap: [3, 8], wood: [6, 14]
     },
     interior: {
