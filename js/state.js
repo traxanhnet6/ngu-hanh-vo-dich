@@ -434,6 +434,8 @@
       try { var _tb = require('./trangbi.js'); if (_tb && _tb.ensureState) _tb.ensureState(data); } catch (e) {}
       // Đợt E2: save cũ túi phẳng -> vật chứa mới (migration).
       try { var _tk = require('./tui-kho.js'); if (_tk && _tk.ensureState) _tk.ensureState(data); } catch (e) {}
+      // HERBQ: hồi tố vật phẩm thảo dược cũ về trung phẩm (1).
+      try { var _hq = (typeof window !== 'undefined' && window.GameHerbQuality) ? window.GameHerbQuality : (typeof require === 'function' ? require('./herb-quality.js') : null); var _herbs = {'la-thanh-tuy':1,'linh-chi-rung':1,'hoa-giai-doc':1,'bang-tinh':1,'bang-tuy':1,'hoa-tinh-tho':1,'cat-tinh':1,'manh-kiem-gay':1,'hon-kiem-nho':1,'nguyen-tinh-moc':1,'nguyen-tinh-thuy':1,'nguyen-tinh-hoa':1,'nguyen-tinh-tho':1,'nguyen-tinh-kim':1,'nuoc-oc-dao-tinh-khiet':1,'dia-tam-thach-vun':1,'da-nung':1,'ngoc-bang-tam':1,'ngoc-cat-tam':1,'huyen-thiet-khoi':1}; var _cs = data.tuiKho && data.tuiKho.containers || {}; if (_hq && _hq.normalizeItem) Object.keys(_cs).forEach(function(k){ (_cs[k].slots||[]).forEach(function(it){ if(it && _herbs[it.itemId]) _hq.normalizeItem(it); }); }); } catch (e) {}
       // Đợt E3: save cũ chưa có trạng thái bí cảnh/sự kiện -> bổ sung mặc định an toàn.
       try { var _bc = require('./bi-canh.js'); if (_bc && _bc.ensureState) _bc.ensureState(data); } catch (e) {}
       // Đợt N2: save cũ chưa có trạng thái Linh Thú -> bổ sung mặc định an toàn.
@@ -1112,11 +1114,11 @@
     if (!player.tuiKho) player.tuiKho = null;
     return player.tuiKho;
   }
-  function addItemToBag(player, itemId, count, itemDefs) {
+  function addItemToBag(player, itemId, count, itemDefs, extra) {
     ensureTuiKho(player);
     var tk = __tk();
     if (tk && tk.addItemToPlayer) {
-      var r = tk.addItemToPlayer(player, itemId, count);
+      var r = tk.addItemToPlayer(player, itemId, count, itemDefs, extra);
       // compat: expose slot index-ish
       if (r && r.success) return { success: true, slot: (typeof r.slot === 'number' ? r.slot : 0), count: r.count, containerId: r.containerId, tempChest: r.tempChest };
       return { success: false, reason: r ? r.reason : 'full' };
@@ -1125,6 +1127,12 @@
     var cnt = (count !== undefined && count !== null) ? count : 1;
     if (itemId === 'linh-thach') { player.linhThach = (player.linhThach || 0) + cnt; return { success: true, slot: -1, count: player.linhThach }; }
     return { success: false, reason: 'full' };
+  }
+
+  function addHerbToBag(player, itemId, count, herbQuality, itemDefs) {
+    ensureTuiKho(player); var tk = __tk();
+    if (tk && tk.addItemToPlayer) return tk.addItemToPlayer(player, itemId, count, undefined, { herbQuality: herbQuality });
+    return addItemToBag(player, itemId, count, itemDefs);
   }
 
   function countItemInBag(player, itemId) {
@@ -1240,6 +1248,7 @@
       return { ok: false };
     },
     addItemToBag: addItemToBag,
+    addHerbToBag: addHerbToBag,
     countItemInBag: countItemInBag,
     hasItemInBag: hasItemInBag,
     removeItemFromBag: removeItemFromBag,

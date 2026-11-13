@@ -14,6 +14,7 @@
   var TOTAL_PLOTS = MAX_PLOTS;   // tương thích mã cũ (vòng lặp UI)
   var INITIAL_PLOTS = 6;         // số ô mở đầu (brief: bắt đầu 6 ô)
   var WITHER_GRACE_SEC = 300;    // PROVISIONAL: thời hạn héo quá hạn
+  var lastCastResult = null;     // Móc lưu vết lần thi triển/thị phạm gần nhất cho VFX đợt sau
 
   // Vòng tương sinh/khắc (khớp combat.js & skills.js)
   var SINH_MAP = { kim: 'thuy', thuy: 'moc', moc: 'hoa', hoa: 'tho', tho: 'kim' };
@@ -31,11 +32,13 @@
   var PLANTABLE = {
     'la-thanh-tuy': {
       itemId: 'la-thanh-tuy', name: 'Lá Thanh Tụy', growSec: 300, yieldCount: 2, seedCost: 1,
-      element: 'moc', tier: 1, minSoilLevel: 0, desc: 'Linh diệp phát sáng linh quang, dược liệu nhập môn ngũ hành.'
+      element: 'moc', tier: 1, minSoilLevel: 0, skillIntervalSec: 90, // PROVISIONAL
+      desc: 'Linh diệp phát sáng linh quang, dược liệu nhập môn ngũ hành.'
     },
     'linh-chi-rung': {
       itemId: 'linh-chi-rung', name: 'Linh Chi Rừng', growSec: 600, yieldCount: 2, seedCost: 1,
-      element: 'moc', tier: 2, minSoilLevel: 1, desc: 'Linh chi tụ linh mộc khí, nguyên liệu luyện đan quý giá.'
+      element: 'moc', tier: 2, minSoilLevel: 1, skillIntervalSec: 180, // PROVISIONAL
+      desc: 'Linh chi tụ linh mộc khí, nguyên liệu luyện đan quý giá.'
     }
   };
 
@@ -49,7 +52,7 @@
     'thoi-sinh': {
       id: 'thoi-sinh', name: 'Thôi Sinh Quyết', element: 'moc', path: 'moc',
       baseCost: 12, baseCooldownSec: 20, tuViElem: 'moc', tuViAmount: 3, // PROVISIONAL
-      desc: 'Thúc cây lớn nhanh một nhịp — tốn linh lực nhiều, dùng dồn dập làm cây chín ép giảm phẩm chất. Cho tu vi đường Mộc.'
+      desc: 'Thúc cây lớn nhanh một nhịp — tốn linh lực nhiều. Cho tu vi đường Mộc.'
     },
     'dan-linh': {
       id: 'dan-linh', name: 'Dẫn Linh Quyết', element: null, path: null,
@@ -59,7 +62,7 @@
     'tru-ue': {
       id: 'tru-ue', name: 'Trừ Uế Quyết', element: 'moc', path: 'moc',
       baseCost: 6, baseCooldownSec: 25, tuViElem: 'moc', tuViAmount: 2, // PROVISIONAL
-      desc: 'Xua sâu linh và cỏ dại mà không phải làm tay từng ô.'
+      desc: 'Xua uế bệnh, sâu linh và cỏ dại mà không phải làm tay từng ô.'
     }
   };
 
@@ -123,6 +126,8 @@
     if (!Array.isArray(ld.plots)) ld.plots = [];
     while (ld.plots.length < MAX_PLOTS) ld.plots.push(null);
     ld.unlockedPlots = maxUnlockedPlots(player);
+    // Hồi tố an toàn: tự động đồng bộ mở khóa pháp quyết theo tiến độ nhiệm vụ
+    syncQuestSpells(player, true);
     return ld;
   }
 
@@ -274,6 +279,17 @@
     return { ok: true, msg: 'Đã trừ sâu linh.' };
   }
 
+  function removeDisease(player, plotIndex) {
+    ensureState(player);
+    var plot = player.linhDien.plots[plotIndex];
+    if (!plot) return { ok: false, msg: 'Ô đất trống.' };
+    plot.disease = false;
+    plot.diseaseCleared = true;
+    var st = getStateAPI();
+    if (st && st.savePlayer) st.savePlayer(player);
+    return { ok: true, msg: 'Đã thanh trừ uế bệnh.' };
+  }
+
   function waterPlot(player, plotIndex, nowMs) {
     ensureState(player);
     if (plotIndex < 0 || plotIndex >= MAX_PLOTS) return { ok: false, msg: 'Ô đất không hợp lệ.' };
@@ -281,7 +297,9 @@
     if (!plot) return { ok: false, msg: 'Ô đất trống.' };
     plot.watered = true;
     plot.waterCount = (plot.waterCount || 0) + 1;
-    plot.lastWateredAt = (nowMs !== undefined && nowMs !== null) ? nowMs : Date.now();
+    var t = (nowMs !== undefined && nowMs !== null) ? nowMs : Date.now();
+    plot.lastWateredAt = t;
+    plot.lastSkillAt = t;
     var st = getStateAPI();
     if (st && st.savePlayer) st.savePlayer(player);
     return { ok: true, msg: 'Đã tưới ô ' + (plotIndex + 1) + '.' };
@@ -307,8 +325,109 @@
   }
 
   // ---------------------------------------------------------------------------
+  // Cấu hình Sâu Bệnh Cỏ Dại ngẫu nhiên (Đợt PEST - Bui 03:07)
+  // ---------------------------------------------------------------------------
+  var pestConfig = {
+    rates: {
+      weed: 0.35,      // PROVISIONAL: 35% xác suất cỏ dại
+      pest: 0.30,      // PROVISIONAL: 30% xác suất sâu linh
+      disease: 0.25    // PROVISIONAL: 25% xác suất uế bệnh
+    },
+    windows: {
+      weed: [0.20, 0.45],      // PROVISIONAL: mọc ở 20% - 45% thời gian lớn
+      pest: [0.45, 0.70],      // PROVISIONAL: xuất hiện ở 45% - 70% thời gian lớn
+      disease: [0.60, 0.85]    // PROVISIONAL: phát bệnh ở 60% - 85% thời gian lớn
+    },
+    spreadRate: 0.10,          // PROVISIONAL: 10% lây lan sang ô bên
+    rng: Math.random
+  };
+
+  function setPestRNG(fn) {
+    pestConfig.rng = (typeof fn === 'function') ? fn : Math.random;
+  }
+
+  function setPestRates(rates) {
+    if (!rates) return;
+    if (typeof rates.weed === 'number') pestConfig.rates.weed = rates.weed;
+    if (typeof rates.pest === 'number') pestConfig.rates.pest = rates.pest;
+    if (typeof rates.disease === 'number') pestConfig.rates.disease = rates.disease;
+    if (typeof rates.spreadRate === 'number') pestConfig.spreadRate = rates.spreadRate;
+  }
+
+  function resetPestConfig() {
+    pestConfig.rates.weed = 0.35;
+    pestConfig.rates.pest = 0.30;
+    pestConfig.rates.disease = 0.25;
+    pestConfig.spreadRate = 0.10;
+    pestConfig.rng = Math.random;
+  }
+
+  function generatePestSchedule(plotIndex, itemId, plantedAt, growSec) {
+    var rng = pestConfig.rng || Math.random;
+    var sched = {};
+
+    var rollWeed = rng();
+    if (rollWeed < pestConfig.rates.weed) {
+      var wWin = pestConfig.windows.weed;
+      sched.weedAt = wWin[0] + rng() * (wWin[1] - wWin[0]);
+    } else {
+      sched.weedAt = null;
+    }
+
+    var rollPest = rng();
+    if (rollPest < pestConfig.rates.pest) {
+      var pWin = pestConfig.windows.pest;
+      sched.pestAt = pWin[0] + rng() * (pWin[1] - pWin[0]);
+    } else {
+      sched.pestAt = null;
+    }
+
+    var rollDis = rng();
+    if (rollDis < pestConfig.rates.disease) {
+      var dWin = pestConfig.windows.disease;
+      sched.diseaseAt = dWin[0] + rng() * (dWin[1] - dWin[0]);
+    } else {
+      sched.diseaseAt = null;
+    }
+
+    return sched;
+  }
+
+  function checkPestSpread(player, now) {
+    if (!player || !player.linhDien || !player.linhDien.plots) return;
+    var plots = player.linhDien.plots;
+    var rng = pestConfig.rng || Math.random;
+    var len = Math.min(plots.length, player.linhDien.unlockedPlots || INITIAL_PLOTS);
+
+    for (var i = 0; i < len; i++) {
+      var p = plots[i];
+      if (!p || !p.itemId) continue;
+
+      if (p.pest || p.disease) {
+        var neighbors = [i - 1, i + 1];
+        for (var n = 0; n < neighbors.length; n++) {
+          var ni = neighbors[n];
+          if (ni >= 0 && ni < len) {
+            var np = plots[ni];
+            if (np && np.itemId) {
+              if (p.pest && !np.pest && !np.pestCleared && rng() < pestConfig.spreadRate) {
+                np.pest = true;
+              }
+              if (p.disease && !np.disease && !np.diseaseCleared && rng() < pestConfig.spreadRate) {
+                np.disease = true;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // plotView
   // ---------------------------------------------------------------------------
+  function getHerbQualityAPI() { try { if (typeof window !== 'undefined' && window.GameHerbQuality) return window.GameHerbQuality; return require('./herb-quality.js'); } catch (e) { return null; } }
+
   function calcQuality(plot, plantDef, withered) {
     var q = 1.0;
     var soilElem = (plot && plot.soilElement) || 'thuy';
@@ -316,9 +435,13 @@
     if (isSynergyGood(soilElem, plantElem)) q += 0.5; // PROVISIONAL
     if (plot && plot.watered) q += 0.2; // PROVISIONAL
     if (plot && plot.fertilizedCount) q += 0.2 * plot.fertilizedCount; // PROVISIONAL
-    if (plot && plot.forcedCount) q -= 0.25 * plot.forcedCount; // chín ép
+    // BỎ PHẠT THÚC ÉP (Lệnh Bui 03:07): không còn trừ phẩm chất khi dùng Thôi Sinh
     if (withered) q -= 0.5; // PROVISIONAL
-    if (plot && (plot.weed || plot.pest)) q -= 0.2;
+    if (plot) {
+      if (plot.weed) q -= 0.15; // PROVISIONAL: cỏ dại tranh linh khí
+      if (plot.pest) q -= 0.15; // PROVISIONAL: sâu linh đục thân lá
+      if (plot.disease) q -= 0.20; // PROVISIONAL: uế bệnh xâm lấn
+    }
     if (q < 0.1) q = 0.1;
     if (q > 2.0) q = 2.0;
     return q;
@@ -331,19 +454,30 @@
     return 'Hạ phẩm';
   }
 
+  // Một context duy nhất cho xem và thu; Linh Vũ không có cờ riêng trên ô nên không cộng spellWatered.
+  function harvestContext(player, plot, view, withered) {
+    return { soilLevel: player.linhDien.soilLevel, watered: !!plot.watered, fertilizedCount: plot.fertilizedCount, soilFertility: player.linhDien.soilFertility, weed: !!view.weed, pest: !!view.pest, withered: !!withered, spellPurified: !!plot.pestCleared, spellGuided: !!plot.guided };
+  }
+
+  function herbQualityForPlot(player, plot, view, withered) {
+    var hq = getHerbQualityAPI();
+    if (hq && hq.qualityForHarvest) return hq.qualityForHarvest(harvestContext(player, plot, view, withered));
+    return 1;
+  }
+
   function plotView(player, plotIndex, nowMs) {
     if (!player || plotIndex < 0 || plotIndex >= MAX_PLOTS) {
-      return { state: 'empty', itemId: null, progress: 0, remainSec: 0, stage: 0, withered: false, weed: false, pest: false, watered: false, quality: 1 };
+      return { state: 'empty', itemId: null, progress: 0, remainSec: 0, stage: 0, withered: false, weed: false, pest: false, disease: false, watered: false, quality: 1, skillIntervalSec: 0, skillRemainSec: 0, needSkill: false, needSkillHint: '' };
     }
     ensureState(player);
     var plot = player.linhDien.plots[plotIndex];
     if (!plot || !plot.itemId || !plot.plantedAt) {
-      return { state: 'empty', itemId: null, progress: 0, remainSec: 0, stage: 0, withered: false, weed: false, pest: false, watered: false, quality: 1 };
+      return { state: 'empty', itemId: null, progress: 0, remainSec: 0, stage: 0, withered: false, weed: false, pest: false, disease: false, watered: false, quality: 1, skillIntervalSec: 0, skillRemainSec: 0, needSkill: false, needSkillHint: '' };
     }
 
     var plantDef = PLANTABLE[plot.itemId];
     if (!plantDef) {
-      return { state: 'empty', itemId: null, progress: 0, remainSec: 0, stage: 0, withered: false, weed: false, pest: false, watered: false, quality: 1 };
+      return { state: 'empty', itemId: null, progress: 0, remainSec: 0, stage: 0, withered: false, weed: false, pest: false, disease: false, watered: false, quality: 1, skillIntervalSec: 0, skillRemainSec: 0, needSkill: false, needSkillHint: '' };
     }
 
     var now = (nowMs !== undefined && nowMs !== null) ? nowMs : Date.now();
@@ -351,8 +485,8 @@
     var plantElem = plot.element || plantDef.element || 'moc';
     var syn = synergyMultiplier(soilElem, plantElem);
     var waterFactor = plot.watered ? 0.75 : 1.0;
-    var weedFactor = (plot.weed || plot.pest) ? 1.15 : 1.0;
     var fertFactor = plot.fertilizedCount > 0 ? Math.max(0.85, 1 - 0.05 * plot.fertilizedCount) : 1.0;
+
     // Đợt N2: thú giữ ruộng (GameLinhThu.guardBonus) giảm tỉ lệ cỏ/sâu
     // (ngưỡng xuất hiện chậm lại) + tăng tốc chăm cây (growSec ngắn lại).
     // Không có thú giữ ruộng thì mọi hệ số bằng 1, hành vi D1 giữ nguyên.
@@ -363,26 +497,81 @@
     } catch (e) { guardBonus = null; }
     var guardActive = !!(guardBonus && guardBonus.active);
     var guardGrow = guardActive ? guardBonus.growFactor : 1;
-    var weedAt = 0.4 * (1 + (guardActive ? guardBonus.weedDelay : 0));
-    var pestAt = 0.7 * (1 + (guardActive ? guardBonus.pestDelay : 0));
-    var growSec = plantDef.growSec * syn * waterFactor * weedFactor * fertFactor * guardGrow;
+    var guardWeedDelay = guardActive ? (guardBonus.weedDelay || 0) : 0;
+    var guardPestDelay = guardActive ? (guardBonus.pestDelay || 0) : 0;
 
-    // cỏ dại / sâu linh xuất hiện theo thời gian
-    var weed = plot.weedCleared ? false : (now >= plot.plantedAt + plantDef.growSec * 1000 * weedAt);
-    var pest = plot.pestCleared ? false : (now >= plot.plantedAt + plantDef.growSec * 1000 * pestAt);
+    // Sâu bệnh cỏ dại ngẫu nhiên (Đợt PEST - Bui 03:07)
+    if (!plot.pestSchedule) {
+      plot.pestSchedule = generatePestSchedule(plotIndex, plot.itemId, plot.plantedAt, plantDef.growSec);
+    }
+    var sched = plot.pestSchedule || {};
+
+    var weed = !!plot.weed;
+    if (plot.weedCleared) {
+      weed = false;
+    } else if (sched.weedAt !== null && sched.weedAt !== undefined) {
+      var weedThreshold = sched.weedAt * (1 + guardWeedDelay);
+      if (now >= plot.plantedAt + plantDef.growSec * 1000 * weedThreshold) {
+        weed = true;
+      }
+    }
+
+    var pest = !!plot.pest;
+    if (plot.pestCleared) {
+      pest = false;
+    } else if (sched.pestAt !== null && sched.pestAt !== undefined) {
+      var pestThreshold = sched.pestAt * (1 + guardPestDelay);
+      if (now >= plot.plantedAt + plantDef.growSec * 1000 * pestThreshold) {
+        pest = true;
+      }
+    }
+
+    var disease = !!plot.disease;
+    if (plot.diseaseCleared) {
+      disease = false;
+    } else if (sched.diseaseAt !== null && sched.diseaseAt !== undefined) {
+      var diseaseThreshold = sched.diseaseAt * (1 + guardPestDelay);
+      if (now >= plot.plantedAt + plantDef.growSec * 1000 * diseaseThreshold) {
+        disease = true;
+      }
+    }
+
     plot.weed = weed;
     plot.pest = pest;
+    plot.disease = disease;
+
+    // Hậu quả uế nhiễm: mỗi loại làm chậm lớn 10% (PROVISIONAL)
+    var pestCount = (weed ? 1 : 0) + (pest ? 1 : 0) + (disease ? 1 : 0);
+    var weedFactor = pestCount > 0 ? (1.0 + 0.10 * pestCount) : 1.0;
+    var growSec = plantDef.growSec * syn * waterFactor * weedFactor * fertFactor * guardGrow;
+
+    // Chu kỳ cần skill (Đợt PEST - Bui 03:07)
+    var skillInterval = plantDef.skillIntervalSec || Math.max(30, Math.round(plantDef.growSec * 0.30));
+    var lastSkill = (plot.lastSkillAt !== undefined && plot.lastSkillAt !== null) ? plot.lastSkillAt : plot.plantedAt;
+    var nextSkillAt = lastSkill + skillInterval * 1000;
+    var skillRemainSec = Math.max(0, Math.ceil((nextSkillAt - now) / 1000));
+    var needSkill = (skillRemainSec === 0);
 
     var elapsedSec = Math.max(0, (now - plot.plantedAt) / 1000);
 
     if (elapsedSec >= growSec + WITHER_GRACE_SEC) {
       var qW = calcQuality(plot, plantDef, true);
-      return { state: 'withered', itemId: plot.itemId, progress: 1.0, remainSec: 0, stage: 2, withered: true, weed: weed, pest: pest, watered: !!plot.watered, quality: qW, grade: qualityGrade(qW) };
+      return {
+        state: 'withered', itemId: plot.itemId, progress: 1.0, remainSec: 0, stage: 2,
+        withered: true, weed: weed, pest: pest, disease: disease, watered: !!plot.watered,
+        quality: qW, herbQuality: herbQualityForPlot(player, plot, { weed: weed, pest: pest }, true), grade: qualityGrade(qW),
+        skillIntervalSec: skillInterval, skillRemainSec: 0, needSkill: false, needSkillHint: ''
+      };
     }
 
     if (elapsedSec >= growSec) {
       var qR = calcQuality(plot, plantDef, false);
-      return { state: 'ready', itemId: plot.itemId, progress: 1.0, remainSec: 0, stage: 2, withered: false, weed: weed, pest: pest, watered: !!plot.watered, quality: qR, grade: qualityGrade(qR) };
+      return {
+        state: 'ready', itemId: plot.itemId, progress: 1.0, remainSec: 0, stage: 2,
+        withered: false, weed: weed, pest: pest, disease: disease, watered: !!plot.watered,
+        quality: qR, herbQuality: herbQualityForPlot(player, plot, { weed: weed, pest: pest }, false), grade: qualityGrade(qR),
+        skillIntervalSec: skillInterval, skillRemainSec: 0, needSkill: false, needSkillHint: ''
+      };
     }
 
     var progress = Math.max(0, Math.min(0.9999, elapsedSec / growSec));
@@ -392,7 +581,14 @@
     if (progress >= 0.66) stage = 2;
     else if (progress >= 0.33) stage = 1;
 
-    return { state: 'growing', itemId: plot.itemId, progress: progress, remainSec: remainSec, stage: stage, withered: false, weed: weed, pest: pest, watered: !!plot.watered, quality: calcQuality(plot, plantDef, false), grade: qualityGrade(calcQuality(plot, plantDef, false)) };
+    var curQ = calcQuality(plot, plantDef, false);
+    return {
+      state: 'growing', itemId: plot.itemId, progress: progress, remainSec: remainSec, stage: stage,
+      withered: false, weed: weed, pest: pest, disease: disease, watered: !!plot.watered,
+      quality: curQ, grade: qualityGrade(curQ),
+      skillIntervalSec: skillInterval, skillRemainSec: skillRemainSec, needSkill: needSkill,
+      needSkillHint: needSkill ? 'CẦN SKILL' : ('Cần skill sau ' + skillRemainSec + 's')
+    };
   }
 
   // ---------------------------------------------------------------------------
@@ -440,6 +636,7 @@
       element: plantDef.element || 'moc',
       soilElement: 'thuy',
       plantedAt: now,
+      lastSkillAt: now,
       watered: false,
       waterCount: 0,
       lastWateredAt: 0,
@@ -449,7 +646,10 @@
       weedCleared: false,
       pest: false,
       pestCleared: false,
-      forcedCount: 0
+      disease: false,
+      diseaseCleared: false,
+      forcedCount: 0,
+      pestSchedule: generatePestSchedule(plotIndex, itemId, now, plantDef.growSec)
     };
 
     st.savePlayer(player);
@@ -478,6 +678,7 @@
     var withered = view.state === 'withered';
     var yieldCount = plantDef ? (plantDef.yieldCount || 1) : 1;
     if (withered) yieldCount = Math.max(1, yieldCount - 1);
+    if (plot.disease) yieldCount = Math.max(1, yieldCount - 1); // PROVISIONAL: Uế bệnh làm giảm sản lượng
     var itemId = plot.itemId;
     var quality = view.quality || calcQuality(plot, plantDef, withered);
 
@@ -487,7 +688,9 @@
 
     if (!st) return { ok: false, msg: 'GameState chưa sẵn sàng.', itemId: itemId, count: 0 };
 
-    var addRes = st.addItemToBag(player, itemId, yieldCount, itemDefs);
+    var hq = getHerbQualityAPI();
+    var herbQuality = hq && hq.qualityForHarvest ? hq.qualityForHarvest(harvestContext(player, plot, view, withered)) : 1;
+    var addRes = st.addHerbToBag ? st.addHerbToBag(player, itemId, yieldCount, herbQuality, itemDefs) : st.addItemToBag(player, itemId, yieldCount, itemDefs);
     if (!addRes || !addRes.success) {
       return { ok: false, msg: 'Túi đồ đã đầy, không thể thu hoạch! Hãy dọn túi trước.', itemId: itemId, count: 0 };
     }
@@ -506,14 +709,208 @@
       itemId: itemId,
       count: yieldCount,
       quality: quality,
+      herbQuality: herbQuality,
       grade: qualityGrade(quality),
       withered: withered
     };
   }
 
   // ---------------------------------------------------------------------------
-  // Pháp quyết
+  // Pháp quyết & Mở khóa qua Nhiệm vụ (Đợt ELDER — Bui 01:32, 01:37 & Chốt 01:52)
+  // Đường chuẩn mới: Nhập tông (sectStage >= 4) -> Trưởng Lão Dược Điền tại Ruộng Linh Mễ dạy 4 pháp quyết
   // ---------------------------------------------------------------------------
+  var SPELL_UNLOCKS = {
+    'linh-vu': {
+      questName: 'Thuật Trồng Dược Tông Môn',
+      hint: 'bái kiến Trưởng Lão Dược Điền tại Ruộng Linh Mễ tông môn',
+      isUnlocked: function (player) {
+        if (!player || !player.quests) return false;
+        var eq = player.quests.elderQuest;
+        return !!(eq && (eq.completed || eq.stage >= 3));
+      }
+    },
+    'tru-ue': {
+      questName: 'Thuật Trồng Dược Tông Môn',
+      hint: 'bái kiến Trưởng Lão Dược Điền tại Ruộng Linh Mễ tông môn',
+      isUnlocked: function (player) {
+        if (!player || !player.quests) return false;
+        var eq = player.quests.elderQuest;
+        return !!(eq && (eq.completed || eq.stage >= 3));
+      }
+    },
+    'thoi-sinh': {
+      questName: 'Thuật Trồng Dược Tông Môn',
+      hint: 'bái kiến Trưởng Lão Dược Điền tại Ruộng Linh Mễ tông môn',
+      isUnlocked: function (player) {
+        if (!player || !player.quests) return false;
+        var eq = player.quests.elderQuest;
+        return !!(eq && (eq.completed || eq.stage >= 3));
+      }
+    },
+    'dan-linh': {
+      questName: 'Thuật Trồng Dược Tông Môn',
+      hint: 'bái kiến Trưởng Lão Dược Điền tại Ruộng Linh Mễ tông môn',
+      isUnlocked: function (player) {
+        if (!player || !player.quests) return false;
+        var eq = player.quests.elderQuest;
+        return !!(eq && (eq.completed || eq.stage >= 3));
+      }
+    }
+  };
+
+  // Kịch bản Trưởng Lão Dược Điền thi triển ví dụ các cấp độ (Bui 01:37)
+  // 4 pháp quyết x 3 cấp độ (Sơ khởi -> Thuần thục -> Đại thành) = 12 bước thị phạm
+  var ELDER_DEMO_STEPS = [
+    { spellId: 'linh-vu', level: 1, name: 'Linh Vũ Quyết', rankName: 'Sơ Khởi (Mưa Phùn)', color: '#63b3ed', desc: 'Linh Vũ sơ khởi, tụ thủy khí thành mưa phùn bồi tưới linh điền...' },
+    { spellId: 'linh-vu', level: 2, name: 'Linh Vũ Quyết', rankName: 'Thuần Thục (Cam Lộ)', color: '#3182ce', desc: 'Linh Vũ bậc hai, mây lam ngưng tụ rải cam lộ khắp ruộng...' },
+    { spellId: 'linh-vu', level: 3, name: 'Linh Vũ Quyết', rankName: 'Đại Thành (Linh Tuyền)', color: '#bee3f8', desc: 'Linh Vũ đại thành! Linh tuyền từ trời rót xuống, thấm đẫm vạn khoảnh!' },
+    { spellId: 'tru-ue', level: 1, name: 'Trừ Uế Quyết', rankName: 'Sơ Khởi (Thanh Phong)', color: '#48bb78', desc: 'Trừ Uế sơ khởi, thanh tẩy uế khí xua tan sâu bọ cắn rễ...' },
+    { spellId: 'tru-ue', level: 2, name: 'Trừ Uế Quyết', rankName: 'Thuần Thục (Tịnh Hóa)', color: '#2f855a', desc: 'Trừ Uế bậc hai, mộc linh thanh khiết diệt sạch cỏ dại...' },
+    { spellId: 'tru-ue', level: 3, name: 'Trừ Uế Quyết', rankName: 'Đại Thành (Bách Bệnh Bất Xâm)', color: '#9ae6b4', desc: 'Trừ Uế đại thành! Tịnh hóa linh thổ, bách bệnh bất xâm!' },
+    { spellId: 'thoi-sinh', level: 1, name: 'Thôi Sinh Quyết', rankName: 'Sơ Khởi (Kích Mầm)', color: '#68d391', desc: 'Thôi Sinh sơ khởi, kích hoạt sinh cơ trong hạt mầm...' },
+    { spellId: 'thoi-sinh', level: 2, name: 'Thôi Sinh Quyết', rankName: 'Thuần Thục (Tảo Niên)', color: '#38a169', desc: 'Thôi Sinh bậc hai, đẩy nhanh niên hạn dược thảo lớn nhanh vượt bậc...' },
+    { spellId: 'thoi-sinh', level: 3, name: 'Thôi Sinh Quyết', rankName: 'Đại Thành (Nghịch Chuyển)', color: '#c6f6d5', desc: 'Thôi Sinh đại thành! Thoáng chốc nụ nở hoa kết trái, nghịch chuyển càn khôn!' },
+    { spellId: 'dan-linh', level: 1, name: 'Dẫn Linh Quyết', rankName: 'Sơ Khởi (Tụ Khí)', color: '#ecc94b', desc: 'Dẫn Linh sơ khởi, gom góp linh khí xung quanh tụ về thổ nhưỡng...' },
+    { spellId: 'dan-linh', level: 2, name: 'Dẫn Linh Quyết', rankName: 'Thuần Thục (Dẫn Mạch)', color: '#d69e2e', desc: 'Dẫn Linh bậc hai, kích hoạt linh mạch dưới sâu nuôi dưỡng độ phì...' },
+    { spellId: 'dan-linh', level: 3, name: 'Dẫn Linh Quyết', rankName: 'Đại Thành (Địa Mạch Thăng Hoa)', color: '#fefcbf', desc: 'Dẫn Linh đại thành! Địa mạch thăng hoa, biến phàm thổ thành phúc địa linh điền!' }
+  ];
+
+  function executeElderDemoStep(player, stepIndex, nowMs) {
+    if (typeof stepIndex !== 'number' || stepIndex < 0 || stepIndex >= ELDER_DEMO_STEPS.length) return null;
+    var step = ELDER_DEMO_STEPS[stepIndex];
+    var now = (nowMs !== undefined && nowMs !== null) ? nowMs : Date.now();
+    var castInfo = {
+      spellId: step.spellId,
+      level: step.level,
+      caster: 'npc_truonglao_duocdien',
+      mapId: 'ruong-linh-me',
+      x: 225,
+      y: 420,
+      stepIndex: stepIndex,
+      rankName: step.rankName,
+      color: step.color,
+      name: step.name,
+      desc: step.desc,
+      at: now
+    };
+
+    if (player && player.linhDien) {
+      player.linhDien.lastCast = castInfo;
+    }
+    lastCastResult = castInfo;
+
+    // Cắm móc VFX theo bậc (Bui 01:37 / Parent Note 01:05)
+    if (typeof window !== 'undefined' && window.GameVFX && window.GameVFX.onSpellCast) {
+      try { window.GameVFX.onSpellCast(castInfo); } catch (e) {}
+    }
+    return castInfo;
+  }
+
+  function simulateElderDemo(player, skip) {
+    if (!player) return [];
+    ensureState(player);
+    if (!player.quests) player.quests = {};
+    if (!player.quests.elderQuest) player.quests.elderQuest = { stage: 2, demoDone: false, completed: false };
+
+    var results = [];
+    if (skip) {
+      var lastStep = executeElderDemoStep(player, ELDER_DEMO_STEPS.length - 1);
+      if (lastStep) results.push(lastStep);
+      player.quests.elderQuest.demoDone = true;
+      player.quests.elderQuest.stage = 2;
+    } else {
+      for (var i = 0; i < ELDER_DEMO_STEPS.length; i++) {
+        var res = executeElderDemoStep(player, i);
+        if (res) results.push(res);
+      }
+      player.quests.elderQuest.demoDone = true;
+      player.quests.elderQuest.stage = 2;
+    }
+
+    var st = getStateAPI();
+    if (st && st.savePlayer) st.savePlayer(player);
+    return results;
+  }
+
+  function learnAllSpellsFromElder(player) {
+    if (!player) return { ok: false, msg: 'Không tìm thấy người chơi.' };
+    ensureState(player);
+    var sids = ['linh-vu', 'tru-ue', 'thoi-sinh', 'dan-linh'];
+    var newlyCount = 0;
+    for (var i = 0; i < sids.length; i++) {
+      var sid = sids[i];
+      if (player.linhDien && player.linhDien.spells && player.linhDien.spells[sid] && !player.linhDien.spells[sid].learned) {
+        newlyCount++;
+      }
+    }
+
+    if (!player.quests) player.quests = {};
+    if (!player.quests.elderQuest) player.quests.elderQuest = {};
+    player.quests.elderQuest.stage = 3;
+    player.quests.elderQuest.completed = true;
+    player.quests.elderQuest.demoDone = true;
+
+    for (var j = 0; j < sids.length; j++) {
+      learnSpell(player, sids[j]);
+    }
+
+    var st = getStateAPI();
+    if (st && st.savePlayer) st.savePlayer(player);
+    return {
+      ok: true,
+      msg: 'Lĩnh ngộ toàn bộ 4 Pháp Quyết Linh Điền từ Trưởng Lão Dược Điền!',
+      newlyLearnedCount: newlyCount
+    };
+  }
+
+  function syncQuestSpells(player, silent) {
+    if (!player || !player.linhDien || !player.linhDien.spells) return [];
+    var ld = player.linhDien;
+    var q = player.quests || {};
+    var unlockedNow = [];
+
+    // Hồi tố save cũ: nếu đã nhập tông (sectStage >= 4)
+    if ((q.sectStage || 0) >= 4) {
+      var anyLearned = ld.spells['linh-vu'].learned || ld.spells['tru-ue'].learned ||
+                       ld.spells['thoi-sinh'].learned || ld.spells['dan-linh'].learned;
+      if (!q.elderQuest) {
+        if (anyLearned) {
+          // Save cũ đã học qua đường cũ -> giữ nguyên, đánh dấu hoàn thành nhiệm vụ
+          q.elderQuest = { stage: 3, demoDone: true, completed: true };
+        } else {
+          // Save cũ nhập tông chưa học -> cấp nhiệm vụ gặp Trưởng Lão
+          q.elderQuest = { stage: 1, demoDone: false, completed: false };
+        }
+      } else if (anyLearned && !q.elderQuest.completed && q.elderQuest.stage < 3) {
+        // Save cũ đã từng học nhưng elderQuest chưa đánh dấu completed -> hồi tố an toàn
+        q.elderQuest.stage = 3;
+        q.elderQuest.completed = true;
+        q.elderQuest.demoDone = true;
+      }
+    }
+
+    // Nếu elderQuest đã hoàn thành (stage >= 3 hoặc completed), kích hoạt 4 pháp quyết
+    if (q.elderQuest && (q.elderQuest.stage >= 3 || q.elderQuest.completed)) {
+      var sids = Object.keys(SPELLS);
+      for (var i = 0; i < sids.length; i++) {
+        var sid = sids[i];
+        if (ld.spells[sid] && !ld.spells[sid].learned) {
+          ld.spells[sid].learned = true;
+          unlockedNow.push(sid);
+          if (!silent && typeof window !== 'undefined' && window.GameUI && window.GameUI.showToast) {
+            window.GameUI.showToast('Lĩnh ngộ pháp quyết linh điền: ' + SPELLS[sid].name + '!');
+          }
+        }
+      }
+    }
+
+    if (unlockedNow.length > 0) {
+      var st = getStateAPI();
+      if (st && st.savePlayer) st.savePlayer(player);
+    }
+    return unlockedNow;
+  }
+
   function getSpellDef(spellId) { return SPELLS[spellId] || null; }
   function listSpells() { return Object.keys(SPELLS).map(function (k) { return SPELLS[k]; }); }
 
@@ -526,10 +923,14 @@
   function learnSpell(player, spellId) {
     ensureState(player);
     if (!SPELLS[spellId]) return { ok: false, msg: 'Pháp quyết không tồn tại.' };
+    var already = !!player.linhDien.spells[spellId].learned;
     player.linhDien.spells[spellId].learned = true;
     var st = getStateAPI();
     if (st && st.savePlayer) st.savePlayer(player);
-    return { ok: true, msg: 'Đã học ' + SPELLS[spellId].name + '.', spellId: spellId };
+    if (!already && typeof window !== 'undefined' && window.GameUI && window.GameUI.showToast) {
+      window.GameUI.showToast('Lĩnh ngộ pháp quyết linh điền: ' + SPELLS[spellId].name + '!');
+    }
+    return { ok: true, msg: 'Đã học ' + SPELLS[spellId].name + '.', spellId: spellId, newlyLearned: !already };
   }
 
   function spellLevel(player, spellId) {
@@ -549,25 +950,50 @@
     ensureState(player);
     var def = SPELLS[spellId];
     if (!def) return { ok: false, msg: 'Không có pháp quyết này.' };
-    if (!isSpellLearned(player, spellId)) return { ok: false, msg: 'Chưa học pháp quyết này.' };
+    if (!isSpellLearned(player, spellId)) {
+      var unlockDef = SPELL_UNLOCKS[spellId];
+      var hint = unlockDef ? ('Hãy ' + unlockDef.hint + ' để lĩnh ngộ!') : 'Hãy hoàn thành nhiệm vụ để lĩnh ngộ!';
+      return { ok: false, msg: 'Chưa học ' + def.name + '. ' + hint, code: 'not_learned' };
+    }
 
     var ld = player.linhDien;
     var sp = ld.spells[spellId];
     var now = (nowMs !== undefined && nowMs !== null) ? nowMs : Date.now();
 
     if (sp.cooldownUntil && now < sp.cooldownUntil) {
-      return { ok: false, msg: 'Đang hồi chiêu.', code: 'cooldown' };
+      var remainSec = Math.ceil((sp.cooldownUntil - now) / 1000);
+      return { ok: false, msg: def.name + ' đang hồi chiêu (còn ' + remainSec + 's).', code: 'cooldown', remainSec: remainSec };
     }
 
     var cost = spellCost(spellId, sp.level || 1);
     var st = getStateAPI();
     if ((player.linhLuc || 0) < cost) {
-      return { ok: false, msg: 'Linh lực không đủ (cần ' + cost + ').', code: 'cost' };
+      return { ok: false, msg: 'Linh lực không đủ (cần ' + cost + ' LL, hiện có ' + (player.linhLuc || 0) + ' LL).', code: 'cost', cost: cost };
+    }
+
+    // Kiểm tra điều kiện thực thi cụ thể cho từng quyết trước khi trừ tài nguyên
+    var affected = 0;
+    var effectMsg = '';
+    var idx = -1;
+
+    if (spellId === 'thoi-sinh') {
+      idx = (typeof plotIndex === 'number') ? plotIndex : -1;
+      if (idx < 0 || idx >= MAX_PLOTS || !ld.plots[idx] || !ld.plots[idx].itemId) {
+        idx = -1;
+        for (var j = 0; j < (ld.unlockedPlots || INITIAL_PLOTS); j++) {
+          if (ld.plots[j] && ld.plots[j].itemId) {
+            var vCheck = plotView(player, j, now);
+            if (vCheck.state === 'growing') { idx = j; break; }
+          }
+        }
+      }
+      if (idx < 0 || !ld.plots[idx] || !ld.plots[idx].itemId) {
+        return { ok: false, msg: 'Không có linh thảo nào đang lớn trong linh điền để thúc.', code: 'no_target' };
+      }
     }
 
     player.linhLuc -= cost;
 
-    var affected = 0;
     if (spellId === 'linh-vu') {
       // tưới tất cả ô đã mở đang có cây
       for (var i = 0; i < (ld.unlockedPlots || INITIAL_PLOTS); i++) {
@@ -576,40 +1002,45 @@
           p.watered = true;
           p.waterCount = (p.waterCount || 0) + 1;
           p.lastWateredAt = now;
+          p.lastSkillAt = now;
           affected++;
         }
       }
+      effectMsg = affected > 0 ? ('Đã tưới ' + affected + ' ô dược thảo!') : 'Mưa linh tưới mát mảnh linh điền.';
     } else if (spellId === 'thoi-sinh') {
-      var idx = (typeof plotIndex === 'number') ? plotIndex : -1;
-      if (idx < 0 || idx >= MAX_PLOTS || !ld.plots[idx]) {
-        // tìm ô đang lớn đầu tiên
-        for (var j = 0; j < (ld.unlockedPlots || INITIAL_PLOTS); j++) {
-          if (ld.plots[j] && ld.plots[j].itemId) { idx = j; break; }
-        }
-      }
-      if (idx >= 0 && ld.plots[idx]) {
-        var plot = ld.plots[idx];
-        // thúc lớn: lùi thời điểm gieo 40% thời gian lớn (PROVISIONAL)
-        var plantDef = PLANTABLE[plot.itemId];
-        var boostSec = plantDef ? Math.round(plantDef.growSec * 0.4) : 120;
-        plot.plantedAt = plot.plantedAt - boostSec * 1000;
-        plot.forcedCount = (plot.forcedCount || 0) + 1;
-        affected = 1;
-      }
+      var plot = ld.plots[idx];
+      var plantDef = PLANTABLE[plot.itemId];
+      var boostSec = plantDef ? Math.round(plantDef.growSec * 0.4) : 120;
+      plot.plantedAt = plot.plantedAt - boostSec * 1000;
+      plot.forcedCount = (plot.forcedCount || 0) + 1;
+      plot.lastSkillAt = now;
+      affected = 1;
+      effectMsg = 'Đã thúc lớn ô #' + (idx + 1) + ' nhanh ' + boostSec + 's!';
     } else if (spellId === 'tru-ue') {
       for (var k = 0; k < (ld.unlockedPlots || INITIAL_PLOTS); k++) {
         var pp = ld.plots[k];
         if (pp) {
           pp.weed = false;
           pp.pest = false;
+          pp.disease = false;
           pp.weedCleared = true;
           pp.pestCleared = true;
+          pp.diseaseCleared = true;
+          pp.lastSkillAt = now;
           affected++;
         }
       }
+      effectMsg = 'Đã quét sạch uế khí, sâu linh, cỏ dại và dịch bệnh trên toàn bộ thửa đất!';
     } else if (spellId === 'dan-linh') {
-      ld.soilFertility = (ld.soilFertility || 0) + (sp.level || 1);
+      var gainFert = (sp.level || 1);
+      ld.soilFertility = (ld.soilFertility || 0) + gainFert;
+      // Hội tụ HERBQ: đánh dấu các ô đang có cây đã được dẫn linh (cộng +4 phẩm chất khi thu)
+      for (var gi = 0; gi < (ld.unlockedPlots || INITIAL_PLOTS); gi++) {
+        var gp = ld.plots[gi];
+        if (gp && gp.itemId) gp.guided = true;
+      }
       affected = (ld.unlockedPlots || INITIAL_PLOTS);
+      effectMsg = 'Dẫn linh khí thành công! Độ phì thửa đất +' + gainFert + ' (hiện tại: ' + ld.soilFertility + ').';
     }
 
     sp.uses = (sp.uses || 0) + 1;
@@ -624,8 +1055,43 @@
       st.addTuViCapped(player, def.tuViElem, (def.tuViAmount || 1) * (sp.level || 1));
     }
 
+    // Ghi chú hội tụ Parent (2026-11-13 01:05): lưu vết lastCast kèm level cho VFX đợt sau
+    ld.lastCast = {
+      spellId: spellId,
+      level: sp.level,
+      uses: sp.uses,
+      affected: affected,
+      at: now
+    };
+
+    // Âm thanh pháp quyết (SFX-INTEGRATE: Bui duyệt 04:05 2026-11-13)
+    // Chỉ phát khi thi triển thành công (vượt qua mọi kiểm tra tài nguyên/hồi chiêu/mục tiêu)
+    var audio = (typeof window !== 'undefined' && window.GameAudio) || (typeof global !== 'undefined' && global.GameAudio) || null;
+    if (audio) {
+      try {
+        if (spellId === 'linh-vu' && typeof audio.playLinhVu === 'function') {
+          audio.playLinhVu();
+        } else if (spellId === 'thoi-sinh' && typeof audio.playThoiSinh === 'function') {
+          audio.playThoiSinh();
+        } else if (spellId === 'dan-linh' && typeof audio.playDanLinh === 'function') {
+          audio.playDanLinh();
+        } else if (spellId === 'tru-ue' && typeof audio.playTruUe === 'function') {
+          audio.playTruUe();
+        }
+      } catch (e) {}
+    }
+
     if (st && st.savePlayer) st.savePlayer(player);
-    return { ok: true, msg: 'Đã thi ' + def.name + '.', spellId: spellId, affected: affected, uses: sp.uses, level: sp.level };
+    return {
+      ok: true,
+      msg: 'Thi triển ' + def.name + ' thành công! ' + effectMsg,
+      spellId: spellId,
+      affected: affected,
+      uses: sp.uses,
+      level: sp.level,
+      cooldownUntil: sp.cooldownUntil,
+      targetPlotIndex: idx >= 0 ? idx : undefined
+    };
   }
 
   // alias cast functions
@@ -753,6 +1219,115 @@
     });
   }
 
+  function renderSpellsBar() {
+    if (typeof document === 'undefined') return;
+    var barEl = document.getElementById('linhdien-spells-bar');
+    if (!barEl) return;
+    if (!livePlayer) return;
+
+    barEl.innerHTML = '';
+    var now = Date.now();
+    var spellKeys = ['linh-vu', 'thoi-sinh', 'tru-ue', 'dan-linh'];
+
+    spellKeys.forEach(function (sid) {
+      var def = SPELLS[sid];
+      var unlockDef = SPELL_UNLOCKS[sid];
+      var sp = livePlayer.linhDien.spells[sid];
+      var learned = !!(sp && sp.learned);
+      var curLinhLuc = livePlayer.linhLuc || 0;
+      var cost = spellCost(sid, sp ? sp.level : 1);
+      var cooldownRemain = (sp && sp.cooldownUntil && sp.cooldownUntil > now)
+        ? Math.ceil((sp.cooldownUntil - now) / 1000)
+        : 0;
+
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn-spell';
+      btn.setAttribute('data-spell-id', sid);
+
+      // Thẻ ngũ hành (không emoji)
+      var elemTag = document.createElement('span');
+      elemTag.className = 'spell-elem-tag tag-' + (def.element || 'vo');
+      elemTag.textContent = def.element === 'thuy' ? 'Thủy' : (def.element === 'moc' ? 'Mộc' : 'Vô');
+
+      var nameEl = document.createElement('span');
+      nameEl.className = 'spell-name';
+      nameEl.textContent = def.name;
+
+      var metaEl = document.createElement('span');
+      metaEl.className = 'spell-meta';
+
+      var statusEl = document.createElement('span');
+      statusEl.className = 'spell-status';
+
+      if (!learned) {
+        btn.classList.add('spell-locked');
+        metaEl.textContent = 'Cấp: Chưa học';
+        statusEl.className += ' status-locked';
+        statusEl.textContent = 'Khóa: ' + (unlockDef ? unlockDef.questName : 'Nhiệm vụ');
+        btn.title = 'Chưa học. Điều kiện: ' + (unlockDef ? unlockDef.hint : 'Hoàn thành nhiệm vụ');
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          if (typeof window !== 'undefined' && window.GameUI && window.GameUI.showToast) {
+            window.GameUI.showToast(def.name + ' chưa mở khóa. Hãy ' + (unlockDef ? unlockDef.hint : 'làm nhiệm vụ') + '!');
+          }
+        });
+      } else {
+        btn.classList.add('spell-learned');
+        metaEl.textContent = 'Cấp ' + (sp.level || 1) + ' · ' + cost + ' LL';
+
+        if (cooldownRemain > 0) {
+          btn.classList.add('spell-cooldown');
+          statusEl.className += ' status-cooldown';
+          statusEl.textContent = 'Hồi: ' + cooldownRemain + 's';
+          btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            if (typeof window !== 'undefined' && window.GameUI && window.GameUI.showToast) {
+              window.GameUI.showToast(def.name + ' đang hồi chiêu (còn ' + cooldownRemain + 's).');
+            }
+          });
+        } else if (curLinhLuc < cost) {
+          btn.classList.add('spell-no-mana');
+          statusEl.className += ' status-no-mana';
+          statusEl.textContent = 'Thiếu LL';
+          btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            if (typeof window !== 'undefined' && window.GameUI && window.GameUI.showToast) {
+              window.GameUI.showToast('Linh lực không đủ để thi ' + def.name + ' (cần ' + cost + ' LL, có ' + curLinhLuc + ' LL).');
+            }
+          });
+        } else {
+          btn.classList.add('spell-ready');
+          statusEl.className += ' status-ready';
+          statusEl.textContent = 'Thi triển';
+          btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            var res = castSpell(livePlayer, sid, selectedPlotIndex);
+            // Ghi chú hội tụ Parent (2026-11-13 01:05): Giữ lại kết quả thi triển (kèm level)
+            // cho đợt VFX hiệu ứng theo bậc cắm vào, không để rơi kết quả.
+            exports.lastCastResult = res;
+            if (typeof window !== 'undefined' && window.GameVFX && window.GameVFX.onSpellCast) {
+              try { window.GameVFX.onSpellCast(res); } catch (e) {}
+            }
+            if (typeof window !== 'undefined' && window.GameUI && window.GameUI.showToast) {
+              window.GameUI.showToast(res.msg);
+            }
+            if (res.ok && typeof window !== 'undefined' && window.GameAudio && window.GameAudio.playChime) {
+              window.GameAudio.playChime();
+            }
+            renderPanel();
+          });
+        }
+      }
+
+      btn.appendChild(elemTag);
+      btn.appendChild(nameEl);
+      btn.appendChild(metaEl);
+      btn.appendChild(statusEl);
+      barEl.appendChild(btn);
+    });
+  }
+
   function renderPanel() {
     if (typeof document === 'undefined') return;
     var gridEl = document.getElementById('linhdien-grid');
@@ -760,9 +1335,20 @@
     if (!livePlayer) return;
 
     ensureState(livePlayer);
+    syncQuestSpells(livePlayer, true);
+
+    // Cập nhật huy hiệu cấp đất + độ phì trên tiêu đề
+    var soilBadge = document.querySelector('#linhdien-modal .linhdien-soil-badge');
+    if (soilBadge) {
+      soilBadge.textContent = 'Cấp đất: ' + getSoilLevelName(livePlayer) + ' · Độ phì: ' + (livePlayer.linhDien.soilFertility || 0);
+    }
+
+    renderSpellsBar();
+
     gridEl.innerHTML = '';
 
     var now = Date.now();
+    checkPestSpread(livePlayer, now);
 
     for (var i = 0; i < MAX_PLOTS; i++) {
       (function (plotIndex) {
@@ -828,6 +1414,15 @@
           badgeEl2.textContent = stageLabels[view.stage] || 'Đang lớn';
           badgeEl2.className += ' badge-growing';
 
+          // Chỉ báo CẦN SKILL trên header (Đợt PEST - Bui 03:07)
+          if (view.needSkill) {
+            plotEl.classList.add('plot-need-skill');
+            var needSkillBadge = document.createElement('span');
+            needSkillBadge.className = 'plot-card-badge badge-need-skill';
+            needSkillBadge.textContent = 'CẦN SKILL';
+            headEl2.appendChild(needSkillBadge);
+          }
+
           var visualWrap = document.createElement('div');
           visualWrap.className = 'plot-herb-visual-wrap';
           if (view.itemId === 'la-thanh-tuy') {
@@ -855,9 +1450,26 @@
           fillEl.className = 'plot-progress-fill';
           fillEl.style.width = (view.progress * 100).toFixed(1) + '%';
           barEl.appendChild(fillEl);
+
+          if (view.watered) plotEl.classList.add('plot-watered');
+          if (view.weed) plotEl.classList.add('plot-has-weed');
+          if (view.pest) plotEl.classList.add('plot-has-pest');
+          if (view.disease) plotEl.classList.add('plot-has-disease');
+          if (view.weed || view.pest || view.disease) plotEl.classList.add('plot-infested');
+
           var timeEl = document.createElement('div');
           timeEl.className = 'plot-remain-time';
-          timeEl.textContent = 'Còn ' + formatRemainTime(view.remainSec) + ' (' + Math.floor(view.progress * 100) + '%)' + (view.weed ? ' · Cỏ dại' : '') + (view.pest ? ' · Sâu linh' : '');
+
+          var timeText = 'Còn ' + formatRemainTime(view.remainSec) + ' (' + Math.floor(view.progress * 100) + '%)' + (view.watered ? ' · Đã tưới' : '');
+          if (view.needSkill) {
+            timeText += ' · [CẦN SKILL!]';
+          } else if (view.skillRemainSec > 0) {
+            timeText += ' · Cần skill: ' + view.skillRemainSec + 's';
+          }
+          if (view.weed) timeText += ' · Cỏ dại';
+          if (view.pest) timeText += ' · Sâu linh';
+          if (view.disease) timeText += ' · Uế bệnh';
+          timeEl.textContent = timeText;
 
           progressWrap.appendChild(barEl);
           progressWrap.appendChild(timeEl);
@@ -866,9 +1478,37 @@
           bodyEl2.appendChild(herbNameEl);
           bodyEl2.appendChild(progressWrap);
 
-          plotEl.addEventListener('click', function () {
+          // Tags uế nhiễm trực quan sẵn có (zero emoji)
+          var tagsWrap = document.createElement('div');
+          tagsWrap.className = 'plot-pest-tags';
+          if (view.weed) {
+            var weedTag = document.createElement('span');
+            weedTag.className = 'plot-pest-tag tag-weed';
+            weedTag.textContent = 'Cỏ dại';
+            tagsWrap.appendChild(weedTag);
+          }
+          if (view.pest) {
+            var pestTag = document.createElement('span');
+            pestTag.className = 'plot-pest-tag tag-pest';
+            pestTag.textContent = 'Sâu linh';
+            tagsWrap.appendChild(pestTag);
+          }
+          if (view.disease) {
+            var diseaseTag = document.createElement('span');
+            diseaseTag.className = 'plot-pest-tag tag-disease';
+            diseaseTag.textContent = 'Uế bệnh';
+            tagsWrap.appendChild(diseaseTag);
+          }
+          if (tagsWrap.children.length > 0) {
+            bodyEl2.appendChild(tagsWrap);
+          }
+
+            plotEl.addEventListener('click', function () {
             if (typeof window !== 'undefined' && window.GameUI && window.GameUI.showToast) {
-              window.GameUI.showToast(herbNameEl.textContent + ' đang lớn: ' + Math.floor(view.progress * 100) + '% (còn ' + formatRemainTime(view.remainSec) + ').');
+              var toastMsg = herbNameEl.textContent + ' đang lớn: ' + Math.floor(view.progress * 100) + '% (còn ' + formatRemainTime(view.remainSec) + ').';
+              if (view.needSkill) toastMsg += ' Đang cần dùng pháp quyết chăm sóc!';
+              else toastMsg += ' Cần skill sau ' + view.skillRemainSec + 's.';
+              window.GameUI.showToast(toastMsg);
             }
           });
         } else if (view.state === 'ready' || view.state === 'withered') {
@@ -1018,10 +1658,19 @@
 
   exports.removeWeed = removeWeed;
   exports.removePest = removePest;
+  exports.removeDisease = removeDisease;
   exports.waterPlot = waterPlot;
   exports.water = waterPlot;
   exports.fertilize = fertilize;
   exports.applyFertilizer = fertilize;
+
+  exports.setPestRNG = setPestRNG;
+  exports.setPestRates = setPestRates;
+  exports.resetPestConfig = resetPestConfig;
+  exports.generatePestSchedule = generatePestSchedule;
+  exports.checkPestSpread = checkPestSpread;
+  exports.pestConfig = pestConfig;
+  exports.PLANTABLE = PLANTABLE;
 
   exports.plotView = plotView;
   exports.calcQuality = calcQuality;
@@ -1043,6 +1692,14 @@
   exports.castThoiSinhQuyet = castThoiSinhQuyet;
   exports.castDanLinhQuyet = castDanLinhQuyet;
   exports.castTruUeQuyet = castTruUeQuyet;
+  exports.SPELL_UNLOCKS = SPELL_UNLOCKS;
+  exports.syncQuestSpells = syncQuestSpells;
+  exports.renderSpellsBar = renderSpellsBar;
+  exports.ELDER_DEMO_STEPS = ELDER_DEMO_STEPS;
+  exports.executeElderDemoStep = executeElderDemoStep;
+  exports.simulateElderDemo = simulateElderDemo;
+  exports.learnAllSpellsFromElder = learnAllSpellsFromElder;
+  exports.lastCastResult = lastCastResult;
 
   exports.attach = attach;
   exports.openPanel = openPanel;

@@ -431,6 +431,19 @@
   // ==========================================================================
   // THÊM / LẤY / ĐẾM VẬT PHẨM TRONG VẬT CHỨA
   // ==========================================================================
+  function itemHerbQuality(item) {
+    if (!item || item.herbQuality === undefined || item.herbQuality === null) return undefined;
+    return Math.max(0, Math.min(3, Math.floor(Number(item.herbQuality) || 0)));
+  }
+
+  function sameHerbQuality(a, b) {
+    var qa = itemHerbQuality(a);
+    var qb = itemHerbQuality(b);
+    return qa === qb;
+  }
+
+  function extraQuality(item) { return itemHerbQuality(item); }
+
   function addItemToContainer(container, itemId, count, extra) {
     if (!container) return { success: false, reason: 'no_container' };
     var cnt = (count !== undefined && count !== null) ? count : 1;
@@ -439,7 +452,7 @@
     if (limit > 1) {
       for (var i = 0; i < container.slots.length; i++) {
         var s = container.slots[i];
-        if (s && !isContainerItem(s) && s.itemId === itemId) {
+        if (s && !isContainerItem(s) && s.itemId === itemId && sameHerbQuality(s, extra)) {
           // stack if under limit
           var space = limit - (s.count || 1);
           if (space > 0) {
@@ -460,6 +473,10 @@
       if (extra && typeof extra === 'object') {
         if (extra.starred) slotObj.starred = true;
         if (extra.locked) slotObj.locked = true;
+        if (extra.herbQuality !== undefined && extra.herbQuality !== null) {
+          slotObj.herbQuality = Math.max(0, Math.min(3, Math.floor(Number(extra.herbQuality) || 0)));
+          slotObj.herbQualityName = extra.herbQualityName || ['Hạ phẩm', 'Trung phẩm', 'Thượng phẩm', 'Cực phẩm'][slotObj.herbQuality];
+        }
       }
       container.slots[idx] = slotObj;
       cnt -= put;
@@ -472,7 +489,7 @@
   }
 
   // Add item to player with flow: default container -> others in order -> temp chest.
-  function addItemToPlayer(player, itemId, count, itemDefs) {
+  function addItemToPlayer(player, itemId, count, itemDefs, extra) {
     ensureState(player);
     var st = player.tuiKho;
     // linh-thach currency stays in player.linhThach (giữ tương thích)
@@ -499,14 +516,14 @@
     for (var oi = 0; oi < uniq.length; oi++) {
       var c = st.containers[uniq[oi]];
       if (!c) continue;
-      var r = addItemToContainer(c, itemId, cnt);
+      var r = addItemToContainer(c, itemId, cnt, extra);
       if (r.success) {
         return { success: true, containerId: c.id, slot: r.slot, count: r.count };
       }
     }
     // all full -> temp chest
     var tc = st.containers[st.tempChestId];
-    var tr = addItemToContainer(tc, itemId, cnt);
+    var tr = addItemToContainer(tc, itemId, cnt, extra);
     if (tr.success) {
       var expires = Date.now() + TEMP_CHEST_DAYS * 24 * 60 * 60 * 1000;
       for (var ti = 0; ti < tc.slots.length; ti++) {
@@ -856,10 +873,10 @@
     ensureState(player);
     return player.tuiKho.containers[player.tuiKho.tempChestId];
   }
-  function addToTempChest(player, itemId, count, now) {
+  function addToTempChest(player, itemId, count, now, extra) {
     ensureState(player);
     var tc = getTempChest(player);
-    var res = addItemToContainer(tc, itemId, count || 1);
+    var res = addItemToContainer(tc, itemId, count || 1, extra);
     if (res.success) {
       // set expiry on slots that received
       var expires = (now || Date.now()) + TEMP_CHEST_DAYS * 24 * 60 * 60 * 1000;
@@ -896,8 +913,8 @@
     // remove from temp
     if (cnt >= (s.count || 1)) tc.slots[slotIndex] = null;
     else s.count -= cnt;
-    // add to carried default
-    var r = addItemToPlayer(player, s.itemId, cnt);
+    // add to carried default (chuyển tiếp toàn bộ extra/s để giữ herbQuality)
+    var r = addItemToPlayer(player, s.itemId, cnt, undefined, s);
     if (!r.success) {
       // revert? keep removed but fail? We'll return fail with msg
       return { ok: false, reason: 'bag_full', msg: 'Túi đầy, không lấy ra được.' };

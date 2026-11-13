@@ -103,6 +103,57 @@
       iconRow: 7,
       desc: 'Hoa trắng mọc ở mép trũng sương độc Rừng Độc Thanh Tụy. Dùng để giải độc và kháng độc một lúc.'
     },
+    // Đợt LINHME: Linh Mễ, Hạt Giống Linh Mễ & Các Món Ăn Hồi Phục
+    'hat-giong-linh-me': {
+      id: 'hat-giong-linh-me',
+      name: 'Hạt Giống Linh Mễ',
+      type: 'material',
+      stackable: true,
+      sellPrice: 1,
+      iconCol: 1,
+      iconRow: 5,
+      desc: 'Hạt giống Linh Mễ mộc khí dồi dào, gieo vào luống đất Tông Môn để trồng Linh Mễ.'
+    },
+    'linh-me': {
+      id: 'linh-me',
+      name: 'Linh Mễ',
+      type: 'material',
+      stackable: true,
+      sellPrice: 2,
+      iconCol: 3,
+      iconRow: 0,
+      desc: 'Hạt gạo linh quang óng ả, lương thực tinh hoa của Tông Môn, dùng để đổi các món ăn hồi phục theo giờ.'
+    },
+    'com-linh-me': {
+      id: 'com-linh-me',
+      name: 'Cơm Linh Mễ',
+      type: 'consumable',
+      stackable: true,
+      sellPrice: 5,
+      iconCol: 5,
+      iconRow: 5,
+      desc: 'Bát cơm trắng ngát hương linh mễ. Ăn vào hồi +10 Khí Huyết và +8 Linh Lực mỗi 5 giây, liên tục trong 1 giờ.'
+    },
+    'com-linh-me-hap': {
+      id: 'com-linh-me-hap',
+      name: 'Cơm Linh Mễ Hấp Băng Tinh',
+      type: 'consumable',
+      stackable: true,
+      sellPrice: 10,
+      iconCol: 5,
+      iconRow: 5,
+      desc: 'Cơm Linh Mễ hấp cùng Băng Tinh thanh lương. Ăn vào hồi +18 Khí Huyết và +15 Linh Lực mỗi 5 giây, liên tục trong 2 giờ.'
+    },
+    'chao-linh-me': {
+      id: 'chao-linh-me',
+      name: 'Cháo Linh Mễ Bổ Khí',
+      type: 'consumable',
+      stackable: true,
+      sellPrice: 15,
+      iconCol: 5,
+      iconRow: 5,
+      desc: 'Cháo Linh Mễ ninh cùng Linh Chi Rừng đại bổ. Ăn vào hồi +25 Khí Huyết và +22 Linh Lực mỗi 5 giây, liên tục trong 3 giờ.'
+    },
     'non-la': {
       id: 'non-la',
       name: 'Nón Lá',

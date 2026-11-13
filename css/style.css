@@ -1215,7 +1215,7 @@ input:checked + .slider:before {
 
 .bag-grid {
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
+  grid-template-columns: repeat(8, minmax(0, 1fr));
   gap: 6px;
   background: rgba(10, 15, 12, 0.6);
   padding: 8px;
@@ -1224,8 +1224,10 @@ input:checked + .slider:before {
 }
 
 .bag-slot {
-  width: 42px;
-  height: 42px;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  min-height: 0;
   background: rgba(25, 35, 27, 0.85);
   border: 1px solid #3c4a3d;
   border-radius: 4px;
@@ -1262,6 +1264,42 @@ input:checked + .slider:before {
   font-weight: bold;
   color: #ffffff;
   text-shadow: 0 1px 2px #000000;
+}
+
+.bag-slot-quality {
+  position: absolute;
+  top: 1px;
+  left: 2px;
+  max-width: 38px;
+  padding: 0 2px;
+  border: 1px solid currentColor;
+  background: rgba(8, 12, 9, 0.78);
+  font-size: 8px;
+  line-height: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+/* Túi ở màn hẹp (≤520px): lưới 8 cột với ô 42px cố định tràn khỏi hộp
+   (đo thật trước sửa: ô cuối tới x=430 ở 390px, x=429 ở 360px; hàng trang
+   bị tới x=495) — 6 cột + ô co theo rãnh, nhãn phẩm không vượt ô, hàng
+   trang bị xuống dòng thay vì tràn. */
+@media (max-width: 520px) {
+  .bag-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .bag-slot-quality {
+    max-width: calc(100% - 4px);
+    /* Nhãn "Thượng" (dài nhất) bị cắt ellipsis ở ô 36px nếu giữ cỡ 8px. */
+    font-size: 7px;
+    line-height: 10px;
+    padding: 0 1px;
+  }
+  .bag-equipment-row {
+    flex-wrap: wrap;
+  }
 }
 
 .bag-item-info {
@@ -2215,6 +2253,16 @@ body.lefty .quest-toggle-btn { left: auto; right: 10px; }
   min-height: 0;
 }
 
+/* Modal thỉnh giáo: phần thân cuộn trong để nút học quyết thứ 4 không bị
+   cắt khỏi mép dưới điện thoại (cùng mẫu hộp túi) */
+#farm-spell-learn-modal .modal-box {
+  max-height: 94vh;
+}
+#farm-spell-learn-modal .modal-body {
+  overflow-y: auto;
+  min-height: 0;
+}
+
 /* Chế độ chụp hình (hồ sơ 28A): ẩn toàn bộ lớp giao diện */
 body.photo-mode #joystick-zone,
 body.photo-mode #skill-bar,
@@ -2287,6 +2335,15 @@ body.photo-mode #toast-container { visibility: hidden; }
   flex-direction: column;
 }
 
+/* PEST parent-fix: thân modal phải cuộn được trên điện thoại (ô #6 trở đi
+   nằm dưới nếp gấp ở màn 390×844) — mẫu đã dùng cho modal học quyết
+   LINHME-MAP: overflow-y auto + min-height 0 để flex child co được. */
+#linhdien-modal .linhdien-body {
+  overflow-y: auto;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
 .linhdien-header-title-wrap {
   display: flex;
   align-items: center;
@@ -2310,6 +2367,189 @@ body.photo-mode #toast-container { visibility: hidden; }
   font-style: italic;
   margin-bottom: 12px;
   line-height: 1.4;
+}
+
+/* ===== HÀNG PHÁP QUYẾT LINH ĐIỀN (Đợt SPELLS) ===== */
+.linhdien-spells-section {
+  background: rgba(18, 22, 18, 0.85);
+  border: 1px solid #5a4625;
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 12px;
+}
+
+.linhdien-spells-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.linhdien-spells-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #ffd978;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.linhdien-spells-sub {
+  font-size: 10px;
+  color: #8c8577;
+  font-style: italic;
+}
+
+.linhdien-spells-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+@media (max-width: 520px) {
+  .linhdien-spells-bar {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+}
+
+.btn-spell {
+  background: linear-gradient(180deg, #2a2216, #18130c);
+  border: 1.5px solid #6b5329;
+  border-radius: 6px;
+  padding: 6px 4px;
+  color: #e8e0cc;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  position: relative;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.btn-spell:hover:not(.spell-locked):not(.spell-cooldown) {
+  border-color: #d4af37;
+  box-shadow: 0 0 8px rgba(212, 175, 55, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-spell:active:not(.spell-locked):not(.spell-cooldown) {
+  transform: translateY(0);
+}
+
+.spell-elem-tag {
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 3px;
+  line-height: 1.2;
+}
+
+.spell-elem-tag.tag-thuy {
+  background: #102a43;
+  color: #90cdf4;
+  border: 1px solid #2b6cb0;
+}
+
+.spell-elem-tag.tag-moc {
+  background: #143322;
+  color: #9ae6b4;
+  border: 1px solid #2f855a;
+}
+
+.spell-elem-tag.tag-vo {
+  background: #332410;
+  color: #fbd38d;
+  border: 1px solid #975a16;
+}
+
+.spell-name {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #fff2cf;
+  white-space: nowrap;
+}
+
+.spell-meta {
+  font-size: 10px;
+  color: #b0a894;
+}
+
+.spell-status {
+  font-size: 9.5px;
+  font-weight: 600;
+  padding: 1px 4px;
+  border-radius: 3px;
+  margin-top: 1px;
+}
+
+.spell-status.status-ready {
+  background: #163828;
+  color: #68d391;
+  border: 1px solid #276749;
+}
+
+.spell-status.status-locked {
+  background: #2d1818;
+  color: #fc8181;
+  border: 1px solid #742a2a;
+}
+
+.spell-status.status-cooldown {
+  background: #332512;
+  color: #f6ad55;
+  border: 1px solid #7b4e18;
+}
+
+.spell-status.status-no-mana {
+  background: #2b1f1a;
+  color: #e2a07c;
+  border: 1px solid #633621;
+}
+
+.btn-spell.spell-locked {
+  opacity: 0.65;
+  border-style: dashed;
+  border-color: #4a3c26;
+  background: #16130d;
+}
+
+.btn-spell.spell-cooldown {
+  opacity: 0.8;
+  border-color: #5a4325;
+}
+
+.plot-watered-indicator {
+  display: inline-block;
+  color: #63b3ed;
+  font-weight: 600;
+  font-size: 10.5px;
+}
+
+.linhdien-plot-card.plot-watered {
+  border-color: #3182ce;
+  box-shadow: inset 0 0 8px rgba(49, 130, 206, 0.2);
+}
+
+.linhdien-plot-card.plot-need-skill {
+  border-color: #dd6b20;
+}
+
+.linhdien-plot-card.plot-has-weed {
+  border-color: #4a5568;
+}
+
+.linhdien-plot-card.plot-has-pest {
+  border-color: #9b2c2c;
+}
+
+.linhdien-plot-card.plot-has-disease {
+  border-color: #6b46c1;
+}
+
+.linhdien-plot-card.plot-infested {
+  box-shadow: inset 0 0 10px rgba(155, 44, 44, 0.35);
 }
 
 .linhdien-grid {
@@ -2382,6 +2622,55 @@ body.photo-mode #toast-container { visibility: hidden; }
   background: #543a14;
   color: #ffd700;
   border: 1px solid #b98a2f;
+}
+
+.badge-need-skill {
+  background: #744210;
+  color: #fbd38d;
+  border: 1px solid #dd6b20;
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  animation: pulse-need-skill 1.5s infinite alternate ease-in-out;
+}
+
+@keyframes pulse-need-skill {
+  0% { transform: scale(0.96); box-shadow: 0 0 2px rgba(221, 107, 32, 0.4); }
+  100% { transform: scale(1.04); box-shadow: 0 0 6px rgba(221, 107, 32, 0.8); }
+}
+
+.plot-pest-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.plot-pest-tag {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.plot-pest-tag.tag-weed {
+  background: #2d3748;
+  color: #cbd5e0;
+  border: 1px solid #4a5568;
+}
+
+.plot-pest-tag.tag-pest {
+  background: #742a2a;
+  color: #feb2b2;
+  border: 1px solid #9b2c2c;
+}
+
+.plot-pest-tag.tag-disease {
+  background: #44337a;
+  color: #d6bcfa;
+  border: 1px solid #6b46c1;
 }
 
 .plot-card-body {
@@ -3051,3 +3340,209 @@ body.photo-mode #toast-container { visibility: hidden; }
 .lt-gear-slot { display: flex; align-items: center; gap: 8px; width: 100%; }
 .lt-gear-label { font-size: 13px; flex: 1; }
 .lt-egg-row { border: 1px dashed rgba(255,233,168,.35); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; }
+
+/* ============ Đợt LINHME: Linh Mễ & Thức Ăn Hồi Phục Theo Giờ ============ */
+.food-buff-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, rgba(62, 46, 26, 0.9), rgba(30, 22, 12, 0.95));
+  border: 1px solid #ffd700;
+  border-radius: 6px;
+  padding: 3px 8px;
+  margin-top: 6px;
+  font-size: 11.5px;
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.25);
+  animation: food-buff-glow 2.5s infinite alternate ease-in-out;
+}
+@keyframes food-buff-glow {
+  0% { border-color: #ffd700; box-shadow: 0 0 6px rgba(255, 215, 0, 0.2); }
+  100% { border-color: #ffeb99; box-shadow: 0 0 12px rgba(255, 215, 0, 0.45); }
+}
+.food-buff-icon { font-size: 14px; }
+.food-buff-name { color: #ffe9a8; font-weight: 700; }
+.food-buff-timer { color: #a3e635; font-family: monospace; font-size: 12px; margin-left: auto; }
+
+/* Bảng Canh Tác 32 Ô Tông Môn */
+.tong-mon-farm-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 65vh;
+  overflow-y: auto;
+  padding: 6px 4px;
+}
+.farm-bed-section {
+  background: rgba(22, 28, 20, 0.75);
+  border: 1px solid rgba(168, 137, 58, 0.4);
+  border-radius: 8px;
+  padding: 10px;
+}
+.farm-bed-title {
+  color: #ffd978;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.farm-plots-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+}
+.farm-plot-card {
+  background: linear-gradient(180deg, #241c13, #151009);
+  border: 1.5px solid #5a4422;
+  border-radius: 6px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+  transition: all 0.2s;
+}
+.farm-plot-card:hover {
+  border-color: #ffd978;
+  box-shadow: 0 0 8px rgba(255, 217, 120, 0.25);
+}
+.farm-plot-card.ready {
+  border-color: #ffd700;
+  background: linear-gradient(180deg, #332712, #1f1709);
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.35);
+}
+.farm-plot-idx { font-size: 11px; color: #a09278; font-weight: 700; }
+.farm-plot-status { font-size: 11px; color: #e2e8f0; font-weight: 600; }
+.farm-plot-status.ready { color: #ffd700; }
+.farm-plot-progress-bar {
+  width: 100%;
+  height: 5px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.farm-plot-progress-fill { height: 100%; background: #55d882; transition: width 0.3s; }
+.farm-plot-btn {
+  font-size: 11px;
+  padding: 3px 8px;
+  width: 100%;
+  border-radius: 4px;
+  margin-top: 2px;
+}
+
+/* Đổi Thức Ăn & Nhiệm Vụ */
+.food-exchange-item, .sect-quest-item {
+  background: rgba(30, 24, 16, 0.85);
+  border: 1px solid rgba(255, 217, 120, 0.25);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.food-exchange-item:hover, .sect-quest-item:hover {
+  border-color: #ffd700;
+}
+.food-info-head { font-weight: 700; color: #ffe9a8; font-size: 14px; }
+.food-info-desc { font-size: 12px; color: #cbd5e1; margin-top: 3px; }
+.food-info-cost { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+.food-info-cost b { color: #ffd700; }
+
+
+/* ================= THANH KỸ NĂNG RUỘNG & PHÁP QUYẾT (Đợt LINHME-MAP) ================= */
+
+.farm-skill-bar {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(18, 26, 20, 0.92);
+  border: 1.5px solid #8e7a46;
+  border-radius: 12px;
+  padding: 8px 14px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.65), 0 0 12px rgba(142, 122, 70, 0.35);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  z-index: 40;
+  backdrop-filter: blur(4px);
+}
+.farm-skill-bar-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffd700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.farm-skill-bar-slots {
+  display: flex;
+  gap: 10px;
+}
+.farm-skill-btn {
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #2a3d2e, #142117);
+  border: 1.5px solid #6b8c6e;
+  color: #e2f8e4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 2px;
+}
+.farm-skill-btn:hover:not(:disabled) {
+  border-color: #ffd700;
+  transform: translateY(-2px);
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.45);
+}
+.farm-skill-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  border-color: #475569;
+}
+.farm-skill-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+.farm-skill-cost {
+  font-size: 9px;
+  font-weight: 700;
+  color: #7fd2ff;
+  margin-top: 2px;
+}
+.farm-skill-cd-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.72);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffd700;
+}
+.farm-spell-learn-item {
+  background: rgba(30, 24, 16, 0.85);
+  border: 1px solid rgba(255, 217, 120, 0.25);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.farm-spell-learn-item:hover {
+  border-color: #ffd700;
+}

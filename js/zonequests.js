@@ -249,6 +249,8 @@
       player.v1.zoneQuests.activeQuestId = null;
     }
 
+    // Đợt ELDER (Bui 01:32 & Chốt 01:52): Dẫn Linh Quyết chuyển hội tụ về Trưởng Lão Dược Điền tại Ruộng Linh Mễ
+
     if (st && st.savePlayer) st.savePlayer(player);
 
     if (typeof window !== 'undefined' && window.GameAudio && window.GameAudio.playChime) {

@@ -1,0 +1,374 @@
+{
+  "version": 3,
+  "status": "CHƯA NGHIỆM THU",
+  "source": "game-ngu-hanh-linhduoc/out/herb-manifest.json (gói hình thật, tên tệp giữ nguyên)",
+  "note": "Mã hiển thị chỉ đọc tệp này. width/height là khổ bitmap gốc; scale đưa về khổ hiển thị (displayW/displayH); pivot tính bằng pixel GỐC (điểm tiếp đất / tâm đáy), nhân scale là ra displayPivot. drawOffset là dịch neo khi vẽ, đơn vị pixel hiển thị. Đổi hình thật: ghi đè PNG + cập nhật 4 số này, không sửa mã. grids: lưới chia cây đều theo phán của Bui (grid-layout.json), khóa theo id điểm hái; plants là pivot tuyệt đối từng cây, cùng lưới mọi giai đoạn.",
+  "sprites": {
+    "herb-plot-tongmon": {
+      "path": "assets/art/herb/herb-plot-tongmon.png",
+      "width": 496,
+      "height": 352,
+      "pivot": {
+        "x": 244.5,
+        "y": 337
+      },
+      "scale": 0.25,
+      "drawOffset": {
+        "x": -62,
+        "y": -44
+      },
+      "role": "backup",
+      "note": "Luống vẽ sẵn trong tranh nền tông môn — mã KHÔNG vẽ sprite này (giữ làm dự phòng)."
+    },
+    "herb-garden-s1": {
+      "path": "assets/art/herb/herb-garden-s1.png",
+      "width": 320,
+      "height": 240,
+      "pivot": {
+        "x": 161.3,
+        "y": 228
+      },
+      "scale": 0.25,
+      "drawOffset": {
+        "x": 0,
+        "y": 8
+      }
+    },
+    "herb-garden-s2": {
+      "path": "assets/art/herb/herb-garden-s2.png",
+      "width": 320,
+      "height": 240,
+      "pivot": {
+        "x": 162.7,
+        "y": 228
+      },
+      "scale": 0.25,
+      "drawOffset": {
+        "x": 0,
+        "y": 8
+      }
+    },
+    "herb-garden-s3": {
+      "path": "assets/art/herb/herb-garden-s3.png",
+      "width": 320,
+      "height": 240,
+      "pivot": {
+        "x": 157.3,
+        "y": 228
+      },
+      "scale": 0.25,
+      "drawOffset": {
+        "x": 0,
+        "y": 8
+      }
+    },
+    "herb-garden-ready": {
+      "path": "assets/art/herb/herb-garden-ready.png",
+      "width": 320,
+      "height": 240,
+      "pivot": {
+        "x": 152.5,
+        "y": 228
+      },
+      "scale": 0.25,
+      "drawOffset": {
+        "x": 0,
+        "y": 8
+      }
+    },
+    "herb-wild-s1": {
+      "path": "assets/art/herb/herb-wild-s1.png",
+      "width": 256,
+      "height": 240,
+      "pivot": {
+        "x": 117.5,
+        "y": 223
+      },
+      "scale": 0.25,
+      "drawOffset": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "herb-wild-s2": {
+      "path": "assets/art/herb/herb-wild-s2.png",
+      "width": 256,
+      "height": 240,
+      "pivot": {
+        "x": 119.0,
+        "y": 223
+      },
+      "scale": 0.25,
+      "drawOffset": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "herb-wild-s3": {
+      "path": "assets/art/herb/herb-wild-s3.png",
+      "width": 256,
+      "height": 240,
+      "pivot": {
+        "x": 113.1,
+        "y": 223
+      },
+      "scale": 0.25,
+      "drawOffset": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "herb-wild-ready": {
+      "path": "assets/art/herb/herb-wild-ready.png",
+      "width": 256,
+      "height": 240,
+      "pivot": {
+        "x": 113.6,
+        "y": 223
+      },
+      "scale": 0.25,
+      "drawOffset": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "herb-single-s1": {
+      "path": "assets/art/herb/herb-single-s1.png",
+      "width": 140,
+      "height": 112,
+      "pivot": {
+        "x": 70.3,
+        "y": 108
+      },
+      "scale": 0.25,
+      "drawOffset": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "herb-single-s2": {
+      "path": "assets/art/herb/herb-single-s2.png",
+      "width": 140,
+      "height": 112,
+      "pivot": {
+        "x": 69.9,
+        "y": 108
+      },
+      "scale": 0.25,
+      "drawOffset": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "herb-single-s3": {
+      "path": "assets/art/herb/herb-single-s3.png",
+      "width": 140,
+      "height": 112,
+      "pivot": {
+        "x": 69.8,
+        "y": 108
+      },
+      "scale": 0.25,
+      "drawOffset": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "herb-single-ready": {
+      "path": "assets/art/herb/herb-single-ready.png",
+      "width": 140,
+      "height": 112,
+      "pivot": {
+        "x": 69.8,
+        "y": 108
+      },
+      "scale": 0.25,
+      "drawOffset": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  },
+  "grids": {
+    "harvest_tm_1": {
+      "soil": [
+        496,
+        331,
+        624,
+        422
+      ],
+      "plants": [
+        [
+          514.5,
+          360.0
+        ],
+        [
+          560.0,
+          360.0
+        ],
+        [
+          605.5,
+          360.0
+        ],
+        [
+          514.5,
+          390.5
+        ],
+        [
+          560.0,
+          390.5
+        ],
+        [
+          605.5,
+          390.5
+        ],
+        [
+          514.5,
+          421.0
+        ],
+        [
+          560.0,
+          421.0
+        ],
+        [
+          605.5,
+          421.0
+        ]
+      ]
+    },
+    "harvest_tm_2": {
+      "soil": [
+        627,
+        456,
+        724,
+        565
+      ],
+      "plants": [
+        [
+          650.0,
+          485.0
+        ],
+        [
+          703.0,
+          485.0
+        ],
+        [
+          650.0,
+          511.3
+        ],
+        [
+          703.0,
+          511.3
+        ],
+        [
+          650.0,
+          537.7
+        ],
+        [
+          703.0,
+          537.7
+        ],
+        [
+          650.0,
+          564.0
+        ],
+        [
+          703.0,
+          564.0
+        ]
+      ]
+    },
+    "harvest_tm_3": {
+      "soil": [
+        531,
+        766,
+        674,
+        860
+      ],
+      "plants": [
+        [
+          549.5,
+          795.0
+        ],
+        [
+          602.5,
+          795.0
+        ],
+        [
+          655.5,
+          795.0
+        ],
+        [
+          549.5,
+          827.0
+        ],
+        [
+          602.5,
+          827.0
+        ],
+        [
+          655.5,
+          827.0
+        ],
+        [
+          549.5,
+          859.0
+        ],
+        [
+          602.5,
+          859.0
+        ],
+        [
+          655.5,
+          859.0
+        ]
+      ]
+    },
+    "harvest_tm_4": {
+      "soil": [
+        700,
+        766,
+        839,
+        860
+      ],
+      "plants": [
+        [
+          718.5,
+          795.0
+        ],
+        [
+          769.5,
+          795.0
+        ],
+        [
+          820.5,
+          795.0
+        ],
+        [
+          718.5,
+          827.0
+        ],
+        [
+          769.5,
+          827.0
+        ],
+        [
+          820.5,
+          827.0
+        ],
+        [
+          718.5,
+          859.0
+        ],
+        [
+          769.5,
+          859.0
+        ],
+        [
+          820.5,
+          859.0
+        ]
+      ]
+    }
+  }
+}

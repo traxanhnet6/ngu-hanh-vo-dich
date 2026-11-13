@@ -12,6 +12,8 @@
   var masterGain = null;
   var musicGain = null;
   var sfxGain = null;
+  var skillSfxGain = null;
+  var skillLimiter = null;
 
   var isInitialized = false;
   var isPlayingMusic = false;
@@ -67,6 +69,37 @@
       sfxGain = ctx.createGain();
       sfxGain.gain.setValueAtTime(currentSettings.sfxVol, ctx.currentTime);
       sfxGain.connect(masterGain);
+
+      // Chuoi skill rieng biet (SFX-CLIPFIX): skillSfxGain -> skillLimiter -> masterGain
+      // Chan dinh sau diem nhan gain de khong bao gio cat song o am luong 100%
+      skillSfxGain = ctx.createGain();
+      skillSfxGain.gain.setValueAtTime(currentSettings.sfxVol, ctx.currentTime);
+
+      try {
+        var ws = ctx.createWaveShaper();
+        var n = 65536;
+        var curve = new Float32Array(n);
+        var limit = 0.96; // Tran bien do -0.35 dBFS chong cat song tuyet doi
+        var t = 0.88;     // Nguong tuyen tinh -1.11 dBFS, duoi nguong nay y = x (0 meo tieng)
+        for (var i = 0; i < n; i++) {
+          var x = (i / (n - 1)) * 2 - 1; // [-1.0, 1.0]
+          var ax = Math.abs(x);
+          if (ax <= t) {
+            curve[i] = x;
+          } else {
+            var excess = ax - t;
+            var sign = x < 0 ? -1 : 1;
+            curve[i] = sign * (t + (limit - t) * Math.tanh(excess / (limit - t)));
+          }
+        }
+        ws.curve = curve;
+        skillLimiter = ws;
+        skillSfxGain.connect(skillLimiter);
+        skillLimiter.connect(masterGain);
+      } catch (e) {
+        skillLimiter = null;
+        skillSfxGain.connect(masterGain);
+      }
 
       isInitialized = true;
       if (ctx.state === 'suspended') {
@@ -1059,6 +1092,344 @@
     } catch (e) {}
   }
 
+  // =========================================================================
+  // ÂM THANH 4 PHÁP QUYẾT LINH ĐIỀN (SKILL-SFX v1 — Bui duyệt 04:05 2026-11-13)
+  // Tổng hợp thủ tục 100% bằng WebAudio, thang ngũ cung chung, hạt giống cố định.
+  // =========================================================================
+
+  // Hạt giống cố định cho giọt mưa lẻ và tia lấp lánh (LCG)
+  function sfxSeededRand(seed) {
+    var s = seed >>> 0;
+    return function () {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      return s / 4294967296;
+    };
+  }
+
+  function sfxNoiseBuffer(audioCtx, seconds, seed) {
+    var len = Math.max(1, Math.floor(audioCtx.sampleRate * seconds));
+    var buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+    var d = buf.getChannelData(0);
+    var rnd = sfxSeededRand(seed || 12345);
+    for (var i = 0; i < len; i++) d[i] = rnd() * 2 - 1;
+    return buf;
+  }
+
+  function sfxBellPartial(audioCtx, dest, freq, t0, vol, decaySec) {
+    var partials = [[1, 1.0], [2.02, 0.55], [2.74, 0.32], [3.76, 0.18]];
+    for (var i = 0; i < partials.length; i++) {
+      var osc = audioCtx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq * partials[i][0], t0);
+      var gain = audioCtx.createGain();
+      var d = decaySec * (1 - i * 0.13);
+      gain.gain.setValueAtTime(vol * partials[i][1], t0);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+      osc.connect(gain);
+      gain.connect(dest);
+      osc.start(t0);
+      osc.stop(t0 + d + 0.05);
+    }
+  }
+
+  function sfxPluck(audioCtx, dest, freq, t0, vol, decaySec) {
+    var osc = audioCtx.createOscillator();
+    var gain = audioCtx.createGain();
+    var filter = audioCtx.createBiquadFilter();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, t0);
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(freq * 3, t0);
+    filter.frequency.exponentialRampToValueAtTime(freq * 0.8, t0 + decaySec);
+    gain.gain.setValueAtTime(0.001, t0);
+    gain.gain.linearRampToValueAtTime(vol, t0 + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + decaySec);
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(dest);
+    osc.start(t0);
+    osc.stop(t0 + decaySec);
+  }
+
+  // Bảng hệ số bù gain: đưa RMS từ thang WebAudio thô lên RMS -20 dBFS (qua fader 0.8 x 0.8 = 0.64)
+  // để khớp chính xác độ lớn bản clip nghe thử mà Bui đã duyệt.
+  var SKILL_SFX_GAINS = {
+    'linh-vu': 8.47,
+    'thoi-sinh': 4.48,
+    'dan-linh': 6.46,
+    'tru-ue': 5.54
+  };
+
+  function createSkillDestNode(t0, gainVal) {
+    var skillGain = ctx.createGain();
+    skillGain.gain.setValueAtTime(gainVal, t0);
+    var targetBus = skillSfxGain || sfxGain;
+    try {
+      var comp = ctx.createDynamicsCompressor();
+      comp.threshold.setValueAtTime(-1.5, t0);
+      comp.ratio.setValueAtTime(12, t0);
+      comp.knee.setValueAtTime(2, t0);
+      comp.attack.setValueAtTime(0.002, t0);
+      comp.release.setValueAtTime(0.05, t0);
+      skillGain.connect(comp);
+      comp.connect(targetBus);
+    } catch (e) {
+      skillGain.connect(targetBus);
+    }
+    return skillGain;
+  }
+
+  /** Skill 1 — Linh Vũ Quyết (Thủy): mưa linh tưới ruộng. ~2.1s */
+  function playLinhVu() {
+    if (!ctx) initAudio();
+    if (!ctx || !sfxGain) return;
+    try {
+      if (ctx.state === 'suspended') ctx.resume();
+      var t0 = ctx.currentTime;
+      var dest = createSkillDestNode(t0, SKILL_SFX_GAINS['linh-vu'] || 8.47);
+      var buf = sfxNoiseBuffer(ctx, 2.2, 777);
+
+      // Nền mưa chính
+      var src = ctx.createBufferSource();
+      src.buffer = buf;
+      var bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.setValueAtTime(1600, t0);
+      bp.Q.value = 0.4;
+      var g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.085, t0 + 0.18);
+      g.gain.setValueAtTime(0.085, t0 + 1.35);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 2.05);
+      src.connect(bp);
+      bp.connect(g);
+      g.connect(dest);
+      src.start(t0);
+      src.stop(t0 + 2.2);
+
+      // Lớp xì cao (hạt mưa nhỏ)
+      var src2 = ctx.createBufferSource();
+      src2.buffer = buf;
+      var hp = ctx.createBiquadFilter();
+      hp.type = 'highpass';
+      hp.frequency.setValueAtTime(4500, t0);
+      var g2 = ctx.createGain();
+      g2.gain.setValueAtTime(0.0001, t0 + 0.05);
+      g2.gain.exponentialRampToValueAtTime(0.022, t0 + 0.25);
+      g2.gain.setValueAtTime(0.022, t0 + 1.3);
+      g2.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.95);
+      src2.connect(hp);
+      hp.connect(g2);
+      g2.connect(dest);
+      src2.start(t0 + 0.05);
+      src2.stop(t0 + 2.1);
+
+      // Lớp vỗ trầm (mưa rơi xuống đất ướt)
+      var src3 = ctx.createBufferSource();
+      src3.buffer = buf;
+      var lp = ctx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.setValueAtTime(700, t0);
+      var g3 = ctx.createGain();
+      g3.gain.setValueAtTime(0.0001, t0);
+      g3.gain.exponentialRampToValueAtTime(0.05, t0 + 0.22);
+      g3.gain.setValueAtTime(0.05, t0 + 1.3);
+      g3.gain.exponentialRampToValueAtTime(0.0001, t0 + 2.0);
+      src3.connect(lp);
+      lp.connect(g3);
+      g3.connect(dest);
+      src3.start(t0);
+      src3.stop(t0 + 2.1);
+
+      // Giọt mưa rơi lẻ: 12 plink cao rải đều có hạt giống
+      var rnd = sfxSeededRand(4242);
+      for (var i = 0; i < 12; i++) {
+        var t = t0 + 0.15 + rnd() * 1.75;
+        var osc = ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1700 + rnd() * 1400, t);
+        var og = ctx.createGain();
+        og.gain.setValueAtTime(0.035, t);
+        og.gain.exponentialRampToValueAtTime(0.0001, t + 0.045);
+        osc.connect(og);
+        og.connect(dest);
+        osc.start(t);
+        osc.stop(t + 0.06);
+      }
+    } catch (e) {}
+  }
+
+  /** Skill 2 — Thôi Sinh Quyết (Mộc): thúc cây lớn nhanh. ~1.9s */
+  function playThoiSinh() {
+    if (!ctx) initAudio();
+    if (!ctx || !sfxGain) return;
+    try {
+      if (ctx.state === 'suspended') ctx.resume();
+      var t0 = ctx.currentTime;
+      var dest = createSkillDestNode(t0, SKILL_SFX_GAINS['thoi-sinh'] || 4.48);
+
+      var notes = [293.66, 329.63, 392.00, 440.00, 523.25];
+      for (var i = 0; i < notes.length; i++) {
+        sfxPluck(ctx, dest, notes[i], t0 + 0.05 + i * 0.13, 0.12, 0.55);
+      }
+
+      // Nhựa dâng: triangle trầm, vào chậm, tắt ở 1.5s
+      var osc = ctx.createOscillator();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(146.83, t0);
+      var g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.linearRampToValueAtTime(0.05, t0 + 0.7);
+      g.gain.setValueAtTime(0.05, t0 + 1.0);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.5);
+      osc.connect(g);
+      g.connect(dest);
+      osc.start(t0);
+      osc.stop(t0 + 1.55);
+
+      // Chuông đỉnh: nốt C5 ngân khi mầm chạm tán
+      var t1 = t0 + 0.72;
+      var o2 = ctx.createOscillator();
+      o2.type = 'sine';
+      o2.frequency.setValueAtTime(523.25, t1);
+      var g2 = ctx.createGain();
+      g2.gain.setValueAtTime(0.001, t1);
+      g2.gain.linearRampToValueAtTime(0.08, t1 + 0.03);
+      g2.gain.exponentialRampToValueAtTime(0.0001, t1 + 0.9);
+      o2.connect(g2);
+      g2.connect(dest);
+      o2.start(t1);
+      o2.stop(t1 + 0.95);
+
+      var o3 = ctx.createOscillator();
+      o3.type = 'sine';
+      o3.frequency.setValueAtTime(1046.50, t1);
+      var g3 = ctx.createGain();
+      g3.gain.setValueAtTime(0.001, t1);
+      g3.gain.linearRampToValueAtTime(0.025, t1 + 0.02);
+      g3.gain.exponentialRampToValueAtTime(0.0001, t1 + 0.6);
+      o3.connect(g3);
+      g3.connect(dest);
+      o3.start(t1);
+      o3.stop(t1 + 0.65);
+    } catch (e) {}
+  }
+
+  /** Skill 3 — Dẫn Linh Quyết (Vô): dẫn linh khí vào đất. ~2.2s */
+  function playDanLinh() {
+    if (!ctx) initAudio();
+    if (!ctx || !sfxGain) return;
+    try {
+      if (ctx.state === 'suspended') ctx.resume();
+      var t0 = ctx.currentTime;
+      var dest = createSkillDestNode(t0, SKILL_SFX_GAINS['dan-linh'] || 6.46);
+
+      // Thiên âm: 3 nốt tấn công chậm, ngân dài (mẫu playHeavenChime)
+      var notes = [
+        { f: 392.00, t: 0.00 },
+        { f: 440.00, t: 0.12 },
+        { f: 587.33, t: 0.24 }
+      ];
+      for (var i = 0; i < notes.length; i++) {
+        var t = t0 + notes[i].t;
+        var o = ctx.createOscillator();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(notes[i].f, t);
+        var g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.07, t + 0.18);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 1.6);
+        o.connect(g);
+        g.connect(dest);
+        o.start(t);
+        o.stop(t + 1.7);
+      }
+
+      // Dải lụa vút lên: gliss sine 480 -> 1500 Hz
+      var gl = ctx.createOscillator();
+      gl.type = 'sine';
+      gl.frequency.setValueAtTime(480, t0 + 0.1);
+      gl.frequency.exponentialRampToValueAtTime(1500, t0 + 1.15);
+      var gg = ctx.createGain();
+      gg.gain.setValueAtTime(0.0001, t0 + 0.1);
+      gg.gain.linearRampToValueAtTime(0.028, t0 + 0.45);
+      gg.gain.setValueAtTime(0.028, t0 + 0.9);
+      gg.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.2);
+      gl.connect(gg);
+      gg.connect(dest);
+      gl.start(t0 + 0.1);
+      gl.stop(t0 + 1.25);
+
+      // Chuông linh châu khi hội tụ
+      sfxBellPartial(ctx, dest, 587.33, t0 + 1.15, 0.08, 1.0);
+
+      // Tia lấp lánh cuối: 6 ping cao rải có hạt giống
+      var rnd = sfxSeededRand(9001);
+      for (var k = 0; k < 6; k++) {
+        var tp = t0 + 1.25 + rnd() * 0.75;
+        var op = ctx.createOscillator();
+        op.type = 'sine';
+        op.frequency.setValueAtTime(1700 + rnd() * 800, tp);
+        var pg = ctx.createGain();
+        pg.gain.setValueAtTime(0.018, tp);
+        pg.gain.exponentialRampToValueAtTime(0.0001, tp + 0.07);
+        op.connect(pg);
+        pg.connect(dest);
+        op.start(tp);
+        op.stop(tp + 0.09);
+      }
+    } catch (e) {}
+  }
+
+  /** Skill 4 — Trừ Uế Quyết (Mộc): xua sâu bệnh cỏ dại. ~2.0s */
+  function playTruUe() {
+    if (!ctx) initAudio();
+    if (!ctx || !sfxGain) return;
+    try {
+      if (ctx.state === 'suspended') ctx.resume();
+      var t0 = ctx.currentTime;
+      var dest = createSkillDestNode(t0, SKILL_SFX_GAINS['tru-ue'] || 5.54);
+
+      // Sóng quét: bandpass 320 -> 2400 -> 520 Hz
+      var buf = sfxNoiseBuffer(ctx, 1.15, 31337);
+      var src = ctx.createBufferSource();
+      src.buffer = buf;
+      var bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.Q.value = 0.7;
+      bp.frequency.setValueAtTime(320, t0);
+      bp.frequency.exponentialRampToValueAtTime(2400, t0 + 0.45);
+      bp.frequency.exponentialRampToValueAtTime(520, t0 + 1.05);
+      var g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.085, t0 + 0.2);
+      g.gain.setValueAtTime(0.085, t0 + 0.6);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.05);
+      src.connect(bp);
+      bp.connect(g);
+      g.connect(dest);
+      src.start(t0);
+      src.stop(t0 + 1.1);
+
+      // Sương lắng: triangle trầm ngắn đầu tiếng
+      var o = ctx.createOscillator();
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(120, t0);
+      o.frequency.exponentialRampToValueAtTime(55, t0 + 0.12);
+      var og = ctx.createGain();
+      og.gain.setValueAtTime(0.07, t0);
+      og.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.12);
+      o.connect(og);
+      og.connect(dest);
+      o.start(t0);
+      o.stop(t0 + 0.15);
+
+      // Chuông trong khi ruộng sạch + chuông phụ
+      sfxBellPartial(ctx, dest, 587.33, t0 + 0.4, 0.10, 1.3);
+      sfxBellPartial(ctx, dest, 880.00, t0 + 0.95, 0.05, 0.8);
+    } catch (e) {}
+  }
+
   function setMusicVolume(vol) {
     currentSettings.musicVol = Math.max(0, Math.min(1, vol));
     if (musicGain && ctx) {
@@ -1070,6 +1441,9 @@
     currentSettings.sfxVol = Math.max(0, Math.min(1, vol));
     if (sfxGain && ctx) {
       sfxGain.gain.setValueAtTime(currentSettings.sfxVol, ctx.currentTime);
+    }
+    if (skillSfxGain && ctx) {
+      skillSfxGain.gain.setValueAtTime(currentSettings.sfxVol, ctx.currentTime);
     }
   }
 
@@ -1116,6 +1490,11 @@
     startTribWind: startTribWind,
     setTribWindLevel: setTribWindLevel,
     stopTribWind: stopTribWind,
+    playLinhVu: playLinhVu,
+    playThoiSinh: playThoiSinh,
+    playDanLinh: playDanLinh,
+    playTruUe: playTruUe,
+    SKILL_SFX_GAINS: SKILL_SFX_GAINS,
     setMusicVolume: setMusicVolume,
     setSfxVolume: setSfxVolume,
     setMasterVolume: setMasterVolume,

@@ -2059,6 +2059,23 @@
     }
 
     var urls = [
+      // HERB-CODE: sprite linh dược (gói hình thật, CHƯA NGHIỆM THU) —
+      // khổ/pivot/neo đọc từ manifest. Sprite luống herb-plot-tongmon.png
+      // không nạp vì mã không vẽ (luống đã có trong tranh nền).
+      'assets/art/herb/herb-garden-s1.png',
+      'assets/art/herb/herb-garden-s2.png',
+      'assets/art/herb/herb-garden-s3.png',
+      'assets/art/herb/herb-garden-ready.png',
+      // HERB-GRID (phán của Bui "chia cây đều vào luống"): cây đơn vẽ theo
+      // lưới trong manifest (mục grids), thay cụm cây mỗi luống.
+      'assets/art/herb/herb-single-s1.png',
+      'assets/art/herb/herb-single-s2.png',
+      'assets/art/herb/herb-single-s3.png',
+      'assets/art/herb/herb-single-ready.png',
+      'assets/art/herb/herb-wild-s1.png',
+      'assets/art/herb/herb-wild-s2.png',
+      'assets/art/herb/herb-wild-s3.png',
+      'assets/art/herb/herb-wild-ready.png',
       'assets/chars/hanhan-idle.png',
       'assets/chars/hanhan-walk.png',
       'assets/chars/hanhan-gen-idle-v1.png',
@@ -2196,6 +2213,16 @@
       })(urls[i]);
     }
 
+    // HERB-CODE: nạp manifest linh dược (không chặn vòng nạp chính)
+    if (typeof fetch !== 'undefined') {
+      try {
+        fetch('assets/art/herb/herb-manifest.json').then(function (r) { return r.json(); }).then(function (j) {
+          herbManifestCache = j;
+          if (typeof window !== 'undefined') window.__HERB_MANIFEST__ = j;
+        }).catch(function () {});
+      } catch (e) {}
+    }
+
     if (typeof Image !== 'undefined') {
       try {
         var hIdle = new Image();
@@ -2290,6 +2317,31 @@
     if (player && player.quests && (player.quests.sectStage || 0) >= 2 && !player.quests.starterSwordReceived) {
       grantStarterSword(false);
     }
+    // Đợt SPELLS: tương thích save cũ, tự động đồng bộ mở khóa pháp quyết
+    try {
+      var ldAPI_boot = (typeof window !== 'undefined' && window.GameLinhDien) ? window.GameLinhDien : (typeof global !== 'undefined' && global.GameLinhDien ? global.GameLinhDien : (typeof require !== 'undefined' ? require('./linhdien.js') : null));
+      if (ldAPI_boot && ldAPI_boot.syncQuestSpells) ldAPI_boot.syncQuestSpells(player, true);
+    } catch (e) {}
+
+    // Đợt LINHME: Bắt kịp thời gian thực cho hiệu ứng thức ăn (Food Buff Real-Time Catch-Up)
+    var foodBuffInit = (typeof window !== 'undefined') ? window.GameFoodBuff : null;
+    if (!foodBuffInit && typeof require === 'function') {
+      try { foodBuffInit = require('./food-buff.js'); } catch (e) { foodBuffInit = null; }
+    }
+    if (foodBuffInit && player && player.foodBuff) {
+      foodBuffInit.applyOfflineCatchUp(player, Date.now());
+    }
+
+    // Đợt LINHME: Khởi tạo state Vườn Linh Mễ Tông Môn 32 ô
+    var farmInit = (typeof window !== 'undefined') ? window.GameTongMonFarm : null;
+    if (!farmInit && typeof require === 'function') {
+      try { farmInit = require('./tong-mon-farm.js'); } catch (e) { farmInit = null; }
+    }
+    if (farmInit && player) {
+      farmInit.ensureState(player);
+    }
+
+
     onReadyCallback = onReady;
 
     if (canvas) resizeCanvas();
@@ -2564,6 +2616,35 @@
       }
     }
 
+    // 3b. Đợt LINHME-MAP: Click vào ô trồng trên Ruộng Linh Mễ (GameTongMonFarm)
+    if (currentMapId === 'ruong-linh-me') {
+      var farmApiClick = (typeof window !== 'undefined') ? window.GameTongMonFarm : null;
+      if (farmApiClick && farmApiClick.getPlotsConfig) {
+        var pConfigs = farmApiClick.getPlotsConfig();
+        for (var pi = 0; pi < pConfigs.length; pi++) {
+          var pcfg = pConfigs[pi];
+          var pr = pcfg.radius || 24;
+          if (Math.hypot(worldX - pcfg.x, worldY - pcfg.y) <= pr) {
+            var distToPlot = Math.hypot(player.x - pcfg.x, player.y - pcfg.y);
+            if (distToPlot <= 60) {
+              currentPath = [];
+              pendingInteraction = null;
+              if (player) player.path = currentPath;
+              executePlotClick(pi, pcfg);
+            } else {
+              (function (targetPi, targetCfg) {
+                triggerPathTo(targetCfg.x, targetCfg.y, {
+                  type: 'farm_plot',
+                  onArrive: function () { executePlotClick(targetPi, targetCfg); }
+                });
+              })(pi, pcfg);
+            }
+            return;
+          }
+        }
+      }
+    }
+
     // 4. Click vào Interactable
     if (mapData.interactables && mapData.interactables.length > 0) {
       for (var i = 0; i < mapData.interactables.length; i++) {
@@ -2757,6 +2838,10 @@
         // để đệ tử mới luôn có Kiếm Đệ Tử khi bắt đầu nhiệm vụ căn bản. Hàm cấp
         // tự khóa một lần duy nhất nên gọi trùng vô hại.
         grantStarterSword(true);
+        // Đợt ELDER (Bui 01:32): Chấp Sự hướng dẫn tân đệ tử tới gặp Trưởng Lão Dược Điền học pháp quyết
+        if (!q.elderQuest) {
+          q.elderQuest = { stage: 1, demoDone: false, completed: false };
+        }
       } else if ((q.sectStage || 0) >= 4) {
         if (q.mainStage === 8) {
           var countItem = function (id) {
@@ -2772,6 +2857,16 @@
             refineTrucCoDan();
           }
         }
+      }
+    } else if (npcId === 'npc_truonglao_duocdien') {
+      // Đợt ELDER (Bui 01:32 & Chốt 01:52): Tương tác với Trưởng Lão Dược Điền tại Ruộng Linh Mễ
+      if ((q.sectStage || 0) >= 4) {
+        if (!q.elderQuest) {
+          q.elderQuest = { stage: 2, demoDone: false, completed: false };
+        } else if (q.elderQuest.stage === 1) {
+          q.elderQuest.stage = 2;
+        }
+        if (stateAPI) stateAPI.savePlayer(player);
       }
     }
   }
@@ -3139,6 +3234,21 @@
       return { stepId: 'orders', stage: 3, mapId: 'tong-mon', kind: 'npc', npcId: 'npc_chapsu' };
     }
 
+    // Đợt ELDER (Bui 01:32 & Chốt 01:52): Dẫn đường bái kiến Trưởng Lão Dược Điền tại Ruộng Linh Mễ ở Tông Môn học 4 pháp quyết
+    if (sectStage >= 4 && q.elderQuest && !q.elderQuest.completed && q.elderQuest.stage < 3) {
+      return {
+        stepId: 'elder_herb_quest',
+        stage: 4,
+        mapId: 'ruong-linh-me',
+        kind: 'npc',
+        npcId: 'npc_truonglao_duocdien',
+        x: 225,
+        y: 420,
+        title: 'Học Thuật Trồng Dược',
+        desc: 'Tới Ruộng Linh Mễ ở Tông Môn bái kiến Trưởng Lão Dược Điền để học 4 pháp quyết.'
+      };
+    }
+
     // Đợt DANPHONG: nhiệm vụ BẢNG THU THẬP đang được theo dõi — dẫn đường
     // (mũi tên, Tự Tìm Đường, bảng theo dõi) ưu tiên chỉ tới mục tiêu của
     // nhiệm vụ bảng. Chuỗi chính không đổi bước/ngưỡng/thoại; khi nhiệm vụ
@@ -3219,14 +3329,17 @@
     if (mainStage === 2 && (q.nhenKills || 0) >= 3) {
       q.mainStage = 3;
       mainStage = 3;
+      // Đợt ELDER (Bui 01:32): Pháp quyết chuyển hội tụ về Trưởng Lão Dược Điền sau Miếu Hoang
     }
     if (mainStage === 3 && hasItem('nguyen-tinh-moc', 1)) {
       q.mainStage = 4;
       mainStage = 4;
+      // Đợt ELDER (Bui 01:32): Pháp quyết chuyển hội tụ về Trưởng Lão Dược Điền sau Miếu Hoang
     }
     if (mainStage === 4 && minTuVi >= 300) {
       q.mainStage = 5;
       mainStage = 5;
+      // Đợt ELDER (Bui 01:32): Pháp quyết chuyển hội tụ về Trưởng Lão Dược Điền sau Miếu Hoang
     }
     if (mainStage === 5 && (q.bangXaKills || 0) >= 4) {
       q.mainStage = 6;
@@ -3807,6 +3920,10 @@
       if (typeof window !== 'undefined' && window.GameMusic) {
         window.GameMusic.setMap(targetMapId);
       }
+      // Đợt LINHME-MAP: Bật/tắt thanh kỹ năng ruộng theo map hiện tại
+      if (typeof window !== 'undefined' && window.GameUI && window.GameUI.updateFarmSkillBar) {
+        window.GameUI.updateFarmSkillBar(targetMapId === 'ruong-linh-me');
+      }
       var mapHolder = (typeof window !== 'undefined' && window.GameMapData) ? window.GameMapData : (mapData && mapData.maps ? mapData : null);
       if (mapHolder && mapHolder.getMap) {
         mapData = mapHolder.getMap(targetMapId);
@@ -4130,6 +4247,26 @@
         window.GameUI.refreshHUD();
       }
       return { ok: true, msg: msgFlower, resistUntil: cured.resistUntil };
+    }
+
+    // Đợt LINHME: dùng món ăn hồi phục theo giờ (Cơm Linh Mễ, Cơm Hấp Băng Tinh, Cháo Linh Mễ)
+    var foodBuffApi = (typeof window !== 'undefined') ? window.GameFoodBuff : null;
+    if (!foodBuffApi && typeof require === 'function') {
+      try { foodBuffApi = require('./food-buff.js'); } catch (e) { foodBuffApi = null; }
+    }
+    if (foodBuffApi && foodBuffApi.FOOD_DEFS && foodBuffApi.FOOD_DEFS[itemId]) {
+      var eatRes = foodBuffApi.eatFood(player, itemId, Date.now());
+      if (!eatRes.ok) {
+        if (typeof window !== 'undefined' && window.GameUI) window.GameUI.showToast(eatRes.msg);
+        return { ok: false, msg: eatRes.msg };
+      }
+      if (audioAPI && audioAPI.playChime) audioAPI.playChime();
+      spawnFloatingText('Linh Thực Hồi Phục!', player.x, player.y - 35, '#ffd700');
+      if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.showToast(eatRes.msg);
+        window.GameUI.refreshHUD();
+      }
+      return { ok: true, msg: eatRes.msg, buff: eatRes.buff };
     }
 
     return { ok: false, msg: 'Vật phẩm không thể sử dụng trực tiếp' };
@@ -6059,6 +6196,18 @@
       player.linhLuc = Math.min(player.linhLucMax, player.linhLuc + 0.4 * dt);
     }
 
+    // Đợt LINHME: Cập nhật hồi phục liên tục theo giờ từ thức ăn (Food Buff Tick)
+    var foodBuffMod = (typeof window !== 'undefined') ? window.GameFoodBuff : null;
+    if (!foodBuffMod && typeof require === 'function') {
+      try { foodBuffMod = require('./food-buff.js'); } catch (e) { foodBuffMod = null; }
+    }
+    if (foodBuffMod && player && player.foodBuff) {
+      var tickRes = foodBuffMod.updateBuffTick(player, Date.now());
+      if (tickRes && tickRes.ticked && typeof window !== 'undefined' && window.GameUI && window.GameUI.refreshHUD) {
+        window.GameUI.refreshHUD();
+      }
+    }
+
     // Cập nhật Chuỗi Săn (Hunt Chain: 20s đếm lùi)
     if (player.huntChain && player.huntChain.timer > 0) {
       player.huntChain.timer -= dt;
@@ -7134,8 +7283,12 @@
     ctx.translate(-renderCamX, -renderCamY);
 
     // 1. Vẽ ảnh nền bản đồ hiện tại (Brief §2: 1920x1280)
+    // Ruộng Linh Mễ vẽ nền thủ tục — phải rẽ trước nhánh ảnh chung vì
+    // bgImage null rơi về assets.map_bg (nền Miếu Hoang, luôn nạp sẵn).
     var bgImg = assets[mapData.bgImage] || (mapData.id === 'rung-doc' ? assets.map_rung_doc_bg : assets.map_bg);
-    if (bgImg && bgImg.complete) {
+    if (mapData.id === 'ruong-linh-me' || currentMapId === 'ruong-linh-me') {
+      drawRuongLinhMeProceduralBg(ctx, mapData.width, mapData.height, nowSecH);
+    } else if (bgImg && bgImg.complete) {
       ctx.drawImage(bgImg, 0, 0, mapData.width, mapData.height);
     }
 
@@ -7532,30 +7685,42 @@
         var isReady = nowSecH >= (harvestReadyTimes[node.id] || 0);
         // Đợt 6 (Việc 3 — mục 4): luống linh điền vẽ riêng cho Vườn Linh Dược tông môn
         var isGardenPlot = (currentMapId === 'tong-mon');
+        // HERB-CODE: điểm hái dại Miếu Hoang vẽ cụm dại trên mặt đất (không icon bay, không luống)
+        var isWildPlot = (currentMapId === 'mieu_hoang');
         if (isGardenPlot) drawGardenPlot(node, isReady, nowSecH, h);
+        if (isWildPlot) drawWildHerb(node, isReady, nowSecH, h);
         if (isReady) {
           var bobH = Math.sin(nowSecH * 3 + h) * 3;
+          // Quầng linh quang: tâm suy từ sprite (giữa cụm) cho tông môn/miếu.
+          var haloH = isGardenPlot
+            ? herbHaloPoint(node, true, nowSecH, 'herb-garden', node.y)
+            : (isWildPlot ? herbHaloPoint(node, true, nowSecH, 'herb-wild', node.y) : null);
+          var haloX = haloH ? haloH.x : node.x;
+          var haloY = haloH ? haloH.y : node.y - 12;
           // Note 8: 'thap' bỏ quầng sáng gradient của điểm hái (icon vẫn nhấp nhô như cũ)
           if (currentQuality !== 'thap') {
             ctx.save();
-            var gradH = ctx.createRadialGradient(node.x, node.y - 12 + bobH, 2, node.x, node.y - 12 + bobH, 18);
+            var gradH = ctx.createRadialGradient(haloX, haloY + bobH, 2, haloX, haloY + bobH, 18);
             gradH.addColorStop(0, 'rgba(124, 232, 152, 0.45)');
             gradH.addColorStop(1, 'rgba(124, 232, 152, 0)');
             ctx.fillStyle = gradH;
             ctx.beginPath();
-            ctx.arc(node.x, node.y - 12 + bobH, 18, 0, Math.PI * 2);
+            ctx.arc(haloX, haloY + bobH, 18, 0, Math.PI * 2);
             ctx.fill();
             ctx.restore();
           }
 
           var iconImg = assets['assets/art/icons-sheet.png'] || assets.icons_sheet;
-          if (iconImg && iconImg.complete) {
+          // HERB-CODE: tông môn + miếu KHÔNG dùng icon vật phẩm bay lơ lửng
+          // (đã có sprite trên mặt đất + quầng halo + viên ngọc + vòng tiến độ);
+          // các map khác giữ nguyên nhánh icon bay.
+          if (!isWildPlot && !isGardenPlot && iconImg && iconImg.complete) {
             var defH = (monstersAPI && monstersAPI.ITEM_DEFS) ? monstersAPI.ITEM_DEFS[node.itemId] : null;
             var colH = defH ? (defH.iconCol || 0) : 0;
             var rowH = defH ? (defH.iconRow || 0) : 0;
             ctx.drawImage(iconImg, colH * 32, rowH * 32, 32, 32, node.x - 12, node.y - 24 + bobH, 24, 24);
           }
-        } else if (!isGardenPlot) {
+        } else if (!isGardenPlot && !isWildPlot) {
           ctx.save();
           ctx.fillStyle = 'rgba(80, 140, 80, 0.35)';
           ctx.beginPath();
@@ -7563,6 +7728,10 @@
           ctx.fill();
           ctx.restore();
         }
+      }
+      // Đợt LINHME-MAP: Vẽ 32 ô trồng trên map riêng Ruộng Linh Mễ
+      if (currentMapId === 'ruong-linh-me') {
+        drawTongMonFarmPlots(nowSecH);
       }
     }
 
@@ -8387,11 +8556,105 @@
     }
   }
 
+  // HERB-CODE: tải manifest linh dược (đồng bộ Node, fetch bất đồng bộ ở trình duyệt).
+  var herbManifestCache = null;
+  function loadHerbManifestSync() {
+    if (herbManifestCache) return herbManifestCache;
+    if (typeof require !== 'undefined') {
+      try {
+        herbManifestCache = require('../assets/art/herb/herb-manifest.json');
+        return herbManifestCache;
+      } catch (e) { /* fallback */ }
+      try {
+        herbManifestCache = require('./../assets/art/herb/herb-manifest.json');
+        return herbManifestCache;
+      } catch (e2) { /* fallback */ }
+    }
+    if (typeof window !== 'undefined' && window.__HERB_MANIFEST__) {
+      herbManifestCache = window.__HERB_MANIFEST__;
+      return herbManifestCache;
+    }
+    return null;
+  }
+
+  function getHerbSpriteInfo(key) {
+    var m = loadHerbManifestSync();
+    if (!m) return null;
+    var info = null;
+    if (m.sprites && m.sprites[key]) info = m.sprites[key];
+    else if (m[key]) info = m[key];
+    if (!info || !info.path) return null;
+    var w = (typeof info.width === 'number') ? info.width : info.w;
+    var h = (typeof info.height === 'number') ? info.height : info.h;
+    var pivot = info.pivot;
+    if (!pivot) pivot = { x: (typeof info.pivotX === 'number' ? info.pivotX : w / 2), y: (typeof info.pivotY === 'number' ? info.pivotY : h) };
+    var scale = (typeof info.scale === 'number') ? info.scale : 1;
+    var off = info.drawOffset || null;
+    if (!w || !h) return null;
+    return {
+      key: key, path: info.path, width: w, height: h, pivot: pivot, scale: scale,
+      drawOffset: { x: (off && typeof off.x === 'number') ? off.x : 0, y: (off && typeof off.y === 'number') ? off.y : 0 },
+      role: info.role || null
+    };
+  }
+
+  /** Ảnh + thông tin manifest của một sprite linh dược; null nếu chưa nạp được. */
+  function getHerbSpriteImage(key) {
+    var info = getHerbSpriteInfo(key);
+    if (!info) return null;
+    var img = assets[info.path];
+    if (!img || !img.complete || !img.naturalWidth) return null;
+    return { info: info, img: img };
+  }
+
+  /** Vẽ một sprite linh dược theo manifest. Trả về true nếu vẽ được, false nếu fallback. */
+  function drawHerbSprite(key, x, y, scaleMul) {
+    var res = getHerbSpriteImage(key);
+    if (!res) return false;
+    var info = res.info;
+    var s = (info.scale || 1) * (scaleMul || 1);
+    var dw = info.width * s;
+    var dh = info.height * s;
+    var px = info.pivot.x * s;
+    var py = info.pivot.y * s;
+    // drawOffset là dịch neo (pixel hiển thị) do gói hình khai báo.
+    var dx = (info.drawOffset.x || 0) * (scaleMul || 1);
+    var dy = (info.drawOffset.y || 0) * (scaleMul || 1);
+    ctx.drawImage(res.img, x + dx - px, y + dy - py, dw, dh);
+    return true;
+  }
+
+  /**
+   * Y cho vòng tiến độ / viên ngọc trạng thái: nằm TRÊN ngọn sprite (suy từ
+   * manifest) để không bị lá che; fallback về độ cao cũ khi chưa có sprite.
+   */
+  function herbMarkerY(key, baseY, fallbackOffset) {
+    var info = getHerbSpriteInfo(key);
+    if (!info) return baseY - fallbackOffset;
+    var s = info.scale || 1;
+    return baseY - info.height * s - 12;
+  }
+
+  /**
+   * Bốn dải giai đoạn theo tiến độ hồi (0..1) + trạng thái sẵn sàng.
+   * PROVISIONAL: 0.33–0.55 -> S1, 0.55–0.8 -> S2, 0.8–1 -> S3, sẵn sàng -> ready.
+   * Trả về: 0 (chưa mọc), 1, 2, 3, hoặc 'ready'.
+   */
+  function herbStageForProgress(prog, isReady) {
+    if (isReady) return 'ready';
+    if (typeof prog !== 'number' || !isFinite(prog) || prog <= 0) return 0;
+    if (prog >= 0.8) return 3;
+    if (prog >= 0.55) return 2;
+    if (prog >= 0.33) return 1;
+    return 0;
+  }
+
   /**
    * Đợt 6 (Việc 3 — mục 4): vẽ LUỐNG LINH ĐIỀN tại các nút hái Vườn Linh Dược (tong-mon).
    * Luống 124x88: gò đất nâu có rãnh + viền sáng hơn nền + bóng tiếp xúc.
    * Trạng thái: sẵn sàng = cụm linh thảo phát sáng + dấu ngọc nảy; đang mọc lại =
    * mầm theo tiến độ hồi (đất trơ / mầm hai lá / cây non) + vòng tiến độ.
+   * HERB-CODE: phần luống + cây vẽ bằng sprite từ manifest; fallback vẽ cũ nếu sprite chưa nạp.
    */
   function drawHerbCluster(cx, cy, scale, glow) {
     ctx.save();
@@ -8420,7 +8683,7 @@
     ctx.restore();
   }
 
-  function drawGardenPlot(node, isReady, nowSec, idx) {
+  function drawGardenPlotClassic(node, isReady, nowSec, idx) {
     var cx = node.x;
     var cy = node.y;
     var x0 = cx - 62;
@@ -8508,6 +8771,447 @@
       ctx.arc(cx, cy - 56, 9, -Math.PI / 2, -Math.PI / 2 + prog * Math.PI * 2);
       ctx.stroke();
       ctx.restore();
+    }
+  }
+
+  // Đợt LINHME-MAP: Vẽ nền thủ tục Ruộng Linh Mễ (Ghi nợ đợt hình ảnh)
+  function drawRuongLinhMeProceduralBg(ctx, w, h, nowSec) {
+    ctx.save();
+
+    // 1. Nền thung lũng xanh mát
+    var bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+    bgGrad.addColorStop(0, '#1e3820');
+    bgGrad.addColorStop(0.5, '#284d2a');
+    bgGrad.addColorStop(1, '#1b331c');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, w, h);
+
+    // Mạng vân cỏ và rêu phong
+    ctx.fillStyle = 'rgba(56, 96, 58, 0.25)';
+    for (var gx = 0; gx < w; gx += 48) {
+      for (var gy = 0; gy < h; gy += 48) {
+        if ((gx + gy) % 96 === 0) {
+          ctx.fillRect(gx, gy, 36, 36);
+        }
+      }
+    }
+
+    // 2. Lối đi lát đá cuội tự nhiên từ cổng Tây sang các khu
+    ctx.fillStyle = 'rgba(90, 80, 70, 0.45)';
+    ctx.beginPath();
+    ctx.ellipse(80, 420, 45, 24, 0, 0, Math.PI * 2);
+    ctx.ellipse(180, 410, 60, 26, -0.1, 0, Math.PI * 2);
+    ctx.ellipse(300, 395, 70, 26, -0.05, 0, Math.PI * 2);
+    ctx.ellipse(450, 385, 80, 26, 0, 0, Math.PI * 2);
+    ctx.ellipse(600, 380, 80, 28, 0, 0, Math.PI * 2);
+    ctx.ellipse(750, 380, 75, 26, 0, 0, Math.PI * 2);
+    ctx.ellipse(900, 390, 75, 26, 0.05, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Nhánh rẽ dọc lên Thượng Điền và xuống Hạ Điền
+    ctx.beginPath();
+    ctx.ellipse(350, 330, 30, 50, 0.1, 0, Math.PI * 2);
+    ctx.ellipse(450, 470, 35, 60, 0.1, 0, Math.PI * 2);
+    ctx.ellipse(750, 460, 30, 50, 0, 0, Math.PI * 2);
+    ctx.ellipse(950, 330, 30, 50, -0.1, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 3. Năm phân khu ruộng bậc thang
+    var zones = [
+      { name: 'Thượng Điền', x: 250, y: 120, w: 200, h: 210 },
+      { name: 'Trung Điền',  x: 520, y: 140, w: 280, h: 160 },
+      { name: 'Đông Điền',   x: 840, y: 120, w: 210, h: 210 },
+      { name: 'Hạ Điền 1',   x: 300, y: 440, w: 280, h: 160 },
+      { name: 'Hạ Điền 2',   x: 700, y: 410, w: 120, h: 230 }
+    ];
+
+    for (var z = 0; z < zones.length; z++) {
+      var zn = zones[z];
+      // Bờ ruộng viền ngoài
+      ctx.fillStyle = '#423020';
+      ctx.fillRect(zn.x - 10, zn.y - 10, zn.w + 20, zn.h + 20);
+
+      // Rãnh mương viền đá
+      ctx.strokeStyle = '#5a4530';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(zn.x - 8, zn.y - 8, zn.w + 16, zn.h + 16);
+
+      // Mặt đất thổ nhưỡng tơi xốp của ruộng
+      var soilGrad = ctx.createLinearGradient(zn.x, zn.y, zn.x, zn.y + zn.h);
+      soilGrad.addColorStop(0, '#2e1f14');
+      soilGrad.addColorStop(1, '#3b291a');
+      ctx.fillStyle = soilGrad;
+      ctx.fillRect(zn.x, zn.y, zn.w, zn.h);
+
+      // Bảng tên mạ vàng phong cách tiên hiệp cho từng phân khu
+      ctx.fillStyle = 'rgba(212, 175, 55, 0.55)';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillText(zn.name, zn.x + 8, zn.y - 14);
+    }
+
+    // 4. Mương nước linh tuyền bao quanh với sóng nước lấp lánh
+    var waveBob = Math.sin((nowSec || 0) * 2.5) * 2;
+    ctx.strokeStyle = 'rgba(70, 160, 210, 0.45)';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(490, 80);
+    ctx.quadraticCurveTo(480 + waveBob, 250, 490, 400);
+    ctx.quadraticCurveTo(500 - waveBob, 550, 490, 720);
+    ctx.moveTo(180, 80);
+    ctx.lineTo(1050, 80);
+    ctx.stroke();
+
+    // 5. Cổng về Tông Môn ở phía Tây
+    ctx.fillStyle = 'rgba(120, 100, 80, 0.8)';
+    ctx.fillRect(20, 360, 14, 120);
+    ctx.fillStyle = 'rgba(212, 175, 55, 0.75)';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillText('Lối Ra Sơn Môn', 15, 345);
+
+    // Bia đá nông vụ
+    ctx.fillStyle = '#655848';
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(170, 335, 45, 30, 4) : ctx.rect(170, 335, 45, 30);
+    ctx.fill();
+    ctx.strokeStyle = '#c5a059';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.fillStyle = '#f5e4b8';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.fillText('Bia Nông', 172, 353);
+
+    ctx.restore();
+  }
+
+  // Đợt LINHME-MAP: Vẽ 32 ô trồng trên map riêng Ruộng Linh Mễ (ruong-linh-me)
+  function drawTongMonFarmPlots(nowSec) {
+    if (currentMapId !== 'ruong-linh-me' || !player) return;
+    var farmApi = (typeof window !== 'undefined') ? window.GameTongMonFarm : null;
+    if (!farmApi || !farmApi.getPlotsConfig) return;
+    var configs = farmApi.getPlotsConfig();
+    var flourish = getSettingsCached().flourishEffects !== false;
+    var nowMs = Date.now();
+
+    for (var i = 0; i < configs.length; i++) {
+      var cfg = configs[i];
+      var view = farmApi.getPlotView(player, i, nowMs);
+      var cx = cfg.x;
+      var cy = cfg.y;
+
+      ctx.save();
+      if (view.state === 'empty') {
+        // Ô trống: gò đất nhỏ hình ellipse, mép sới tơi xốp
+        ctx.fillStyle = 'rgba(28, 20, 14, 0.40)';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + 2, 12, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(168, 137, 58, 0.35)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + 2, 10, 5, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      } else if (view.state === 'growing') {
+        // Đang mọc: gò đất + cây non
+        ctx.fillStyle = 'rgba(28, 20, 14, 0.50)';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + 2, 13, 7, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Mầm hoặc nhánh cây
+        var stage = view.stage || 0;
+        var pScale = (stage === 0) ? 0.6 : 0.85;
+        ctx.strokeStyle = '#58b858';
+        ctx.lineWidth = 2 * pScale;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy + 2);
+        ctx.quadraticCurveTo(cx - 3 * pScale, cy - 8 * pScale, cx - 5 * pScale, cy - 14 * pScale);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(cx, cy + 2);
+        ctx.quadraticCurveTo(cx + 3 * pScale, cy - 9 * pScale, cx + 5 * pScale, cy - 16 * pScale);
+        ctx.stroke();
+
+        ctx.fillStyle = '#6ade6a';
+        ctx.beginPath();
+        ctx.ellipse(cx - 5 * pScale, cy - 14 * pScale, 3 * pScale, 2 * pScale, -0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(cx + 5 * pScale, cy - 16 * pScale, 3.5 * pScale, 2 * pScale, 0.4, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (view.watered) {
+          ctx.fillStyle = 'rgba(100, 200, 255, 0.6)';
+          ctx.beginPath();
+          ctx.arc(cx, cy + 3, 2.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (view.state === 'ready') {
+        // Chín vàng: bông lúa tiên óng ánh + hào quang
+        var bob = flourish ? Math.sin(nowSec * 3.5 + i * 0.7) * 3 : 0;
+        var grad = ctx.createRadialGradient(cx, cy - 10 + bob, 2, cx, cy - 10 + bob, 16);
+        grad.addColorStop(0, 'rgba(255, 220, 80, 0.55)');
+        grad.addColorStop(1, 'rgba(255, 220, 80, 0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(cx, cy - 10 + bob, 16, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = '#d4af37';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy + 2);
+        ctx.quadraticCurveTo(cx - 4, cy - 12 + bob, cx + 6, cy - 20 + bob);
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffe066';
+        for (var h = 0; h < 5; h++) {
+          var hx = cx - 2 + h * 2;
+          var hy = cy - 8 - h * 2.5 + bob;
+          ctx.beginPath();
+          ctx.ellipse(hx, hy, 3.2, 1.8, 0.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        if (flourish) {
+          var sparkAlpha = (Math.sin(nowSec * 5 + i) * 0.5 + 0.5);
+          ctx.fillStyle = 'rgba(255, 255, 220, ' + sparkAlpha + ')';
+          ctx.beginPath();
+          ctx.arc(cx + 7, cy - 22 + bob, 1.8, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+    }
+  }
+
+  function executePlotClick(plotIdx, plotCfg) {
+    if (!player) return;
+    var farmApi = (typeof window !== 'undefined') ? window.GameTongMonFarm : null;
+    if (!farmApi) return;
+    var view = farmApi.getPlotView(player, plotIdx, Date.now());
+
+    if (view.state === 'ready') {
+      var hRes = farmApi.harvest(player, plotIdx, Date.now());
+      if (hRes.ok) {
+        if (audioAPI && audioAPI.playChime) audioAPI.playChime();
+        spawnFloatingText('+' + hRes.count + ' ' + hRes.name, plotCfg.x, plotCfg.y - 25, '#ffd700');
+        if (typeof window !== 'undefined' && window.GameUI) {
+          window.GameUI.showToast(hRes.msg);
+          window.GameUI.refreshHUD();
+        }
+      }
+      return;
+    }
+
+    if (view.state === 'empty') {
+      var pRes = farmApi.plant(player, plotIdx, 'linh-me', Date.now());
+      if (pRes.ok) {
+        if (audioAPI && audioAPI.playClick) audioAPI.playClick();
+        spawnFloatingText('Đã gieo!', plotCfg.x, plotCfg.y - 20, '#7ce898');
+        if (typeof window !== 'undefined' && window.GameUI) {
+          window.GameUI.showToast(pRes.msg);
+          window.GameUI.refreshHUD();
+        }
+      } else {
+        if (typeof window !== 'undefined' && window.GameUI) {
+          window.GameUI.showToast(pRes.msg + ' Hãy tới gặp Dược Sư nhận việc hoặc mở Bảng Canh Tác.');
+          if (window.GameUI.openTongMonFarmModal) window.GameUI.openTongMonFarmModal();
+        }
+      }
+      return;
+    }
+
+    if (view.state === 'growing') {
+      if (!view.watered) {
+        var wRes = farmApi.water(player, plotIdx, Date.now());
+        if (wRes.ok) {
+          if (audioAPI && audioAPI.playClick) audioAPI.playClick();
+          spawnFloatingText('Đã tưới nước!', plotCfg.x, plotCfg.y - 20, '#64c8ff');
+          if (typeof window !== 'undefined' && window.GameUI) {
+            window.GameUI.showToast(wRes.msg);
+          }
+          return;
+        }
+      }
+      if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.showToast('Ô đất ' + (plotIdx + 1) + ': ' + view.name + ' đang lớn, còn ' + view.remainSec + ' giây.');
+      }
+    }
+  }
+
+  /** Dịch neo Y (drawOffset) của một sprite trong manifest; fallback khi chưa có. */
+  function herbSpriteOffsetY(key, fallback) {
+    var info = getHerbSpriteInfo(key);
+    if (!info) return fallback;
+    return info.drawOffset.y || 0;
+  }
+
+  /** Tiến độ hồi của một điểm hái (0..1). */
+  function herbProgressOf(node, nowSec) {
+    var readyAt = harvestReadyTimes[node.id] || 0;
+    var respawn = node.respawnSec || 90;
+    var prog = 1 - Math.max(0, (readyAt - nowSec)) / respawn;
+    if (prog < 0) prog = 0;
+    if (prog > 1) prog = 1;
+    return prog;
+  }
+
+  /** Giai đoạn -> khóa sprite trong manifest. */
+  function herbSpriteKey(prefix, stage) {
+    if (stage === 'ready') return prefix + '-ready';
+    if (stage === 3) return prefix + '-s3';
+    if (stage === 2) return prefix + '-s2';
+    if (stage === 1) return prefix + '-s1';
+    return null;
+  }
+
+  /**
+   * HERB-GRID: lưới chia cây đều của một điểm hái (mục grids trong manifest,
+   * khóa theo id điểm). Trả về mảng [x, y] pivot tuyệt đối từng cây, hoặc null
+   * khi điểm không có lưới / manifest chưa nạp — mã rơi về nhánh cụm cây.
+   */
+  function herbGridFor(nodeId) {
+    var m = loadHerbManifestSync();
+    if (!m || !m.grids) return null;
+    var g = m.grids[nodeId];
+    if (!g || !Array.isArray(g.plants) || g.plants.length === 0) return null;
+    return g.plants;
+  }
+
+  /** Bóng tiếp xúc dưới cụm linh thảo. */
+  function drawHerbGroundShadow(cx, cy, rx, ry) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(8, 10, 6, 0.28)';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  /** Dấu hiệu "sẵn sàng": viên ngọc nảy (giữ nguyên như bản vẽ cũ). */
+  function drawHerbReadyGem(cx, gemY, nowSec, idx) {
+    var flourish = getSettingsCached().flourishEffects !== false;
+    var bobM = flourish ? Math.sin(nowSec * 3 + idx) * 3.5 : 0;
+    ctx.save();
+    ctx.translate(cx, gemY + bobM);
+    ctx.rotate(Math.PI / 4);
+    ctx.fillStyle = '#7dffb0';
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.4;
+    ctx.shadowColor = 'rgba(125, 255, 176, 0.9)';
+    ctx.shadowBlur = qualityShadow(8);
+    ctx.fillRect(-6, -6, 12, 12);
+    ctx.strokeRect(-6, -6, 12, 12);
+    ctx.restore();
+  }
+
+  /** Vòng tiến độ hồi (giữ nguyên như bản vẽ cũ, chỉ dời độ cao). */
+  function drawHerbProgressRing(cx, ringY, prog, lineWidth) {
+    ctx.save();
+    ctx.lineWidth = lineWidth;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.30)';
+    ctx.beginPath();
+    ctx.arc(cx, ringY, 9, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = '#ffd94d';
+    ctx.beginPath();
+    ctx.arc(cx, ringY, 9, -Math.PI / 2, -Math.PI / 2 + prog * Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  /** Điểm giữa cụm (cho quầng linh quang) suy từ manifest; fallback vị trí cũ. */
+  function herbHaloPoint(node, isReady, nowSec, prefix, fallbackBaseY) {
+    var stage = isReady ? 'ready' : herbStageForProgress(herbProgressOf(node, nowSec), false);
+    var key = herbSpriteKey(prefix, stage);
+    var info = key ? getHerbSpriteInfo(key) : null;
+    if (!info) return { x: node.x, y: node.y - 12 };
+    var baseY = node.y + (info.drawOffset.y || 0);
+    return { x: node.x, y: baseY - info.height * (info.scale || 1) * 0.5 };
+  }
+
+  /**
+   * HERB-CODE: vẽ cụm linh thảo TRỒNG của tông môn thẳng lên luống đã vẽ sẵn
+   * trong tranh nền — KHÔNG vẽ lớp sprite luống (luống chồng luống nhìn xấu).
+   * Sprite `herb-plot-tongmon` vẫn nằm trong gói hình làm dự phòng, mã không dùng.
+   * Neo: pivot + drawOffset khai trong manifest. Fallback: vẽ cũ nếu sprite chưa nạp.
+   */
+  function drawGardenPlot(node, isReady, nowSec, idx) {
+    var cx = node.x;
+    var cy = node.y;
+    var prog = isReady ? 1 : herbProgressOf(node, nowSec);
+    var stage = herbStageForProgress(prog, isReady);
+
+    // HERB-GRID (phán của Bui "chia cây đều vào luống"): điểm có lưới thì vẽ
+    // cây đơn tại từng pivot trong lưới, cùng giai đoạn cho cả luống; ngọc /
+    // vòng vẽ một lần phía trên hàng cây trên cùng. Bóng tiếp xúc đã nướng
+    // sẵn trong sprite cây đơn nên không vẽ thêm bóng.
+    var grid = herbGridFor(node.id);
+    var singleKey = herbSpriteKey('herb-single', stage);
+    if (grid && (stage === 0 || (singleKey && getHerbSpriteImage(singleKey)))) {
+      var topY = grid[0][1];
+      var gi;
+      for (gi = 0; gi < grid.length; gi++) {
+        if (grid[gi][1] < topY) topY = grid[gi][1];
+      }
+      if (singleKey) {
+        for (gi = 0; gi < grid.length; gi++) {
+          drawHerbSprite(singleKey, grid[gi][0], grid[gi][1], 1);
+        }
+      }
+      var markerY = herbMarkerY(singleKey || 'herb-single-s3', topY, 68);
+      if (isReady) {
+        drawHerbReadyGem(cx, markerY, nowSec, idx);
+      } else {
+        drawHerbProgressRing(cx, markerY, prog, 2.6);
+      }
+      return;
+    }
+
+    var key = herbSpriteKey('herb-garden', stage);
+
+    // Chưa nạp sprite (hoặc giai đoạn 0 chưa có cây) -> vẽ cũ, không crash.
+    if (!key || !getHerbSpriteImage(key)) {
+      drawGardenPlotClassic(node, isReady, nowSec, idx);
+      return;
+    }
+
+    var baseY = cy + herbSpriteOffsetY(key, 8);
+    drawHerbGroundShadow(cx, baseY, 30, 8);
+    drawHerbSprite(key, cx, cy, 1);
+
+    if (isReady) {
+      drawHerbReadyGem(cx, herbMarkerY(key, baseY, 68), nowSec, idx);
+    } else {
+      drawHerbProgressRing(cx, herbMarkerY('herb-garden-s3', baseY, 68), prog, 2.6);
+    }
+  }
+
+  /**
+   * HERB-CODE: vẽ điểm hái dại Miếu Hoang — sprite cụm dại đặt TRÊN MẶT ĐẤT
+   * tại toạ độ điểm (không luống, không icon bay), cùng 4 dải giai đoạn.
+   */
+  function drawWildHerb(node, isReady, nowSec, idx) {
+    var cx = node.x;
+    var cy = node.y;
+    var prog = isReady ? 1 : herbProgressOf(node, nowSec);
+    var stage = herbStageForProgress(prog, isReady);
+    var key = herbSpriteKey('herb-wild', stage);
+
+    if (!key || !getHerbSpriteImage(key)) {
+      if (isReady) drawHerbCluster(cx, cy, 1, true);
+      else drawHerbCluster(cx, cy, stage === 3 ? 0.8 : 0.45, false);
+      return;
+    }
+
+    var baseY = cy + herbSpriteOffsetY(key, 0);
+    drawHerbGroundShadow(cx, baseY, 26, 7);
+    drawHerbSprite(key, cx, cy, 1);
+
+    if (isReady) {
+      drawHerbReadyGem(cx, herbMarkerY(key, baseY, 68), nowSec, idx);
+    } else {
+      drawHerbProgressRing(cx, herbMarkerY('herb-wild-s3', baseY, 68), prog, 2.4);
     }
   }
 
@@ -9400,8 +10104,11 @@
       return (stateAPI && player) ? stateAPI.harmonyRatio(player.paths) : null;
     },
     handleRevive: handleRevive,
+    setPlayer: function (p) { player = p; },
+    getPlayer: function () { return player; },
     switchMap: switchMap,
     teleportTo: teleportTo,
+    spawnFloatingText: spawnFloatingText,
     handleNpcTalked: handleNpcTalked,
     getCurrentMap: function () { return mapData; },
     getCurrentMapId: function () { return currentMapId; },
@@ -9648,6 +10355,21 @@
       WARN_SEC: SWORD_SWEEP_WARN_SEC,
       DURATION_SEC: SWORD_SWEEP_DURATION_SEC,
       DAMAGE: SWORD_SWEEP_DAMAGE
+    },
+    // HERB-CODE: helper hiển thị linh dược (để test Node)
+    herb: {
+      loadManifest: loadHerbManifestSync,
+      getSpriteInfo: getHerbSpriteInfo,
+      drawSprite: drawHerbSprite,
+      stageForProgress: herbStageForProgress,
+      drawGardenPlot: drawGardenPlot,
+      drawWildHerb: drawWildHerb,
+      // CHỈ DÙNG CHO TEST NODE — game không gọi các hàm dưới đây.
+      _setRenderContext: function (c) { ctx = c; },
+      _assets: function () { return assets; },
+      _progressOf: herbProgressOf,
+      _readyTimes: function () { return harvestReadyTimes; },
+      MANIFEST_PATH: 'assets/art/herb/herb-manifest.json'
     },
     setCurrentMap: function (mapId) {
       currentMapId = mapId;

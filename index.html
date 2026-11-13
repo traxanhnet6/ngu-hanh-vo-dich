@@ -83,6 +83,13 @@
             <b id="hud-linhluc-val" class="bar-val">20 / 20</b>
           </div>
         </div>
+
+        <!-- Đợt LINHME: Huy hiệu Buff Thức Ăn Hồi Phục Theo Giờ -->
+        <div id="hud-food-buff" class="food-buff-badge hidden" title="Hiệu ứng Linh Thực hồi phục liên tục">
+          <span class="food-buff-icon">Mễ</span>
+          <span id="hud-food-name" class="food-buff-name">Cơm Linh Mễ</span>
+          <span id="hud-food-timer" class="food-buff-timer">59:20</span>
+        </div>
       </div>
 
       <!-- Bảng theo dõi nhiệm vụ bên trái -->
@@ -123,6 +130,13 @@
               <path d="M12 13c0-4.97 4.03-9 9-9 0 4.97-4.03 9-9 9z"></path>
             </svg>
             <span class="hud-tool-label">Linh Điền</span>
+          </button>
+          <!-- Đợt LINHME: Nút mở Vườn Linh Mễ Tông Môn -->
+          <button id="btn-linhme" class="btn wood hud-tool-btn" type="button" aria-label="Linh Mễ" title="Vườn Linh Mễ Tông Môn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+            <span class="hud-tool-label">Linh Mễ</span>
           </button>
           <button id="btn-bag" class="btn wood hud-tool-btn" type="button" aria-label="Túi Đồ (B)" title="Túi Trữ Vật (B)">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -938,6 +952,18 @@
       </div>
       <div class="linhdien-body">
         <div class="linhdien-intro">Mảnh linh điền riêng sau Miếu Hoang — đất lành nuôi dưỡng linh thảo trời đất.</div>
+
+        <!-- Hàng pháp quyết linh điền (Đợt SPELLS) -->
+        <div class="linhdien-spells-section">
+          <div class="linhdien-spells-header">
+            <span class="linhdien-spells-title">PHÁP QUYẾT LINH ĐIỀN</span>
+            <span class="linhdien-spells-sub">Thi triển tốn Linh Lực, có thời gian hồi chiêu</span>
+          </div>
+          <div id="linhdien-spells-bar" class="linhdien-spells-bar">
+            <!-- 4 nút pháp quyết render bởi GameLinhDien -->
+          </div>
+        </div>
+
         <div id="linhdien-grid" class="linhdien-grid">
           <!-- 6 ô đất render bởi GameLinhDien -->
         </div>
@@ -1023,6 +1049,106 @@
     </div>
   </div>
 
+  <!-- Modal Canh Tác Tông Môn — Vườn Linh Mễ 32 Ô (Đợt LINHME) -->
+  <div id="tong-mon-farm-modal" class="modal-overlay hidden">
+    <div class="panel modal-box linhdien-box" style="width: 720px; max-width: 96vw;">
+      <div class="modal-header">
+        <div class="linhdien-header-title-wrap">
+          <h2 class="modal-title">VƯỜN LINH MỄ TÔNG MÔN</h2>
+          <span class="linhdien-soil-badge" style="background:#23391d; border-color:#58b858; color:#98ff98;">32 Ô Đất Trống</span>
+        </div>
+        <button id="close-tong-mon-farm-modal" class="btn-close" type="button" aria-label="Đóng">×</button>
+      </div>
+      <div class="linhdien-body">
+        <div class="linhdien-intro" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <span>Ruộng lúa tiên Tông Môn màu mỡ, nuôi dưỡng Linh Mễ — nguyên liệu nấu các món linh thực bổ khí ích huyết.</span>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button id="btn-goto-ruong" class="btn wood" type="button" style="font-size:12px; padding:4px 10px; background:#1b3d54; color:#7fd2ff;">Đi Tới Ruộng Linh Mễ</button>
+            <button id="btn-farm-plant-all" class="btn wood" type="button" style="font-size:12px; padding:4px 10px;">Gieo Nhanh Linh Mễ</button>
+            <button id="btn-farm-harvest-all" class="btn wood" type="button" style="font-size:12px; padding:4px 10px; background:#473417; color:#ffd700;">Thu Hoạch Toàn Bộ</button>
+          </div>
+        </div>
+        <div id="tong-mon-farm-grid" class="tong-mon-farm-grid">
+          <!-- 32 ô đất render bởi GameTongMonFarm -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Đổi Linh Thực / Thức Ăn Hồi Phục Theo Giờ (Đợt LINHME) -->
+  <div id="food-exchange-modal" class="modal-overlay hidden">
+    <div class="panel modal-box" style="width: 520px; max-width: 95vw;">
+      <div class="modal-header">
+        <div class="linhdien-header-title-wrap">
+          <h2 class="modal-title">ĐỔI LINH THỰC TÔNG MÔN</h2>
+          <span class="linhdien-soil-badge" style="background:#3e2e1a; color:#ffd978;">Dược Thực Tông Môn</span>
+        </div>
+        <button id="close-food-exchange-modal" class="btn-close" type="button" aria-label="Đóng">×</button>
+      </div>
+      <div class="modal-body" style="padding: 12px;">
+        <div class="linhdien-intro">Nộp Linh Mễ thu hoạch cùng thảo dược để đổi các món ăn hồi phục sinh lực và linh lực liên tục theo giờ.</div>
+        <div id="food-exchange-list" class="food-exchange-list" style="display:flex; flex-direction:column; gap:10px;">
+          <!-- Danh sách món ăn render bởi GameFoodBuff -->
+        </div>
+      </div>
+      <div class="modal-actions" style="margin-top: 12px; text-align: center;">
+        <button id="btn-close-food-modal" class="btn wood" type="button">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Việc Vụ Tông Môn (Đợt LINHME) -->
+  <div id="sect-quest-modal" class="modal-overlay hidden">
+    <div class="panel modal-box" style="width: 540px; max-width: 95vw;">
+      <div class="modal-header">
+        <div class="linhdien-header-title-wrap">
+          <h2 class="modal-title">VIỆC VỤ TÔNG MÔN</h2>
+          <span class="linhdien-soil-badge" style="background:#1d2939; border-color:#5c9eff; color:#a8d1ff;">Nhiệm Vụ Canh Tác</span>
+        </div>
+        <button id="close-sect-quest-modal" class="btn-close" type="button" aria-label="Đóng">×</button>
+      </div>
+      <div class="modal-body" style="padding: 12px;">
+        <div class="linhdien-intro">Đệ tử gieo trồng và cung ứng Linh Mễ cho môn phái sẽ được ban thưởng Linh Thạch, thực phẩm bổ dưỡng và công đức.</div>
+        <div id="sect-quest-list" class="sect-quest-list" style="display:flex; flex-direction:column; gap:10px;">
+          <!-- Danh sách việc tông render bởi GameTongMonFarm -->
+        </div>
+      </div>
+      <div class="modal-actions" style="margin-top: 12px; text-align: center;">
+        <button id="btn-close-sect-quest-modal" class="btn wood" type="button">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Thỉnh Giáo Pháp Quyết Canh Tác (Đợt LINHME-MAP) -->
+  <div id="farm-spell-learn-modal" class="modal-overlay hidden">
+    <div class="panel modal-box" style="width: 560px; max-width: 95vw;">
+      <div class="modal-header">
+        <div class="linhdien-header-title-wrap">
+          <h2 class="modal-title">THỈNH GIÁO PHÁP QUYẾT CANH TÁC</h2>
+          <span class="linhdien-soil-badge" style="background:#283824; border-color:#7cc576; color:#98ff98;">Dược Sư Truyền Thụ</span>
+        </div>
+        <button id="close-farm-spell-modal" class="btn-close" type="button" aria-label="Đóng">×</button>
+      </div>
+      <div class="modal-body" style="padding: 12px;">
+        <div class="linhdien-intro">Tu tiên giả tu luyện các môn pháp quyết nông nghiệp để nhuận trạch linh điền, thúc đẩy sinh trưởng và nâng cao sản lượng thu hoạch.</div>
+        <div id="farm-spell-learn-list" class="farm-spell-learn-list" style="display:flex; flex-direction:column; gap:10px;">
+          <!-- 4 pháp quyết render bởi UI -->
+        </div>
+      </div>
+      <div class="modal-actions" style="margin-top: 12px; text-align: center;">
+        <button id="btn-close-farm-spell-modal" class="btn wood" type="button">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Thanh Pháp Quyết Canh Tác trên Ruộng Linh Mễ (Đợt LINHME-MAP) -->
+  <div id="farm-skill-bar" class="farm-skill-bar hidden">
+    <div class="farm-skill-bar-title">PHÁP QUYẾT CANH TÁC</div>
+    <div id="farm-skill-bar-slots" class="farm-skill-bar-slots">
+      <!-- 4 nút kỹ năng render tự động -->
+    </div>
+  </div>
+
   <!-- Lớp phủ Hướng Dẫn Tân Thủ (Tutorial Overlay) -->
   <div id="tutorial-overlay" class="tutorial-overlay hidden">
     <div id="tutorial-spotlight" class="tutorial-spotlight"></div>
@@ -1048,9 +1174,12 @@
   <script src="js/voice.js"></script>
   <script src="js/mapdata.js"></script>
   <script src="js/pathfind.js"></script>
+  <script src="js/food-buff.js"></script>
+  <script src="js/tong-mon-farm.js"></script>
   <script src="js/engine.js"></script>
   <script src="js/tutorial.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/herb-quality.js"></script>
   <script src="js/linhdien.js"></script>
   <script src="js/danphong.js"></script>
   <script src="js/luyendan.js"></script>

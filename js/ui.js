@@ -74,6 +74,13 @@
     if (typeof window !== 'undefined' && window.GameKimDan && window.GameKimDan.attach) {
       window.GameKimDan.attach(playerObj);
     }
+    // Đợt LINHME: Khởi tạo dữ liệu Vườn Linh Mễ và Thức Ăn Buff
+    if (typeof window !== 'undefined' && window.GameTongMonFarm && window.GameTongMonFarm.ensureState) {
+      window.GameTongMonFarm.ensureState(playerObj);
+    }
+    if (typeof window !== 'undefined' && window.GameFoodBuff && window.GameFoodBuff.ensureState) {
+      window.GameFoodBuff.ensureState(playerObj);
+    }
   }
 
   function updateMinimapBackground() {
@@ -358,6 +365,11 @@
     wireSettingsExtras();
     wireQuestToggle();
     startClockAndIdleWatch();
+
+    // Đợt LINHME: Canh tác Linh Mễ, Đổi thức ăn, Việc vụ Tông Môn
+    wireTongMonFarm();
+    wireFoodExchange();
+    wireSectQuests();
   }
 
   // ---------- ĐỢT 6 (mục 15): CÁC ĐIỀU KHIỂN CÀI ĐẶT BỔ SUNG ----------
@@ -599,36 +611,81 @@
     modal.classList.remove('hidden');
   }
 
-  function sortBag() {
-    if (!player || !player.bag) return;
-    var defs = itemDefs();
+  function sortBag(targetPlayer) {
+    var p = targetPlayer || player;
+    if (!p || !p.bag) return;
+    var defs = (typeof itemDefs === 'function') ? itemDefs() : ((typeof monstersAPI !== 'undefined' && monstersAPI && monstersAPI.ITEM_DEFS) ? monstersAPI.ITEM_DEFS : {});
     var rank = { legend: 5, epic: 4, rare: 3, good: 2, common: 1 };
-    // Gộp chồng cùng loại trước
+    var slots = (typeof currentBagSlots === 'function' && !targetPlayer) ? currentBagSlots() : (p.bag && p.bag.slots ? p.bag.slots : []);
+    if (!slots || !Array.isArray(slots)) return;
+
+    // Gộp chồng theo cặp (itemId, herbQuality)
     var merged = {};
     var order = [];
-    for (var i = 0; i < player.bag.slots.length; i++) {
-      var sd = player.bag.slots[i];
-      if (!sd || !sd.itemId) continue;
-      if (merged[sd.itemId]) merged[sd.itemId].count += (sd.count || 1);
-      else { merged[sd.itemId] = { itemId: sd.itemId, count: sd.count || 1 }; order.push(sd.itemId); }
+    var containerItems = [];
+    var hqAPI = (typeof window !== 'undefined' && window.GameHerbQuality) ? window.GameHerbQuality : (typeof require === 'function' ? (function () { try { return require('./herb-quality.js'); } catch (e) { return null; } })() : null);
+
+    for (var i = 0; i < slots.length; i++) {
+      var sd = slots[i];
+      if (!sd) continue;
+      // Bảo toàn vật chứa con nếu có
+      if (tuiKhoAPI && tuiKhoAPI.isContainerItem && tuiKhoAPI.isContainerItem(sd)) {
+        containerItems.push(sd);
+        continue;
+      }
+      if (!sd.itemId) continue;
+
+      var hasQuality = (sd.herbQuality !== undefined && sd.herbQuality !== null);
+      var qVal = hasQuality ? Math.max(0, Math.min(3, Math.floor(Number(sd.herbQuality) || 0))) : undefined;
+      var key = hasQuality ? (sd.itemId + '__hq_' + qVal) : sd.itemId;
+
+      if (merged[key]) {
+        merged[key].count += (sd.count || 1);
+        if (sd.starred) merged[key].starred = true;
+        if (sd.locked) merged[key].locked = true;
+      } else {
+        var entry = { itemId: sd.itemId, count: sd.count || 1 };
+        if (hasQuality) {
+          entry.herbQuality = qVal;
+          if (sd.herbQualityName) {
+            entry.herbQualityName = sd.herbQualityName;
+          } else if (hqAPI && hqAPI.getQualityLabel) {
+            entry.herbQualityName = hqAPI.getQualityLabel(qVal);
+          } else {
+            entry.herbQualityName = ['Hạ phẩm', 'Trung phẩm', 'Thượng phẩm', 'Cực phẩm'][qVal] || 'Trung phẩm';
+          }
+        }
+        if (sd.starred) entry.starred = true;
+        if (sd.locked) entry.locked = true;
+        merged[key] = entry;
+        order.push(key);
+      }
     }
-    var arr = order.map(function (id) { return merged[id]; });
+
+    var arr = order.map(function (k) { return merged[k]; });
     arr.sort(function (a, b) {
       var da = defs[a.itemId] || {};
       var db = defs[b.itemId] || {};
       var ra = rank[da.quality] || 0;
       var rb = rank[db.quality] || 0;
       if (rb !== ra) return rb - ra;
-      return String(da.type || '').localeCompare(String(db.type || ''));
+      var cmpType = String(da.type || '').localeCompare(String(db.type || ''));
+      if (cmpType !== 0) return cmpType;
+      if (a.itemId !== b.itemId) return String(a.itemId).localeCompare(String(db.itemId));
+      var qa = (a.herbQuality !== undefined && a.herbQuality !== null) ? Number(a.herbQuality) : -1;
+      var qb = (b.herbQuality !== undefined && b.herbQuality !== null) ? Number(b.herbQuality) : -1;
+      return qb - qa;
     });
-    for (var j = 0; j < player.bag.slots.length; j++) {
-      player.bag.slots[j] = arr[j] || null;
+
+    var finalArr = containerItems.concat(arr);
+    for (var j = 0; j < slots.length; j++) {
+      slots[j] = finalArr[j] || null;
     }
-    player.bagLocks = {};
+    p.bagLocks = {};
     selectedBagSlot = null;
-    if (stateAPI) stateAPI.savePlayer(player);
-    renderBagGrid();
-    showToast('Đã sắp xếp túi đồ');
+    if (stateAPI && stateAPI.savePlayer) stateAPI.savePlayer(p);
+    if (typeof renderBagGrid === 'function' && !targetPlayer) renderBagGrid();
+    if (typeof showToast === 'function') showToast('Đã sắp xếp túi đồ');
   }
 
   function startPersonalTimer(mins) {
@@ -1076,6 +1133,8 @@
           var posY = -(def.iconRow || 0) * 32;
           iconDiv.style.backgroundPosition = posX + 'px ' + posY + 'px';
           slotDiv.appendChild(iconDiv);
+
+          if (slotData.herbQuality !== undefined) { var qSpan = document.createElement('span'); qSpan.className = 'bag-slot-quality'; qSpan.textContent = (window.GameHerbQuality && window.GameHerbQuality.getQualityShortLabel) ? window.GameHerbQuality.getQualityShortLabel(slotData.herbQuality) : ['Hạ','Trung','Thượng','Cực'][slotData.herbQuality]; qSpan.style.borderColor = ['#8b8b8b','#4f9d69','#4f83c4','#b07ad6'][slotData.herbQuality] || '#8b8b8b'; slotDiv.appendChild(qSpan); }
 
           if (slotData.count > 1) {
             var countSpan = document.createElement('span');
@@ -1583,6 +1642,577 @@
     }
   }
 
+  // ---------- ĐỢT LINHME: VƯỜN LINH MỄ TÔNG MÔN (32 Ô ĐẤT) ----------
+  function openTongMonFarmModal() {
+    var modal = document.getElementById('tong-mon-farm-modal');
+    if (!modal) return;
+    renderTongMonFarmModal();
+    modal.classList.remove('hidden');
+    if (audioAPI && audioAPI.playClick) audioAPI.playClick();
+  }
+
+  function closeTongMonFarmModal() {
+    var modal = document.getElementById('tong-mon-farm-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  function renderTongMonFarmModal() {
+    var gridEl = document.getElementById('tong-mon-farm-grid');
+    if (!gridEl) return;
+    var farmApi = (typeof window !== 'undefined') ? window.GameTongMonFarm : null;
+    if (!farmApi || !player) return;
+
+    farmApi.ensureState(player);
+    var pConfigs = farmApi.getPlotsConfig();
+    var now = Date.now();
+    if (farmApi.checkFarmPestSpread) farmApi.checkFarmPestSpread(player, now);
+    var html = '';
+
+    // Hàng Pháp Quyết Canh Tác (4 Kỹ Năng)
+    html += '<div class="farm-spells-panel" style="margin-bottom:12px; padding:10px; background:rgba(20,28,24,0.8); border:1px solid #7c6838; border-radius:8px;">';
+    html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">';
+    html += '  <span style="font-size:12px; font-weight:bold; color:#ffd700;">PHÁP QUYẾT CANH TÁC (4 KỸ NĂNG)</span>';
+    html += '  <span style="font-size:11px; color:#a0c0a0;">Dùng linh lực nhuận trạch toàn bộ ruộng</span>';
+    html += '</div>';
+    html += '<div class="farm-spells-row" style="display:flex; gap:8px; flex-wrap:wrap;">';
+    var spells = farmApi.listFarmSpells ? farmApi.listFarmSpells() : [];
+    for (var s = 0; s < spells.length; s++) {
+      var sp = spells[s];
+      var learned = farmApi.isSpellLearned(player, sp.id);
+      var spState = (player.linhDien && player.linhDien.spells) ? player.linhDien.spells[sp.id] : null;
+      var cdRemain = (spState && spState.cooldownUntil && spState.cooldownUntil > now)
+        ? Math.ceil((spState.cooldownUntil - now) / 1000)
+        : 0;
+      var btnDisable = !learned || cdRemain > 0 || (player.linhLuc || 0) < (farmApi.getFarmSpellCost ? farmApi.getFarmSpellCost(player, sp.id) : sp.costMP);
+      var btnText = sp.name + ' (' + (farmApi.getFarmSpellCost ? farmApi.getFarmSpellCost(player, sp.id) : sp.costMP) + ' MP)';
+      if (!learned) btnText += ' [Chưa học]';
+      else if (cdRemain > 0) btnText += ' [' + cdRemain + 's]';
+
+      var btnBg = learned ? (btnDisable ? 'background:#202820; opacity:0.6;' : 'background:#243d2c; border-color:#659c6b;') : 'background:#1a1a1a; opacity:0.45;';
+
+      html += '<button class="btn wood farm-spell-btn" data-spell="' + sp.id + '"' + (btnDisable ? ' disabled' : '') + ' style="font-size:11px; padding:6px 10px; ' + btnBg + '" title="' + sp.desc + '">';
+      html += sp.icon + ' ' + btnText;
+      html += '</button>';
+    }
+    html += '</div></div>';
+
+    var beds = [
+      { id: 'zone_thuong_dien', name: 'Thượng Điền (8 ô đất — Tây Bắc)' },
+      { id: 'zone_trung_dien', name: 'Trung Điền (6 ô đất — Trung Tâm)' },
+      { id: 'zone_dong_dien', name: 'Đông Điền (8 ô đất — Đông Bắc)' },
+      { id: 'zone_ha_dien_1', name: 'Hạ Điền 1 (6 ô đất — Tây Nam)' },
+      { id: 'zone_ha_dien_2', name: 'Hạ Điền 2 (4 ô đất — Đông Nam)' }
+    ];
+
+    for (var b = 0; b < beds.length; b++) {
+      var bed = beds[b];
+      html += '<div class="farm-bed-section" style="margin-bottom:10px;">';
+      html += '<div class="farm-bed-title">' + bed.name + '</div>';
+      html += '<div class="farm-plots-row">';
+
+      for (var i = 0; i < pConfigs.length; i++) {
+        var cfg = pConfigs[i];
+        if (cfg.zoneId !== bed.id) continue;
+        var view = farmApi.getPlotView(player, cfg.id, now);
+        var isReady = view.state === 'ready';
+        var cardClass = 'farm-plot-card' + (isReady ? ' ready' : '');
+        var statusClass = 'farm-plot-status' + (isReady ? ' ready' : '');
+        var statusText = '';
+        var progressHtml = '';
+        var btnHtml = '';
+
+        if (view.state === 'empty') {
+          statusText = 'Đất trống';
+          btnHtml = '<button class="btn wood farm-plot-btn btn-plot-plant" data-plot="' + cfg.id + '">Gieo Linh Mễ</button>';
+        } else if (view.state === 'growing') {
+          var pct = Math.min(100, Math.max(0, Math.round(view.progress * 100)));
+          var waterTag = view.watered ? ' (Đã tưới)' : '';
+          var yieldTag = (view.yieldBonus && view.yieldBonus > 0) ? ' [+' + view.yieldBonus + ' hạt]' : '';
+          var pestTag = '';
+          if (view.weed) pestTag += ' [Cỏ dại]';
+          if (view.pest) pestTag += ' [Sâu linh]';
+          if (view.disease) pestTag += ' [Uế bệnh]';
+          var skillTag = view.needSkill ? ' [CẦN SKILL]' : (view.needSkillHint ? ' [' + view.needSkillHint + ']' : '');
+          statusText = view.name + ' (' + view.remainSec + 's' + waterTag + yieldTag + ')' + pestTag + skillTag;
+          progressHtml = '<div class="farm-plot-progress-bar"><div class="farm-plot-progress-fill" style="width:' + pct + '%;"></div></div>';
+          if (!view.watered) {
+            btnHtml = '<button class="btn wood farm-plot-btn btn-plot-water" data-plot="' + cfg.id + '" style="background:#1b3d54; color:#7fd2ff;">Tưới Nước</button>';
+          } else {
+            btnHtml = '<button class="btn wood farm-plot-btn" disabled style="opacity:0.6; cursor:default;">Đang Lớn...</button>';
+          }
+        } else if (view.state === 'ready') {
+          var rYieldTag = (view.yieldBonus && view.yieldBonus > 0) ? ' [+' + view.yieldBonus + ']' : '';
+          var rPestTag = '';
+          if (view.weed) rPestTag += ' [Cỏ dại]';
+          if (view.pest) rPestTag += ' [Sâu linh]';
+          if (view.disease) rPestTag += ' [Uế bệnh]';
+          statusText = view.name + ' (Chín)' + rYieldTag + rPestTag;
+          progressHtml = '<div class="farm-plot-progress-bar"><div class="farm-plot-progress-fill" style="width:100%; background:#ffd700;"></div></div>';
+          btnHtml = '<button class="btn wood farm-plot-btn btn-plot-harvest" data-plot="' + cfg.id + '" style="background:#473417; color:#ffd700; font-weight:bold;">Thu Hoạch</button>';
+        }
+
+        html += '<div class="' + cardClass + '">';
+        html += '<div class="farm-plot-idx">Ô #' + (cfg.id + 1) + '</div>';
+        html += '<div class="' + statusClass + '">' + statusText + '</div>';
+        html += progressHtml;
+        html += btnHtml;
+        html += '</div>';
+      }
+
+      html += '</div></div>';
+    }
+
+    gridEl.innerHTML = html;
+
+    var spellBtns = gridEl.querySelectorAll('.farm-spell-btn');
+    spellBtns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var sid = btn.getAttribute('data-spell');
+        var res = farmApi.castFarmSpell(player, sid, Date.now());
+        if (showToast) showToast(res.msg);
+        if (res.ok && audioAPI && audioAPI.playChime) audioAPI.playChime();
+        renderTongMonFarmModal();
+        refreshHUD();
+        if (updateFarmSkillBar) updateFarmSkillBar(typeof currentMapId !== 'undefined' ? currentMapId === 'ruong-linh-me' : false);
+      });
+    });
+
+    var plantBtns = gridEl.querySelectorAll('.btn-plot-plant');
+    plantBtns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var pid = parseInt(btn.getAttribute('data-plot'), 10);
+        var res = farmApi.plant(player, pid, 'linh-me', Date.now());
+        if (showToast) showToast(res.msg);
+        renderTongMonFarmModal();
+        refreshHUD();
+      });
+    });
+
+    var waterBtns = gridEl.querySelectorAll('.btn-plot-water');
+    waterBtns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var pid = parseInt(btn.getAttribute('data-plot'), 10);
+        var res = farmApi.water(player, pid, Date.now());
+        if (showToast) showToast(res.msg);
+        renderTongMonFarmModal();
+      });
+    });
+
+    var harvestBtns = gridEl.querySelectorAll('.btn-plot-harvest');
+    harvestBtns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var pid = parseInt(btn.getAttribute('data-plot'), 10);
+        var res = farmApi.harvest(player, pid, Date.now());
+        if (showToast) showToast(res.msg);
+        renderTongMonFarmModal();
+        refreshHUD();
+      });
+    });
+  }
+
+  function wireTongMonFarm() {
+    var btnHud = document.getElementById('btn-linhme');
+    if (btnHud && !btnHud.dataset.wired) {
+      btnHud.dataset.wired = '1';
+      btnHud.addEventListener('click', openTongMonFarmModal);
+    }
+    var closeX = document.getElementById('close-tong-mon-farm-modal');
+    if (closeX && !closeX.dataset.wired) {
+      closeX.dataset.wired = '1';
+      closeX.addEventListener('click', closeTongMonFarmModal);
+    }
+    var modal = document.getElementById('tong-mon-farm-modal');
+    if (modal && !modal.dataset.wired) {
+      modal.dataset.wired = '1';
+      modal.addEventListener('click', function (e) {
+        if (e.target === modal) closeTongMonFarmModal();
+      });
+    }
+    var btnPlantAll = document.getElementById('btn-farm-plant-all');
+    if (btnPlantAll && !btnPlantAll.dataset.wired) {
+      btnPlantAll.dataset.wired = '1';
+      btnPlantAll.addEventListener('click', function () {
+        var farmApi = (typeof window !== 'undefined') ? window.GameTongMonFarm : null;
+        if (!farmApi || !player) return;
+        var res = farmApi.plantAll(player, 'linh-me', Date.now());
+        if (showToast) showToast(res.msg);
+        renderTongMonFarmModal();
+        refreshHUD();
+      });
+    }
+    var btnHarvestAll = document.getElementById('btn-farm-harvest-all');
+    if (btnHarvestAll && !btnHarvestAll.dataset.wired) {
+      btnHarvestAll.dataset.wired = '1';
+      btnHarvestAll.addEventListener('click', function () {
+        var farmApi = (typeof window !== 'undefined') ? window.GameTongMonFarm : null;
+        if (!farmApi || !player) return;
+        var res = farmApi.harvestAll(player, Date.now());
+        if (showToast) showToast(res.msg);
+        renderTongMonFarmModal();
+        refreshHUD();
+      });
+    }
+
+    var btnGotoRuong = document.getElementById('btn-goto-ruong');
+    if (btnGotoRuong && !btnGotoRuong.dataset.wired) {
+      btnGotoRuong.dataset.wired = '1';
+      btnGotoRuong.addEventListener('click', function () {
+        closeTongMonFarmModal();
+        if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.switchMap) {
+          window.GameEngine.switchMap('ruong-linh-me', { x: 120, y: 420 });
+          if (showToast) showToast('Đang bước vào Ruộng Linh Mễ...');
+        }
+      });
+    }
+
+    // Modal thỉnh giáo pháp quyết canh tác
+    var closeSpellX = document.getElementById('close-farm-spell-modal');
+    if (closeSpellX && !closeSpellX.dataset.wired) {
+      closeSpellX.dataset.wired = '1';
+      closeSpellX.addEventListener('click', closeFarmSpellLearnModal);
+    }
+    var btnCloseSpell = document.getElementById('btn-close-farm-spell-modal');
+    if (btnCloseSpell && !btnCloseSpell.dataset.wired) {
+      btnCloseSpell.dataset.wired = '1';
+      btnCloseSpell.addEventListener('click', closeFarmSpellLearnModal);
+    }
+    var spellModal = document.getElementById('farm-spell-learn-modal');
+    if (spellModal && !spellModal.dataset.wired) {
+      spellModal.dataset.wired = '1';
+      spellModal.addEventListener('click', function (e) {
+        if (e.target === spellModal) closeFarmSpellLearnModal();
+      });
+    }
+  }
+
+  // ---------- ĐỢT LINHME-MAP: THANH KỸ NĂNG RUỘNG & THỈNH GIÁO PHÁP QUYẾT ----------
+  var lastFarmBarRefresh = 0;
+
+  function updateFarmSkillBar(visible) {
+    var bar = document.getElementById('farm-skill-bar');
+    if (!bar) return;
+    if (!visible) {
+      bar.classList.add('hidden');
+      return;
+    }
+    bar.classList.remove('hidden');
+
+    var slotsEl = document.getElementById('farm-skill-bar-slots');
+    if (!slotsEl) return;
+    var farmApi = (typeof window !== 'undefined') ? window.GameTongMonFarm : null;
+    if (!farmApi || !player) return;
+
+    var spells = farmApi.listFarmSpells ? farmApi.listFarmSpells() : [];
+    var now = Date.now();
+    slotsEl.innerHTML = '';
+
+    for (var i = 0; i < spells.length; i++) {
+      var sp = spells[i];
+      var learned = farmApi.isSpellLearned(player, sp.id);
+      var spState = (player.linhDien && player.linhDien.spells) ? player.linhDien.spells[sp.id] : null;
+      var cdRemain = (spState && spState.cooldownUntil && spState.cooldownUntil > now)
+        ? Math.ceil((spState.cooldownUntil - now) / 1000)
+        : 0;
+      var curCost = farmApi.getFarmSpellCost ? farmApi.getFarmSpellCost(player, sp.id) : sp.costMP;
+      var disabled = !learned || cdRemain > 0 || (player.linhLuc || 0) < curCost;
+
+      var btn = document.createElement('button');
+      btn.className = 'farm-skill-btn' + (disabled ? ' disabled' : '');
+      btn.type = 'button';
+      btn.setAttribute('data-spell', sp.id);
+      if (disabled) btn.disabled = true;
+      btn.title = sp.name + ': ' + sp.desc;
+
+      var iconEl = document.createElement('div');
+      iconEl.className = 'farm-skill-icon';
+      iconEl.textContent = sp.icon;
+      btn.appendChild(iconEl);
+
+      var costEl = document.createElement('div');
+      costEl.className = 'farm-skill-cost';
+      costEl.textContent = learned ? (curCost + 'MP') : 'Khóa';
+      btn.appendChild(costEl);
+
+      if (cdRemain > 0) {
+        var cdEl = document.createElement('div');
+        cdEl.className = 'farm-skill-cd-overlay';
+        cdEl.textContent = String(cdRemain);
+        btn.appendChild(cdEl);
+      }
+
+      (function (spellId) {
+        btn.addEventListener('click', function () {
+          var res = farmApi.castFarmSpell(player, spellId, Date.now());
+          if (showToast) showToast(res.msg);
+          if (res.ok) {
+            if (audioAPI && audioAPI.playChime) audioAPI.playChime();
+            if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.spawnFloatingText) {
+              window.GameEngine.spawnFloatingText(res.name + '!', player.x, player.y - 40, '#7ce898');
+            }
+          }
+          updateFarmSkillBar(true);
+          refreshHUD();
+        });
+      })(sp.id);
+
+      slotsEl.appendChild(btn);
+    }
+  }
+
+  function openFarmSpellLearnModal() {
+    var modal = document.getElementById('farm-spell-learn-modal');
+    if (!modal) return;
+    renderFarmSpellLearnModal();
+    modal.classList.remove('hidden');
+    if (audioAPI && audioAPI.playClick) audioAPI.playClick();
+  }
+
+  function closeFarmSpellLearnModal() {
+    var modal = document.getElementById('farm-spell-learn-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  function renderFarmSpellLearnModal() {
+    var listEl = document.getElementById('farm-spell-learn-list');
+    if (!listEl) return;
+    var farmApi = (typeof window !== 'undefined') ? window.GameTongMonFarm : null;
+    if (!farmApi || !player) return;
+
+    var spells = farmApi.listFarmSpells ? farmApi.listFarmSpells() : [];
+    var html = '';
+
+    for (var i = 0; i < spells.length; i++) {
+      var sp = spells[i];
+      var learned = farmApi.isSpellLearned(player, sp.id);
+      var curCostLearn = farmApi.getFarmSpellCost ? farmApi.getFarmSpellCost(player, sp.id) : sp.costMP;
+
+      html += '<div class="farm-spell-learn-item">';
+      html += '  <div style="flex:1;">';
+      html += '    <div style="font-size:14px; font-weight:700; color:#ffd700;">' + sp.icon + ' ' + sp.name + ' <span style="font-size:11px; color:#7fd2ff;">(' + curCostLearn + ' MP, hồi ' + sp.cooldownSec + 's)</span></div>';
+      html += '    <div style="font-size:12px; color:#cbd5e1; margin-top:3px;">' + sp.desc + '</div>';
+      html += '  </div>';
+      html += '  <div>';
+      if (learned) {
+        html += '    <span style="color:#58b858; font-weight:bold; font-size:13px;">Đã Lĩnh Ngộ</span>';
+      } else {
+        html += '    <span style="color:#ffe9a8; font-size:12px;">Bái kiến Trưởng Lão Dược Điền tại Ruộng Linh Mễ để học</span>';
+      }
+      html += '  </div>';
+      html += '</div>';
+    }
+
+    listEl.innerHTML = html;
+  }
+
+  // ---------- ĐỢT LINHME: ĐỔI LINH THỰC (THỨC ĂN HỒI PHỤC THEO GIỜ) ----------
+  function openFoodExchangeModal() {
+    var modal = document.getElementById('food-exchange-modal');
+    if (!modal) return;
+    renderFoodExchangeModal();
+    modal.classList.remove('hidden');
+    if (audioAPI && audioAPI.playClick) audioAPI.playClick();
+  }
+
+  function closeFoodExchangeModal() {
+    var modal = document.getElementById('food-exchange-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  function renderFoodExchangeModal() {
+    var listEl = document.getElementById('food-exchange-list');
+    if (!listEl) return;
+    var foodApi = (typeof window !== 'undefined') ? window.GameFoodBuff : null;
+    if (!foodApi || !player) return;
+
+    var recipes = foodApi.getRecipes();
+    var html = '';
+
+    for (var i = 0; i < recipes.length; i++) {
+      var r = recipes[i];
+      var def = foodApi.getFoodDef(r.foodId);
+      var canCraft = foodApi.canCraftFood(player, r.foodId);
+
+      var costParts = [];
+      for (var c = 0; c < r.cost.length; c++) {
+        var req = r.cost[c];
+        var curCount = (stateAPI && stateAPI.countItemInBag) ? stateAPI.countItemInBag(player, req.itemId) : 0;
+        var isEnough = curCount >= req.count;
+        var color = isEnough ? '#98ff98' : '#ff7a7a';
+        costParts.push('<span style="color:' + color + ';">' + (req.name || req.itemId) + ' (' + curCount + '/' + req.count + ')</span>');
+      }
+
+      var durationHours = def ? (def.durationSec / 3600) : 1;
+      var rateText = def ? ('+' + def.hpPerTick + ' Khí Huyết & +' + def.mpPerTick + ' Linh Lực mỗi ' + def.tickIntervalSec + 's (kéo dài ' + durationHours + ' giờ)') : '';
+
+      html += '<div class="food-exchange-item">';
+      html += '  <div style="flex:1;">';
+      html += '    <div class="food-info-head">' + r.name + '</div>';
+      html += '    <div class="food-info-desc" style="color:#8be38b;">' + rateText + '</div>';
+      html += '    <div class="food-info-desc">' + r.desc + '</div>';
+      html += '    <div class="food-info-cost">Nguyên liệu: ' + costParts.join(', ') + '</div>';
+      html += '  </div>';
+      html += '  <div>';
+      var disabledAttr = canCraft.ok ? '' : ' disabled style="opacity:0.5; cursor:not-allowed;"';
+      html += '    <button class="btn wood btn-craft-food" data-food="' + r.foodId + '"' + disabledAttr + '>Nấu / Đổi</button>';
+      html += '  </div>';
+      html += '</div>';
+    }
+
+    listEl.innerHTML = html;
+
+    var craftBtns = listEl.querySelectorAll('.btn-craft-food');
+    craftBtns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var fid = btn.getAttribute('data-food');
+        var res = foodApi.craftFood(player, fid);
+        if (showToast) showToast(res.msg);
+        renderFoodExchangeModal();
+        refreshHUD();
+      });
+    });
+  }
+
+  function wireFoodExchange() {
+    var closeX = document.getElementById('close-food-exchange-modal');
+    if (closeX && !closeX.dataset.wired) {
+      closeX.dataset.wired = '1';
+      closeX.addEventListener('click', closeFoodExchangeModal);
+    }
+    var closeBtn = document.getElementById('btn-close-food-modal');
+    if (closeBtn && !closeBtn.dataset.wired) {
+      closeBtn.dataset.wired = '1';
+      closeBtn.addEventListener('click', closeFoodExchangeModal);
+    }
+    var modal = document.getElementById('food-exchange-modal');
+    if (modal && !modal.dataset.wired) {
+      modal.dataset.wired = '1';
+      modal.addEventListener('click', function (e) {
+        if (e.target === modal) closeFoodExchangeModal();
+      });
+    }
+    var hudFoodBadge = document.getElementById('hud-food-buff');
+    if (hudFoodBadge && !hudFoodBadge.dataset.wired) {
+      hudFoodBadge.dataset.wired = '1';
+      hudFoodBadge.addEventListener('click', openFoodExchangeModal);
+    }
+  }
+
+  // ---------- ĐỢT LINHME: VIỆC VỤ TÔNG MÔN (CANH TÁC LINH MỄ) ----------
+  function openSectQuestModal() {
+    var modal = document.getElementById('sect-quest-modal');
+    if (!modal) return;
+    renderSectQuestModal();
+    modal.classList.remove('hidden');
+    if (audioAPI && audioAPI.playClick) audioAPI.playClick();
+  }
+
+  function closeSectQuestModal() {
+    var modal = document.getElementById('sect-quest-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  function renderSectQuestModal() {
+    var listEl = document.getElementById('sect-quest-list');
+    if (!listEl) return;
+    var farmApi = (typeof window !== 'undefined') ? window.GameTongMonFarm : null;
+    if (!farmApi || !player) return;
+
+    farmApi.ensureState(player);
+    var quests = farmApi.getSectQuests();
+    var html = '';
+
+    for (var i = 0; i < quests.length; i++) {
+      var q = quests[i];
+      var isActive = (player.sectQuests && player.sectQuests.activeQuestId === q.id);
+      var checkCanComplete = farmApi.canCompleteSectQuest(player, q.id);
+      var completedTimes = (player.sectQuests && player.sectQuests.completedCount && player.sectQuests.completedCount[q.id]) || 0;
+
+      var reqParts = [];
+      for (var r = 0; r < q.requirements.length; r++) {
+        var req = q.requirements[r];
+        var curCount = (stateAPI && stateAPI.countItemInBag) ? stateAPI.countItemInBag(player, req.itemId) : 0;
+        var isEnough = curCount >= req.count;
+        var color = isEnough ? '#98ff98' : '#ff7a7a';
+        reqParts.push('<span style="color:' + color + ';">' + req.name + ' (' + curCount + '/' + req.count + ')</span>');
+      }
+
+      var rewardDesc = '+' + q.rewardLT + ' Linh Thạch';
+      if (q.rewardItems && q.rewardItems.length > 0) {
+        for (var rw = 0; rw < q.rewardItems.length; rw++) {
+          rewardDesc += ', +' + q.rewardItems[rw].count + ' ' + (q.rewardItems[rw].name || q.rewardItems[rw].itemId);
+        }
+      }
+      if (q.congHien > 0) {
+        rewardDesc += ', +' + q.congHien + ' Cống Hiến Tông';
+      }
+
+      var actionBtn = '';
+      if (!isActive) {
+        actionBtn = '<button class="btn wood btn-accept-sect-quest" data-quest="' + q.id + '">Nhận Việc</button>';
+      } else {
+        if (checkCanComplete.ok) {
+          actionBtn = '<button class="btn wood btn-complete-sect-quest" data-quest="' + q.id + '" style="background:#23591d; border-color:#58b858; color:#98ff98; font-weight:bold;">Nộp Hoàn Thành</button>';
+        } else {
+          actionBtn = '<button class="btn wood" disabled style="opacity:0.5; cursor:not-allowed;">Đang Làm (Chưa Đủ)</button>';
+        }
+      }
+
+      html += '<div class="sect-quest-item">';
+      html += '  <div style="flex:1;">';
+      html += '    <div class="food-info-head" style="color:#a8d1ff;">' + q.name + (completedTimes > 0 ? (' <span style="font-size:11px; color:#88a;">(Đã hoàn thành: ' + completedTimes + ' lần)</span>') : '') + '</div>';
+      html += '    <div class="food-info-desc">' + q.desc + '</div>';
+      html += '    <div class="food-info-cost">Yêu cầu nộp: ' + reqParts.join(', ') + '</div>';
+      html += '    <div class="food-info-cost" style="color:#ffd700;">Phần thưởng: ' + rewardDesc + '</div>';
+      html += '  </div>';
+      html += '  <div>' + actionBtn + '</div>';
+      html += '</div>';
+    }
+
+    listEl.innerHTML = html;
+
+    var acceptBtns = listEl.querySelectorAll('.btn-accept-sect-quest');
+    acceptBtns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var qid = btn.getAttribute('data-quest');
+        var res = farmApi.acceptSectQuest(player, qid);
+        if (showToast) showToast(res.msg);
+        renderSectQuestModal();
+        refreshHUD();
+      });
+    });
+
+    var completeBtns = listEl.querySelectorAll('.btn-complete-sect-quest');
+    completeBtns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var qid = btn.getAttribute('data-quest');
+        var res = farmApi.completeSectQuest(player, qid);
+        if (showToast) showToast(res.msg);
+        renderSectQuestModal();
+        refreshHUD();
+      });
+    });
+  }
+
+  function wireSectQuests() {
+    var closeX = document.getElementById('close-sect-quest-modal');
+    if (closeX && !closeX.dataset.wired) {
+      closeX.dataset.wired = '1';
+      closeX.addEventListener('click', closeSectQuestModal);
+    }
+    var closeBtn = document.getElementById('btn-close-sect-quest-modal');
+    if (closeBtn && !closeBtn.dataset.wired) {
+      closeBtn.dataset.wired = '1';
+      closeBtn.addEventListener('click', closeSectQuestModal);
+    }
+    var modal = document.getElementById('sect-quest-modal');
+    if (modal && !modal.dataset.wired) {
+      modal.dataset.wired = '1';
+      modal.addEventListener('click', function (e) {
+        if (e.target === modal) closeSectQuestModal();
+      });
+    }
+  }
+
   function updateItemInfo(slotData, defs) {
     var nameEl = document.getElementById('bag-info-name');
     var descEl = document.getElementById('bag-info-desc');
@@ -1814,6 +2444,23 @@
 
     renderRingWidget();
     updateQuestPanel();
+
+    // Đợt LINHME: Cập nhật huy hiệu Thức Ăn Hồi Phục (Food Buff)
+    var foodBadge = document.getElementById('hud-food-buff');
+    if (foodBadge) {
+      var foodApi = (typeof window !== 'undefined') ? window.GameFoodBuff : null;
+      var activeBuff = (foodApi && player) ? foodApi.getActiveBuff(player, Date.now()) : null;
+      if (activeBuff) {
+        foodBadge.classList.remove('hidden');
+        var fName = document.getElementById('hud-food-name');
+        var fTimer = document.getElementById('hud-food-timer');
+        if (fName) fName.textContent = activeBuff.name;
+        if (fTimer) fTimer.textContent = activeBuff.timeStr;
+        foodBadge.title = activeBuff.name + ': +' + activeBuff.hpPerTick + ' HP, +' + activeBuff.mpPerTick + ' MP mỗi ' + activeBuff.tickIntervalSec + 's. Còn lại: ' + activeBuff.timeStr;
+      } else {
+        foodBadge.classList.add('hidden');
+      }
+    }
   }
 
   /**
@@ -2171,7 +2818,7 @@
 
     updateMinimapBackground();
 
-    if (minimapBgImg && minimapBgImg.complete) {
+    if (minimapBgImg && minimapBgImg.complete && minimapBgImg.naturalWidth > 0) {
       minimapCtx.drawImage(minimapBgImg, 0, 0, mw, mh);
     } else {
       minimapCtx.fillStyle = '#222822';
@@ -2293,6 +2940,17 @@
       var loadoutCd = window.GameSkills.getLoadout();
       for (var si = 0; si < loadoutCd.length; si++) {
         updateSkillSlotUI(si + 1, extras.skillsCd[loadoutCd[si].id] || 0, loadoutCd[si].cooldown);
+      }
+    }
+
+    // Làm mới thanh pháp quyết canh tác mỗi giây khi ở map ruộng để đếm
+    // ngược hồi chiêu chạy và nút mở lại khi hết hồi chiêu (trước đây thanh
+    // chỉ vẽ lại khi đổi map/bấm cast nên đếm ngược đóng băng, nút khóa cứng).
+    if (mapData && mapData.id === 'ruong-linh-me') {
+      var nowMs = Date.now();
+      if (nowMs - lastFarmBarRefresh >= 1000) {
+        lastFarmBarRefresh = nowMs;
+        updateFarmSkillBar(true);
       }
     }
   }
@@ -2436,9 +3094,149 @@
       showChapsuChoices();
     } else if (dialogueState.npc && dialogueState.npc.id === 'npc_tuan_thu_su' && !dialogueState.choiceShown) {
       showTuanThuSuChoices();
+    } else if (dialogueState.npc && dialogueState.npc.id === 'npc_truonglao_duocdien' && !dialogueState.choiceShown) {
+      showTruongLaoChoices();
+    } else if (dialogueState.npc && dialogueState.npc.id === 'npc_duocsu' && !dialogueState.choiceShown) {
+      showDuocSuChoices();
     } else {
       closeDialogue();
     }
+  }
+
+  // Đợt ELDER (Bui 01:32 & 01:37): Menu lựa chọn của Trưởng Lão Dược Điền
+  var elderDemoTimer = null;
+  function showTruongLaoChoices() {
+    dialogueState.choiceShown = true;
+    var box = document.getElementById('dialogue-choices');
+    if (!box) { closeDialogue(); return; }
+    box.innerHTML = '';
+    box.classList.remove('hidden');
+
+    var mkBtn = function (label, fn) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn wood dialogue-choice-btn';
+      b.textContent = label;
+      b.addEventListener('click', function (e) {
+        e.stopPropagation();
+        fn();
+      });
+      box.appendChild(b);
+    };
+
+    var q = (player && player.quests) || {};
+    var sectDone = (q.sectStage || 0) >= 4;
+    var ld = (typeof window !== 'undefined' && window.GameLinhDien) ? window.GameLinhDien : null;
+
+    if (!sectDone) {
+      var textEl = document.getElementById('dialogue-text');
+      if (textEl) {
+        textEl.textContent = 'Trưởng Lão Dược Điền: Ruộng Linh Mễ này là căn cơ nông nghiệp của Thanh Vân Tông ta. Ngươi chưa chính thức nhập môn, chớ nên nóng vội.';
+      }
+      mkBtn('Rời đi', function () { closeDialogue(); });
+      return;
+    }
+
+    var allLearned = ld && ld.isSpellLearned &&
+                     ld.isSpellLearned(player, 'linh-vu') &&
+                     ld.isSpellLearned(player, 'tru-ue') &&
+                     ld.isSpellLearned(player, 'thoi-sinh') &&
+                     ld.isSpellLearned(player, 'dan-linh');
+
+    if (!allLearned) {
+      mkBtn('Xem Trưởng Lão thị phạm 4 Pháp Quyết', function () {
+        startElderDemoUI();
+      });
+      mkBtn('Bái lĩnh truyền thừa 4 Pháp Quyết ngay', function () {
+        learnAllSpellsFromElderUI();
+      });
+    } else {
+      mkBtn('Mở Linh Điền (Ruộng Dược)', function () {
+        closeDialogue();
+        if (ld && ld.openPanel) ld.openPanel();
+      });
+      mkBtn('Xem lại thị phạm các cấp độ', function () {
+        startElderDemoUI();
+      });
+    }
+    mkBtn('Rời đi', function () { closeDialogue(); });
+  }
+
+  function startElderDemoUI() {
+    var ld = (typeof window !== 'undefined' && window.GameLinhDien) ? window.GameLinhDien : null;
+    if (!ld || !ld.ELDER_DEMO_STEPS) {
+      learnAllSpellsFromElderUI();
+      return;
+    }
+
+    var steps = ld.ELDER_DEMO_STEPS;
+    var currentStep = 0;
+    var textEl = document.getElementById('dialogue-text');
+    var box = document.getElementById('dialogue-choices');
+    if (box) {
+      box.innerHTML = '';
+      box.classList.remove('hidden');
+      var skipBtn = document.createElement('button');
+      skipBtn.type = 'button';
+      skipBtn.className = 'btn wood dialogue-choice-btn';
+      skipBtn.textContent = 'Bỏ qua trình diễn (Skip)';
+      skipBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (elderDemoTimer) clearTimeout(elderDemoTimer);
+        ld.simulateElderDemo(player, true);
+        if (textEl) {
+          textEl.textContent = 'Trưởng Lão Dược Điền: Ngươi quả là kỳ tài thông tuệ, vừa nhìn đã thấu suốt bí quyết!';
+        }
+        showTruongLaoChoices();
+      });
+      box.appendChild(skipBtn);
+    }
+
+    function runStep() {
+      if (currentStep >= steps.length) {
+        if (player.quests && player.quests.elderQuest) {
+          player.quests.elderQuest.demoDone = true;
+          player.quests.elderQuest.stage = 2;
+        }
+        if (stateAPI) stateAPI.savePlayer(player);
+        if (textEl) {
+          textEl.textContent = 'Trưởng Lão Dược Điền: Đó là 4 đại pháp quyết linh điền của tông môn ở các cấp độ. Ngươi đã sẵn sàng tiếp nhận truyền thừa chưa?';
+        }
+        showTruongLaoChoices();
+        return;
+      }
+
+      var res = ld.executeElderDemoStep(player, currentStep);
+      var s = steps[currentStep];
+      if (textEl) {
+        textEl.textContent = 'Trưởng Lão Dược Điền: ' + s.desc;
+      }
+      if (audioAPI && audioAPI.playChime) audioAPI.playChime();
+
+      var spText = '[' + s.name + ' - ' + s.rankName + ']';
+      if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.spawnFloatingText) {
+        var fxX = (res && typeof res.x === 'number') ? res.x : 225;
+        var fxY = (res && typeof res.y === 'number') ? res.y - 20 : 400;
+        window.GameEngine.spawnFloatingText(spText, fxX, fxY, s.color);
+      }
+
+      currentStep++;
+      elderDemoTimer = setTimeout(runStep, 1200); // 1.2s mỗi bậc (PROVISIONAL)
+    }
+
+    runStep();
+  }
+
+  function learnAllSpellsFromElderUI() {
+    if (elderDemoTimer) clearTimeout(elderDemoTimer);
+    var ld = (typeof window !== 'undefined' && window.GameLinhDien) ? window.GameLinhDien : null;
+    if (ld && ld.learnAllSpellsFromElder) {
+      var r = ld.learnAllSpellsFromElder(player);
+      if (audioAPI && audioAPI.playChime) audioAPI.playChime();
+      showToast(r.msg || 'Đã lĩnh hội 4 Pháp Quyết Linh Điền!');
+      refreshHUD();
+    }
+    closeDialogue();
   }
 
   // Đợt 6: lựa chọn dịch vụ của Chấp Sự hiện ở cuối thoại (đổi đan / luyện Trúc Cơ Đan)
@@ -2509,6 +3307,48 @@
         if (dp.openPanel) dp.openPanel('refine');
       });
     }
+    // Đợt LINHME: Việc vụ Tông Môn (Linh Mễ) tại Chấp Sự
+    mkBtn('Việc Vụ Tông Môn (Linh Mễ)', function () {
+      closeDialogue();
+      openSectQuestModal();
+    });
+    mkBtn('Rời đi', function () { closeDialogue(); });
+  }
+
+  // Đợt LINHME: Lựa chọn dịch vụ của Dược Sư (Vườn Linh Mễ, Việc Tông, Đổi Thức Ăn)
+  function showDuocSuChoices() {
+    dialogueState.choiceShown = true;
+    var box = document.getElementById('dialogue-choices');
+    if (!box) { closeDialogue(); return; }
+    box.innerHTML = '';
+    box.classList.remove('hidden');
+    var mkBtn = function (label, fn) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn wood dialogue-choice-btn';
+      b.textContent = label;
+      b.addEventListener('click', function (e) {
+        e.stopPropagation();
+        fn();
+      });
+      box.appendChild(b);
+    };
+    mkBtn('Vườn Linh Mễ Tông Môn (32 Ô Đất)', function () {
+      closeDialogue();
+      openTongMonFarmModal();
+    });
+    mkBtn('Xem Pháp Quyết Canh Tác (4 Kỹ Năng)', function () {
+      closeDialogue();
+      openFarmSpellLearnModal();
+    });
+    mkBtn('Việc Vụ Tông Môn (Canh Tác Linh Mễ)', function () {
+      closeDialogue();
+      openSectQuestModal();
+    });
+    mkBtn('Đổi Linh Thực / Thức Ăn Hồi Phục', function () {
+      closeDialogue();
+      openFoodExchangeModal();
+    });
     mkBtn('Rời đi', function () { closeDialogue(); });
   }
 
@@ -2650,6 +3490,7 @@
 
   var toastTimer = null;
   function showToast(message) {
+    if (typeof document === 'undefined') return;
     var toast = document.getElementById('game-toast');
     if (!toast) return;
 
@@ -3466,6 +4307,18 @@
   UIAPI.closeLinhThu = closeLinhThu;
   UIAPI.openSaddlebag = openSaddlebag;
   UIAPI.renderLinhThuPanel = renderLinhThuPanel;
+  // Đợt LINHME: Vườn Linh Mễ, Đổi Thức Ăn, Việc Vụ Tông
+  UIAPI.openTongMonFarmModal = openTongMonFarmModal;
+  UIAPI.closeTongMonFarmModal = closeTongMonFarmModal;
+  UIAPI.openFoodExchangeModal = openFoodExchangeModal;
+  UIAPI.closeFoodExchangeModal = closeFoodExchangeModal;
+  UIAPI.openSectQuestModal = openSectQuestModal;
+  UIAPI.closeSectQuestModal = closeSectQuestModal;
+  // Đợt LINHME-MAP: Kỹ năng ruộng & thỉnh giáo
+  UIAPI.updateFarmSkillBar = updateFarmSkillBar;
+  UIAPI.openFarmSpellLearnModal = openFarmSpellLearnModal;
+  UIAPI.closeFarmSpellLearnModal = closeFarmSpellLearnModal;
+  UIAPI.sortBag = sortBag;
 
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = UIAPI;

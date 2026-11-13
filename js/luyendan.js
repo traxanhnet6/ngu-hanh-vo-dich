@@ -475,7 +475,20 @@
   }
 
   // ---------------- Refine core ----------------
+  function getHerbQualityAPI() { try { if (typeof window !== 'undefined' && window.GameHerbQuality) return window.GameHerbQuality; return require('./herb-quality.js'); } catch (e) { return null; } }
   function countMaterial(player, itemId) { return bagCount(player, itemId); }
+  function materialQuality(plan) {
+    var values = plan && plan.materialQualities;
+    // Không có dữ liệu nguyên liệu nghĩa là không cộng điểm; đây là đường gọi D2 cũ.
+    if (!Array.isArray(values) || values.length === 0) return null;
+    var hq = getHerbQualityAPI();
+    return hq && hq.weightedAverage ? hq.weightedAverage(values) : null;
+  }
+  function materialQualityLabel(q) {
+    var hq = getHerbQualityAPI();
+    return q === null ? 'Không có dữ liệu phẩm chất' : (hq && hq.getQualityLabel ? hq.getQualityLabel(q) : 'Không xác định');
+  }
+  function previewRefine(player, plan) { plan = plan || {}; var r = getPillRecipe(plan.pillId || plan.recipeId); if (!r) return { ok: false, reason: 'unknown_recipe' }; var q = materialQuality(plan); var base = (typeof plan.baseScore === 'number' ? plan.baseScore : 0.5); var score = Math.max(0, Math.min(1, base + (q === null ? 0 : q * 0.10))); var idx = Math.min(3, Math.floor(score * 3.999)); return { ok: true, materialQuality: q, materialQualityName: materialQualityLabel(q), predictedGrade: GRADE_NAMES[idx], predictedGradeIndex: idx }; }
 
   function validateMaterials(recipe, provided) {
     // provided: array of itemIds in order
@@ -570,6 +583,8 @@
     var profBonus = proficiencyBonus(player, pillId);
 
     var score = fireScore * 0.1 + effHeat * 0.4 + sealScore * 0.3 + orderScore * 0.2 + profBonus;
+    var materialQ = materialQuality(plan);
+    if (materialQ !== null) score += materialQ * 0.10; // PROVISIONAL: chỉ cộng khi có mảng phẩm chất
     score = Math.max(0, Math.min(1, score));
 
     // ky tran optional
@@ -654,7 +669,7 @@
     showToast(msgOk);
     refreshHUD();
 
-    return { ok: true, pillId: pillId, grade: gradeName, gradeIndex: gradeIdx, danVan: danVan, score: score, kyTranUsed: kyTranUsed, msg: msgOk };
+    return { ok: true, pillId: pillId, grade: gradeName, gradeIndex: gradeIdx, danVan: danVan, score: score, materialQuality: materialQ, materialQualityName: materialQualityLabel(materialQ), kyTranUsed: kyTranUsed, msg: msgOk };
   }
 
   function quickRefine(player, pillId, furnaceId) {
@@ -752,6 +767,7 @@
   exports.combineFragments = combineFragments;
   exports.tryVariantDiscovery = tryVariantDiscovery;
   exports.getKyTran = getKyTran;
+  exports.previewRefine = previewRefine;
   exports.refineBatch = refineBatch;
   exports.refine = refineBatch;
   exports.consumePill = consumePill;

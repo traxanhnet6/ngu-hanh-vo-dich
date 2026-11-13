@@ -137,6 +137,35 @@
     ]
   };
 
+  // Đợt ELDER: NPC Trưởng Lão Dược Điền tại Ruộng Linh Mễ Tông Môn (Bui 01:32 & Chốt 01:52)
+  var TRUONG_LAO_DUOC_DIEN = {
+    id: 'npc_truonglao_duocdien',
+    name: 'Trưởng Lão Dược Điền',
+    asset: 'assets/art/npc-truonglao.png',
+    originalW: 235,
+    originalH: 560,
+    w: 50,
+    h: 120,
+    x: 200,
+    y: 300,
+    feetX: 225,
+    feetY: 420,
+    baseY: 420,
+    collisionRadius: 14,
+    standTile: {
+      x: 225,
+      y: 450
+    },
+    mapId: 'ruong-linh-me',
+    questGate: null,
+    dialogueDefault: [
+      'Ruộng Linh Mễ này là căn cơ nông nghiệp của Thanh Vân Tông ta. Người tu đạo cũng không thể thiếu linh lương dưỡng mạch.'
+    ],
+    dialogueQuest: [
+      'Ngươi chính là tân đệ tử nhập môn do Chấp Sự tiến cử? Tốt lắm, hãy xem ta thị phạm 4 pháp quyết canh tác linh điền tông môn!'
+    ]
+  };
+
   var SPAWN_MIEU = {
     x: 560,
     y: 620
@@ -181,6 +210,18 @@
       desc: 'Ngôi miếu cổ đổ nát trên đỉnh núi tuyết, nơi hai huynh muội nương tựa nhau.',
       rect: { x: 0, y: 0, w: 1920, h: 1280 }
     }
+  ];
+
+  // PROVISIONAL: điểm hái dại Miếu Hoang — số/vị trí TẠM, chờ Bui phán.
+  // Cùng luật như tông: itemId la-thanh-tuy, respawnSec 90, count 1.
+  // HERB-CODE: lấy ĐÚNG 5 vị trí trong game-ngu-hanh-linhduoc/qa/mieu-positions-proposal.md
+  // (CHƯA NGHIỆM THU). respawnSec 120 = nhịp Lá Thanh Tụy dại ở Rừng Độc (TẠM).
+  var HARVEST_NODES_MIEU_HOANG = [
+    { id: 'harvest_mh_1', itemId: 'la-thanh-tuy', name: 'Lá Thanh Tụy', x: 350, y: 950, radius: 48, respawnSec: 120, count: 1 },
+    { id: 'harvest_mh_2', itemId: 'la-thanh-tuy', name: 'Lá Thanh Tụy', x: 1050, y: 950, radius: 48, respawnSec: 120, count: 1 },
+    { id: 'harvest_mh_3', itemId: 'la-thanh-tuy', name: 'Lá Thanh Tụy', x: 1450, y: 750, radius: 48, respawnSec: 120, count: 1 },
+    { id: 'harvest_mh_4', itemId: 'la-thanh-tuy', name: 'Lá Thanh Tụy', x: 1350, y: 250, radius: 48, respawnSec: 120, count: 1 },
+    { id: 'harvest_mh_5', itemId: 'la-thanh-tuy', name: 'Lá Thanh Tụy', x: 1560, y: 350, radius: 48, respawnSec: 120, count: 1 }
   ];
 
   function isWalkableMieu(x, y) {
@@ -246,6 +287,9 @@
   forceWalkable(collisionGridMieu, LINH_NHI.standTile.x, LINH_NHI.standTile.y);
   forceWalkable(collisionGridMieu, EXITS_MIEU[0].target.x, EXITS_MIEU[0].target.y);
   forceWalkable(collisionGridMieu, EXITS_MIEU[1].target.x, EXITS_MIEU[1].target.y);
+  for (var hmh = 0; hmh < HARVEST_NODES_MIEU_HOANG.length; hmh++) {
+    forceWalkable(collisionGridMieu, HARVEST_NODES_MIEU_HOANG[hmh].x, HARVEST_NODES_MIEU_HOANG[hmh].y);
+  }
 
   var MAP_MIEU_HOANG = {
     id: 'mieu_hoang',
@@ -265,7 +309,7 @@
     ].concat(TREES_MIEU, STANDEES_MIEU_EXTRA),
     npcs: [LINH_NHI],
     interactables: INTERACTABLES_MIEU,
-    harvestNodes: [],
+    harvestNodes: HARVEST_NODES_MIEU_HOANG,
     monsterPacks: [],
     zones: ZONES_MIEU,
     obstacles: SCENERY_OBSTACLES_MIEU,
@@ -627,6 +671,15 @@
       target: { x: 960, y: 425 },
       targetMap: 'dai-dien',
       targetSpawn: { x: 600, y: 690 }
+    },
+    {
+      id: 'exit_to_ruong_linhme',
+      name: 'Ruộng Linh Mễ',
+      rect: { x: 440, y: 590, w: 60, h: 70 },
+      chipLabel: 'Ruộng Linh Mễ',
+      target: { x: 470, y: 625 },
+      targetMap: 'ruong-linh-me',
+      targetSpawn: { x: 120, y: 420 }
     }
   ];
 
@@ -863,6 +916,16 @@
       action: 'door_enter',
       targetMap: 'dai-dien',
       targetSpawn: { x: 600, y: 690 }
+    },
+    {
+      id: 'interact_door_ruong_linhme',
+      label: 'Ruộng Linh Mễ',
+      x: 470,
+      y: 625,
+      radius: 48,
+      action: 'door_enter',
+      targetMap: 'ruong-linh-me',
+      targetSpawn: { x: 120, y: 420 }
     },
     {
       id: 'interact_notice_board',
@@ -1560,6 +1623,126 @@
     exits: EXITS_DAI_TRUYEN_TONG,
     collisionGrid: collisionGridDaiTruyenTong,
     isWalkable: isWalkableDaiTruyenTong
+  };
+
+  // ============================================================
+  // MAP LINH MỄ: RUỘNG LINH MỄ (1200 x 800) — Đợt LINHME-MAP
+  // ============================================================
+
+  var SPAWN_RUONG_LINH_ME = {
+    x: 120,
+    y: 420
+  };
+
+  var ZONES_RUONG_LINH_ME = [
+    {
+      id: 'ruong_linhme',
+      name: 'Ruộng Linh Mễ',
+      desc: 'Linh điền màu mỡ của Tông Môn, nơi gieo cấy Linh Mễ và thi triển pháp quyết canh tác.',
+      rect: { x: 0, y: 0, w: 1200, h: 800 }
+    }
+  ];
+
+  var EXITS_RUONG_LINH_ME = [
+    {
+      id: 'exit_to_tong_mon',
+      name: 'Sơn Môn',
+      rect: { x: 20, y: 380, w: 70, h: 80 },
+      chipLabel: 'Về Tông Môn',
+      target: { x: 55, y: 420 },
+      targetMap: 'tong-mon',
+      targetSpawn: { x: 520, y: 625 }
+    }
+  ];
+
+  var INTERACTABLES_RUONG_LINH_ME = [
+    {
+      id: 'ruong_linhme_gate',
+      label: 'Ra Sơn Môn',
+      x: 55,
+      y: 420,
+      radius: 44,
+      action: 'door_enter',
+      targetMap: 'tong-mon',
+      targetSpawn: { x: 520, y: 625 }
+    },
+    {
+      id: 'ruong_linhme_stele',
+      label: 'Bia Nông Vụ',
+      x: 180,
+      y: 350,
+      radius: 36,
+      action: 'open_linhme_farm'
+    }
+  ];
+
+  var SCENERY_OBSTACLES_RUONG_LINH_ME = [
+    { rect: { x: 0, y: 0, w: 1200, h: 40 } },
+    { rect: { x: 0, y: 760, w: 1200, h: 40 } },
+    { rect: { x: 1160, y: 0, w: 40, h: 800 } },
+    { rect: { x: 0, y: 0, w: 30, h: 370 } },
+    { rect: { x: 0, y: 470, w: 30, h: 330 } }
+  ];
+
+  function isWalkableRuongLinhMe(x, y) {
+    if (x < 15 || x > 1200 - 15 || y < 15 || y > 800 - 15) {
+      var inExit = false;
+      for (var e = 0; e < EXITS_RUONG_LINH_ME.length; e++) {
+        var er = EXITS_RUONG_LINH_ME[e].rect;
+        if (x >= er.x && x <= er.x + er.w && y >= er.y && y <= er.y + er.h) {
+          inExit = true;
+          break;
+        }
+      }
+      if (!inExit) return false;
+    }
+
+    for (var j = 0; j < SCENERY_OBSTACLES_RUONG_LINH_ME.length; j++) {
+      var obs = SCENERY_OBSTACLES_RUONG_LINH_ME[j];
+      if (obs.rect) {
+        var inExitZone = false;
+        for (var k = 0; k < EXITS_RUONG_LINH_ME.length; k++) {
+          var exr = EXITS_RUONG_LINH_ME[k].rect;
+          if (x >= exr.x && x <= exr.x + exr.w && y >= exr.y && y <= exr.y + exr.h) {
+            inExitZone = true;
+            break;
+          }
+        }
+        if (!inExitZone && x >= obs.rect.x && x <= obs.rect.x + obs.rect.w &&
+            y >= obs.rect.y && y <= obs.rect.y + obs.rect.h) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  var collisionGridRuongLinhMe = buildGrid(1200, 800, isWalkableRuongLinhMe);
+  forceWalkable(collisionGridRuongLinhMe, SPAWN_RUONG_LINH_ME.x, SPAWN_RUONG_LINH_ME.y);
+  forceWalkable(collisionGridRuongLinhMe, EXITS_RUONG_LINH_ME[0].target.x, EXITS_RUONG_LINH_ME[0].target.y);
+  forceWalkable(collisionGridRuongLinhMe, INTERACTABLES_RUONG_LINH_ME[0].x, INTERACTABLES_RUONG_LINH_ME[0].y);
+  forceWalkable(collisionGridRuongLinhMe, INTERACTABLES_RUONG_LINH_ME[1].x, INTERACTABLES_RUONG_LINH_ME[1].y);
+
+  var MAP_RUONG_LINH_ME = {
+    id: 'ruong-linh-me',
+    name: 'Ruộng Linh Mễ',
+    width: 1200,
+    height: 800,
+    gridSize: GRID_SIZE,
+    cols: Math.ceil(1200 / GRID_SIZE),
+    rows: Math.ceil(800 / GRID_SIZE),
+    bgImage: null, // Procedural canvas background
+    spawn: SPAWN_RUONG_LINH_ME,
+    standees: [],
+    npcs: [],
+    interactables: INTERACTABLES_RUONG_LINH_ME,
+    harvestNodes: [],
+    monsterPacks: [],
+    zones: ZONES_RUONG_LINH_ME,
+    obstacles: SCENERY_OBSTACLES_RUONG_LINH_ME,
+    exits: EXITS_RUONG_LINH_ME,
+    collisionGrid: collisionGridRuongLinhMe,
+    isWalkable: isWalkableRuongLinhMe
   };
 
   // ============================================================
@@ -2423,6 +2606,7 @@
     'dai-dien': MAP_DAI_DIEN,
     'son-coc': MAP_SON_COC,
     'dai-truyen-tong': MAP_DAI_TRUYEN_TONG,
+    'ruong-linh-me': MAP_RUONG_LINH_ME,
     'ho-bang': MAP_HO_BANG,
     'mo-lua': MAP_MO_LUA,
     'hoang-mac': MAP_HOANG_MAC,
@@ -2443,10 +2627,32 @@
     } catch (e) { return false; }
   }
 
+  // Đợt ELDER (Bui 01:52): Cơ chế guarded registration đăng ký Trưởng Lão Dược Điền vào map ruong-linh-me khi map tồn tại
+  function registerElderToRuongLinhMe(registry) {
+    var reg = registry || ALL_MAPS;
+    if (!reg) return false;
+    var targetMap = reg['ruong-linh-me'] || reg['ruong_linh_me'];
+    if (!targetMap) return false;
+    if (!Array.isArray(targetMap.npcs)) targetMap.npcs = [];
+    if (!targetMap.npcs.some(function (n) { return n.id === TRUONG_LAO_DUOC_DIEN.id; })) {
+      targetMap.npcs.push(TRUONG_LAO_DUOC_DIEN);
+    }
+    targetMap.truonglao_duocdien = TRUONG_LAO_DUOC_DIEN;
+    if (targetMap.collisionGrid && typeof forceWalkable === 'function') {
+      forceWalkable(targetMap.collisionGrid, TRUONG_LAO_DUOC_DIEN.standTile.x, TRUONG_LAO_DUOC_DIEN.standTile.y);
+    }
+    return true;
+  }
+
+  // Tự động kiểm tra đăng ký có điều kiện (nếu map ruong-linh-me đã có trong ALL_MAPS)
+  registerElderToRuongLinhMe(ALL_MAPS);
+
   var MapData = Object.assign({}, MAP_MIEU_HOANG, {
     maps: ALL_MAPS,
     buildGrid: buildGrid,
     forceWalkable: forceWalkable,
+    TRUONG_LAO_DUOC_DIEN: TRUONG_LAO_DUOC_DIEN,
+    registerElderToRuongLinhMe: registerElderToRuongLinhMe,
     // Đợt V1 chặng 0: khung cơ chế vùng dùng chung (hình học + cổng an toàn)
     V1_SAFE_RADIUS: V1_SAFE_RADIUS,
     // Đợt V1 chặng 1: chu kỳ đổi vị trí trũng sương độc Rừng Độc (PROVISIONAL)
@@ -2463,6 +2669,8 @@
     SWORD_SWEEP_LANES_KIEM_TRUNG: SWORD_SWEEP_LANES_KIEM_TRUNG,
     SWORD_RAIN_SPOTS_KIEM_TRUNG: SWORD_RAIN_SPOTS_KIEM_TRUNG,
     // Đợt V1 chặng 6: danh mục điểm hái 5 vùng theo hồ sơ 01
+    HARVEST_NODES_TONG_MON: HARVEST_NODES_TONG_MON,
+    HARVEST_NODES_MIEU_HOANG: HARVEST_NODES_MIEU_HOANG,
     HARVEST_NODES_RUNG_DOC: HARVEST_NODES_RUNG_DOC,
     HARVEST_NODES_HO_BANG: HARVEST_NODES_HO_BANG,
     HARVEST_NODES_MO_LUA: HARVEST_NODES_MO_LUA,
@@ -2484,6 +2692,10 @@
       if (id === 'dai_dien' || id === 'dai-dien') return MAP_DAI_DIEN;
       if (id === 'son_coc' || id === 'son-coc') return MAP_SON_COC;
       if (id === 'dai_truyen_tong' || id === 'dai-truyen-tong') return MAP_DAI_TRUYEN_TONG;
+      if (id === 'ruong_linh_me' || id === 'ruong-linh-me' || id === 'ruong_linhme') {
+        if (typeof MAP_RUONG_LINH_ME !== 'undefined' && MAP_RUONG_LINH_ME) return MAP_RUONG_LINH_ME;
+        return ALL_MAPS['ruong-linh-me'] || ALL_MAPS['ruong_linh_me'] || null;
+      }
       if (id === 'ho_bang' || id === 'ho-bang') return MAP_HO_BANG;
       if (id === 'mo_lua' || id === 'mo-lua') return MAP_MO_LUA;
       if (id === 'hoang_mac' || id === 'hoang-mac') return MAP_HOANG_MAC;
