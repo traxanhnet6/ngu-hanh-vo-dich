@@ -1947,6 +1947,21 @@
     south: 72, southeast: 62, east: 68, northeast: 78,
     north: 84, northwest: 96, west: 112, southwest: 118
   };
+  // Đợt FIX C (WALK-MERGE 2026-11-13): lớp kiếm cầm tay vẽ từ hình riêng
+  // sword_hand_v1.png (414×2160, điểm nắm đo thật (206,1672)) — lưỡi to
+  // bản, đốc vàng chạm trổ, tua đỏ theo đúng ảnh mẫu của Bui. Chỉ dùng cho
+  // vũ khí họ kiếm (id bắt đầu bằng 'kiem-'); dao/gậy giữ đường icon cũ.
+  // Hiển thị 168px = 1,5× chiều cao nhân vật (112px) — dưới cỡ này hoa văn
+  // đốc + tua đỏ mất nét. Góc xoay canvas (độ, dương = chiều kim đồng hồ)
+  // theo bảng tránh mặt đã kiểm trên khung thật: lưỡi nghiêng ra ngoài,
+  // không che mặt (south/southwest từ ART-GATE v1–v3, west/northeast khóa
+  // đợt này trên dải ghép 64 khung).
+  var HH_SWORD_DISPLAY = 168;
+  var HH_SWORD_GRIP = [206, 1672];
+  var HH_SWORD_ANGLE = {
+    south: -35, southwest: 25, north: 0, northwest: 0,
+    southeast: 0, east: 0, west: 0, northeast: 0
+  };
   var HH_HAND_GEN_IDLE = {
     south: [0.14, 0.70], southeast: [0.22, 0.71], east: [0.42, 0.72], northeast: [0.47, 0.68],
     north: [0.50, 0.68], northwest: [0.52, 0.68], west: [0.60, 0.72], southwest: [0.80, 0.71]
@@ -1996,11 +2011,34 @@
       var hx = dest.x + entry.cx * k;
       var hy = dest.y + entry.cy * k;
       lastGripWorld = { x: hx, y: hy, dirName: dirName };
+      // Đợt FIX C: vũ khí họ kiếm vẽ bằng hình kiếm riêng; kiếm chưa nạp
+      // xong thì lùi về đường icon, không vỡ hình. Vá nắm tay phía dưới
+      // chạy chung cho cả hai đường vẽ.
+      var swordImg = assets.sword_hand;
+      var wid = equipmentIdOf(player.equipment.weapon);
+      var useBigSword = swordImg && swordImg.complete && swordImg.naturalWidth > 0 &&
+        typeof wid === 'string' && wid.indexOf('kiem') === 0;
       ctx.save();
       ctx.translate(hx, hy);
-      ctx.rotate(rot);
-      ctx.drawImage(sheet, def.iconCol * 32, def.iconRow * 32, 32, 32,
-        -icon.gx * s, -icon.gy * s, 32 * s, 32 * s);
+      if (useBigSword) {
+        var baseRot = (typeof HH_SWORD_ANGLE[dirName] === 'number') ? HH_SWORD_ANGLE[dirName] : 0;
+        var rotDeg = baseRot;
+        if (basicSwing) {
+          // Nhịp vung SWINGFIX chạy trong không gian góc lưỡi màn hình
+          // (0 = hướng đông, chiều kim đồng hồ); lưỡi kiếm dọc (mũi lên)
+          // ứng với góc lưỡi -90, cộng thêm góc nghiêng nghỉ của hướng.
+          rotDeg = swingBladeAngle(dirName, -90 + baseRot) + 90;
+        }
+        ctx.rotate(rotDeg * Math.PI / 180);
+        var sc = HH_SWORD_DISPLAY / swordImg.naturalHeight;
+        ctx.drawImage(swordImg,
+          -HH_SWORD_GRIP[0] * sc, -HH_SWORD_GRIP[1] * sc,
+          swordImg.naturalWidth * sc, HH_SWORD_DISPLAY);
+      } else {
+        ctx.rotate(rot);
+        ctx.drawImage(sheet, def.iconCol * 32, def.iconRow * 32, 32, 32,
+          -icon.gx * s, -icon.gy * s, 32 * s, 32 * s);
+      }
       ctx.restore();
       // Vá nắm tay: vẽ lại đúng vùng nắm tay của khung nhân vật lên trên
       // chuôi — nắm tay che đoạn chuôi trong tay, đọc thành nắm thật.
@@ -2098,6 +2136,9 @@
       'assets/chars/hanhan-gen-idle-v1.png',
       'assets/chars/hanhan-gen-walk-v1.png',
       'assets/chars/hanhan-gen-hat-v1.png',
+      // Đợt FIX C (WALK-MERGE): kiếm cầm tay vẽ từ hình riêng — lưỡi to bản,
+      // đốc vàng chạm trổ, tua đỏ, điểm nắm đo thật (206,1672) trên 414×2160.
+      'assets/chars/sword_hand_v1.png',
       'assets/chars/hanhan-face.png',
       'assets/chars/thaotinh-sheet.png',
       'assets/chars/nhenxanh-sheet.png',
@@ -2211,6 +2252,7 @@
         if (url === 'assets/chars/hanhan-gen-idle-v1.png') assets['hanhan_gen_idle'] = img;
         if (url === 'assets/chars/hanhan-gen-walk-v1.png') assets['hanhan_gen_walk'] = img;
         if (url === 'assets/chars/hanhan-gen-hat-v1.png') assets['hanhan_gen_hat'] = img;
+        if (url === 'assets/chars/sword_hand_v1.png') assets['sword_hand'] = img;
         if (url === 'assets/chars/thaotinh-sheet.png') assets['thaotinh_sheet'] = img;
         if (url === 'assets/chars/nhenxanh-sheet.png') assets['nhenxanh_sheet'] = img;
         if (url === 'assets/chars/cothuye-sheet.png') assets['cothuye_sheet'] = img;

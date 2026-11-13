@@ -1,1302 +1,1814 @@
 {
-  "atlas": "hanhan_walk_atlas_v1.png",
-  "size": {
-    "w": 2048,
-    "h": 2048
+ "atlas": "hanhan-gen-walk-v1.png",
+ "size": {
+  "w": 2048,
+  "h": 2048
+ },
+ "scale_from_master": 0.6,
+ "master": {
+  "cell": {
+   "w": 512,
+   "h": 476
   },
-  "scale_from_master": 0.6,
-  "master": {
-    "cell": {
-      "w": 512,
-      "h": 476
-    },
-    "char_height_px": 440,
-    "ground_y_in_cell": 448,
-    "pivot_norm": {
-      "x": 0.5,
-      "y": 0.9412
-    }
+  "char_height_px": 440,
+  "ground_y_in_cell": 448,
+  "pivot_norm": {
+   "x": 0.5,
+   "y": 0.9412
+  }
+ },
+ "frames": [
+  {
+   "name": "walk_south_0",
+   "strip": "walk_south",
+   "index": 0,
+   "fps": 10,
+   "rect": {
+    "x": 4,
+    "y": 4,
+    "w": 151,
+    "h": 264
+   },
+   "pivot": {
+    "x": 84.1,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.557,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 60.9,
+    "y": 156.8
+   },
+   "grip_norm": {
+    "x": 0.4033,
+    "y": 0.5939
+   }
   },
-  "frames": [
-    {
-      "name": "walk_south_0",
-      "strip": "walk_south",
-      "index": 0,
-      "fps": 10,
-      "rect": {
-        "x": 2,
-        "y": 2,
-        "w": 155,
-        "h": 261
-      },
-      "pivot": {
-        "x": 84.0,
-        "y": 259.8
-      },
-      "pivot_norm": {
-        "x": 0.5419,
-        "y": 0.9954
-      }
-    },
-    {
-      "name": "walk_south_1",
-      "strip": "walk_south",
-      "index": 1,
-      "fps": 10,
-      "rect": {
-        "x": 159,
-        "y": 2,
-        "w": 154,
-        "h": 266
-      },
-      "pivot": {
-        "x": 86.4,
-        "y": 265.2
-      },
-      "pivot_norm": {
-        "x": 0.561,
-        "y": 0.997
-      }
-    },
-    {
-      "name": "walk_south_2",
-      "strip": "walk_south",
-      "index": 2,
-      "fps": 10,
-      "rect": {
-        "x": 315,
-        "y": 2,
-        "w": 157,
-        "h": 266
-      },
-      "pivot": {
-        "x": 90.0,
-        "y": 265.2
-      },
-      "pivot_norm": {
-        "x": 0.5732,
-        "y": 0.997
-      }
-    },
-    {
-      "name": "walk_south_3",
-      "strip": "walk_south",
-      "index": 3,
-      "fps": 10,
-      "rect": {
-        "x": 474,
-        "y": 2,
-        "w": 153,
-        "h": 266
-      },
-      "pivot": {
-        "x": 88.8,
-        "y": 264.6
-      },
-      "pivot_norm": {
-        "x": 0.5804,
-        "y": 0.9947
-      }
-    },
-    {
-      "name": "walk_south_4",
-      "strip": "walk_south",
-      "index": 4,
-      "fps": 10,
-      "rect": {
-        "x": 629,
-        "y": 2,
-        "w": 161,
-        "h": 269
-      },
-      "pivot": {
-        "x": 93.6,
-        "y": 267.6
-      },
-      "pivot_norm": {
-        "x": 0.5814,
-        "y": 0.9948
-      }
-    },
-    {
-      "name": "walk_south_5",
-      "strip": "walk_south",
-      "index": 5,
-      "fps": 10,
-      "rect": {
-        "x": 792,
-        "y": 2,
-        "w": 167,
-        "h": 270
-      },
-      "pivot": {
-        "x": 94.8,
-        "y": 268.8
-      },
-      "pivot_norm": {
-        "x": 0.5677,
-        "y": 0.9956
-      }
-    },
-    {
-      "name": "walk_south_6",
-      "strip": "walk_south",
-      "index": 6,
-      "fps": 10,
-      "rect": {
-        "x": 961,
-        "y": 2,
-        "w": 150,
-        "h": 264
-      },
-      "pivot": {
-        "x": 81.0,
-        "y": 262.8
-      },
-      "pivot_norm": {
-        "x": 0.54,
-        "y": 0.9955
-      }
-    },
-    {
-      "name": "walk_south_7",
-      "strip": "walk_south",
-      "index": 7,
-      "fps": 10,
-      "rect": {
-        "x": 1113,
-        "y": 2,
-        "w": 166,
-        "h": 270
-      },
-      "pivot": {
-        "x": 94.8,
-        "y": 268.8
-      },
-      "pivot_norm": {
-        "x": 0.5711,
-        "y": 0.9956
-      }
-    },
-    {
-      "name": "walk_southeast_0",
-      "strip": "walk_southeast",
-      "index": 0,
-      "fps": 10,
-      "rect": {
-        "x": 1281,
-        "y": 2,
-        "w": 223,
-        "h": 263
-      },
-      "pivot": {
-        "x": 132.6,
-        "y": 261.6
-      },
-      "pivot_norm": {
-        "x": 0.5946,
-        "y": 0.9947
-      }
-    },
-    {
-      "name": "walk_southeast_1",
-      "strip": "walk_southeast",
-      "index": 1,
-      "fps": 10,
-      "rect": {
-        "x": 1506,
-        "y": 2,
-        "w": 163,
-        "h": 262
-      },
-      "pivot": {
-        "x": 96.6,
-        "y": 260.4
-      },
-      "pivot_norm": {
-        "x": 0.5926,
-        "y": 0.9939
-      }
-    },
-    {
-      "name": "walk_southeast_2",
-      "strip": "walk_southeast",
-      "index": 2,
-      "fps": 10,
-      "rect": {
-        "x": 1671,
-        "y": 2,
-        "w": 173,
-        "h": 257
-      },
-      "pivot": {
-        "x": 106.8,
-        "y": 256.2
-      },
-      "pivot_norm": {
-        "x": 0.6173,
-        "y": 0.9969
-      }
-    },
-    {
-      "name": "walk_southeast_3",
-      "strip": "walk_southeast",
-      "index": 3,
-      "fps": 10,
-      "rect": {
-        "x": 1846,
-        "y": 2,
-        "w": 158,
-        "h": 265
-      },
-      "pivot": {
-        "x": 100.8,
-        "y": 264.0
-      },
-      "pivot_norm": {
-        "x": 0.638,
-        "y": 0.9962
-      }
-    },
-    {
-      "name": "walk_southeast_4",
-      "strip": "walk_southeast",
-      "index": 4,
-      "fps": 10,
-      "rect": {
-        "x": 2,
-        "y": 274,
-        "w": 179,
-        "h": 268
-      },
-      "pivot": {
-        "x": 119.4,
-        "y": 266.4
-      },
-      "pivot_norm": {
-        "x": 0.667,
-        "y": 0.994
-      }
-    },
-    {
-      "name": "walk_southeast_5",
-      "strip": "walk_southeast",
-      "index": 5,
-      "fps": 10,
-      "rect": {
-        "x": 183,
-        "y": 274,
-        "w": 188,
-        "h": 269
-      },
-      "pivot": {
-        "x": 124.8,
-        "y": 268.2
-      },
-      "pivot_norm": {
-        "x": 0.6638,
-        "y": 0.997
-      }
-    },
-    {
-      "name": "walk_southeast_6",
-      "strip": "walk_southeast",
-      "index": 6,
-      "fps": 10,
-      "rect": {
-        "x": 373,
-        "y": 274,
-        "w": 216,
-        "h": 268
-      },
-      "pivot": {
-        "x": 134.4,
-        "y": 267.0
-      },
-      "pivot_norm": {
-        "x": 0.6222,
-        "y": 0.9963
-      }
-    },
-    {
-      "name": "walk_southeast_7",
-      "strip": "walk_southeast",
-      "index": 7,
-      "fps": 10,
-      "rect": {
-        "x": 591,
-        "y": 274,
-        "w": 169,
-        "h": 268
-      },
-      "pivot": {
-        "x": 97.2,
-        "y": 266.4
-      },
-      "pivot_norm": {
-        "x": 0.5751,
-        "y": 0.994
-      }
-    },
-    {
-      "name": "walk_east_0",
-      "strip": "walk_east",
-      "index": 0,
-      "fps": 10,
-      "rect": {
-        "x": 762,
-        "y": 274,
-        "w": 185,
-        "h": 260
-      },
-      "pivot": {
-        "x": 118.2,
-        "y": 259.2
-      },
-      "pivot_norm": {
-        "x": 0.6389,
-        "y": 0.9969
-      }
-    },
-    {
-      "name": "walk_east_1",
-      "strip": "walk_east",
-      "index": 1,
-      "fps": 10,
-      "rect": {
-        "x": 949,
-        "y": 274,
-        "w": 163,
-        "h": 262
-      },
-      "pivot": {
-        "x": 98.4,
-        "y": 261.0
-      },
-      "pivot_norm": {
-        "x": 0.6037,
-        "y": 0.9962
-      }
-    },
-    {
-      "name": "walk_east_2",
-      "strip": "walk_east",
-      "index": 2,
-      "fps": 10,
-      "rect": {
-        "x": 1114,
-        "y": 274,
-        "w": 153,
-        "h": 262
-      },
-      "pivot": {
-        "x": 85.8,
-        "y": 260.4
-      },
-      "pivot_norm": {
-        "x": 0.5608,
-        "y": 0.9939
-      }
-    },
-    {
-      "name": "walk_east_3",
-      "strip": "walk_east",
-      "index": 3,
-      "fps": 10,
-      "rect": {
-        "x": 1269,
-        "y": 274,
-        "w": 167,
-        "h": 268
-      },
-      "pivot": {
-        "x": 100.2,
-        "y": 266.4
-      },
-      "pivot_norm": {
-        "x": 0.6,
-        "y": 0.994
-      }
-    },
-    {
-      "name": "walk_east_4",
-      "strip": "walk_east",
-      "index": 4,
-      "fps": 10,
-      "rect": {
-        "x": 1438,
-        "y": 274,
-        "w": 176,
-        "h": 270
-      },
-      "pivot": {
-        "x": 103.2,
-        "y": 268.8
-      },
-      "pivot_norm": {
-        "x": 0.5864,
-        "y": 0.9956
-      }
-    },
-    {
-      "name": "walk_east_5",
-      "strip": "walk_east",
-      "index": 5,
-      "fps": 10,
-      "rect": {
-        "x": 1616,
-        "y": 274,
-        "w": 165,
-        "h": 265
-      },
-      "pivot": {
-        "x": 102.0,
-        "y": 264.0
-      },
-      "pivot_norm": {
-        "x": 0.6182,
-        "y": 0.9962
-      }
-    },
-    {
-      "name": "walk_east_6",
-      "strip": "walk_east",
-      "index": 6,
-      "fps": 10,
-      "rect": {
-        "x": 1783,
-        "y": 274,
-        "w": 191,
-        "h": 270
-      },
-      "pivot": {
-        "x": 122.4,
-        "y": 268.8
-      },
-      "pivot_norm": {
-        "x": 0.6408,
-        "y": 0.9956
-      }
-    },
-    {
-      "name": "walk_east_7",
-      "strip": "walk_east",
-      "index": 7,
-      "fps": 10,
-      "rect": {
-        "x": 2,
-        "y": 546,
-        "w": 170,
-        "h": 268
-      },
-      "pivot": {
-        "x": 93.6,
-        "y": 267.0
-      },
-      "pivot_norm": {
-        "x": 0.5506,
-        "y": 0.9963
-      }
-    },
-    {
-      "name": "walk_northeast_0",
-      "strip": "walk_northeast",
-      "index": 0,
-      "fps": 10,
-      "rect": {
-        "x": 174,
-        "y": 546,
-        "w": 204,
-        "h": 265
-      },
-      "pivot": {
-        "x": 130.8,
-        "y": 263.4
-      },
-      "pivot_norm": {
-        "x": 0.6412,
-        "y": 0.994
-      }
-    },
-    {
-      "name": "walk_northeast_1",
-      "strip": "walk_northeast",
-      "index": 1,
-      "fps": 10,
-      "rect": {
-        "x": 380,
-        "y": 546,
-        "w": 184,
-        "h": 266
-      },
-      "pivot": {
-        "x": 120.6,
-        "y": 264.6
-      },
-      "pivot_norm": {
-        "x": 0.6554,
-        "y": 0.9947
-      }
-    },
-    {
-      "name": "walk_northeast_2",
-      "strip": "walk_northeast",
-      "index": 2,
-      "fps": 10,
-      "rect": {
-        "x": 566,
-        "y": 546,
-        "w": 197,
-        "h": 266
-      },
-      "pivot": {
-        "x": 127.2,
-        "y": 264.6
-      },
-      "pivot_norm": {
-        "x": 0.6457,
-        "y": 0.9947
-      }
-    },
-    {
-      "name": "walk_northeast_3",
-      "strip": "walk_northeast",
-      "index": 3,
-      "fps": 10,
-      "rect": {
-        "x": 765,
-        "y": 546,
-        "w": 193,
-        "h": 267
-      },
-      "pivot": {
-        "x": 112.2,
-        "y": 265.8
-      },
-      "pivot_norm": {
-        "x": 0.5813,
-        "y": 0.9955
-      }
-    },
-    {
-      "name": "walk_northeast_4",
-      "strip": "walk_northeast",
-      "index": 4,
-      "fps": 10,
-      "rect": {
-        "x": 960,
-        "y": 546,
-        "w": 191,
-        "h": 269
-      },
-      "pivot": {
-        "x": 109.8,
-        "y": 268.2
-      },
-      "pivot_norm": {
-        "x": 0.5749,
-        "y": 0.997
-      }
-    },
-    {
-      "name": "walk_northeast_5",
-      "strip": "walk_northeast",
-      "index": 5,
-      "fps": 10,
-      "rect": {
-        "x": 1153,
-        "y": 546,
-        "w": 197,
-        "h": 264
-      },
-      "pivot": {
-        "x": 117.0,
-        "y": 262.8
-      },
-      "pivot_norm": {
-        "x": 0.5939,
-        "y": 0.9955
-      }
-    },
-    {
-      "name": "walk_northeast_6",
-      "strip": "walk_northeast",
-      "index": 6,
-      "fps": 10,
-      "rect": {
-        "x": 1352,
-        "y": 546,
-        "w": 174,
-        "h": 268
-      },
-      "pivot": {
-        "x": 109.2,
-        "y": 266.4
-      },
-      "pivot_norm": {
-        "x": 0.6276,
-        "y": 0.994
-      }
-    },
-    {
-      "name": "walk_northeast_7",
-      "strip": "walk_northeast",
-      "index": 7,
-      "fps": 10,
-      "rect": {
-        "x": 1528,
-        "y": 546,
-        "w": 202,
-        "h": 269
-      },
-      "pivot": {
-        "x": 128.4,
-        "y": 268.2
-      },
-      "pivot_norm": {
-        "x": 0.6356,
-        "y": 0.997
-      }
-    },
-    {
-      "name": "walk_north_0",
-      "strip": "walk_north",
-      "index": 0,
-      "fps": 10,
-      "rect": {
-        "x": 1732,
-        "y": 546,
-        "w": 176,
-        "h": 269
-      },
-      "pivot": {
-        "x": 106.2,
-        "y": 268.2
-      },
-      "pivot_norm": {
-        "x": 0.6034,
-        "y": 0.997
-      }
-    },
-    {
-      "name": "walk_north_1",
-      "strip": "walk_north",
-      "index": 1,
-      "fps": 10,
-      "rect": {
-        "x": 2,
-        "y": 817,
-        "w": 169,
-        "h": 266
-      },
-      "pivot": {
-        "x": 101.4,
-        "y": 265.2
-      },
-      "pivot_norm": {
-        "x": 0.6,
-        "y": 0.997
-      }
-    },
-    {
-      "name": "walk_north_2",
-      "strip": "walk_north",
-      "index": 2,
-      "fps": 10,
-      "rect": {
-        "x": 173,
-        "y": 817,
-        "w": 167,
-        "h": 259
-      },
-      "pivot": {
-        "x": 100.8,
-        "y": 257.4
-      },
-      "pivot_norm": {
-        "x": 0.6036,
-        "y": 0.9938
-      }
-    },
-    {
-      "name": "walk_north_3",
-      "strip": "walk_north",
-      "index": 3,
-      "fps": 10,
-      "rect": {
-        "x": 342,
-        "y": 817,
-        "w": 167,
-        "h": 263
-      },
-      "pivot": {
-        "x": 102.0,
-        "y": 261.6
-      },
-      "pivot_norm": {
-        "x": 0.6108,
-        "y": 0.9947
-      }
-    },
-    {
-      "name": "walk_north_4",
-      "strip": "walk_north",
-      "index": 4,
-      "fps": 10,
-      "rect": {
-        "x": 511,
-        "y": 817,
-        "w": 178,
-        "h": 269
-      },
-      "pivot": {
-        "x": 108.6,
-        "y": 268.2
-      },
-      "pivot_norm": {
-        "x": 0.6101,
-        "y": 0.997
-      }
-    },
-    {
-      "name": "walk_north_5",
-      "strip": "walk_north",
-      "index": 5,
-      "fps": 10,
-      "rect": {
-        "x": 691,
-        "y": 817,
-        "w": 169,
-        "h": 264
-      },
-      "pivot": {
-        "x": 103.8,
-        "y": 262.8
-      },
-      "pivot_norm": {
-        "x": 0.6142,
-        "y": 0.9955
-      }
-    },
-    {
-      "name": "walk_north_6",
-      "strip": "walk_north",
-      "index": 6,
-      "fps": 10,
-      "rect": {
-        "x": 862,
-        "y": 817,
-        "w": 184,
-        "h": 266
-      },
-      "pivot": {
-        "x": 117.0,
-        "y": 265.2
-      },
-      "pivot_norm": {
-        "x": 0.6359,
-        "y": 0.997
-      }
-    },
-    {
-      "name": "walk_north_7",
-      "strip": "walk_north",
-      "index": 7,
-      "fps": 10,
-      "rect": {
-        "x": 1048,
-        "y": 817,
-        "w": 191,
-        "h": 270
-      },
-      "pivot": {
-        "x": 120.6,
-        "y": 268.8
-      },
-      "pivot_norm": {
-        "x": 0.6314,
-        "y": 0.9956
-      }
-    },
-    {
-      "name": "walk_northwest_0",
-      "strip": "walk_northwest",
-      "index": 0,
-      "fps": 10,
-      "rect": {
-        "x": 1241,
-        "y": 817,
-        "w": 169,
-        "h": 266
-      },
-      "pivot": {
-        "x": 78.0,
-        "y": 265.2
-      },
-      "pivot_norm": {
-        "x": 0.4615,
-        "y": 0.997
-      }
-    },
-    {
-      "name": "walk_northwest_1",
-      "strip": "walk_northwest",
-      "index": 1,
-      "fps": 10,
-      "rect": {
-        "x": 1412,
-        "y": 817,
-        "w": 166,
-        "h": 267
-      },
-      "pivot": {
-        "x": 64.8,
-        "y": 265.8
-      },
-      "pivot_norm": {
-        "x": 0.3904,
-        "y": 0.9955
-      }
-    },
-    {
-      "name": "walk_northwest_2",
-      "strip": "walk_northwest",
-      "index": 2,
-      "fps": 10,
-      "rect": {
-        "x": 1580,
-        "y": 817,
-        "w": 162,
-        "h": 265
-      },
-      "pivot": {
-        "x": 64.2,
-        "y": 263.4
-      },
-      "pivot_norm": {
-        "x": 0.3963,
-        "y": 0.994
-      }
-    },
-    {
-      "name": "walk_northwest_3",
-      "strip": "walk_northwest",
-      "index": 3,
-      "fps": 10,
-      "rect": {
-        "x": 1744,
-        "y": 817,
-        "w": 161,
-        "h": 266
-      },
-      "pivot": {
-        "x": 66.6,
-        "y": 265.2
-      },
-      "pivot_norm": {
-        "x": 0.4137,
-        "y": 0.997
-      }
-    },
-    {
-      "name": "walk_northwest_4",
-      "strip": "walk_northwest",
-      "index": 4,
-      "fps": 10,
-      "rect": {
-        "x": 2,
-        "y": 1089,
-        "w": 169,
-        "h": 269
-      },
-      "pivot": {
-        "x": 75.6,
-        "y": 268.2
-      },
-      "pivot_norm": {
-        "x": 0.4473,
-        "y": 0.997
-      }
-    },
-    {
-      "name": "walk_northwest_5",
-      "strip": "walk_northwest",
-      "index": 5,
-      "fps": 10,
-      "rect": {
-        "x": 173,
-        "y": 1089,
-        "w": 160,
-        "h": 265
-      },
-      "pivot": {
-        "x": 65.4,
-        "y": 263.4
-      },
-      "pivot_norm": {
-        "x": 0.4087,
-        "y": 0.994
-      }
-    },
-    {
-      "name": "walk_northwest_6",
-      "strip": "walk_northwest",
-      "index": 6,
-      "fps": 10,
-      "rect": {
-        "x": 335,
-        "y": 1089,
-        "w": 172,
-        "h": 266
-      },
-      "pivot": {
-        "x": 68.4,
-        "y": 265.2
-      },
-      "pivot_norm": {
-        "x": 0.3977,
-        "y": 0.997
-      }
-    },
-    {
-      "name": "walk_northwest_7",
-      "strip": "walk_northwest",
-      "index": 7,
-      "fps": 10,
-      "rect": {
-        "x": 509,
-        "y": 1089,
-        "w": 189,
-        "h": 264
-      },
-      "pivot": {
-        "x": 72.0,
-        "y": 262.8
-      },
-      "pivot_norm": {
-        "x": 0.381,
-        "y": 0.9955
-      }
-    },
-    {
-      "name": "walk_west_0",
-      "strip": "walk_west",
-      "index": 0,
-      "fps": 10,
-      "rect": {
-        "x": 700,
-        "y": 1089,
-        "w": 185,
-        "h": 260
-      },
-      "pivot": {
-        "x": 66.6,
-        "y": 259.2
-      },
-      "pivot_norm": {
-        "x": 0.36,
-        "y": 0.9969
-      }
-    },
-    {
-      "name": "walk_west_1",
-      "strip": "walk_west",
-      "index": 1,
-      "fps": 10,
-      "rect": {
-        "x": 887,
-        "y": 1089,
-        "w": 163,
-        "h": 262
-      },
-      "pivot": {
-        "x": 64.8,
-        "y": 261.0
-      },
-      "pivot_norm": {
-        "x": 0.3975,
-        "y": 0.9962
-      }
-    },
-    {
-      "name": "walk_west_2",
-      "strip": "walk_west",
-      "index": 2,
-      "fps": 10,
-      "rect": {
-        "x": 1052,
-        "y": 1089,
-        "w": 153,
-        "h": 262
-      },
-      "pivot": {
-        "x": 67.2,
-        "y": 260.4
-      },
-      "pivot_norm": {
-        "x": 0.4392,
-        "y": 0.9939
-      }
-    },
-    {
-      "name": "walk_west_3",
-      "strip": "walk_west",
-      "index": 3,
-      "fps": 10,
-      "rect": {
-        "x": 1207,
-        "y": 1089,
-        "w": 167,
-        "h": 268
-      },
-      "pivot": {
-        "x": 67.2,
-        "y": 266.4
-      },
-      "pivot_norm": {
-        "x": 0.4024,
-        "y": 0.994
-      }
-    },
-    {
-      "name": "walk_west_4",
-      "strip": "walk_west",
-      "index": 4,
-      "fps": 10,
-      "rect": {
-        "x": 1376,
-        "y": 1089,
-        "w": 176,
-        "h": 270
-      },
-      "pivot": {
-        "x": 73.2,
-        "y": 268.8
-      },
-      "pivot_norm": {
-        "x": 0.4159,
-        "y": 0.9956
-      }
-    },
-    {
-      "name": "walk_west_5",
-      "strip": "walk_west",
-      "index": 5,
-      "fps": 10,
-      "rect": {
-        "x": 1554,
-        "y": 1089,
-        "w": 165,
-        "h": 265
-      },
-      "pivot": {
-        "x": 63.0,
-        "y": 264.0
-      },
-      "pivot_norm": {
-        "x": 0.3818,
-        "y": 0.9962
-      }
-    },
-    {
-      "name": "walk_west_6",
-      "strip": "walk_west",
-      "index": 6,
-      "fps": 10,
-      "rect": {
-        "x": 1721,
-        "y": 1089,
-        "w": 191,
-        "h": 270
-      },
-      "pivot": {
-        "x": 69.0,
-        "y": 268.8
-      },
-      "pivot_norm": {
-        "x": 0.3613,
-        "y": 0.9956
-      }
-    },
-    {
-      "name": "walk_west_7",
-      "strip": "walk_west",
-      "index": 7,
-      "fps": 10,
-      "rect": {
-        "x": 2,
-        "y": 1361,
-        "w": 170,
-        "h": 268
-      },
-      "pivot": {
-        "x": 76.2,
-        "y": 267.0
-      },
-      "pivot_norm": {
-        "x": 0.4482,
-        "y": 0.9963
-      }
-    },
-    {
-      "name": "walk_southwest_0",
-      "strip": "walk_southwest",
-      "index": 0,
-      "fps": 10,
-      "rect": {
-        "x": 174,
-        "y": 1361,
-        "w": 169,
-        "h": 264
-      },
-      "pivot": {
-        "x": 70.8,
-        "y": 262.8
-      },
-      "pivot_norm": {
-        "x": 0.4189,
-        "y": 0.9955
-      }
-    },
-    {
-      "name": "walk_southwest_1",
-      "strip": "walk_southwest",
-      "index": 1,
-      "fps": 10,
-      "rect": {
-        "x": 345,
-        "y": 1361,
-        "w": 156,
-        "h": 265
-      },
-      "pivot": {
-        "x": 69.6,
-        "y": 263.4
-      },
-      "pivot_norm": {
-        "x": 0.4462,
-        "y": 0.994
-      }
-    },
-    {
-      "name": "walk_southwest_2",
-      "strip": "walk_southwest",
-      "index": 2,
-      "fps": 10,
-      "rect": {
-        "x": 503,
-        "y": 1361,
-        "w": 162,
-        "h": 266
-      },
-      "pivot": {
-        "x": 63.6,
-        "y": 265.2
-      },
-      "pivot_norm": {
-        "x": 0.3926,
-        "y": 0.997
-      }
-    },
-    {
-      "name": "walk_southwest_3",
-      "strip": "walk_southwest",
-      "index": 3,
-      "fps": 10,
-      "rect": {
-        "x": 667,
-        "y": 1361,
-        "w": 160,
-        "h": 266
-      },
-      "pivot": {
-        "x": 61.8,
-        "y": 265.2
-      },
-      "pivot_norm": {
-        "x": 0.3862,
-        "y": 0.997
-      }
-    },
-    {
-      "name": "walk_southwest_4",
-      "strip": "walk_southwest",
-      "index": 4,
-      "fps": 10,
-      "rect": {
-        "x": 829,
-        "y": 1361,
-        "w": 179,
-        "h": 268
-      },
-      "pivot": {
-        "x": 63.6,
-        "y": 267.0
-      },
-      "pivot_norm": {
-        "x": 0.3553,
-        "y": 0.9963
-      }
-    },
-    {
-      "name": "walk_southwest_5",
-      "strip": "walk_southwest",
-      "index": 5,
-      "fps": 10,
-      "rect": {
-        "x": 1010,
-        "y": 1361,
-        "w": 178,
-        "h": 269
-      },
-      "pivot": {
-        "x": 66.6,
-        "y": 267.6
-      },
-      "pivot_norm": {
-        "x": 0.3742,
-        "y": 0.9948
-      }
-    },
-    {
-      "name": "walk_southwest_6",
-      "strip": "walk_southwest",
-      "index": 6,
-      "fps": 10,
-      "rect": {
-        "x": 1190,
-        "y": 1361,
-        "w": 201,
-        "h": 266
-      },
-      "pivot": {
-        "x": 69.6,
-        "y": 265.2
-      },
-      "pivot_norm": {
-        "x": 0.3463,
-        "y": 0.997
-      }
-    },
-    {
-      "name": "walk_southwest_7",
-      "strip": "walk_southwest",
-      "index": 7,
-      "fps": 10,
-      "rect": {
-        "x": 1393,
-        "y": 1361,
-        "w": 220,
-        "h": 264
-      },
-      "pivot": {
-        "x": 79.2,
-        "y": 262.8
-      },
-      "pivot_norm": {
-        "x": 0.36,
-        "y": 0.9955
-      }
-    }
-  ]
+  {
+   "name": "walk_south_1",
+   "strip": "walk_south",
+   "index": 1,
+   "fps": 10,
+   "rect": {
+    "x": 159,
+    "y": 4,
+    "w": 153,
+    "h": 264
+   },
+   "pivot": {
+    "x": 84.7,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.5536,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 48.9,
+    "y": 169.1
+   },
+   "grip_norm": {
+    "x": 0.3196,
+    "y": 0.6405
+   }
+  },
+  {
+   "name": "walk_south_2",
+   "strip": "walk_south",
+   "index": 2,
+   "fps": 10,
+   "rect": {
+    "x": 316,
+    "y": 4,
+    "w": 142,
+    "h": 264
+   },
+   "pivot": {
+    "x": 79.1,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.557,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 34.0,
+    "y": 162.4
+   },
+   "grip_norm": {
+    "x": 0.2394,
+    "y": 0.6152
+   }
+  },
+  {
+   "name": "walk_south_3",
+   "strip": "walk_south",
+   "index": 3,
+   "fps": 10,
+   "rect": {
+    "x": 462,
+    "y": 4,
+    "w": 147,
+    "h": 264
+   },
+   "pivot": {
+    "x": 83.7,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.5694,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 30.9,
+    "y": 172.9
+   },
+   "grip_norm": {
+    "x": 0.2102,
+    "y": 0.6549
+   }
+  },
+  {
+   "name": "walk_south_4",
+   "strip": "walk_south",
+   "index": 4,
+   "fps": 10,
+   "rect": {
+    "x": 613,
+    "y": 4,
+    "w": 137,
+    "h": 264
+   },
+   "pivot": {
+    "x": 79.0,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.5766,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 39.5,
+    "y": 163.4
+   },
+   "grip_norm": {
+    "x": 0.2883,
+    "y": 0.6189
+   }
+  },
+  {
+   "name": "walk_south_5",
+   "strip": "walk_south",
+   "index": 5,
+   "fps": 10,
+   "rect": {
+    "x": 754,
+    "y": 4,
+    "w": 138,
+    "h": 264
+   },
+   "pivot": {
+    "x": 74.7,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.5413,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 21.6,
+    "y": 164.4
+   },
+   "grip_norm": {
+    "x": 0.1565,
+    "y": 0.6227
+   }
+  },
+  {
+   "name": "walk_south_6",
+   "strip": "walk_south",
+   "index": 6,
+   "fps": 10,
+   "rect": {
+    "x": 896,
+    "y": 4,
+    "w": 150,
+    "h": 264
+   },
+   "pivot": {
+    "x": 80.1,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.534,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 48.9,
+    "y": 163.2
+   },
+   "grip_norm": {
+    "x": 0.326,
+    "y": 0.6182
+   }
+  },
+  {
+   "name": "walk_south_7",
+   "strip": "walk_south",
+   "index": 7,
+   "fps": 10,
+   "rect": {
+    "x": 1050,
+    "y": 4,
+    "w": 145,
+    "h": 264
+   },
+   "pivot": {
+    "x": 77.0,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.531,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 45.2,
+    "y": 159.3
+   },
+   "grip_norm": {
+    "x": 0.3117,
+    "y": 0.6034
+   }
+  },
+  {
+   "name": "walk_southeast_0",
+   "strip": "walk_southeast",
+   "index": 0,
+   "fps": 10,
+   "rect": {
+    "x": 1199,
+    "y": 4,
+    "w": 163,
+    "h": 264
+   },
+   "pivot": {
+    "x": 93.4,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.573,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 53.4,
+    "y": 191.2
+   },
+   "grip_norm": {
+    "x": 0.3276,
+    "y": 0.7242
+   }
+  },
+  {
+   "name": "walk_southeast_1",
+   "strip": "walk_southeast",
+   "index": 1,
+   "fps": 10,
+   "rect": {
+    "x": 1366,
+    "y": 4,
+    "w": 164,
+    "h": 264
+   },
+   "pivot": {
+    "x": 95.7,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.5835,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 59.2,
+    "y": 174.4
+   },
+   "grip_norm": {
+    "x": 0.361,
+    "y": 0.6606
+   }
+  },
+  {
+   "name": "walk_southeast_2",
+   "strip": "walk_southeast",
+   "index": 2,
+   "fps": 10,
+   "rect": {
+    "x": 1534,
+    "y": 4,
+    "w": 165,
+    "h": 264
+   },
+   "pivot": {
+    "x": 96.2,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.583,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 57.8,
+    "y": 176.2
+   },
+   "grip_norm": {
+    "x": 0.3503,
+    "y": 0.6674
+   }
+  },
+  {
+   "name": "walk_southeast_3",
+   "strip": "walk_southeast",
+   "index": 3,
+   "fps": 10,
+   "rect": {
+    "x": 1703,
+    "y": 4,
+    "w": 193,
+    "h": 264
+   },
+   "pivot": {
+    "x": 109.5,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.5674,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 68.3,
+    "y": 179.2
+   },
+   "grip_norm": {
+    "x": 0.3539,
+    "y": 0.6788
+   }
+  },
+  {
+   "name": "walk_southeast_4",
+   "strip": "walk_southeast",
+   "index": 4,
+   "fps": 10,
+   "rect": {
+    "x": 4,
+    "y": 272,
+    "w": 182,
+    "h": 264
+   },
+   "pivot": {
+    "x": 105.1,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.5775,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 67.3,
+    "y": 172.1
+   },
+   "grip_norm": {
+    "x": 0.3698,
+    "y": 0.6519
+   }
+  },
+  {
+   "name": "walk_southeast_5",
+   "strip": "walk_southeast",
+   "index": 5,
+   "fps": 10,
+   "rect": {
+    "x": 190,
+    "y": 272,
+    "w": 185,
+    "h": 264
+   },
+   "pivot": {
+    "x": 105.7,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.5714,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 65.1,
+    "y": 171.3
+   },
+   "grip_norm": {
+    "x": 0.3519,
+    "y": 0.6489
+   }
+  },
+  {
+   "name": "walk_southeast_6",
+   "strip": "walk_southeast",
+   "index": 6,
+   "fps": 10,
+   "rect": {
+    "x": 379,
+    "y": 272,
+    "w": 182,
+    "h": 264
+   },
+   "pivot": {
+    "x": 104.1,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.572,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 64.7,
+    "y": 169.2
+   },
+   "grip_norm": {
+    "x": 0.3555,
+    "y": 0.6409
+   }
+  },
+  {
+   "name": "walk_southeast_7",
+   "strip": "walk_southeast",
+   "index": 7,
+   "fps": 10,
+   "rect": {
+    "x": 565,
+    "y": 272,
+    "w": 154,
+    "h": 264
+   },
+   "pivot": {
+    "x": 88.1,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.5721,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 48.9,
+    "y": 180.1
+   },
+   "grip_norm": {
+    "x": 0.3175,
+    "y": 0.6822
+   }
+  },
+  {
+   "name": "walk_east_0",
+   "strip": "walk_east",
+   "index": 0,
+   "fps": 10,
+   "rect": {
+    "x": 723,
+    "y": 272,
+    "w": 158,
+    "h": 264
+   },
+   "pivot": {
+    "x": 86.1,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.5449,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 144.0,
+    "y": 142.9
+   },
+   "grip_norm": {
+    "x": 0.9114,
+    "y": 0.5413
+   }
+  },
+  {
+   "name": "walk_east_1",
+   "strip": "walk_east",
+   "index": 1,
+   "fps": 10,
+   "rect": {
+    "x": 885,
+    "y": 272,
+    "w": 168,
+    "h": 264
+   },
+   "pivot": {
+    "x": 99.0,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.5893,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 157.0,
+    "y": 149.8
+   },
+   "grip_norm": {
+    "x": 0.9345,
+    "y": 0.5674
+   }
+  },
+  {
+   "name": "walk_east_2",
+   "strip": "walk_east",
+   "index": 2,
+   "fps": 10,
+   "rect": {
+    "x": 1057,
+    "y": 272,
+    "w": 155,
+    "h": 264
+   },
+   "pivot": {
+    "x": 93.2,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.6013,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 144.2,
+    "y": 162.6
+   },
+   "grip_norm": {
+    "x": 0.9303,
+    "y": 0.6159
+   }
+  },
+  {
+   "name": "walk_east_3",
+   "strip": "walk_east",
+   "index": 3,
+   "fps": 10,
+   "rect": {
+    "x": 1216,
+    "y": 272,
+    "w": 141,
+    "h": 264
+   },
+   "pivot": {
+    "x": 73.0,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.5177,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 127.3,
+    "y": 162.5
+   },
+   "grip_norm": {
+    "x": 0.9028,
+    "y": 0.6155
+   }
+  },
+  {
+   "name": "walk_east_4",
+   "strip": "walk_east",
+   "index": 4,
+   "fps": 10,
+   "rect": {
+    "x": 1361,
+    "y": 272,
+    "w": 169,
+    "h": 264
+   },
+   "pivot": {
+    "x": 100.0,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.5917,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 147.4,
+    "y": 160.0
+   },
+   "grip_norm": {
+    "x": 0.8722,
+    "y": 0.6061
+   }
+  },
+  {
+   "name": "walk_east_5",
+   "strip": "walk_east",
+   "index": 5,
+   "fps": 10,
+   "rect": {
+    "x": 1534,
+    "y": 272,
+    "w": 187,
+    "h": 264
+   },
+   "pivot": {
+    "x": 117.3,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.6273,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 175.6,
+    "y": 144.1
+   },
+   "grip_norm": {
+    "x": 0.939,
+    "y": 0.5458
+   }
+  },
+  {
+   "name": "walk_east_6",
+   "strip": "walk_east",
+   "index": 6,
+   "fps": 10,
+   "rect": {
+    "x": 1725,
+    "y": 272,
+    "w": 156,
+    "h": 264
+   },
+   "pivot": {
+    "x": 89.6,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.5744,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 142.9,
+    "y": 159.6
+   },
+   "grip_norm": {
+    "x": 0.916,
+    "y": 0.6045
+   }
+  },
+  {
+   "name": "walk_east_7",
+   "strip": "walk_east",
+   "index": 7,
+   "fps": 10,
+   "rect": {
+    "x": 4,
+    "y": 540,
+    "w": 168,
+    "h": 264
+   },
+   "pivot": {
+    "x": 95.5,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.5685,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 155.7,
+    "y": 159.6
+   },
+   "grip_norm": {
+    "x": 0.9268,
+    "y": 0.6045
+   }
+  },
+  {
+   "name": "walk_northeast_0",
+   "strip": "walk_northeast",
+   "index": 0,
+   "fps": 10,
+   "rect": {
+    "x": 176,
+    "y": 540,
+    "w": 187,
+    "h": 264
+   },
+   "pivot": {
+    "x": 100.0,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.5348,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 175.6,
+    "y": 165.3
+   },
+   "grip_norm": {
+    "x": 0.939,
+    "y": 0.6261
+   }
+  },
+  {
+   "name": "walk_northeast_1",
+   "strip": "walk_northeast",
+   "index": 1,
+   "fps": 10,
+   "rect": {
+    "x": 367,
+    "y": 540,
+    "w": 137,
+    "h": 264
+   },
+   "pivot": {
+    "x": 65.0,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.4745,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 127.6,
+    "y": 178.8
+   },
+   "grip_norm": {
+    "x": 0.9314,
+    "y": 0.6773
+   }
+  },
+  {
+   "name": "walk_northeast_2",
+   "strip": "walk_northeast",
+   "index": 2,
+   "fps": 10,
+   "rect": {
+    "x": 508,
+    "y": 540,
+    "w": 159,
+    "h": 264
+   },
+   "pivot": {
+    "x": 85.3,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.5365,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 148.0,
+    "y": 178.0
+   },
+   "grip_norm": {
+    "x": 0.9308,
+    "y": 0.6742
+   }
+  },
+  {
+   "name": "walk_northeast_3",
+   "strip": "walk_northeast",
+   "index": 3,
+   "fps": 10,
+   "rect": {
+    "x": 671,
+    "y": 540,
+    "w": 143,
+    "h": 264
+   },
+   "pivot": {
+    "x": 78.3,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.5476,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 132.3,
+    "y": 180.2
+   },
+   "grip_norm": {
+    "x": 0.9252,
+    "y": 0.6826
+   }
+  },
+  {
+   "name": "walk_northeast_4",
+   "strip": "walk_northeast",
+   "index": 4,
+   "fps": 10,
+   "rect": {
+    "x": 818,
+    "y": 540,
+    "w": 145,
+    "h": 264
+   },
+   "pivot": {
+    "x": 77.6,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.5352,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 134.6,
+    "y": 179.9
+   },
+   "grip_norm": {
+    "x": 0.9283,
+    "y": 0.6814
+   }
+  },
+  {
+   "name": "walk_northeast_5",
+   "strip": "walk_northeast",
+   "index": 5,
+   "fps": 10,
+   "rect": {
+    "x": 967,
+    "y": 540,
+    "w": 135,
+    "h": 264
+   },
+   "pivot": {
+    "x": 71.2,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.5274,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 124.0,
+    "y": 178.7
+   },
+   "grip_norm": {
+    "x": 0.9185,
+    "y": 0.6769
+   }
+  },
+  {
+   "name": "walk_northeast_6",
+   "strip": "walk_northeast",
+   "index": 6,
+   "fps": 10,
+   "rect": {
+    "x": 1106,
+    "y": 540,
+    "w": 176,
+    "h": 264
+   },
+   "pivot": {
+    "x": 107.8,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.6125,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 157.0,
+    "y": 177.8
+   },
+   "grip_norm": {
+    "x": 0.892,
+    "y": 0.6735
+   }
+  },
+  {
+   "name": "walk_northeast_7",
+   "strip": "walk_northeast",
+   "index": 7,
+   "fps": 10,
+   "rect": {
+    "x": 1286,
+    "y": 540,
+    "w": 169,
+    "h": 264
+   },
+   "pivot": {
+    "x": 94.8,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.5609,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 158.6,
+    "y": 175.3
+   },
+   "grip_norm": {
+    "x": 0.9385,
+    "y": 0.664
+   }
+  },
+  {
+   "name": "walk_north_0",
+   "strip": "walk_north",
+   "index": 0,
+   "fps": 10,
+   "rect": {
+    "x": 1459,
+    "y": 540,
+    "w": 135,
+    "h": 264
+   },
+   "pivot": {
+    "x": 67.8,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.5022,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 16.0,
+    "y": 174.0
+   },
+   "grip_norm": {
+    "x": 0.1185,
+    "y": 0.6591
+   }
+  },
+  {
+   "name": "walk_north_1",
+   "strip": "walk_north",
+   "index": 1,
+   "fps": 10,
+   "rect": {
+    "x": 1598,
+    "y": 540,
+    "w": 133,
+    "h": 264
+   },
+   "pivot": {
+    "x": 63.0,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.4737,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 6.8,
+    "y": 177.6
+   },
+   "grip_norm": {
+    "x": 0.0511,
+    "y": 0.6727
+   }
+  },
+  {
+   "name": "walk_north_2",
+   "strip": "walk_north",
+   "index": 2,
+   "fps": 10,
+   "rect": {
+    "x": 1735,
+    "y": 540,
+    "w": 142,
+    "h": 264
+   },
+   "pivot": {
+    "x": 69.1,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.4866,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 9.2,
+    "y": 173.1
+   },
+   "grip_norm": {
+    "x": 0.0648,
+    "y": 0.6557
+   }
+  },
+  {
+   "name": "walk_north_3",
+   "strip": "walk_north",
+   "index": 3,
+   "fps": 10,
+   "rect": {
+    "x": 1881,
+    "y": 540,
+    "w": 128,
+    "h": 264
+   },
+   "pivot": {
+    "x": 63.8,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.4984,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 8.8,
+    "y": 189.2
+   },
+   "grip_norm": {
+    "x": 0.0688,
+    "y": 0.7167
+   }
+  },
+  {
+   "name": "walk_north_4",
+   "strip": "walk_north",
+   "index": 4,
+   "fps": 10,
+   "rect": {
+    "x": 4,
+    "y": 808,
+    "w": 127,
+    "h": 264
+   },
+   "pivot": {
+    "x": 62.9,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.4953,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 6.2,
+    "y": 182.4
+   },
+   "grip_norm": {
+    "x": 0.0488,
+    "y": 0.6909
+   }
+  },
+  {
+   "name": "walk_north_5",
+   "strip": "walk_north",
+   "index": 5,
+   "fps": 10,
+   "rect": {
+    "x": 135,
+    "y": 808,
+    "w": 134,
+    "h": 264
+   },
+   "pivot": {
+    "x": 68.2,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.509,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 22.3,
+    "y": 176.9
+   },
+   "grip_norm": {
+    "x": 0.1664,
+    "y": 0.6701
+   }
+  },
+  {
+   "name": "walk_north_6",
+   "strip": "walk_north",
+   "index": 6,
+   "fps": 10,
+   "rect": {
+    "x": 273,
+    "y": 808,
+    "w": 128,
+    "h": 264
+   },
+   "pivot": {
+    "x": 62.7,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.4898,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 8.0,
+    "y": 168.0
+   },
+   "grip_norm": {
+    "x": 0.0625,
+    "y": 0.6364
+   }
+  },
+  {
+   "name": "walk_north_7",
+   "strip": "walk_north",
+   "index": 7,
+   "fps": 10,
+   "rect": {
+    "x": 405,
+    "y": 808,
+    "w": 134,
+    "h": 264
+   },
+   "pivot": {
+    "x": 66.6,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.497,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 12.3,
+    "y": 154.4
+   },
+   "grip_norm": {
+    "x": 0.0918,
+    "y": 0.5848
+   }
+  },
+  {
+   "name": "walk_northwest_0",
+   "strip": "walk_northwest",
+   "index": 0,
+   "fps": 10,
+   "rect": {
+    "x": 543,
+    "y": 808,
+    "w": 124,
+    "h": 264
+   },
+   "pivot": {
+    "x": 62.8,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.5065,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 115.0,
+    "y": 157.6
+   },
+   "grip_norm": {
+    "x": 0.9274,
+    "y": 0.597
+   }
+  },
+  {
+   "name": "walk_northwest_1",
+   "strip": "walk_northwest",
+   "index": 1,
+   "fps": 10,
+   "rect": {
+    "x": 671,
+    "y": 808,
+    "w": 162,
+    "h": 264
+   },
+   "pivot": {
+    "x": 70.8,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.437,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 137.2,
+    "y": 145.5
+   },
+   "grip_norm": {
+    "x": 0.8469,
+    "y": 0.5511
+   }
+  },
+  {
+   "name": "walk_northwest_2",
+   "strip": "walk_northwest",
+   "index": 2,
+   "fps": 10,
+   "rect": {
+    "x": 837,
+    "y": 808,
+    "w": 184,
+    "h": 264
+   },
+   "pivot": {
+    "x": 81.2,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.4413,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 147.8,
+    "y": 143.3
+   },
+   "grip_norm": {
+    "x": 0.8033,
+    "y": 0.5428
+   }
+  },
+  {
+   "name": "walk_northwest_3",
+   "strip": "walk_northwest",
+   "index": 3,
+   "fps": 10,
+   "rect": {
+    "x": 1025,
+    "y": 808,
+    "w": 141,
+    "h": 264
+   },
+   "pivot": {
+    "x": 64.1,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.4546,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 116.0,
+    "y": 154.1
+   },
+   "grip_norm": {
+    "x": 0.8227,
+    "y": 0.5837
+   }
+  },
+  {
+   "name": "walk_northwest_4",
+   "strip": "walk_northwest",
+   "index": 4,
+   "fps": 10,
+   "rect": {
+    "x": 1170,
+    "y": 808,
+    "w": 163,
+    "h": 264
+   },
+   "pivot": {
+    "x": 74.3,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.4558,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 132.4,
+    "y": 150.9
+   },
+   "grip_norm": {
+    "x": 0.8123,
+    "y": 0.5716
+   }
+  },
+  {
+   "name": "walk_northwest_5",
+   "strip": "walk_northwest",
+   "index": 5,
+   "fps": 10,
+   "rect": {
+    "x": 1337,
+    "y": 808,
+    "w": 172,
+    "h": 264
+   },
+   "pivot": {
+    "x": 72.6,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.4221,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 134.0,
+    "y": 145.0
+   },
+   "grip_norm": {
+    "x": 0.7791,
+    "y": 0.5492
+   }
+  },
+  {
+   "name": "walk_northwest_6",
+   "strip": "walk_northwest",
+   "index": 6,
+   "fps": 10,
+   "rect": {
+    "x": 1513,
+    "y": 808,
+    "w": 160,
+    "h": 264
+   },
+   "pivot": {
+    "x": 73.3,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.4581,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 131.3,
+    "y": 153.4
+   },
+   "grip_norm": {
+    "x": 0.8206,
+    "y": 0.5811
+   }
+  },
+  {
+   "name": "walk_northwest_7",
+   "strip": "walk_northwest",
+   "index": 7,
+   "fps": 10,
+   "rect": {
+    "x": 1677,
+    "y": 808,
+    "w": 133,
+    "h": 264
+   },
+   "pivot": {
+    "x": 55.7,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.4188,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 112.8,
+    "y": 150.8
+   },
+   "grip_norm": {
+    "x": 0.8481,
+    "y": 0.5712
+   }
+  },
+  {
+   "name": "walk_west_0",
+   "strip": "walk_west",
+   "index": 0,
+   "fps": 10,
+   "rect": {
+    "x": 1814,
+    "y": 808,
+    "w": 201,
+    "h": 264
+   },
+   "pivot": {
+    "x": 68.4,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.3403,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 11.7,
+    "y": 141.9
+   },
+   "grip_norm": {
+    "x": 0.0582,
+    "y": 0.5375
+   }
+  },
+  {
+   "name": "walk_west_1",
+   "strip": "walk_west",
+   "index": 1,
+   "fps": 10,
+   "rect": {
+    "x": 4,
+    "y": 1076,
+    "w": 171,
+    "h": 264
+   },
+   "pivot": {
+    "x": 67.3,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.3936,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 9.9,
+    "y": 145.2
+   },
+   "grip_norm": {
+    "x": 0.0579,
+    "y": 0.55
+   }
+  },
+  {
+   "name": "walk_west_2",
+   "strip": "walk_west",
+   "index": 2,
+   "fps": 10,
+   "rect": {
+    "x": 179,
+    "y": 1076,
+    "w": 153,
+    "h": 264
+   },
+   "pivot": {
+    "x": 76.7,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.5013,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 12.1,
+    "y": 142.0
+   },
+   "grip_norm": {
+    "x": 0.0791,
+    "y": 0.5379
+   }
+  },
+  {
+   "name": "walk_west_3",
+   "strip": "walk_west",
+   "index": 3,
+   "fps": 10,
+   "rect": {
+    "x": 336,
+    "y": 1076,
+    "w": 173,
+    "h": 264
+   },
+   "pivot": {
+    "x": 67.7,
+    "y": 262
+   },
+   "pivot_norm": {
+    "x": 0.3913,
+    "y": 0.9924
+   },
+   "grip": {
+    "x": 15.7,
+    "y": 144.3
+   },
+   "grip_norm": {
+    "x": 0.0908,
+    "y": 0.5466
+   }
+  },
+  {
+   "name": "walk_west_4",
+   "strip": "walk_west",
+   "index": 4,
+   "fps": 10,
+   "rect": {
+    "x": 513,
+    "y": 1076,
+    "w": 190,
+    "h": 264
+   },
+   "pivot": {
+    "x": 69.8,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.3674,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 18.1,
+    "y": 148.7
+   },
+   "grip_norm": {
+    "x": 0.0953,
+    "y": 0.5633
+   }
+  },
+  {
+   "name": "walk_west_5",
+   "strip": "walk_west",
+   "index": 5,
+   "fps": 10,
+   "rect": {
+    "x": 707,
+    "y": 1076,
+    "w": 168,
+    "h": 264
+   },
+   "pivot": {
+    "x": 64.3,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.3827,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 14.3,
+    "y": 153.6
+   },
+   "grip_norm": {
+    "x": 0.0851,
+    "y": 0.5818
+   }
+  },
+  {
+   "name": "walk_west_6",
+   "strip": "walk_west",
+   "index": 6,
+   "fps": 10,
+   "rect": {
+    "x": 879,
+    "y": 1076,
+    "w": 165,
+    "h": 264
+   },
+   "pivot": {
+    "x": 75.7,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.4588,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 26.4,
+    "y": 150.5
+   },
+   "grip_norm": {
+    "x": 0.16,
+    "y": 0.5701
+   }
+  },
+  {
+   "name": "walk_west_7",
+   "strip": "walk_west",
+   "index": 7,
+   "fps": 10,
+   "rect": {
+    "x": 1048,
+    "y": 1076,
+    "w": 164,
+    "h": 264
+   },
+   "pivot": {
+    "x": 70.4,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.4293,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 19.0,
+    "y": 153.3
+   },
+   "grip_norm": {
+    "x": 0.1159,
+    "y": 0.5807
+   }
+  },
+  {
+   "name": "walk_southwest_0",
+   "strip": "walk_southwest",
+   "index": 0,
+   "fps": 10,
+   "rect": {
+    "x": 1216,
+    "y": 1076,
+    "w": 156,
+    "h": 264
+   },
+   "pivot": {
+    "x": 70.3,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.4506,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 124.0,
+    "y": 200.6
+   },
+   "grip_norm": {
+    "x": 0.7949,
+    "y": 0.7598
+   }
+  },
+  {
+   "name": "walk_southwest_1",
+   "strip": "walk_southwest",
+   "index": 1,
+   "fps": 10,
+   "rect": {
+    "x": 1376,
+    "y": 1076,
+    "w": 173,
+    "h": 264
+   },
+   "pivot": {
+    "x": 79.0,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.4566,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 137.1,
+    "y": 181.0
+   },
+   "grip_norm": {
+    "x": 0.7925,
+    "y": 0.6856
+   }
+  },
+  {
+   "name": "walk_southwest_2",
+   "strip": "walk_southwest",
+   "index": 2,
+   "fps": 10,
+   "rect": {
+    "x": 1553,
+    "y": 1076,
+    "w": 192,
+    "h": 264
+   },
+   "pivot": {
+    "x": 77.0,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.401,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 130.6,
+    "y": 187.4
+   },
+   "grip_norm": {
+    "x": 0.6802,
+    "y": 0.7098
+   }
+  },
+  {
+   "name": "walk_southwest_3",
+   "strip": "walk_southwest",
+   "index": 3,
+   "fps": 10,
+   "rect": {
+    "x": 1749,
+    "y": 1076,
+    "w": 153,
+    "h": 264
+   },
+   "pivot": {
+    "x": 75.4,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.4928,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 131.8,
+    "y": 177.2
+   },
+   "grip_norm": {
+    "x": 0.8614,
+    "y": 0.6712
+   }
+  },
+  {
+   "name": "walk_southwest_4",
+   "strip": "walk_southwest",
+   "index": 4,
+   "fps": 10,
+   "rect": {
+    "x": 4,
+    "y": 1344,
+    "w": 151,
+    "h": 264
+   },
+   "pivot": {
+    "x": 70.1,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.4642,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 114.7,
+    "y": 182.8
+   },
+   "grip_norm": {
+    "x": 0.7596,
+    "y": 0.6924
+   }
+  },
+  {
+   "name": "walk_southwest_5",
+   "strip": "walk_southwest",
+   "index": 5,
+   "fps": 10,
+   "rect": {
+    "x": 159,
+    "y": 1344,
+    "w": 143,
+    "h": 264
+   },
+   "pivot": {
+    "x": 59.3,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.4147,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 94.8,
+    "y": 180.7
+   },
+   "grip_norm": {
+    "x": 0.6629,
+    "y": 0.6845
+   }
+  },
+  {
+   "name": "walk_southwest_6",
+   "strip": "walk_southwest",
+   "index": 6,
+   "fps": 10,
+   "rect": {
+    "x": 306,
+    "y": 1344,
+    "w": 148,
+    "h": 264
+   },
+   "pivot": {
+    "x": 68.2,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.4608,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 103.9,
+    "y": 187.9
+   },
+   "grip_norm": {
+    "x": 0.702,
+    "y": 0.7117
+   }
+  },
+  {
+   "name": "walk_southwest_7",
+   "strip": "walk_southwest",
+   "index": 7,
+   "fps": 10,
+   "rect": {
+    "x": 458,
+    "y": 1344,
+    "w": 178,
+    "h": 264
+   },
+   "pivot": {
+    "x": 79.8,
+    "y": 263
+   },
+   "pivot_norm": {
+    "x": 0.4483,
+    "y": 0.9962
+   },
+   "grip": {
+    "x": 124.2,
+    "y": 194.4
+   },
+   "grip_norm": {
+    "x": 0.6978,
+    "y": 0.7364
+   }
+  }
+ ]
 }
