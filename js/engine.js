@@ -8515,6 +8515,13 @@
       }
     }
 
+    // 4d. (Đợt SPELLFX-INTEGRATE) Hiệu ứng 4 pháp quyết linh điền — trên mặt
+    // đất/luống, dưới thực thể (đúng lớp clip đã dựng: nhân vật vẽ sau, đè lên
+    // hiệu ứng). Lính gác + try/catch: lỗi VFX không bao giờ được giết vòng lặp.
+    if (typeof window !== 'undefined' && window.GameVFX && window.GameVFX.draw) {
+      try { window.GameVFX.draw(ctx); } catch (e) {}
+    }
+
     // 5. Thu thập toàn bộ thực thể hiển thị và sắp xếp chiều sâu Painter's Algorithm
     var entities = [];
 
