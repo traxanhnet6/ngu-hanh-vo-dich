@@ -18,6 +18,13 @@
 
   function pad3(n) { n = Math.max(0, Math.floor(n)); var s = String(n); while (s.length < 3) s = '0' + s; return s; }
 
+  // DANFIRE3: đỉnh tượng trên nắp theo khung lửa — biên đạo nắp lặp chu kỳ 24
+  // khung, giống hệt ở cả 3 mức (đo thật trên khung: 165 nắp đóng, 64 nắp mở).
+  // Dải wisp neo đáy theo đỉnh tượng để vệt luôn nối liền tượng và bốc lên trên.
+  var LID_TOP_24 = [165, 165, 165, 165, 135, 109, 89, 76, 67, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 89, 115, 140, 165];
+  var WISP_STRETCH = 1.4;
+  var WISP_BASE_OVERLAP = 8;
+
   function framePathFire(level, frame) {
     level = Math.max(1, Math.min(3, Math.floor(level || 1)));
     return 'assets/art/danlo-fire/level-' + level + '/f' + pad3(frame % FIRE_FRAMES) + '.png';
@@ -136,14 +143,17 @@
     if (smokeImg) {
       ctx.drawImage(smokeImg, std.x, std.y, std.w, std.h);
     }
-    // vệt khói giữa lúc ngưng đan
+    // vệt khói giữa lúc ngưng đan — DANFIRE3: dải wisp kéo dài dọc 1.4x,
+    // đáy neo theo đỉnh tượng của đúng khung lửa đang vẽ để vệt luôn nối
+    // liền tượng và bốc cao lên nền trống như clip mẫu ở mọi pha nắp
     var wispGrade = getNgungDanWisp();
     if (wispGrade) {
       var wi = Math.floor(nowMs / (1000 / WISP_FPS)) % WISP_FRAMES;
       var wispImg = getImage(framePathWisp(wispGrade, wi));
       if (wispImg) {
-        var wH = std.h * (165 / 706);
-        ctx.drawImage(wispImg, std.x, std.y, std.w, wH);
+        var wH = std.h * (165 / 706) * WISP_STRETCH;
+        var wBottom = std.y + std.h * ((LID_TOP_24[fi % 24] + WISP_BASE_OVERLAP) / 706);
+        ctx.drawImage(wispImg, std.x, wBottom - wH, std.w, wH);
       }
     }
     return true;
