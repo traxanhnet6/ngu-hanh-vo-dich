@@ -3091,6 +3091,84 @@ body.photo-mode #toast-container { visibility: hidden; }
   overflow-y: auto;
 }
 
+/* Đợt DANPANEL: bảng Đan Phòng gọn neo đáy ở màn hẹp để lò + lửa sau modal
+   vẫn thấy rõ; nhạy chạm. Mọi quy tắc giới hạn trong #danphong-modal —
+   không ảnh hưởng modal khác. */
+#danphong-modal .danphong-tab,
+#danphong-modal .danphong-btn,
+#danphong-modal .danboard-pick,
+#danphong-modal .danboard-slot,
+#danphong-modal .danboard-seal-bar,
+#danphong-modal .danboard-seal-btn,
+#danphong-modal .danphong-size-btn,
+#danphong-modal .btn-close {
+  touch-action: manipulation;
+}
+#danphong-modal .danphong-body {
+  touch-action: pan-y;
+}
+#danphong-modal .danboard-seal-bar {
+  min-height: 44px;
+}
+@media (max-width: 640px) {
+  #danphong-modal {
+    align-items: flex-end;
+    padding: 0;
+    background: rgba(0, 0, 0, 0.25);
+  }
+  /* 48vh (đo thật): camera map Phòng Luyện Đan bị kẹp cố định, chân lò +
+     lửa nằm ở y≈418 màn 390×844 — bảng 48vh chừa ~20px dưới chân lửa ở
+     mọi chiều cao điện thoại thường gặp; 50vh chỉ chừa ~4px, quá sát. */
+  #danphong-modal .danphong-box {
+    width: 100vw;
+    max-width: 100vw;
+    max-height: 48vh;
+    border-radius: 14px 14px 0 0;
+    border-bottom: none;
+  }
+  #danphong-modal .danphong-body {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  #danphong-modal .danphong-tab {
+    font-size: 13px;
+    padding: 8px 6px;
+  }
+}
+
+/* Đợt DANPANEL2: tùy chọn cỡ Bé để nhìn cả người. Nút chuyển cỡ chỉ hiện
+   ở màn hẹp (PC giữ nguyên, không thấy nút). Mọi quy tắc giới hạn trong
+   #danphong-modal. */
+#danphong-modal .danphong-size-btn {
+  display: none;
+}
+@media (max-width: 640px) {
+  #danphong-modal .danphong-size-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    min-width: 44px;
+    height: 44px;
+    padding: 0 10px;
+    box-sizing: border-box;
+    border: 1px solid #a8893a;
+    border-radius: 8px;
+    background: #3e2e1a;
+    color: #ffd978;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  /* Cỡ Bé 32vh (đo thật màn 390×844): nhân vật đứng ở mép bán kính tương
+     tác lò (y thế giới 495) có chân ở y≈486, đứng xa hơn (y=550) chân ở
+     y≈551; bảng 32vh có mép trên y≈574, chừa ~23px dưới chân ở y=550 và
+     thấy đủ lò + lửa + toàn thân ở mọi điểm đứng quanh lò. */
+  #danphong-modal.danphong-size-be .danphong-box {
+    max-height: 32vh;
+  }
+}
+
 /* Đợt DANSKILL: thẻ Kỹ Năng Luyện Đan (tái dùng khung danphong-card) */
 .danskill-effect {
   font-size: 12px;

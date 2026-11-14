@@ -214,6 +214,48 @@
   var livePlayer = null;
   var currentTab = 'refine';
 
+  // Đợt DANPANEL2: tùy chọn cỡ bảng Đan Phòng ('vua' 48vh / 'be' 32vh).
+  // Lưu bằng cơ chế settings sẵn có của GameState (loadSettings/saveSettings),
+  // mặc định lần đầu là 'vua'. Không dựng hệ lưu mới.
+  var PANEL_SIZE_KEY = 'danphongPanelSize';
+  var panelSize = 'vua';
+
+  function readSavedPanelSize() {
+    try {
+      var st = getStateAPI();
+      if (st && st.loadSettings) {
+        var s = st.loadSettings();
+        if (s && s[PANEL_SIZE_KEY] === 'be') { panelSize = 'be'; return; }
+      }
+    } catch (e) {}
+    panelSize = 'vua';
+  }
+
+  function applyPanelSize() {
+    if (typeof document === 'undefined') return;
+    var modal = document.getElementById('danphong-modal');
+    if (modal) modal.classList.toggle('danphong-size-be', panelSize === 'be');
+    var btn = document.getElementById('danphong-size-toggle');
+    if (btn) {
+      var isBe = panelSize === 'be';
+      btn.textContent = isBe ? 'Vừa' : 'Bé';
+      btn.setAttribute('aria-label', isBe ? 'Mở rộng bảng Đan Phòng' : 'Thu nhỏ bảng Đan Phòng');
+    }
+  }
+
+  function setPanelSize(size) {
+    panelSize = (size === 'be') ? 'be' : 'vua';
+    applyPanelSize();
+    try {
+      var st = getStateAPI();
+      if (st && st.saveSettings) {
+        var patch = {};
+        patch[PANEL_SIZE_KEY] = panelSize;
+        st.saveSettings(patch);
+      }
+    } catch (e) {}
+  }
+
   function getStateAPI() {
     if (typeof window !== 'undefined' && window.GameState) return window.GameState;
     if (typeof global !== 'undefined' && global.GameState) return global.GameState;
@@ -1293,6 +1335,76 @@
     return ['#8b8b8b', '#4f9d69', '#4f83c4', '#b07ad6'][Math.max(0, Math.min(3, q || 1))];
   }
 
+  // Đợt DANPANEL: hai hàng đổi trạng thái trong bước 1 (ô đã xếp + chip chọn)
+  // được dựng bởi hàm riêng để refreshBoardStep1() chỉ cập nhật đúng hai hàng
+  // này, giữ nguyên toàn bộ DOM còn lại của modal khi bấm trong cùng bước.
+  function boardStep1SeqRow(recipe) {
+    var seqRow = el('div', 'danboard-unit-row');
+    seqRow.id = 'danboard-seq-row';
+    for (var s = 0; s < recipe.materials.length; s++) {
+      (function (slotIdx) {
+        var slot = el('div', 'danboard-slot' + (boardState.chosen[slotIdx] ? ' filled' : ''));
+        if (boardState.chosen[slotIdx]) {
+          var icon2 = el('div', 'danphong-mat-icon');
+          setElementIconSprite(icon2, getItemDef(boardState.chosen[slotIdx]), 28);
+          slot.appendChild(icon2);
+          slot.appendChild(el('span', 'danboard-slot-num', String(slotIdx + 1)));
+          slot.addEventListener('click', function () {
+            boardState.chosen.splice(slotIdx, 1);
+            refreshBoardStep1();
+          });
+        } else {
+          slot.appendChild(el('span', 'danboard-slot-num', String(slotIdx + 1)));
+        }
+        seqRow.appendChild(slot);
+      })(s);
+    }
+    return seqRow;
+  }
+
+  function boardStep1PickRow(recipe) {
+    var player = livePlayer;
+    var needCounts = boardCounts(recipe.materials);
+    var chosenCounts = boardCounts(boardState.chosen);
+    var pickRow = el('div', 'danboard-unit-row');
+    pickRow.id = 'danboard-pick-row';
+    Object.keys(needCounts).forEach(function (itemId) {
+      var have = countOf(player, itemId);
+      var remaining = needCounts[itemId] - (chosenCounts[itemId] || 0);
+      var chip = el('div', 'danboard-pick' + (remaining <= 0 || have < (chosenCounts[itemId] || 0) + 1 ? ' disabled' : ''));
+      var icon3 = el('div', 'danphong-mat-icon');
+      setElementIconSprite(icon3, getItemDef(itemId), 28);
+      chip.appendChild(icon3);
+      chip.appendChild(el('span', 'danboard-unit-name', itemName(itemId)));
+      chip.appendChild(el('span', 'danphong-mat-count' + (have >= needCounts[itemId] ? ' enough' : ' lacking'), have + '/' + needCounts[itemId]));
+      chip.addEventListener('click', function () {
+        var cur = boardCounts(boardState.chosen)[itemId] || 0;
+        if (cur >= needCounts[itemId]) { showToast('Đã xếp đủ ' + itemName(itemId) + ' cho mẻ này.'); return; }
+        if (countOf(livePlayer, itemId) < cur + 1) { showToast('Không đủ ' + itemName(itemId) + ' trong túi.'); return; }
+        boardState.chosen.push(itemId);
+        refreshBoardStep1();
+      });
+      pickRow.appendChild(chip);
+    });
+    return pickRow;
+  }
+
+  function refreshBoardStep1() {
+    if (!boardState || boardState.step !== 1) { renderPanel(); return; }
+    var recipe = boardRecipeFor(boardState.pillId);
+    var seqTitle = document.getElementById('danboard-seq-title');
+    var seqRow = document.getElementById('danboard-seq-row');
+    var pickRow = document.getElementById('danboard-pick-row');
+    if (!recipe || !seqTitle || !seqRow || !pickRow) { renderPanel(); return; }
+    seqTitle.textContent = 'Thứ tự bỏ vào lò (' + boardState.chosen.length + '/' + recipe.materials.length + ') — chạm ô đã xếp để rút ra';
+    var newSeq = boardStep1SeqRow(recipe);
+    seqRow.innerHTML = '';
+    while (newSeq.firstChild) seqRow.appendChild(newSeq.firstChild);
+    var newPick = boardStep1PickRow(recipe);
+    pickRow.innerHTML = '';
+    while (newPick.firstChild) pickRow.appendChild(newPick.firstChild);
+  }
+
   function renderBoardStep1(body, recipe) {
     var player = livePlayer;
     var db = getDanBanAPI();
@@ -1303,7 +1415,6 @@
       'Chạm từng dược liệu để bỏ vào lò theo thứ tự. Xếp đúng thứ tự công thức được trọn điểm dược liệu; xếp sai vẫn luyện được nhưng mất nửa điểm (Tịnh Dược Quyết gỡ bớt thiệt hại). Phẩm chất ghi kèm là phẩm của đơn vị sẽ bị trừ khỏi túi.'));
 
     var needCounts = boardCounts(recipe.materials);
-    var chosenCounts = boardCounts(boardState.chosen);
 
     var reqTitle = el('div', 'danboard-section-title', 'Dược liệu cần dùng (theo thứ tự công thức)' + (avgLabel ? ' — phẩm dự kiến: ' + avgLabel : ''));
     body.appendChild(reqTitle);
@@ -1322,62 +1433,25 @@
     body.appendChild(reqRow);
 
     var seqTitle = el('div', 'danboard-section-title', 'Thứ tự bỏ vào lò (' + boardState.chosen.length + '/' + recipe.materials.length + ') — chạm ô đã xếp để rút ra');
+    seqTitle.id = 'danboard-seq-title';
     body.appendChild(seqTitle);
-    var seqRow = el('div', 'danboard-unit-row');
-    for (var s = 0; s < recipe.materials.length; s++) {
-      (function (slotIdx) {
-        var slot = el('div', 'danboard-slot' + (boardState.chosen[slotIdx] ? ' filled' : ''));
-        if (boardState.chosen[slotIdx]) {
-          var icon2 = el('div', 'danphong-mat-icon');
-          setElementIconSprite(icon2, getItemDef(boardState.chosen[slotIdx]), 28);
-          slot.appendChild(icon2);
-          slot.appendChild(el('span', 'danboard-slot-num', String(slotIdx + 1)));
-          slot.addEventListener('click', function () {
-            boardState.chosen.splice(slotIdx, 1);
-            renderPanel();
-          });
-        } else {
-          slot.appendChild(el('span', 'danboard-slot-num', String(slotIdx + 1)));
-        }
-        seqRow.appendChild(slot);
-      })(s);
-    }
-    body.appendChild(seqRow);
+    body.appendChild(boardStep1SeqRow(recipe));
 
     var pickTitle = el('div', 'danboard-section-title', 'Chạm để bỏ vào lò');
     body.appendChild(pickTitle);
-    var pickRow = el('div', 'danboard-unit-row');
-    Object.keys(needCounts).forEach(function (itemId) {
-      var have = countOf(player, itemId);
-      var remaining = needCounts[itemId] - (chosenCounts[itemId] || 0);
-      var chip = el('div', 'danboard-pick' + (remaining <= 0 || have < (chosenCounts[itemId] || 0) + 1 ? ' disabled' : ''));
-      var icon3 = el('div', 'danphong-mat-icon');
-      setElementIconSprite(icon3, getItemDef(itemId), 28);
-      chip.appendChild(icon3);
-      chip.appendChild(el('span', 'danboard-unit-name', itemName(itemId)));
-      chip.appendChild(el('span', 'danphong-mat-count' + (have >= needCounts[itemId] ? ' enough' : ' lacking'), have + '/' + needCounts[itemId]));
-      chip.addEventListener('click', function () {
-        var cur = boardCounts(boardState.chosen)[itemId] || 0;
-        if (cur >= needCounts[itemId]) { showToast('Đã xếp đủ ' + itemName(itemId) + ' cho mẻ này.'); return; }
-        if (countOf(livePlayer, itemId) < cur + 1) { showToast('Không đủ ' + itemName(itemId) + ' trong túi.'); return; }
-        boardState.chosen.push(itemId);
-        renderPanel();
-      });
-      pickRow.appendChild(chip);
-    });
-    body.appendChild(pickRow);
+    body.appendChild(boardStep1PickRow(recipe));
 
     var tools = el('div', 'danphong-actions');
     var btnAuto = el('button', 'btn wood danphong-btn', 'Xếp Theo Phương');
     btnAuto.type = 'button';
     btnAuto.addEventListener('click', function () {
       boardState.chosen = recipe.materials.slice();
-      renderPanel();
+      refreshBoardStep1();
     });
     tools.appendChild(btnAuto);
     var btnClear = el('button', 'btn wood danphong-btn', 'Xóa Hết');
     btnClear.type = 'button';
-    btnClear.addEventListener('click', function () { boardState.chosen = []; renderPanel(); });
+    btnClear.addEventListener('click', function () { boardState.chosen = []; refreshBoardStep1(); });
     tools.appendChild(btnClear);
     body.appendChild(tools);
 
@@ -1405,7 +1479,11 @@
     order.forEach(function (elem) {
       var btn = el('button', 'btn wood danphong-btn danboard-elem-btn' + (boardState.fireElement === elem ? ' selected' : ''), names[elem]);
       btn.type = 'button';
-      btn.addEventListener('click', function () { boardState.fireElement = elem; renderPanel(); });
+      btn.addEventListener('click', function () {
+        boardState.fireElement = elem;
+        var btns = row.querySelectorAll('.danboard-elem-btn');
+        for (var i = 0; i < btns.length; i++) btns[i].classList.toggle('selected', btns[i] === btn);
+      });
       row.appendChild(btn);
     });
     body.appendChild(row);
@@ -1426,7 +1504,11 @@
     levels.forEach(function (lv) {
       var btn = el('button', 'btn wood danphong-btn danboard-heat-btn' + (boardState.heatLevel === lv.level ? ' selected' : ''), lv.name);
       btn.type = 'button';
-      btn.addEventListener('click', function () { boardState.heatLevel = lv.level; renderPanel(); });
+      btn.addEventListener('click', function () {
+        boardState.heatLevel = lv.level;
+        var btns = row.querySelectorAll('.danboard-heat-btn');
+        for (var i = 0; i < btns.length; i++) btns[i].classList.toggle('selected', btns[i] === btn);
+      });
       row.appendChild(btn);
     });
     body.appendChild(row);
@@ -1665,6 +1747,7 @@
     if (!modal) return;
     if (tab === 'board' || tab === 'refine' || tab === 'skills') currentTab = tab;
     modal.classList.remove('hidden');
+    applyPanelSize();
     renderPanel();
   }
 
@@ -1695,6 +1778,15 @@
       btnClose.dataset.wired = '1';
       btnClose.addEventListener('click', function () { closePanel(); });
     }
+
+    // Đợt DANPANEL2: nút chuyển cỡ Vừa/Bé + khôi phục cỡ đã lưu.
+    var btnSize = document.getElementById('danphong-size-toggle');
+    if (btnSize && !btnSize.dataset.wired) {
+      btnSize.dataset.wired = '1';
+      btnSize.addEventListener('click', function () { setPanelSize(panelSize === 'be' ? 'vua' : 'be'); });
+    }
+    readSavedPanelSize();
+    applyPanelSize();
 
     var tabRefine = document.getElementById('danphong-tab-refine');
     if (tabRefine && !tabRefine.dataset.wired) {
