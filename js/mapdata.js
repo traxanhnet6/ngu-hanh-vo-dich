@@ -1162,6 +1162,22 @@
     { rect: { x: 1895, y: 0, w: 25, h: 1280 } },
     // Hồ Linh Tuyền theo tranh nền mới (nước 1250-1570 x 330-620, đá bờ tới 1245-1575 x 325-625); bờ tây nam tại (1315,665) để đệ tử tới ngâm tay hồi phục
     { rect: { x: 1245, y: 325, w: 330, h: 300 } },
+    // Đợt CLIFFCOLLISION (Bui 06:56 ngày 2026-11-14): va chạm mặt vách/vực vẽ trên tranh nền
+    // phía đông map — trước đây chỉ biên đông x>=1895 bị chặn, nhân vật đi được lên tranh mặt vách.
+    // Các hình đo từ PNG nền ở tỉ lệ 1:1, bám mép vách nhìn thấy; chừa bãi cỏ/mỏm đá + hành lang
+    // đường đá tới tháp (tuyến towerpath, sân trước cửa tới x=1784) + mọi điểm neo gameplay.
+    { rect: { x: 1704, y: 0, w: 216, h: 48 } }, // cliff_ne_1: Góc đông-bắc: mép nền Bí Cảnh chạy chéo, bậc 1
+    { rect: { x: 1728, y: 48, w: 192, h: 24 } }, // cliff_ne_2: Mép nền Bí Cảnh, bậc 2
+    { rect: { x: 1752, y: 72, w: 168, h: 24 } }, // cliff_ne_3: Mép nền Bí Cảnh, bậc 3
+    { rect: { x: 1776, y: 96, w: 144, h: 24 } }, // cliff_ne_4: Mép nền Bí Cảnh, bậc 4
+    { rect: { x: 1800, y: 120, w: 120, h: 72 } }, // cliff_ne_5: Góc đông nền Bí Cảnh + mép đông-nam nền
+    { rect: { x: 1776, y: 192, w: 144, h: 48 } }, // cliff_ne_6: Dốc đá dưới mép đông-nam nền Bí Cảnh
+    { rect: { x: 1824, y: 240, w: 96, h: 192 } }, // cliff_e_1: Dốc đông + gờ đá + sương, y 240-432
+    { rect: { x: 1848, y: 432, w: 72, h: 192 } }, // cliff_e_2: Mép cỏ/cụm đá ven vực, y 432-624
+    { rect: { x: 1752, y: 624, w: 168, h: 96 } }, // cliff_arena: Gờ đá phía đông đấu trường, y 624-720
+    { rect: { x: 1728, y: 720, w: 192, h: 96 } }, // cliff_tower_w: Mặt vách phía tây tháp, y 720-816
+    { rect: { x: 1800, y: 816, w: 120, h: 96 } }, // cliff_tower_e: Vực phía đông sân trước cửa tháp, y 816-912 (giữ mở sân tới x=1784)
+    { rect: { x: 1728, y: 912, w: 192, h: 343 } }, // cliff_south: Vách nam + khối đá đông-nam, y 912-1255
     // Mái nhà vẽ nhô ở mép nam và mép tây nam của Khu Dân Cư (sân đá trước nhà vẫn đi được)
     { rect: { x: 60, y: 1185, w: 760, h: 70 } },
     { rect: { x: 0, y: 950, w: 60, h: 330 } }
