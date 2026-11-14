@@ -86,8 +86,8 @@
     { id: 'bush_m1', asset: 'assets/art/standee-bush.png', originalW: 309, originalH: 313, w: 120, h: 121, x: 718, y: 83, baseY: 204, ellipse: { cx: 779.6, cy: 184.6, rx: 45.4, ry: 13.6 } },
     { id: 'bush_m2', asset: 'assets/art/standee-bush.png', originalW: 309, originalH: 313, w: 130, h: 132, x: 933, y: 383, baseY: 515, ellipse: { cx: 999.7, cy: 493.9, rx: 49.2, ry: 14.8 } },
     { id: 'bush_m3', asset: 'assets/art/standee-bush.png', originalW: 309, originalH: 313, w: 140, h: 142, x: 1072, y: 442, baseY: 584, ellipse: { cx: 1143.8, cy: 561.3, rx: 53.0, ry: 15.9 } },
-    { id: 'ruined_m1', asset: 'assets/art/standee-ruined-blocks.png', originalW: 409, originalH: 313, w: 240, h: 191, x: 70, y: 619, baseY: 810, ellipse: { cx: 182.3, cy: 748.4, rx: 107.4, ry: 32.3 } },
-    { id: 'ruined_m2', asset: 'assets/art/standee-ruined-blocks.png', originalW: 409, originalH: 313, w: 200, h: 159, x: 300, y: 624, baseY: 783, ellipse: { cx: 393.6, cy: 731.7, rx: 89.5, ry: 26.9 } }
+    { id: 'ruined_m1', asset: 'assets/art/standee-ruined-blocks.png', originalW: 409, originalH: 313, w: 240, h: 191, x: 70, y: 619, baseY: 810, ellipse: { cx: 182.3, cy: 776.5, rx: 107.4, ry: 32.3 } },
+    { id: 'ruined_m2', asset: 'assets/art/standee-ruined-blocks.png', originalW: 409, originalH: 313, w: 200, h: 159, x: 300, y: 624, baseY: 783, ellipse: { cx: 393.6, cy: 755.1, rx: 89.5, ry: 26.9 } }
   ];
 
   var SCENERY_OBSTACLES_MIEU = [
@@ -811,9 +811,9 @@
       originalW: 258,
       originalH: 480,
       w: 120,
-      h: 160,
+      h: 223,
       x: 90,
-      y: 60,
+      y: -3,
       baseY: 220,
       ellipse: { cx: 150.2, cy: 205.7, rx: 18.1, ry: 5.3 }
     },
@@ -823,9 +823,9 @@
       originalW: 258,
       originalH: 480,
       w: 130,
-      h: 173,
+      h: 242,
       x: 300,
-      y: 40,
+      y: -29,
       baseY: 213,
       ellipse: { cx: 365.3, cy: 197.5, rx: 19.6, ry: 5.8 }
     },
@@ -835,9 +835,9 @@
       originalW: 258,
       originalH: 480,
       w: 110,
-      h: 147,
+      h: 205,
       x: 430,
-      y: 90,
+      y: 32,
       baseY: 237,
       ellipse: { cx: 485.2, cy: 223.8, rx: 16.6, ry: 4.9 }
     },
@@ -847,14 +847,14 @@
       originalW: 258,
       originalH: 480,
       w: 125,
-      h: 167,
+      h: 233,
       x: 170,
-      y: 150,
+      y: 84,
       baseY: 317,
       ellipse: { cx: 232.8, cy: 302.0, rx: 18.9, ry: 5.6 }
     },
-    { id: 'bamboo_tm60', asset: 'assets/art/standee-bamboo-cluster.png', originalW: 258, originalH: 480, w: 150, h: 200, x: 60, y: 700, baseY: 900, ellipse: { cx: 135.3, cy: 882.1, rx: 22.6, ry: 6.7 } },
-    { id: 'bamboo_tm240', asset: 'assets/art/standee-bamboo-cluster.png', originalW: 258, originalH: 480, w: 130, h: 173, x: 240, y: 620, baseY: 793, ellipse: { cx: 305.3, cy: 777.5, rx: 19.6, ry: 5.8 } },
+    { id: 'bamboo_tm60', asset: 'assets/art/standee-bamboo-cluster.png', originalW: 258, originalH: 480, w: 150, h: 279, x: 60, y: 621, baseY: 900, ellipse: { cx: 135.3, cy: 882.1, rx: 22.6, ry: 6.7 } },
+    { id: 'bamboo_tm240', asset: 'assets/art/standee-bamboo-cluster.png', originalW: 258, originalH: 480, w: 130, h: 242, x: 240, y: 551, baseY: 793, ellipse: { cx: 305.3, cy: 777.5, rx: 19.6, ry: 5.8 } },
     { id: 'bush_tm1', asset: 'assets/art/standee-bush.png', originalW: 309, originalH: 313, w: 130, h: 132, x: 700, y: 1080, baseY: 1212, ellipse: { cx: 766.7, cy: 1190.9, rx: 49.2, ry: 14.8 } },
     { id: 'rock_tm1', asset: 'assets/art/standee-rock-cluster.png', originalW: 417, originalH: 313, w: 130, h: 98, x: 1230, y: 130, baseY: 228, ellipse: { cx: 1288.8, cy: 207.6, rx: 53.3, ry: 16.1 } }
   ];
@@ -2508,8 +2508,8 @@
     { id: 'rp4', asset: 'assets/art/standee-ruin-pillar.png', originalW: 220, originalH: 585, w: 135, h: 359, x: 885, y: 761, baseY: 1120, ellipse: { cx: 950.0, cy: 1084.7, rx: 65.1, ry: 19.5 } },
     { id: 'db1', asset: 'assets/art/standee-desert-bone.png', originalW: 536, originalH: 449, w: 340, h: 285, x: 302, y: -125, baseY: 160, ellipse: { cx: 480.0, cy: 114.9, rx: 108.8, ry: 32.6 } },
     { id: 'db2', asset: 'assets/art/standee-desert-bone.png', originalW: 536, originalH: 449, w: 300, h: 251, x: 1522, y: 829, baseY: 1080, ellipse: { cx: 1680.0, cy: 1040.2, rx: 96.0, ry: 28.8 } },
-    { id: 'rb1', asset: 'assets/art/standee-ruined-blocks.png', originalW: 409, originalH: 313, w: 200, h: 153, x: 526, y: 927, baseY: 1080, ellipse: { cx: 620.0, cy: 1046.4, rx: 89.5, ry: 26.9 } },
-    { id: 'rb2', asset: 'assets/art/standee-ruined-blocks.png', originalW: 409, originalH: 313, w: 180, h: 138, x: 1116, y: 42, baseY: 180, ellipse: { cx: 1200.0, cy: 149.7, rx: 80.5, ry: 24.2 } },
+    { id: 'rb1', asset: 'assets/art/standee-ruined-blocks.png', originalW: 409, originalH: 313, w: 200, h: 153, x: 526, y: 927, baseY: 1080, ellipse: { cx: 620.0, cy: 1052.1, rx: 89.5, ry: 26.9 } },
+    { id: 'rb2', asset: 'assets/art/standee-ruined-blocks.png', originalW: 409, originalH: 313, w: 180, h: 138, x: 1116, y: 42, baseY: 180, ellipse: { cx: 1200.0, cy: 154.9, rx: 80.5, ry: 24.2 } },
     { id: 'rc1', asset: 'assets/art/standee-rock-cluster.png', originalW: 417, originalH: 313, w: 140, h: 105, x: 1437, y: 1075, baseY: 1180, ellipse: { cx: 1500.0, cy: 1158.2, rx: 57.4, ry: 17.2 } }
   ];
 
