@@ -1296,6 +1296,12 @@
   for (var ptm = 0; ptm < MONSTER_PACKS_TONG_MON.length; ptm++) {
     forceWalkable(collisionGridTongMon, MONSTER_PACKS_TONG_MON[ptm].anchor.x, MONSTER_PACKS_TONG_MON[ptm].anchor.y);
   }
+  // Đợt TOWERPATH (Bui 06:45 ngày 2026-11-14): đường đá tới chân Tháp Tu Luyện.
+  // Tuyến vẽ trên nền: vành đông đấu trường (1496,892) -> bãi cỏ -> gờ đá -> sân trước cửa tháp.
+  // Các ô trên tuyến đã đi được sẵn trong lưới gốc (đã kiểm bằng A* thật — xem patch/tower-path-route.json);
+  // forceWalkable dưới đây chỉ là bảo đảm cho điểm đứng trước cửa, theo đúng quy ước của map này.
+  // TUYỆT ĐỐI không mở ô nào của baseRect tháp (1635,795,210x55) hay biên đông (x>=1895).
+  forceWalkable(collisionGridTongMon, 1740, 875); // điểm đứng trước cửa tháp (ngay nam baseRect)
 
   var MAP_TONG_MON = {
     id: 'tong-mon',
