@@ -203,6 +203,7 @@
         fireElement: input.fireElement || (recipe ? recipe.elem : 'moc'),
         heatScore: heatScore,
         sealTiming: sealTiming,
+        heatLevel: (typeof input.heatLevel === 'number') ? input.heatLevel : null,
         materialQualities: materialQualities,
         nowMs: input.nowMs
       },

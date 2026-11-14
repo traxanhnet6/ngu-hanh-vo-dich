@@ -8536,12 +8536,18 @@
               var sImg = assets[std.asset] || (std.id === 'fallen_log_1' ? assets.fallen_log : (std.id === 'broadleaf_1' || std.id === 'broadleaf_2' || std.id === 'broadleaf_3' ? assets.broadleaf_tree : assets[std.id]));
               if (std.id === 'standee_dan_lo') {
                 var isBurning = isDanLoBurning();
-                var danloAsset = isBurning ? (std.burningAsset || 'assets/art/danlo-burning.png') : (std.asset || 'assets/art/danlo-cold.png');
-                var dImg = assets[danloAsset] || assets[std.asset];
-                if (dImg && dImg.complete && dImg.naturalWidth > 0) {
-                  ctx.drawImage(dImg, std.x, std.y, std.w, std.h);
-                } else {
-                  drawDanLoProcedural(ctx, std.x, std.y, std.w, std.h, std.feetX, std.feetY, isBurning);
+                var _danfireDrawn = false;
+                if (isBurning && typeof window !== 'undefined' && window.GameDanFire && typeof window.GameDanFire.drawDanLo === 'function') {
+                  try { _danfireDrawn = !!window.GameDanFire.drawDanLo(ctx, std, (typeof performance !== 'undefined' ? performance.now() : Date.now())); } catch (e) { _danfireDrawn = false; }
+                }
+                if (!_danfireDrawn) {
+                  var danloAsset = isBurning ? (std.burningAsset || 'assets/art/danlo-burning.png') : (std.asset || 'assets/art/danlo-cold.png');
+                  var dImg = assets[danloAsset] || assets[std.asset];
+                  if (dImg && dImg.complete && dImg.naturalWidth > 0) {
+                    ctx.drawImage(dImg, std.x, std.y, std.w, std.h);
+                  } else {
+                    drawDanLoProcedural(ctx, std.x, std.y, std.w, std.h, std.feetX, std.feetY, isBurning);
+                  }
                 }
               } else {
                 if (std.trunk) {
@@ -11087,6 +11093,7 @@
     handleRevive: handleRevive,
     setPlayer: function (p) { player = p; },
     getPlayer: function () { return player; },
+    isDanLoBurning: isDanLoBurning,
     switchMap: switchMap,
     teleportTo: teleportTo,
     spawnFloatingText: spawnFloatingText,
@@ -11117,6 +11124,7 @@
     },
     getGroundDrops: function () { return groundDrops; },
     getPlayer: function () { return player; },
+    isDanLoBurning: isDanLoBurning,
     performContextAction: performContextAction,
     executeHarvestNode: executeHarvestNode,
     getActionContext: function () { return computeActionContext(); },

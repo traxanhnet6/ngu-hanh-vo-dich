@@ -374,7 +374,12 @@
     player.stats.refines = (player.stats.refines || 0) + 1;
     if (!player.luyenDan) player.luyenDan = {};
     player.luyenDan.lastRefineAt = Date.now();
-    if (typeof window !== 'undefined') window.__danLoBurningUntil = Date.now() + 60000;
+    player.luyenDan.lastHeatLevel = player.luyenDan.lastHeatLevel || 2;
+    if (typeof window !== 'undefined') {
+      window.__danLoBurningUntil = Date.now() + 60000;
+      window.__danLoNgungDanUntil = Date.now() + 2000;
+      window.__danLoNgungDanWisp = window.__danLoNgungDanWisp || 'trung';
+    }
     st.savePlayer(player);
 
     var msgOk = 'Luyện thành công 1 ' + itemName(recipe.pillId) + '! Dùng đan để tăng 20 tu vi ' + ELEM_NAMES[elem] + '.';
@@ -427,7 +432,12 @@
     player.stats.refines = (player.stats.refines || 0) + 1;
     if (!player.luyenDan) player.luyenDan = {};
     player.luyenDan.lastRefineAt = Date.now();
-    if (typeof window !== 'undefined') window.__danLoBurningUntil = Date.now() + 60000;
+    player.luyenDan.lastHeatLevel = player.luyenDan.lastHeatLevel || 2;
+    if (typeof window !== 'undefined') {
+      window.__danLoBurningUntil = Date.now() + 60000;
+      window.__danLoNgungDanUntil = Date.now() + 2000;
+      window.__danLoNgungDanWisp = window.__danLoNgungDanWisp || 'trung';
+    }
     st.savePlayer(player);
 
     var msgOk = 'Luyện thành công 1 ' + itemName(recipe.pillId) + '! ' + recipe.usedAt + ' — mở bảng Đột Phá Tiểu Mốc (gặp Chấp Sự) để dùng.';

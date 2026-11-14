@@ -200,6 +200,7 @@
     if (typeof s.rank !== 'number') s.rank = 0;
     s.rank = Math.max(0, Math.min(3, Math.floor(s.rank)));
     if (typeof s.toxin !== 'number') s.toxin = 0;
+    if (typeof s.lastHeatLevel !== 'number' || s.lastHeatLevel < 1 || s.lastHeatLevel > 3) s.lastHeatLevel = 2;
     if (!Array.isArray(s.recipes)) s.recipes = [];
     if (!Array.isArray(s.availableRecipes)) s.availableRecipes = [];
     if (!s.fragments || typeof s.fragments !== 'object') s.fragments = {};
@@ -684,12 +685,22 @@
     recordProficiency(player, pillId, true);
     s.pillGrades[pillId] = Math.max(s.pillGrades[pillId] || 0, gradeIdx);
     s.lastGrade = { pillId: pillId, grade: gradeName, danVan: danVan, score: score };
+    // Đợt DANFIRE: ghi mức lửa theo trạng thái thật (mức khống hỏa đã chọn)
+    // để lò cháy đúng cường độ; vệt khói giữa hiện đúng màu phẩm khi ngưng đan.
+    var _heatLevel = (typeof plan.heatLevel === 'number') ? Math.max(1, Math.min(3, Math.floor(plan.heatLevel))) : (typeof s.lastHeatLevel === 'number' ? s.lastHeatLevel : 2);
+    s.lastHeatLevel = _heatLevel;
+    if (typeof s.lastHeatLevel !== 'number' || s.lastHeatLevel < 1 || s.lastHeatLevel > 3) s.lastHeatLevel = 2;
 
     // Đợt DANBOARD: successes chỉ tăng 1 lần/mẻ, tại recordProficiency ở
     // trên. Dòng tăng thừa ở đây (đếm đôi) đã gỡ — ngưỡng học kỹ năng và
     // cấp đan sư đọc đúng nghĩa "số mẻ thành công".
     s.lastRefineAt = Date.now();
-    if (typeof window !== 'undefined') window.__danLoBurningUntil = Date.now() + 60000;
+    if (typeof window !== 'undefined') {
+      window.__danLoBurningUntil = Date.now() + 60000;
+      window.__danLoNgungDanUntil = Date.now() + 4000;
+      var _wispKey = (gradeName === 'cực') ? 'cuc' : (gradeName === 'thượng' ? 'thuong' : (gradeName === 'trung' ? 'trung' : 'ha'));
+      window.__danLoNgungDanWisp = _wispKey;
+    }
     getAlchemistRank(player);
 
     if (!player.stats) player.stats = { playSec: 0, kills: 0, bossKills: 0, harvests: 0, refines: 0 };
@@ -731,6 +742,7 @@
       fireElement: recipe.elem,
       heatScore: 0.7,
       sealTiming: 0.7,
+      heatLevel: 2,
       maxGradeIndex: 2
     };
     if (materialQualities) plan.materialQualities = materialQualities;
