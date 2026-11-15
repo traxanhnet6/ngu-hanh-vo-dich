@@ -2032,7 +2032,7 @@
   // theo bảng tránh mặt đã kiểm trên khung thật: lưỡi nghiêng ra ngoài,
   // không che mặt (south/southwest từ ART-GATE v1–v3, west/northeast khóa
   // đợt này trên dải ghép 64 khung).
-  var HH_SWORD_DISPLAY = 168;
+  var HH_SWORD_DISPLAY = 150;
   var HH_SWORD_GRIP = [206, 1672];
   var HH_SWORD_ANGLE = {
     south: -35, southwest: 25, north: 0, northwest: 0,
