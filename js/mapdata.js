@@ -783,9 +783,12 @@
     },
     {
       id: 'standee_thap',
+      // Đợt SECTART-INTEGRATE: hình tháp 8 mái v1 (Bui quyết 06:45 2026-11-14),
+      // CHƯA NGHIỆM THU. Bitmap 1250x1920 tỉ lệ 0,6510 = khổ hiển thị 280x430
+      // (0,6512) nên giữ nguyên rect/neo/va chạm — chỉ thay tệp hình.
       asset: 'assets/art/standee-thap.png',
-      originalW: 280,
-      originalH: 687,
+      originalW: 1250,
+      originalH: 1920,
       w: 280,
       h: 430,
       x: 1600,
@@ -795,12 +798,16 @@
     },
     {
       id: 'standee_portal',
+      // Đợt SECTART-INTEGRATE: hình cổng bí cảnh v1, CHƯA NGHIỆM THU. Bitmap
+      // vuông 1600x1600 nên rect rộng 170->180 (x 1560->1555) để giữ tỉ lệ
+      // bitmap đã nạp, chân đế (neo 0,494/0,962) khớp vị trí cũ; baseY/trunk
+      // (va chạm) giữ nguyên.
       asset: 'assets/art/standee-portal.png',
-      originalW: 133,
-      originalH: 257,
-      w: 170,
+      originalW: 1600,
+      originalH: 1600,
+      w: 180,
       h: 180,
-      x: 1560,
+      x: 1555,
       y: 70,
       baseY: 250,
       trunk: { x: 1645, y: 215, r: 25 }
