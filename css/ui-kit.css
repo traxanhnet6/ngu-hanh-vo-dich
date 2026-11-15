@@ -1,0 +1,703 @@
+/* ==========================================================================
+   ĐỢT UIKIT-INTEGRATE (2026-11-14) — Áp bộ khung giao diện (bộ khung Ngũ Hành,
+   92 PNG, nhãn CHƯA NGHIỆM THU) vào game web theo đúng 9 quyết định Bui đã
+   duyệt 06:42 ngày 2026-11-14. Tệp này nạp SAU css/style.css và chỉ GHI ĐÈ
+   hình thức; mọi luật chỉ hiệu lực khi <body> mang class `uikit` + một trong
+   hai class biến thể `uikit-pc` / `uikit-phone` do js/ui.js đặt MỘT LẦN lúc
+   khởi động (theo §5 UI-KIT.md: một bản duy nhất suốt phiên, không đổi giữa
+   chừng). Nếu JS không đặt class, game giữ nguyên giao diện live.
+
+   Quy ước ảnh: đường dẫn tương đối từ css/ tới assets/ui-kit/. Khung giãn
+   được dùng border-image (slice = margins_px trong margins.json, width =
+   margins_logical, kèm `fill`); khung cố định (ô, nút tròn, cần) dùng
+   background-image 100% 100% để icon con vẽ lên trên. Nền live giữ nguyên
+   bên dưới mọi khung để nếu ảnh khung lỗi thì giao diện vẫn đọc được.
+   ========================================================================== */
+
+/* ---------- Biến thể PC: ảnh + lát cắt + cỡ ---------- */
+body.uikit-pc {
+  --uk-panel: url('../assets/ui-kit/panel-frame__pc.png');
+  --uk-panel-slice: 30;
+  --uk-panel-width: 15px;
+  --uk-panel-outset: 14px;
+  --uk-panel-sm: url('../assets/ui-kit/panel-frame-small__pc.png');
+  --uk-panel-sm-slice: 30;
+  --uk-panel-sm-width: 15px;
+  --uk-panel-sm-outset: 14px;
+  --uk-strip: url('../assets/ui-kit/skillbar-strip__pc.png');
+  --uk-strip-slice: 32;
+  --uk-strip-width: 16px;
+  --uk-toolbar: url('../assets/ui-kit/toolbar-strip__pc.png');
+  --uk-toolbar-slice: 32;
+  --uk-toolbar-width: 12px;
+  --uk-track: url('../assets/ui-kit/bar-track__pc.png');
+  --uk-track-slice: 6 14;
+  --uk-track-width: 3px 7px;
+  --uk-btn: url('../assets/ui-kit/btn-normal__pc.png');
+  --uk-btn-hover: url('../assets/ui-kit/btn-hover__pc.png');
+  --uk-btn-pressed: url('../assets/ui-kit/btn-pressed__pc.png');
+  --uk-btn-disabled: url('../assets/ui-kit/btn-disabled__pc.png');
+  --uk-btn-gold: url('../assets/ui-kit/btn-gold-normal__pc.png');
+  --uk-btn-gold-hover: url('../assets/ui-kit/btn-gold-hover__pc.png');
+  --uk-btn-gold-pressed: url('../assets/ui-kit/btn-gold-pressed__pc.png');
+  --uk-btn-gold-disabled: url('../assets/ui-kit/btn-gold-disabled__pc.png');
+  --uk-btn-slice: 20;
+  --uk-btn-width: 10px;
+  --uk-tab-active: url('../assets/ui-kit/tab-active__pc.png');
+  --uk-tab-inactive: url('../assets/ui-kit/tab-inactive__pc.png');
+  --uk-tab-slice: 16 20 8 20;
+  --uk-tab-width: 8px 10px 4px 10px;
+  --uk-toast: url('../assets/ui-kit/toast-frame__pc.png');
+  --uk-toast-slice: 36;
+  --uk-toast-width: 9px;
+  --uk-nameplate: url('../assets/ui-kit/nameplate__pc.png');
+  --uk-nameplate-slice: 16 32;
+  --uk-nameplate-width: 8px 16px;
+  --uk-minimap: url('../assets/ui-kit/minimap-frame__pc.png');
+  --uk-slot-skill: url('../assets/ui-kit/slot-skill__pc.png');
+  --uk-slot-empty: url('../assets/ui-kit/slot-empty__pc.png');
+  --uk-slot-filled: url('../assets/ui-kit/slot-filled__pc.png');
+  --uk-slot-locked: url('../assets/ui-kit/slot-locked__pc.png');
+  --uk-round: url('../assets/ui-kit/round-btn__pc.png');
+  --uk-round-pressed: url('../assets/ui-kit/round-btn-pressed__pc.png');
+  --uk-round-sm: url('../assets/ui-kit/round-btn-small__pc.png');
+  --uk-round-sm-pressed: url('../assets/ui-kit/round-btn-small-pressed__pc.png');
+  --uk-close: url('../assets/ui-kit/btn-close-normal__pc.png');
+  --uk-close-hover: url('../assets/ui-kit/btn-close-hover__pc.png');
+  --uk-joy-base: url('../assets/ui-kit/joystick-base__pc.png');
+  --uk-joy-knob: url('../assets/ui-kit/joystick-knob__pc.png');
+
+  --uk-slot-size: 58px;
+  --uk-action-size: 64px;
+  --uk-pet-size: 48px;
+  --uk-farm-size: 52px;
+  --uk-tab-height: 34px;
+  --uk-skill-icon: 36px;
+  --uk-hotkey-font: 11px;
+  --uk-hotkey-pos: 4px;
+  --uk-hotkey-box: 18px;
+  --uk-nametag-font: 10px;
+  --uk-strip-overlap: -7px;
+}
+
+/* ---------- Biến thể điện thoại: ảnh + lát cắt + cỡ ---------- */
+body.uikit-phone {
+  --uk-panel: url('../assets/ui-kit/panel-frame__phone.png');
+  --uk-panel-slice: 36;
+  --uk-panel-width: 18px;
+  --uk-panel-outset: 17px;
+  --uk-panel-sm: url('../assets/ui-kit/panel-frame-small__phone.png');
+  --uk-panel-sm-slice: 36;
+  --uk-panel-sm-width: 18px;
+  --uk-panel-sm-outset: 17px;
+  --uk-strip: url('../assets/ui-kit/skillbar-strip__phone.png');
+  --uk-strip-slice: 38;
+  --uk-strip-width: 19px;
+  --uk-toolbar: url('../assets/ui-kit/toolbar-strip__phone.png');
+  --uk-toolbar-slice: 38;
+  --uk-toolbar-width: 14px;
+  --uk-track: url('../assets/ui-kit/bar-track__phone.png');
+  --uk-track-slice: 6 16;
+  --uk-track-width: 3px 8px;
+  --uk-btn: url('../assets/ui-kit/btn-normal__phone.png');
+  --uk-btn-hover: url('../assets/ui-kit/btn-hover__phone.png');
+  --uk-btn-pressed: url('../assets/ui-kit/btn-pressed__phone.png');
+  --uk-btn-disabled: url('../assets/ui-kit/btn-disabled__phone.png');
+  --uk-btn-gold: url('../assets/ui-kit/btn-gold-normal__phone.png');
+  --uk-btn-gold-hover: url('../assets/ui-kit/btn-gold-hover__phone.png');
+  --uk-btn-gold-pressed: url('../assets/ui-kit/btn-gold-pressed__phone.png');
+  --uk-btn-gold-disabled: url('../assets/ui-kit/btn-gold-disabled__phone.png');
+  --uk-btn-slice: 24;
+  --uk-btn-width: 12px;
+  --uk-tab-active: url('../assets/ui-kit/tab-active__phone.png');
+  --uk-tab-inactive: url('../assets/ui-kit/tab-inactive__phone.png');
+  --uk-tab-slice: 16 20 8 20;
+  --uk-tab-width: 8px 10px 4px 10px;
+  --uk-toast: url('../assets/ui-kit/toast-frame__phone.png');
+  --uk-toast-slice: 42;
+  --uk-toast-width: 10px;
+  --uk-nameplate: url('../assets/ui-kit/nameplate__phone.png');
+  --uk-nameplate-slice: 16 32;
+  --uk-nameplate-width: 8px 16px;
+  --uk-minimap: url('../assets/ui-kit/minimap-frame__phone.png');
+  --uk-slot-skill: url('../assets/ui-kit/slot-skill__phone.png');
+  --uk-slot-empty: url('../assets/ui-kit/slot-empty__phone.png');
+  --uk-slot-filled: url('../assets/ui-kit/slot-filled__phone.png');
+  --uk-slot-locked: url('../assets/ui-kit/slot-locked__phone.png');
+  --uk-round: url('../assets/ui-kit/round-btn__phone.png');
+  --uk-round-pressed: url('../assets/ui-kit/round-btn-pressed__phone.png');
+  --uk-round-sm: url('../assets/ui-kit/round-btn-small__phone.png');
+  --uk-round-sm-pressed: url('../assets/ui-kit/round-btn-small-pressed__phone.png');
+  --uk-close: url('../assets/ui-kit/btn-close-normal__phone.png');
+  --uk-close-hover: url('../assets/ui-kit/btn-close-hover__phone.png');
+  --uk-joy-base: url('../assets/ui-kit/joystick-base__phone.png');
+  --uk-joy-knob: url('../assets/ui-kit/joystick-knob__phone.png');
+
+  /* Quyết định 5: ô skill 72px trên điện thoại (khung phone vẽ đúng 72). */
+  --uk-slot-size: 72px;
+  --uk-action-size: 80px;
+  --uk-pet-size: 60px;
+  /* Ô pháp quyết Linh Điền 60px: 4 ô + dải vừa khổ 360dp (xem § farm). */
+  --uk-farm-size: 60px;
+  --uk-tab-height: 42px;
+  --uk-skill-icon: 44px;
+  --uk-hotkey-font: 12px;
+  --uk-hotkey-pos: 5px;
+  --uk-hotkey-box: 22px;
+  --uk-nametag-font: 11px;
+  --uk-strip-overlap: -7px;
+}
+
+/* ================= KHUNG PANEL / MODAL ================= */
+/* Khung panel cho mọi hộp modal TRỪ hộp "Bạn Đã Gục" (giữ tông đỏ riêng) và
+   hộp đăng nhập. Hộp chọn giống trên map giữ tông gỗ riêng, không đổi.
+   QUAN TRỌNG: viền bố cục giữ 1px như live, khung vẽ RA NGOÀI bằng
+   border-image-outset — viền 15px đặt trong hộp sẽ bóp nội dung (đo thật:
+   lưới túi 374→346, ô túi 39,25→35,75, thanh HUD 99→77). */
+.uikit .modal-box:not(.death-box),
+.uikit .auth-box {
+  box-sizing: border-box;
+  border-style: solid;
+  border-width: 1px;
+  border-color: transparent;
+  border-image-source: var(--uk-panel);
+  border-image-slice: var(--uk-panel-slice) fill;
+  border-image-width: var(--uk-panel-width);
+  border-image-outset: var(--uk-panel-outset);
+  border-image-repeat: stretch;
+  border-radius: 0;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+}
+
+/* Khung nhân vật + bảng nhiệm vụ: GIỮ NGUYÊN GIAO DIỆN LIVE, không khung.
+   Hai hộp này gần như chạm nhau (đáy khung nhân vật 137, đỉnh bảng nhiệm
+   vụ 135) — mọi khung vẽ thêm (trong hay ngoài) đều chồng lên nội dung hộp
+   kia: đã đo thật, khung outset che mất hàng Linh lực. Cùng lý do hud-frame
+   của bộ khung bị loại: nội dung HUD live không khớp khung cố định. */
+.uikit #char-frame,
+.uikit #quest-panel {
+  /* Cố tình trống: giữ nguyên giao diện live. */
+}
+
+/* Hộp thoại: khung panel + chip tên bằng nameplate. dialogue-frame của bộ
+   khung cố định 600x140 kèm chip tên nướng sẵn nên không dùng được với hộp
+   thoại cao thay đổi theo số lựa chọn. Khung vẽ ra ngoài để không bóp nội
+   dung; đáy hộp nâng đúng một khoảng outset để mép khung không bị cắt. */
+.uikit #dialogue-box {
+  box-sizing: border-box;
+  border-style: solid;
+  border-width: 1px;
+  border-color: transparent;
+  border-image-source: var(--uk-panel);
+  border-image-slice: var(--uk-panel-slice) fill;
+  border-image-width: var(--uk-panel-width);
+  border-image-outset: var(--uk-panel-outset);
+  border-image-repeat: stretch;
+  border-radius: 0;
+  bottom: var(--uk-panel-outset);
+}
+.uikit .dialogue-name {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  min-height: 28px;
+  padding: 3px 18px;
+  box-sizing: border-box;
+  border-style: solid;
+  border-width: var(--uk-nameplate-width);
+  border-color: transparent;
+  border-image-source: var(--uk-nameplate);
+  border-image-slice: var(--uk-nameplate-slice) fill;
+  border-image-width: var(--uk-nameplate-width);
+  border-image-repeat: stretch;
+}
+
+/* Bản đồ nhỏ: khung minimap làm nền, canvas + nhãn vẽ lên trên. Khung làm hộp
+   cao thêm 12px (130→142, đo thật) nên trên PC phải đẩy cụm điều khiển phải
+   xuống đúng 12px, nếu không hàng zoom sẽ che nhãn tên map. Trên điện thoại
+   cụm điều khiển vốn đã nằm thấp hơn nên không cần đẩy. */
+.uikit #minimap-wrap {
+  border: none;
+  border-radius: 0;
+  background-image: var(--uk-minimap);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  padding: 14px 14px 8px;
+}
+/* Đẩy cụm zoom/toolbar/hàng dùng nhanh xuống 12px trên PC (xem chú thích
+   trên). Dùng thuộc tính translate để cộng thêm vào mọi vị trí live, kể cả
+   khi media query đổi top. */
+body.uikit-pc #hud-right-controls {
+  translate: 0 12px;
+}
+
+/* Toast: khung toast-frame. */
+.uikit .toast {
+  box-sizing: border-box;
+  border-style: solid;
+  border-width: var(--uk-toast-width);
+  border-color: transparent;
+  border-image-source: var(--uk-toast);
+  border-image-slice: var(--uk-toast-slice) fill;
+  border-image-width: var(--uk-toast-width);
+  border-image-repeat: stretch;
+  border-radius: 0;
+}
+
+/* ================= THANH TIẾN TRÌNH — QUYẾT ĐỊNH 6: CAO 12 ================= */
+/* Mọi thanh: rãnh dùng khung bar-track, fill giữ gradient CSS (fill PNG của
+   bộ khung không cắt được theo tỉ lệ mà không méo nắp hai đầu). Thanh niêm
+   phong ván luyện đan là minigame bấm giờ theo đoạn, không phải thanh tiến
+   trình — giữ nguyên. */
+.uikit .bar-track,
+.uikit .plot-progress-bar,
+.uikit .farm-plot-progress-bar,
+.uikit .kimdan-bar,
+.uikit .lt-aff-bar {
+  box-sizing: border-box;
+  height: 12px;
+  border-style: solid;
+  border-width: var(--uk-track-width);
+  border-color: transparent;
+  border-image-source: var(--uk-track);
+  border-image-slice: var(--uk-track-slice) fill;
+  border-image-width: var(--uk-track-width);
+  border-image-repeat: stretch;
+  border-radius: 0;
+  overflow: hidden;
+}
+/* Fill máu/linh lực theo đúng màu khóa của bộ khung. */
+.uikit .bar-fill.hp-bar {
+  background: linear-gradient(90deg, #c0392b, #e06048);
+}
+.uikit .bar-fill.linhluc-bar {
+  background: linear-gradient(90deg, #2e86c1, #5ca8e8);
+}
+
+/* ================= NÚT BẤM ================= */
+/* Nút thường + nút vàng theo 4 trạng thái của bộ khung. Nút gỗ (.wood) và
+   nút nguy hiểm (.btn-danger) giữ ngôn ngữ riêng, không đổi. */
+.uikit .btn:not(.wood):not(.btn-danger) {
+  border-style: solid;
+  border-width: var(--uk-btn-width);
+  border-color: transparent;
+  border-image-source: var(--uk-btn);
+  border-image-slice: var(--uk-btn-slice) fill;
+  border-image-width: var(--uk-btn-width);
+  border-image-repeat: stretch;
+  border-radius: 0;
+  box-shadow: none;
+}
+.uikit .btn:not(.wood):not(.btn-danger):hover {
+  border-image-source: var(--uk-btn-hover);
+}
+.uikit .btn:not(.wood):not(.btn-danger):active {
+  border-image-source: var(--uk-btn-pressed);
+}
+.uikit .btn:not(.wood):not(.btn-danger)[disabled],
+.uikit .btn:not(.wood):not(.btn-danger).disabled {
+  border-image-source: var(--uk-btn-disabled);
+}
+.uikit .btn.btn-main:not(.wood):not(.btn-danger) {
+  border-image-source: var(--uk-btn-gold);
+}
+.uikit .btn.btn-main:not(.wood):not(.btn-danger):hover {
+  border-image-source: var(--uk-btn-gold-hover);
+}
+.uikit .btn.btn-main:not(.wood):not(.btn-danger):active {
+  border-image-source: var(--uk-btn-gold-pressed);
+}
+.uikit .btn.btn-main:not(.wood):not(.btn-danger)[disabled],
+.uikit .btn.btn-main:not(.wood):not(.btn-danger).disabled {
+  border-image-source: var(--uk-btn-gold-disabled);
+}
+.uikit .btn.small:not(.wood):not(.btn-danger) {
+  border-width: 6px;
+  border-image-width: 6px;
+}
+
+/* ---------- Nút đóng — QUYẾT ĐỊNH 2: nhìn 40px, vùng chạm 48px ---------- */
+/* Chữ "×" live được giấu (chữ trong suốt); dấu X vàng đã nướng trong ảnh
+   khung. Hộp nút 48x48 chính là vùng chạm. */
+.uikit .btn-close {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  padding: 0;
+  font-size: 0;
+  line-height: 0;
+  color: transparent;
+  text-shadow: none;
+  background-image: var(--uk-close);
+  background-size: 40px 40px;
+  background-position: center;
+  background-repeat: no-repeat;
+  border: none;
+}
+.uikit .btn-close:hover {
+  color: transparent;
+  background-image: var(--uk-close-hover);
+}
+
+/* ---------- Tab túi đồ — QUYẾT ĐỊNH 2: nhìn 34/42px, vùng chạm 48px ---------- */
+/* Chiều cao KHÓA đúng cỡ khung (height + padding dọc 0 + line-height trừ viền
+   trên 8px/dưới 4px); min-height + padding cũ làm tab phình 30→38px.
+   Vùng chạm mở rộng bằng phần tử giả trong suốt; % của phần tử giả tính theo
+   HỘP ĐỆM (padding box) nên phải trừ thêm viền trên/dưới. Hàng tab là hộp
+   cuộn ngang (overflow-x:auto) nên overflow-y tính thành auto và CẮT phần
+   mở rộng — đệm 7px trong hộp + lề âm bù lại để vùng chạm nằm trong hộp
+   cuộn mà bố cục dòng không đổi. */
+.uikit .bag-tab {
+  position: relative;
+  box-sizing: border-box;
+  height: var(--uk-tab-height);
+  min-height: var(--uk-tab-height);
+  padding: 0 14px;
+  line-height: calc(var(--uk-tab-height) - 12px);
+  border-style: solid;
+  border-width: var(--uk-tab-width);
+  border-color: transparent;
+  border-image-source: var(--uk-tab-inactive);
+  border-image-slice: var(--uk-tab-slice) fill;
+  border-image-width: var(--uk-tab-width);
+  border-image-repeat: stretch;
+  border-radius: 0;
+}
+.uikit .bag-tab.active {
+  border-image-source: var(--uk-tab-active);
+}
+.uikit .bag-tab::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc((var(--uk-tab-height) - 48px) / 2 - 8px);
+  bottom: calc((var(--uk-tab-height) - 48px) / 2 - 4px);
+}
+.uikit .bag-tabs {
+  padding: 7px 0 11px;
+  margin: -7px 0 -7px;
+}
+
+/* ================= THANH KỸ NĂNG ================= */
+/* Cụm nút tròn: Thuần Phục + Hợp Kích xếp dọc phía trên nút Tương Tác
+   (quyết định 8). Dải skill chỉ ôm các ô skill (quyết định 5). */
+.uikit .uikit-action-cluster {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.uikit .uikit-skill-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  padding: 9px 12px;
+  border-style: solid;
+  border-width: var(--uk-strip-width);
+  border-color: transparent;
+  border-image-source: var(--uk-strip);
+  border-image-slice: var(--uk-strip-slice) fill;
+  border-image-width: var(--uk-strip-width);
+  border-image-repeat: stretch;
+}
+/* Ô skill chồng lên mép trong của dải như ảnh ghép mẫu của bộ khung. */
+.uikit .uikit-skill-strip .skill-slot {
+  margin-top: var(--uk-strip-overlap);
+  margin-bottom: var(--uk-strip-overlap);
+}
+
+/* Ô skill: khung slot-skill làm nền, icon thật của game vẽ lên trên
+   (quyết định 1). Cỡ theo biến thể (quyết định 5). */
+.uikit .skill-slot {
+  width: var(--uk-slot-size);
+  height: var(--uk-slot-size);
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background-image: var(--uk-slot-skill);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+.uikit .skill-slot:hover {
+  border-color: transparent;
+  box-shadow: none;
+}
+.uikit .skill-icon {
+  width: var(--uk-skill-icon);
+  height: var(--uk-skill-icon);
+}
+/* Số phím nằm trong giếng vuông góc trái-trên của khung (đo từ ảnh thật). */
+.uikit .skill-hotkey {
+  top: var(--uk-hotkey-pos);
+  left: var(--uk-hotkey-pos);
+  width: var(--uk-hotkey-box);
+  height: var(--uk-hotkey-box);
+  padding: 0;
+  font-size: var(--uk-hotkey-font);
+  line-height: var(--uk-hotkey-box);
+  text-align: center;
+  background: transparent;
+  border-radius: 0;
+}
+.uikit .skill-name-tag {
+  font-size: var(--uk-nametag-font);
+}
+
+/* Nút Tương Tác: nút tròn lớn, icon theo ngữ cảnh giữ nguyên của game. */
+.uikit .action-slot {
+  width: var(--uk-action-size);
+  height: var(--uk-action-size);
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background-image: var(--uk-round);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+.uikit .action-slot:active {
+  background-image: var(--uk-round-pressed);
+}
+.uikit-phone .action-slot .action-icon-attack {
+  width: 44px;
+  height: 44px;
+}
+.uikit-phone .action-slot svg.action-icon {
+  width: 40px;
+  height: 40px;
+}
+.uikit-phone .action-slot .skill-name-tag {
+  font-size: 12px;
+}
+
+/* Nút Thuần Phục / Hợp Kích: nút tròn nhỏ, glyph SVG của game giữ nguyên,
+   nhãn chữ giấu trên nút tròn (tên vẫn có trong title + aria-label). */
+.uikit .pet-combat-btn {
+  width: var(--uk-pet-size);
+  height: var(--uk-pet-size);
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background-image: var(--uk-round-sm);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+.uikit .pet-combat-btn:active {
+  background-image: var(--uk-round-sm-pressed);
+}
+.uikit .pet-combat-btn .skill-name-tag {
+  display: none;
+}
+.uikit-phone .pet-combat-btn .pet-combat-glyph {
+  width: 36px;
+  height: 36px;
+}
+.uikit-phone .pet-combat-btn .pet-combat-glyph svg {
+  width: 32px;
+  height: 32px;
+}
+/* Quyết định 8: ẩn hẳn khi không có mục tiêu (JS gắn class này). */
+.uikit .pet-combat-btn.uikit-pet-hidden {
+  display: none;
+}
+
+/* ---------- Ẩn thanh skill khi thoại trên điện thoại — QUYẾT ĐỊNH 3 ---------- */
+/* PC giữ cả hai. JS gắn/gỡ class uikit-dialogue-open ở open/closeDialogue. */
+.uikit-phone.uikit-dialogue-open #skill-bar {
+  display: none;
+}
+
+/* ================= CẦN ĐIỀU KHIỂN ================= */
+/* Giữ nguyên hình học live (đế 120, núm 46) để không động logic cần; chỉ
+   thay mặt art bằng khung của bộ khung. */
+.uikit .joystick-base {
+  background-image: var(--uk-joy-base);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  border: none;
+  box-shadow: none;
+}
+.uikit .joystick-stick {
+  background-image: var(--uk-joy-knob);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  border: none;
+  box-shadow: none;
+}
+
+/* ================= Ô TÚI ĐỒ — QUYẾT ĐỊNH 5: GIỮ HÌNH HỌC LIVE ================= */
+/* Lưới + cỡ ô live giữ nguyên (ô ~44px trong hộp 440px); chỉ thay mặt nền
+   theo trạng thái ô: trống / có đồ / khóa. Viền phẩm N1 + viền chọn giữ
+   nguyên qua border-color. */
+.uikit .bag-slot {
+  background-image: var(--uk-slot-empty);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  border-color: transparent;
+  border-radius: 0;
+}
+.uikit .bag-slot:has(.bag-slot-icon) {
+  background-image: var(--uk-slot-filled);
+}
+.uikit .bag-slot:has(.bag-slot-lock) {
+  background-image: var(--uk-slot-locked);
+}
+.uikit .bag-slot.selected {
+  border-color: #55d882;
+}
+
+/* ================= Ô DÙNG NHANH — QUYẾT ĐỊNH 5: 56px ================= */
+.uikit .quick-slot {
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  border: none;
+  border-radius: 0;
+  background-image: var(--uk-slot-empty);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+.uikit .quick-slot:has(.quick-slot-icon) {
+  background-image: var(--uk-slot-filled);
+}
+.uikit .quick-slot > span {
+  top: 5px;
+  left: 6px;
+  font-size: 10px;
+  line-height: 1.3;
+  padding: 0 4px;
+  background: rgba(0, 0, 0, 0.75);
+  border-radius: 3px;
+  text-shadow: 0 1px 2px #000;
+  z-index: 3;
+}
+/* Icon đồ trong ô 56px phải căn giữa (live neo góc trên-trái vì ô live chỉ
+   32px, bằng đúng icon). */
+.uikit .quick-slot-icon {
+  top: 50%;
+  left: 50%;
+  right: auto;
+  bottom: auto;
+  margin: 0;
+  transform: translate(-50%, -50%);
+}
+
+/* Nút mở rộng hàng dùng nhanh — QUYẾT ĐỊNH 9: hiện ở khổ ≤480px (xem
+   ngưỡng đo thật ở media query bên dưới). Nút KHÔNG mang class .quick-slot
+   để renderQuickSlots không xóa nó. */
+.uikit .uikit-quick-toggle {
+  display: none;
+  position: relative;
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  padding: 0;
+  background-color: #0a0e0a;
+  border: none;
+  border-radius: 0;
+  background-image: var(--uk-slot-empty);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  color: #e8dfc0;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+}
+/* Thu gọn hàng dùng nhanh — QUYẾT ĐỊNH 9. Ngưỡng 480px đo từ thực tế: hàng
+   4 ô 56px rộng 248px, dưới 480px nó chồng lên bảng nhiệm vụ đã mở (chồng
+   88–128px ở khổ 360–400, đo thật trên ảnh chụp); trên 480px thì vừa. Khi
+   thu gọn, nút mở rộng 56px vẫn nằm gọn ở mép phải, không chồng bảng. Bấm
+   nút mở hàng tạm thời để chọn đồ (lớp phủ tạm thời, bấm lại để thu). */
+@media (max-width: 480px) {
+  .uikit-phone .uikit-quick-toggle {
+    display: inline-flex;
+  }
+  .uikit-phone .quick-slots:not(.uikit-quick-expanded) .quick-slot {
+    display: none;
+  }
+  .uikit-phone .quick-slots.uikit-quick-expanded .uikit-quick-toggle svg {
+    transform: rotate(45deg);
+  }
+}
+
+/* ================= THANH CÔNG CỤ — QUYẾT ĐỊNH 7 ================= */
+/* Dải dọc khi mở mang khung toolbar-strip. Các nút gỗ bên trong giữ nguyên. */
+.uikit .hud-toolbar-panel {
+  box-sizing: border-box;
+  padding: 12px;
+  border-style: solid;
+  border-width: var(--uk-toolbar-width);
+  border-color: transparent;
+  border-image-source: var(--uk-toolbar);
+  border-image-slice: var(--uk-toolbar-slice) fill;
+  border-image-width: var(--uk-toolbar-width);
+  border-image-repeat: stretch;
+}
+/* Điện thoại: 3 nút chính (Túi, Linh Điền, Cài Đặt) + nút mở rộng; 2 nút
+   còn lại (Linh Mễ, Linh Thú) chỉ hiện khi mở rộng. PC: đủ 5 nút, không
+   có nút mở rộng. Thứ tự trực quan đặt bằng order, DOM giữ nguyên. */
+.uikit-pc #btn-toolbar-more {
+  display: none;
+}
+.uikit-phone #btn-bag { order: 1; }
+.uikit-phone #btn-linhdien { order: 2; }
+.uikit-phone #btn-settings { order: 3; }
+.uikit-phone #btn-toolbar-more { order: 4; }
+.uikit-phone #btn-linhme { order: 5; }
+.uikit-phone #btn-linhthu { order: 6; }
+.uikit-phone .uikit-toolbar-extra {
+  display: none;
+}
+.uikit-phone #hud-toolbar.uikit-toolbar-show-all .uikit-toolbar-extra {
+  display: inline-flex;
+}
+.uikit-phone #hud-toolbar.uikit-toolbar-show-all #btn-toolbar-more .uikit-more-chevron {
+  transform: rotate(180deg);
+}
+
+/* ================= THANH PHÁP QUYẾT LINH ĐIỀN ================= */
+/* Tấm mang khung panel nhỏ; 4 ô pháp quyết mang khung slot-skill. Icon
+   pháp quyết là dữ liệu live của game, giữ nguyên. */
+.uikit .farm-skill-bar {
+  box-sizing: border-box;
+  padding: 14px 16px 12px;
+  border-style: solid;
+  border-width: var(--uk-panel-sm-width);
+  border-color: transparent;
+  border-image-source: var(--uk-panel-sm);
+  border-image-slice: var(--uk-panel-sm-slice) fill;
+  border-image-width: var(--uk-panel-sm-width);
+  border-image-repeat: stretch;
+  border-radius: 0;
+}
+.uikit .farm-skill-btn {
+  width: var(--uk-farm-size);
+  height: var(--uk-farm-size);
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background-image: var(--uk-slot-skill);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+.uikit .farm-skill-btn:disabled {
+  filter: grayscale(0.7);
+  opacity: 0.6;
+}
+
+/* ================= HUY HIỆU THỨC ĂN — QUYẾT ĐỊNH 1 ================= */
+/* Chữ "Mễ" thay bằng icon thật của món ăn trong icons-sheet (JS đặt vị trí
+   nền theo đúng món đang có hiệu lực, mặc định ô cơm Linh Mễ). */
+.uikit .food-buff-icon {
+  display: inline-block;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  font-size: 0;
+  line-height: 0;
+  background-image: url('../assets/art/icons-sheet.png');
+  background-size: 192px 256px;
+  background-repeat: no-repeat;
+  background-position: -160px -160px;
+}

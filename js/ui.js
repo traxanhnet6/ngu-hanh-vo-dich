@@ -72,6 +72,50 @@
   /**
    * Khởi tạo giao diện người dùng
    */
+  // Đợt UIKIT-INTEGRATE: chọn biến thể khung PC/điện thoại MỘT LẦN lúc khởi
+  // động (§5 UI-KIT.md: một bản duy nhất suốt phiên, không đổi giữa chừng)
+  // + nối dây các nút mới của đợt. Không đổi logic game.
+  function applyUIKitVariant() {
+    if (typeof document === 'undefined' || !document.body) return;
+    var coarse = false;
+    try { coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches); } catch (e) { coarse = false; }
+    var narrow = false;
+    try { narrow = window.innerWidth <= 640; } catch (e) { narrow = false; }
+    document.body.classList.add('uikit');
+    document.body.classList.add((coarse || narrow) ? 'uikit-phone' : 'uikit-pc');
+  }
+
+  // Quyết định 7: nút mở rộng của thanh công cụ trên điện thoại.
+  function wireUIKitToolbar() {
+    var more = document.getElementById('btn-toolbar-more');
+    if (!more || more.dataset.wired) return;
+    more.dataset.wired = '1';
+    more.addEventListener('click', function () {
+      var bar = document.getElementById('hud-toolbar');
+      if (!bar) return;
+      var expanded = bar.classList.toggle('uikit-toolbar-show-all');
+      more.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      var label = more.querySelector('.hud-tool-label');
+      if (label) label.textContent = expanded ? 'Thu gọn' : 'Thêm';
+      if (audioAPI) audioAPI.playClick();
+    });
+  }
+
+  // Quyết định 9: nút mở rộng hàng dùng nhanh ở khổ hẹp hơn cả 360dp.
+  function wireUIKitQuickToggle() {
+    var tog = document.getElementById('btn-quick-slots-toggle');
+    if (!tog || tog.dataset.wired) return;
+    tog.dataset.wired = '1';
+    tog.addEventListener('click', function () {
+      var row = document.getElementById('quick-slots');
+      if (!row) return;
+      var expanded = row.classList.toggle('uikit-quick-expanded');
+      tog.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      tog.title = expanded ? 'Thu hàng dùng nhanh' : 'Mở hàng dùng nhanh';
+      if (audioAPI) audioAPI.playClick();
+    });
+  }
+
   function initUI(playerObj, mapObj) {
     player = playerObj;
     mapData = mapObj || (typeof window !== 'undefined' ? window.MapData : null);
@@ -86,6 +130,10 @@
     }
 
     if (typeof document === 'undefined') return;
+
+    applyUIKitVariant();
+    wireUIKitToolbar();
+    wireUIKitQuickToggle();
 
     minimapCanvas = document.getElementById('minimap-canvas');
     if (minimapCanvas) {
@@ -1269,10 +1317,12 @@
               var icon = document.createElement('div');
               icon.className = 'quick-slot-icon';
               icon.style.backgroundImage = "url('assets/art/icons-sheet.png')";
-              icon.style.backgroundPosition = (-(def.iconCol || 0) * 24) + 'px ' + (-(def.iconRow || 0) * 24) + 'px';
-              icon.style.backgroundSize = '144px 192px';
-              icon.style.width = '24px';
-              icon.style.height = '24px';
+              // Đợt UIKIT-INTEGRATE (quyết định 5): ô dùng nhanh 56px, icon 32px
+              // (ô 32px của sheet, trước đây 24px trong ô 32px).
+              icon.style.backgroundPosition = (-(def.iconCol || 0) * 32) + 'px ' + (-(def.iconRow || 0) * 32) + 'px';
+              icon.style.backgroundSize = '192px 256px';
+              icon.style.width = '32px';
+              icon.style.height = '32px';
               el.appendChild(icon);
             }
             el.title = (def ? def.name : s.itemId) + ' x' + (s.count || 1);
@@ -3090,6 +3140,17 @@
         var fTimer = document.getElementById('hud-food-timer');
         if (fName) fName.textContent = activeBuff.name;
         if (fTimer) fTimer.textContent = activeBuff.timeStr;
+        // Đợt UIKIT-INTEGRATE (quyết định 1): icon thật của món ăn trong
+        // icons-sheet theo đúng món đang có hiệu lực; mặc định ô (5,5) là
+        // icon chung của cả 3 món Cơm/Cháo Linh Mễ trong ITEM_DEFS.
+        var fIcon = foodBadge.querySelector('.food-buff-icon');
+        if (fIcon) {
+          var fDefs = (monstersAPI && monstersAPI.ITEM_DEFS) ? monstersAPI.ITEM_DEFS : {};
+          var fDef = fDefs[activeBuff.foodId] || {};
+          var fCol = (typeof fDef.iconCol === 'number') ? fDef.iconCol : 5;
+          var fRow = (typeof fDef.iconRow === 'number') ? fDef.iconRow : 5;
+          fIcon.style.backgroundPosition = (-fCol * 32) + 'px ' + (-fRow * 32) + 'px';
+        }
         foodBadge.title = activeBuff.name + ': +' + activeBuff.hpPerTick + ' HP, +' + activeBuff.mpPerTick + ' MP mỗi ' + activeBuff.tickIntervalSec + 's. Còn lại: ' + activeBuff.timeStr;
       } else {
         foodBadge.classList.add('hidden');
@@ -3755,6 +3816,9 @@
     }
 
     if (dialogueBox) dialogueBox.classList.remove('hidden');
+    // Đợt UIKIT-INTEGRATE (quyết định 3): điện thoại ẩn thanh skill khi thoại;
+    // CSS chỉ ẩn ở biến thể phone, PC giữ cả hai. Gỡ ở closeDialogue.
+    if (typeof document !== 'undefined' && document.body) document.body.classList.add('uikit-dialogue-open');
     renderDialogueLine();
   }
 
@@ -4203,6 +4267,8 @@
     dialogueState.active = false;
     var dialogueBox = document.getElementById('dialogue-box');
     if (dialogueBox) dialogueBox.classList.add('hidden');
+    // Đợt UIKIT-INTEGRATE (quyết định 3): đóng thoại hiện lại thanh skill ngay.
+    if (typeof document !== 'undefined' && document.body) document.body.classList.remove('uikit-dialogue-open');
     var choicesEl = document.getElementById('dialogue-choices');
     if (choicesEl) { choicesEl.innerHTML = ''; choicesEl.classList.add('hidden'); }
     var prevStepId = dialogueState.prevStepId;
@@ -5023,6 +5089,12 @@
         lastTameBtnState = key;
         tameBtn.disabled = !ts.available;
         tameBtn.title = ts.available ? ('Thuần phục (tỉ lệ ' + Math.round((ts.chance || 0) * 100) + '%)') : ts.reason;
+        // Đợt UIKIT-INTEGRATE (quyết định 8): ẩn khi không có mục tiêu — chuỗi
+        // lý do lấy đúng js/engine.js getTameState ('Chưa chọn quái.' khi chưa
+        // chọn quái hoặc quái đã chết; 'Chưa sẵn sàng.' khi chưa vào game).
+        // Đã chọn quái nhưng chưa đủ điều kiện thì vẫn hiện (mờ) để thấy lý do.
+        var hideTame = !ts.available && (ts.reason === 'Chưa chọn quái.' || ts.reason === 'Chưa sẵn sàng.');
+        tameBtn.classList.toggle('uikit-pet-hidden', !!hideTame);
       }
     }
     var harmBtn = document.getElementById('btn-hop-kich');
@@ -5033,6 +5105,11 @@
         lastHarmonyBtnState = hkey;
         harmBtn.disabled = !hs.ready;
         harmBtn.title = hs.ready ? 'Hợp kích' : hs.reason;
+        // Đợt UIKIT-INTEGRATE (quyết định 8): ẩn khi chưa có thú đi cùng (không
+        // có mục tiêu hợp kích); đã có thú nhưng chưa đủ điều kiện thì vẫn hiện
+        // (mờ) để thấy lý do. Chuỗi lý do lấy đúng js/engine.js getHarmonyState.
+        var hideHarm = !hs.ready && (hs.reason === 'Chưa có thú đi cùng.' || hs.reason === 'Chưa sẵn sàng.');
+        harmBtn.classList.toggle('uikit-pet-hidden', !!hideHarm);
       }
     }
   }
