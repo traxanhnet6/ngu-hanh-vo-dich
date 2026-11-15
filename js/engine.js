@@ -2030,13 +2030,17 @@
   // Hiển thị 168px = 1,5× chiều cao nhân vật (112px) — dưới cỡ này hoa văn
   // đốc + tua đỏ mất nét. Góc xoay canvas (độ, dương = chiều kim đồng hồ)
   // theo bảng tránh mặt đã kiểm trên khung thật: lưỡi nghiêng ra ngoài,
-  // không che mặt (south/southwest từ ART-GATE v1–v3, west/northeast khóa
-  // đợt này trên dải ghép 64 khung).
+  // không che mặt (south/southwest từ ART-GATE v1–v3, giữ nguyên).
+  // Đợt GRIPFIX2 2026-11-15: 6 hướng còn lại để 0° nên lưỡi dựng đứng
+  // xuyên qua/ghé sát đầu (đã soi đủ 112 khung idle+walk phủ điểm nắm) —
+  // cho cả 6 hướng nghiêng ra ngoài theo phía tay (đông/tây nghiêng về
+  // phía trước mặt), cùng phía tay khi nghỉ và khi đi nên không lật
+  // phía lúc bắt đầu/dừng đi; cỡ kiếm giữ nguyên.
   var HH_SWORD_DISPLAY = 150;
   var HH_SWORD_GRIP = [206, 1672];
   var HH_SWORD_ANGLE = {
-    south: -35, southwest: 25, north: 0, northwest: 0,
-    southeast: 0, east: 0, west: 0, northeast: 0
+    south: -35, southwest: 25, north: -35, northwest: 35,
+    southeast: -35, east: 35, west: -35, northeast: 35
   };
   var HH_HAND_GEN_IDLE = {
     south: [0.14, 0.70], southeast: [0.22, 0.71], east: [0.42, 0.72], northeast: [0.47, 0.68],
@@ -6782,7 +6786,11 @@
             } else {
               slideVel.y = 0; // trượt đụng tường: dừng thành phần dọc
             }
-            if (moved) player.dir = getDirFromVelocity(slideVel.x, slideVel.y);
+            // Đợt GRIPFIX2: vận tốc có thể về (0,0) khi cả hai thành phần
+            // đều đụng tường (bước dài 0 vẫn đặt moved) — getDirFromVelocity
+            // của (0,0) trả về đông nên mặt bị lật sang đông khi đẩy tường;
+            // vận tốc bằng 0 thì mặt theo phím như nhánh kẹt tường.
+            if (moved && Math.hypot(slideVel.x, slideVel.y) > 0) player.dir = getDirFromVelocity(slideVel.x, slideVel.y);
             else player.dir = getDirFromVelocity(vx, vy); // kẹt tường: mặt vẫn theo phím
           }
         } else {
@@ -6807,7 +6815,9 @@
           } else {
             groundVel.y = 0; // đụng tường: dừng thành phần dọc
           }
-          if (moved) player.dir = getDirFromVelocity(groundVel.x, groundVel.y);
+          // Đợt GRIPFIX2: như nhánh trượt băng — vận tốc về (0,0) khi kẹt
+          // tường thì mặt theo phím, không lật sang đông.
+          if (moved && Math.hypot(groundVel.x, groundVel.y) > 0) player.dir = getDirFromVelocity(groundVel.x, groundVel.y);
           else player.dir = getDirFromVelocity(vx, vy); // kẹt tường: mặt vẫn theo phím
         }
         currentPath = [];
@@ -6867,7 +6877,9 @@
           } else {
             slideVel.y = 0;
           }
-          if (moved) {
+          // Đợt GRIPFIX2: trượt quán tính đụng tường về vận tốc 0 thì giữ
+          // nguyên hướng mặt, không lật sang đông.
+          if (moved && Math.hypot(slideVel.x, slideVel.y) > 0) {
             player.dir = getDirFromVelocity(slideVel.x, slideVel.y);
             slidingOnly = true; // trượt không bước: không phát tiếng bước chân
           }
@@ -6898,7 +6910,9 @@
           } else {
             groundVel.y = 0;
           }
-          if (moved) player.dir = getDirFromVelocity(groundVel.x, groundVel.y);
+          // Đợt GRIPFIX2: trượt đà đụng tường về vận tốc 0 thì giữ nguyên
+          // hướng mặt, không lật sang đông.
+          if (moved && Math.hypot(groundVel.x, groundVel.y) > 0) player.dir = getDirFromVelocity(groundVel.x, groundVel.y);
         }
       }
     }
