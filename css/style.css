@@ -4880,3 +4880,85 @@ body.photo-mode #toast-container { visibility: hidden; }
 .linhdien-field-seed-panel.hidden {
   display: none;
 }
+
+/* ==========================================================================
+   ĐỢT P2A — bảng nhân vật: linh khí theo đất + tốc độ thổ nạp + kinh mạch
+   (không thêm nút HUD mới; chỉ trình bày trong modal Thống Kê sẵn có)
+   ========================================================================== */
+.stats-subtitle {
+  margin: 14px 0 6px;
+  font-size: 12px;
+  letter-spacing: 0.4px;
+  color: #ffe9a8;
+  border-bottom: 1px solid rgba(255, 233, 168, 0.25);
+  padding-bottom: 4px;
+}
+
+.stats-count {
+  font-size: 11px;
+  color: #9fd7c8;
+  font-weight: normal;
+}
+
+.stats-hint {
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #a8bdb1;
+}
+
+.stats-path-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 4px;
+  border: 0;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+  background: transparent;
+  color: #d4e0d6;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.stats-path-row:hover,
+.stats-path-row:focus-visible {
+  background: rgba(255, 233, 168, 0.08);
+}
+
+.stats-path-detail {
+  padding: 6px 8px 8px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #bfe6d3;
+  background: rgba(0, 0, 0, 0.22);
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+
+.meridian-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+  margin: 6px 0;
+}
+
+.meridian-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  border-radius: 6px;
+  font-size: 12px;
+  border: 1px solid #4a5a50;
+  background: #1b241e;
+  color: #7e8f83;
+}
+
+.meridian-cell.open {
+  border-color: #7fd4ff;
+  background: linear-gradient(180deg, #1d3b45, #14262b);
+  color: #cdefff;
+  box-shadow: 0 0 6px rgba(127, 212, 255, 0.35);
+}

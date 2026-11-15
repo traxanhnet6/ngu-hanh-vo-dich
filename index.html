@@ -709,6 +709,20 @@
         <div class="summary-row"><span>Boss đã hạ:</span> <b id="stats-bosses">0</b></div>
         <div class="summary-row"><span>Lượt thu hoạch linh dược:</span> <b id="stats-harvests">0</b></div>
         <div class="summary-row"><span>Đan đã luyện thành:</span> <b id="stats-refines">0</b></div>
+
+        <!-- Đợt P2A: linh khí theo đất + thổ nạp thật + kinh mạch (hồ sơ 45) -->
+        <h3 class="stats-subtitle">LINH KHÍ NƠI ĐỨNG</h3>
+        <div class="summary-row"><span>Đất:</span> <b id="stats-land-name">—</b></div>
+        <div class="summary-row"><span>Tốc độ thổ nạp:</span> <b id="stats-tu-speed">0</b></div>
+        <div id="stats-thien-tu-note" class="stats-hint"></div>
+
+        <h3 class="stats-subtitle">TU VI TỪNG ĐƯỜNG <span class="stats-count">bấm để xem nguồn</span></h3>
+        <div id="stats-path-rows"></div>
+
+        <h3 class="stats-subtitle">KINH MẠCH <span id="stats-meridian-count" class="stats-count">0/8</span></h3>
+        <div id="stats-meridians" class="meridian-grid"></div>
+        <div id="stats-meridian-bonus" class="stats-hint"></div>
+
         <div class="modal-actions" style="margin-top: 14px;">
           <button id="btn-close-stats" class="btn wood" type="button">Đóng</button>
         </div>
@@ -1326,6 +1340,8 @@
   <script src="js/music.js"></script>
   <script src="js/voice.js"></script>
   <script src="js/mapdata.js"></script>
+  <!-- Đợt P2A: thiền/thổ nạp + linh khí theo đất + kinh mạch (hồ sơ 45) -->
+  <script src="js/thien-tu.js"></script>
   <script src="js/pathfind.js"></script>
   <script src="js/food-buff.js"></script>
   <script src="js/tong-mon-farm.js"></script>

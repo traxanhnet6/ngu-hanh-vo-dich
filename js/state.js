@@ -211,7 +211,15 @@
    * @param {Object} paths 5 đường tu
    * @returns {Object} Các chỉ số phái sinh
    */
-  function deriveStats(paths, equipment, kimDanPham) {
+  /** API js/thien-tu.js (lười — tránh vòng nạp state <-> thien-tu ở Node). */
+  function getThienTuAPI() {
+    if (typeof window !== 'undefined' && window.GameThienTu) return window.GameThienTu;
+    if (typeof global !== 'undefined' && global.GameThienTu) return global.GameThienTu;
+    if (typeof require === 'function') { try { return require('./thien-tu.js'); } catch (e) { return null; } }
+    return null;
+  }
+
+  function deriveStats(paths, equipment, kimDanPham, player) {
     var k = (paths && paths.kim && paths.kim.tuVi) || 0;
     var m = (paths && paths.moc && paths.moc.tuVi) || 0;
     var t = (paths && paths.thuy && paths.thuy.tuVi) || 0;
@@ -233,6 +241,14 @@
       : (kimDanPham && typeof kimDanPham === 'object' ? getKimDanPham(kimDanPham) : 0);
     if (pham >= 1) {
       linhLucMax = Math.round(linhLucMax * (1 + 0.05 * (pham - 1)));
+    }
+    // Đợt P2A — KINH MẠCH: cộng SAU công thức gốc (và sau phẩm Kim Đan), mỗi
+    // mạch đã thông +MERIDIAN_LINH_LUC_MAX linh lực tối đa (số trong
+    // js/thien-tu.js). Không truyền player (mọi lời gọi cũ) -> +0, hành vi y
+    // như trước đợt; công thức gốc phía trên không bị sửa.
+    if (player) {
+      var _ttApi = getThienTuAPI();
+      if (_ttApi) linhLucMax += _ttApi.meridianLinhLucBonus(player);
     }
 
     // Đợt K2: Công kích của năm đường nhân hệ số Hài Hòa (hồ sơ 02 §5) —
@@ -365,6 +381,8 @@
       stats: { playSec: 0, kills: 0, bossKills: 0, harvests: 0, refines: 0 },
       usedGiftcodes: {},
       tieuMoc: { moc: 1, ngoDao: false, thangTinhAnh: false, focus: null },
+      // Đợt P2A: trạng thái thiền/thổ nạp/kinh mạch (js/thien-tu.js chuẩn hóa khi nạp).
+      thienTu: { meridians: [], fatigueUntil: 0, thoaHoaCount: 0, tuViThoNap: 0 },
       bagLocks: {},
       // Đợt V1 chặng 0 + chặng 7: trạng thái cơ chế vùng và việc mở vùng (xem ensureV1).
       v1: { poisonStacks: 0, poisonResistUntil: 0, unlockedZones: {}, zoneQuests: { activeQuestId: null, tracked: false, completed: {} } },
@@ -482,7 +500,7 @@
     ensureTuiKho(player);
 
     // Đồng bộ lại chỉ số phái sinh (đợt T3: kèm phẩm Kim Đan nếu đã kết đan)
-    var stats = deriveStats(player.paths, player.equipment, getKimDanPham(player));
+    var stats = deriveStats(player.paths, player.equipment, getKimDanPham(player), player);
     player.hpMax = stats.hpMax;
     player.linhLucMax = stats.linhLucMax;
     if (player.hp > player.hpMax) player.hp = player.hpMax;
@@ -619,7 +637,10 @@
       if (!data.bagLocks || typeof data.bagLocks !== 'object') {
         data.bagLocks = {};
       }
-      var stats = deriveStats(data.paths, data.equipment, getKimDanPham(data));
+      // Đợt P2A: save cũ chưa có thienTu -> nhận mặc định (không mất dữ liệu khác)
+      var _ttLoad = getThienTuAPI();
+      if (_ttLoad && _ttLoad.ensureState) _ttLoad.ensureState(data);
+      var stats = deriveStats(data.paths, data.equipment, getKimDanPham(data), data);
       data.hpMax = stats.hpMax;
       data.linhLucMax = stats.linhLucMax;
       // REALMFIX: chuẩn hóa nhãn cảnh giới cho bản lưu cũ ngay khi nạp
@@ -950,7 +971,7 @@
       stampN1DataToBagSlot(player, back, oldVal);
     }
 
-    var stats = deriveStats(player.paths, player.equipment);
+    var stats = deriveStats(player.paths, player.equipment, undefined, player);
     player.hpMax = stats.hpMax;
     player.linhLucMax = stats.linhLucMax;
     savePlayer(player);
@@ -1000,7 +1021,7 @@
     else if (typeof require === 'function') try { defs = require('./monsters.js').ITEM_DEFS; } catch (e) {}
     var def = defs ? defs[itemId] : null;
 
-    var stats = deriveStats(player.paths, player.equipment);
+    var stats = deriveStats(player.paths, player.equipment, undefined, player);
     player.hpMax = stats.hpMax;
     player.linhLucMax = stats.linhLucMax;
     savePlayer(player);

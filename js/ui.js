@@ -709,6 +709,113 @@
     }
   }
 
+  function getThienTuUiAPI() {
+    return (typeof window !== 'undefined' && window.GameThienTu) ? window.GameThienTu : null;
+  }
+
+  /**
+   * ĐỢT P2A — bảng nhân vật: mật độ linh khí NƠI ĐANG ĐỨNG, tốc độ thổ nạp
+   * THẬT (tu vi/phút), nguồn tu vi từng đường bấm được, sơ đồ 8 kinh mạch.
+   * Số đọc từ js/thien-tu.js + engine, không chép cứng con số nào.
+   */
+  function renderStatsThienTu() {
+    var tt = getThienTuUiAPI();
+    if (!tt || !player) return;
+    tt.ensureState(player);
+
+    var eng = (typeof window !== 'undefined') ? window.GameEngine : null;
+    var mapId = (eng && eng.getCurrentMapId) ? eng.getCurrentMapId() : null;
+    var map = null;
+    if (mapId && typeof window !== 'undefined' && window.GameMapData && window.GameMapData.getMap) {
+      map = window.GameMapData.getMap(mapId);
+    }
+
+    // "Đang đứng trên linh nhãn?" — đo bằng đúng bán kính tương tác của điểm
+    var atLinhNhan = false;
+    if (map && map.interactables) {
+      for (var i = 0; i < map.interactables.length; i++) {
+        var it = map.interactables[i];
+        if (it && it.linhNhan && Math.hypot(player.x - it.x, player.y - it.y) <= (it.radius || 48)) {
+          atLinhNhan = true;
+          break;
+        }
+      }
+    }
+
+    var rate = tt.tuRatePerMin(player, mapId, atLinhNhan);
+    var med = (eng && eng.thienTu && eng.thienTu.getMeditation) ? eng.thienTu.getMeditation() : null;
+    var set = function (id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
+
+    set('stats-land-name', rate.landName
+      ? (rate.landName + ' · linh khí ' + rate.elemName + ' (' + rate.tierName +
+        (atLinhNhan ? ' · linh nhãn ×' + tt.P2A_CONST.LINH_NHAN_MULT : '') + ')')
+      : 'Chưa gán linh khí cho map này');
+    set('stats-tu-speed', rate.perMin > 0
+      ? (Math.round(rate.perMin) + ' tu vi ' + rate.elemName + '/phút')
+      : ('0 (đất khác hệ ' + tt.ELEM_NAMES[tt.playerElement(player)] + ')'));
+
+    var note;
+    if (med) {
+      note = 'Đang thiền ' + Math.round(med.seconds) + 's — hồi linh lực ×' +
+        tt.P2A_CONST.MEDITATE_REGEN_MULT + ' (bấm di chuyển/đánh để đứng dậy).';
+    } else {
+      note = 'Chưa thiền — bấm Đả Tọa hoặc Linh Nhãn để hồi linh lực ×' +
+        tt.P2A_CONST.MEDITATE_REGEN_MULT + (rate.perMin > 0 ? ' và thổ nạp tu vi.' : '.');
+    }
+    if (tt.isFatigued(player)) {
+      note += ' Đang mệt sau tẩu hỏa: hồi linh lực ×' + tt.P2A_CONST.FATIGUE_REGEN_MULT + '.';
+    }
+    set('stats-thien-tu-note', note);
+
+    // 5 đường tu vi: số thật + bấm mở nguồn (chỉ chữ mô tả nguồn có thật trong bản)
+    var wrap = document.getElementById('stats-path-rows');
+    if (wrap) {
+      wrap.innerHTML = '';
+      var elems = ['kim', 'moc', 'thuy', 'hoa', 'tho'];
+      for (var e = 0; e < elems.length; e++) {
+        (function (elem) {
+          var tuVi = (player.paths && player.paths[elem] && player.paths[elem].tuVi) || 0;
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'stats-path-row';
+          var left = document.createElement('span');
+          left.textContent = tt.ELEM_NAMES[elem] + ': ' + tuVi + ' tu vi' +
+            (rate.elem === elem ? ' · đất đang đứng' : '');
+          var right = document.createElement('span');
+          right.textContent = 'nguồn ▾';
+          btn.appendChild(left);
+          btn.appendChild(right);
+          var detail = document.createElement('div');
+          detail.className = 'stats-path-detail hidden';
+          detail.textContent = tt.PATH_SOURCE_TEXT[elem];
+          btn.addEventListener('click', function () { detail.classList.toggle('hidden'); });
+          wrap.appendChild(btn);
+          wrap.appendChild(detail);
+        })(elems[e]);
+      }
+    }
+
+    // Sơ đồ 8 kinh mạch — ô sáng = đã thông
+    var list = tt.meridianList(player);
+    var grid = document.getElementById('stats-meridians');
+    var openCount = 0;
+    if (grid) {
+      grid.innerHTML = '';
+      for (var m = 0; m < list.length; m++) {
+        var cell = document.createElement('div');
+        cell.className = 'meridian-cell' + (list[m].open ? ' open' : '');
+        cell.textContent = String(m + 1);
+        cell.title = list[m].label + ' — ' +
+          (list[m].open ? 'đã thông' : ('chưa thông: ' + list[m].condText));
+        grid.appendChild(cell);
+        if (list[m].open) openCount++;
+      }
+    }
+    set('stats-meridian-count', openCount + '/' + list.length);
+    set('stats-meridian-bonus', '+' + tt.meridianLinhLucBonus(player) + ' linh lực tối đa · +' +
+      tt.meridianRegenPerSec(player).toFixed(1) + ' linh lực/giây (mở bằng mốc cảnh giới hoặc nhiệm vụ tông môn).');
+  }
+
   function openStatsModal() {
     var modal = document.getElementById('stats-modal');
     if (!modal || !player) return;
@@ -720,6 +827,7 @@
     set('stats-bosses', s.bossKills || 0);
     set('stats-harvests', s.harvests || 0);
     set('stats-refines', s.refines || 0);
+    renderStatsThienTu();
     modal.classList.remove('hidden');
   }
 
@@ -1501,7 +1609,10 @@
   // Vật (stateAPI.deriveStats gồm cả trang bị đang mặc), không đổi công thức.
   function updateBagStats() {
     if (!player || !stateAPI || !stateAPI.deriveStats) return;
-    var stats = stateAPI.deriveStats(player.paths, player.equipment);
+    // Đợt P2AFIX: truyền player (kèm phẩm Kim Đan) để linhLucMax hiện khớp
+    // player.linhLucMax thật (gồm bonus kinh mạch) — như savePlayer.
+    var kdPhamBag = (stateAPI && typeof stateAPI.getKimDanPham === 'function') ? stateAPI.getKimDanPham(player) : 0;
+    var stats = stateAPI.deriveStats(player.paths, player.equipment, kdPhamBag, player);
     var values = {
       'bag-stat-atk': stats.attack,
       'bag-stat-hp': stats.hpMax,
@@ -3039,7 +3150,9 @@
     if (tuviMoc) tuviMoc.textContent = tuviText(p.moc && p.moc.tuVi);
 
     // Chỉ số phái sinh (gồm cả trang bị đang mặc — khớp công thức chiến đấu của engine)
-    var stats = stateAPI.deriveStats(player.paths, player.equipment);
+    // Đợt P2AFIX: truyền player (kèm phẩm Kim Đan kdPham2 đã tính ở trên) để
+    // linhLucMax hiện khớp player.linhLucMax thật (gồm bonus kinh mạch).
+    var stats = stateAPI.deriveStats(player.paths, player.equipment, kdPham2, player);
     var statHp = document.getElementById('stat-hpmax');
     var statLl = document.getElementById('stat-llmax');
     var statAtk = document.getElementById('stat-atk');

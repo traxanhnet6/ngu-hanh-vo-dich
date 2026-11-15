@@ -3064,6 +3064,57 @@
   // Tự động kiểm tra đăng ký có điều kiện (nếu map ruong-linh-me đã có trong ALL_MAPS)
   registerElderToRuongLinhMe(ALL_MAPS);
 
+  // ============================================================
+  // ĐỢT P2A: LINH NHÃN — điểm tụ khí của 5 vùng (hồ sơ 45 §3)
+  // 2 điểm/map, toạ độ PROVISIONAL của đội P2A: đã kiểm bằng A* từ điểm spawn
+  // của chính map (đi được, không đè interactable/harvest/hazard, cách pack
+  // quái gần nhất >= 122px). Hành động dùng chung case 'meditate' của engine,
+  // cờ linhNhan:true để engine nhân LINH_NHAN_MULT khi ngồi đây.
+  // ============================================================
+  var LINH_NHAN_SITES = [
+    { id: 'linh_nhan_rd_1', mapId: 'rung-doc', x: 1315, y: 345 },
+    { id: 'linh_nhan_rd_2', mapId: 'rung-doc', x: 1600, y: 1050 },
+    { id: 'linh_nhan_hb_1', mapId: 'ho-bang', x: 1650, y: 700 },
+    { id: 'linh_nhan_hb_2', mapId: 'ho-bang', x: 600, y: 1050 },
+    { id: 'linh_nhan_ml_1', mapId: 'mo-lua', x: 1050, y: 700 },
+    { id: 'linh_nhan_ml_2', mapId: 'mo-lua', x: 300, y: 1000 },
+    { id: 'linh_nhan_hm_1', mapId: 'hoang-mac', x: 900, y: 300 },
+    { id: 'linh_nhan_hm_2', mapId: 'hoang-mac', x: 1700, y: 1100 },
+    { id: 'linh_nhan_kt_1', mapId: 'kiem-trung', x: 900, y: 1150 },
+    { id: 'linh_nhan_kt_2', mapId: 'kiem-trung', x: 1500, y: 1050 }
+  ];
+
+  function registerLinhNhanSites() {
+    for (var i = 0; i < LINH_NHAN_SITES.length; i++) {
+      var site = LINH_NHAN_SITES[i];
+      var map = ALL_MAPS[site.mapId];
+      if (!map) continue;
+      if (!Array.isArray(map.interactables)) map.interactables = [];
+      var exists = false;
+      for (var j = 0; j < map.interactables.length; j++) {
+        if (map.interactables[j] && map.interactables[j].id === site.id) { exists = true; break; }
+      }
+      if (!exists) {
+        map.interactables.push({
+          id: site.id,
+          label: 'Linh Nhãn',
+          x: site.x,
+          y: site.y,
+          radius: 48,
+          action: 'meditate',
+          linhNhan: true
+        });
+      }
+      // Bảo hiểm: điểm đứng phải walkable (cùng quy ước forceWalkable của Tông Môn)
+      if (map.collisionGrid && typeof forceWalkable === 'function') {
+        forceWalkable(map.collisionGrid, site.x, site.y);
+      }
+    }
+    return LINH_NHAN_SITES.length;
+  }
+
+  registerLinhNhanSites();
+
   var MapData = Object.assign({}, MAP_MIEU_HOANG, {
     maps: ALL_MAPS,
     buildGrid: buildGrid,
@@ -3085,6 +3136,8 @@
     // Đợt V1 chặng 5: kiếm khí quét + điểm rơi kiếm vũ Kiếm Trủng
     SWORD_SWEEP_LANES_KIEM_TRUNG: SWORD_SWEEP_LANES_KIEM_TRUNG,
     SWORD_RAIN_SPOTS_KIEM_TRUNG: SWORD_RAIN_SPOTS_KIEM_TRUNG,
+    // Đợt P2A: điểm linh nhãn 5 vùng (hồ sơ 45 §3) — engine đọc qua interactables
+    LINH_NHAN_SITES: LINH_NHAN_SITES,
     // Đợt V1 chặng 6: danh mục điểm hái 5 vùng theo hồ sơ 01
     HARVEST_NODES_TONG_MON: HARVEST_NODES_TONG_MON,
     HARVEST_NODES_MIEU_HOANG: HARVEST_NODES_MIEU_HOANG,

@@ -449,7 +449,7 @@
     opts = opts || {};
     var st = getStateAPI();
     if (!st || !player) return null;
-    var stats = st.deriveStats(player.paths, player.equipment);
+    var stats = st.deriveStats(player.paths, player.equipment, undefined, player);
     var mirrorHp = Math.round(stats.hpMax * MIRROR_HP_MULT);
     function side(hp, hpMax) {
       return {

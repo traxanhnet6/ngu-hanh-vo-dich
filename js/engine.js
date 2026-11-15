@@ -1790,6 +1790,82 @@
   var INTERRUPT_HP_FRACTION = 0.10;
   var lastCombatTime = 0;
 
+  // ===========================================================================
+  // ĐỢT P2A: THIỀN THẬT + THỔ NẠP + KINH MẠCH (hồ sơ 45)
+  // Toàn bộ SỐ nằm trong MỘT object P2A_CONST của js/thien-tu.js; engine chỉ giữ
+  // trạng thái đang ngồi ở đâu, tự đứng dậy khi nào và nhịp cộng tu vi.
+  // ===========================================================================
+  var meditation = null; // { mapId, landName, atLinhNhan, startedAt, lastHp, tuAccum, risky }
+  var thienTuMeridianTick = 0;
+
+  function getThienTuAPI() {
+    if (typeof window !== 'undefined' && window.GameThienTu) return window.GameThienTu;
+    if (typeof global !== 'undefined' && global.GameThienTu) return global.GameThienTu;
+    if (typeof require === 'function') { try { return require('./thien-tu.js'); } catch (e) { return null; } }
+    return null;
+  }
+
+  function isMeditating() { return !!meditation; }
+
+  var MEDITATE_ELEM_COLORS = { moc: '#55d882', thuy: '#7fd4ff', hoa: '#ff9a5c', tho: '#e8c56b', kim: '#e8ecf2' };
+
+  /** Vào chế độ thiền tại điểm Đả Tạo / Linh Nhãn đang đứng. */
+  function startMeditation(it) {
+    var tt = getThienTuAPI();
+    if (!tt || !player || player.hp <= 0) return false;
+    tt.ensureState(player);
+    var atLinhNhan = !!(it && it.linhNhan);
+    var rate = tt.tuRatePerMin(player, currentMapId, atLinhNhan);
+    meditation = {
+      mapId: currentMapId,
+      landName: rate.landName,
+      atLinhNhan: atLinhNhan,
+      startedAt: performance.now(),
+      lastHp: player.hp,
+      tuAccum: 0,
+      risky: tt.thoaHoaRisk(player, currentMapId)
+    };
+    currentPath = [];
+    pendingInteraction = null;
+    if (targetMonster) targetMonster = null;
+    if (audioAPI) audioAPI.playChime();
+
+    var msg = 'Ngồi thiền tại ' + (rate.landName || 'đây') + ' — hồi linh lực ×' +
+      tt.P2A_CONST.MEDITATE_REGEN_MULT;
+    if (rate.perMin > 0) {
+      msg += ' · thổ nạp ' + tt.ELEM_NAMES[rate.elem] + ' ' + Math.round(rate.perMin) + ' tu vi/phút';
+    } else if (rate.elem) {
+      msg += ' · đất ' + (tt.ELEM_NAMES[rate.elem] || '?') + ' khác hệ: chỉ hồi linh lực';
+    }
+    if (meditation.risky) {
+      msg += ' · CẢNH BÁO linh khí trái hệ: ' + tt.P2A_CONST.THOA_HOA_WARN_SEC + 's nữa tẩu hỏa';
+    }
+    if (typeof window !== 'undefined' && window.GameUI) {
+      window.GameUI.refreshHUD();
+      window.GameUI.showToast(msg);
+    }
+    return true;
+  }
+
+  /** Ra khỏi chế độ thiền (bấm di chuyển/đánh, trúng đòn, quái aggro, tẩu hỏa...). */
+  function stopMeditation(reason) {
+    if (!meditation) return false;
+    var msgs = {
+      move: 'Đứng dậy — ngừng thổ nạp.',
+      damage: 'Trúng đòn! Buộc phải đứng dậy.',
+      combat: 'Quái đã áp sát — tự đứng dậy.',
+      attack: 'Ra đòn — tự đứng dậy.',
+      thoahua: 'TẨU HỎA! Kinh mạch rối loạn, phải đứng dậy.',
+      map: 'Rời nơi này — ngừng thiền.',
+      manual: 'Đứng dậy.'
+    };
+    meditation = null;
+    if (typeof window !== 'undefined' && window.GameUI && window.GameUI.showToast) {
+      window.GameUI.showToast(msgs[reason] || msgs.manual);
+    }
+    return true;
+  }
+
   // Danh sách thực thể thế giới
   var fieldMonsters = [];
   var groundDrops = [];
@@ -3038,13 +3114,15 @@
         }
         break;
       case 'meditate':
-        player.linhLuc = player.linhLucMax;
-        spawnFloatingText('Linh lực đầy!', player.x, player.y - 35, '#6ee7b7');
-        if (audioAPI) audioAPI.playChime();
-        if (typeof window !== 'undefined' && window.GameUI) {
-          window.GameUI.refreshHUD();
-          window.GameUI.showToast('Đả tọa tĩnh tâm: Linh Lực đã hồi phục');
+        // Đợt P2A: Đả Tọa / Linh Nhãn = CHẾ ĐỘ THIỀN THẬT (không còn hồi đầy
+        // một lần): khóa di chuyển/đánh, hồi linh lực ×MEDITATE_REGEN_MULT,
+        // thổ nạp tu vi theo đất, tự đứng dậy khi trúng đòn/quái aggro/bấm đi.
+        // Bấm lần nữa = đứng dậy.
+        if (meditation) {
+          stopMeditation('manual');
+          break;
         }
+        startMeditation(it);
         // Đợt T1: đả tọa tại điểm này trong lúc ở tầng 3 = hoàn thành tiểu
         // bình cảnh NGỘ ĐẠO của mốc 3->4 (hồ sơ 06: "lên linh mạch đả tọa
         // ngộ đạo 1 lần tại điểm linh mạch").
@@ -3404,6 +3482,9 @@
 
   function performContextAction() {
     if (!player || !mapData || player.hp <= 0) return;
+    // Đợt P2A: đang ngồi thiền thì mọi thao tác hành động = tự đứng dậy trước
+    // (bấm lần nữa mới thực hiện hành động), đúng "khóa đánh khi thiền".
+    if (meditation) { stopMeditation('attack'); return; }
     if (typeof document !== 'undefined') {
       var dlg = document.getElementById('dialogue-box');
       if (dlg && !dlg.classList.contains('hidden')) return; // Đang trong hội thoại
@@ -4135,6 +4216,8 @@
 
   function triggerPathTo(worldX, worldY, interaction) {
     if (!pathfinder || !mapData || !player) return;
+    // Đợt P2A: bấm đi đâu đó = tự đứng dậy khỏi thiền rồi mới đi.
+    if (meditation) stopMeditation('move');
 
     clickRipple = {
       x: worldX,
@@ -4228,6 +4311,8 @@
    * Chuyển đổi giữa 2 bản đồ với hiệu ứng mờ dần (Fade)
    */
   function switchMap(targetMapId, targetSpawn) {
+    // Đợt P2A: đổi map = rời nơi đang thiền -> đứng dậy, không mang trạng thái thiền sang map mới.
+    if (meditation) stopMeditation('map');
     if (mapFade.alpha > 0 || mapFade.dir !== 0) {
       // Đang fade chuyển cảnh: xếp hàng (yêu cầu cuối thắng), chạy ngay khi fade xong
       pendingMapSwitch = { id: targetMapId, spawn: targetSpawn };
@@ -4531,7 +4616,7 @@
       var addedPill = Math.min(20, roomNow);
       player.paths[elem].tuVi = (player.paths[elem].tuVi || 0) + addedPill;
 
-      var stats = stateAPI.deriveStats(player.paths, player.equipment);
+      var stats = stateAPI.deriveStats(player.paths, player.equipment, undefined, player);
       player.hpMax = stats.hpMax;
       player.linhLucMax = stats.linhLucMax;
       stateAPI.savePlayer(player);
@@ -5989,7 +6074,7 @@
    */
   function tryInterruptCast(dealtToPlayer) {
     if (!castState || !player || !(dealtToPlayer > 0)) return false;
-    var stats = stateAPI ? stateAPI.deriveStats(player.paths, player.equipment) : { hpMax: 100, linhLucMax: 20 };
+    var stats = stateAPI ? stateAPI.deriveStats(player.paths, player.equipment, undefined, player) : { hpMax: 100, linhLucMax: 20 };
     if (dealtToPlayer < INTERRUPT_HP_FRACTION * stats.hpMax) return false;
     var def = castState.def;
     castState = null;
@@ -6529,15 +6614,87 @@
     var n2RideApi = (typeof window !== 'undefined') ? window.GameLinhThu : null;
     if (n2RideApi) currentSpeed = currentSpeed * n2RideApi.rideSpeedFactor(isPetRidingActive(), anyMonsterAggro());
 
+    // ĐỢT P2A: tick thiền/thổ nạp + mở kinh mạch (hồ sơ 45 §3/§4/§7).
+    // Đặt TRƯỚC khối hồi phục để quyết định đứng dậy và tốc độ hồi của khung này.
+    var ttTickApi = getThienTuAPI();
+    if (ttTickApi && player) {
+      ttTickApi.ensureState(player);
+      thienTuMeridianTick += dt;
+      if (thienTuMeridianTick >= 0.5) {
+        thienTuMeridianTick = 0;
+        var openedM = ttTickApi.checkMeridians(player);
+        for (var om = 0; om < openedM.length; om++) {
+          spawnFloatingText('Thông ' + openedM[om].label + '!', player.x, player.y - 60, '#a8e6ff');
+          if (typeof window !== 'undefined' && window.GameUI && window.GameUI.showToast) {
+            window.GameUI.showToast('Kinh mạch khai thông: ' + openedM[om].label + ' (+' +
+              ttTickApi.P2A_CONST.MERIDIAN_LINH_LUC_MAX + ' linh lực tối đa)');
+          }
+        }
+        if (openedM.length > 0 && stateAPI) {
+          // savePlayer tính lại linhLucMax (deriveStats đã cộng bonus kinh mạch)
+          stateAPI.savePlayer(player);
+          if (typeof window !== 'undefined' && window.GameUI && window.GameUI.refreshHUD) {
+            window.GameUI.refreshHUD();
+          }
+        }
+      }
+
+      if (meditation) {
+        // Tự đứng dậy: mất máu (quái đánh/hazard) hoặc quái đã aggro.
+        if (player.hp < meditation.lastHp - 0.001) {
+          stopMeditation('damage');
+        } else if (anyMonsterAggro()) {
+          stopMeditation('combat');
+        } else {
+          meditation.lastHp = player.hp;
+          var medRate = ttTickApi.tuRatePerMin(player, currentMapId, meditation.atLinhNhan);
+          if (medRate.perMin > 0) {
+            meditation.tuAccum += (medRate.perMin / 60) * dt;
+            while (meditation.tuAccum >= 1) {
+              meditation.tuAccum -= 1;
+              var gainedMed = ttTickApi.grantThoNap(player, medRate.elem, 1);
+              if (gainedMed > 0) {
+                spawnFloatingText('+' + gainedMed + ' tu vi ' + ttTickApi.ELEM_NAMES[medRate.elem] +
+                  ' — thổ nạp tại ' + (meditation.landName || 'đây'),
+                  player.x, player.y - 45, MEDITATE_ELEM_COLORS[medRate.elem] || '#55d882');
+                if (stateAPI) stateAPI.savePlayer(player);
+              } else {
+                // Trần mốc (T1) đã kịch: không dồn, chờ đột phá
+                meditation.tuAccum = 0;
+              }
+            }
+          } else {
+            meditation.tuAccum = 0;
+          }
+          // Tẩu hỏa: chỉ đất khác hệ + tier dày (nhánh đan độc bị chặn — báo cáo P2A)
+          if (meditation.risky && (now - meditation.startedAt) >= ttTickApi.P2A_CONST.THOA_HOA_WARN_SEC * 1000) {
+            var thoaHoaRes = ttTickApi.applyThoaHoa(player, Date.now());
+            if (thoaHoaRes && thoaHoaRes.ok) {
+              spawnFloatingText('Tẩu hỏa! -' + thoaHoaRes.lost + ' tu vi ' + thoaHoaRes.elemName,
+                player.x, player.y - 55, '#ff8a8a');
+              if (stateAPI) stateAPI.savePlayer(player);
+            }
+            stopMeditation('thoahua');
+          }
+        }
+      }
+    }
+
     // Cập nhật hồi phục khí huyết và linh lực theo giây (Brief §5)
+    // Đợt P2A: cộng hồi linh lực từ kinh mạch đã thông + nhân tốc độ thiền +
+    // giảm khi đang mệt sau tẩu hỏa. Base 2,0/0,4 giữ nguyên khi không thiền.
+    var ttRegenApi = getThienTuAPI();
+    var ttMedMult = (meditation && ttRegenApi) ? ttRegenApi.P2A_CONST.MEDITATE_REGEN_MULT : 1;
+    var ttMeridianRegen = (ttRegenApi && player) ? ttRegenApi.meridianRegenPerSec(player) : 0;
+    var ttFatigueMult = (ttRegenApi && player) ? ttRegenApi.regenFatigueMultiplier(player, Date.now()) : 1;
     var inCombat = (now - lastCombatTime) < 5000;
     if (!inCombat) {
       // Đợt V1 chặng 1: đang trúng độc thì hồi máu chậm lại theo tầng độc
       // (PROVISIONAL: 10%/tầng — xem khối V1 chặng 1 ở đầu tệp).
       player.hp = Math.min(player.hpMax, player.hp + 1.5 * dt * poisonRegenMultiplier(player));
-      player.linhLuc = Math.min(player.linhLucMax, player.linhLuc + 2.0 * dt);
+      player.linhLuc = Math.min(player.linhLucMax, player.linhLuc + (2.0 * ttMedMult + ttMeridianRegen) * ttFatigueMult * dt);
     } else {
-      player.linhLuc = Math.min(player.linhLucMax, player.linhLuc + 0.4 * dt);
+      player.linhLuc = Math.min(player.linhLucMax, player.linhLuc + (0.4 + ttMeridianRegen) * ttFatigueMult * dt);
     }
 
     // Đợt LINHME: Cập nhật hồi phục liên tục theo giờ từ thức ăn (Food Buff Tick)
@@ -6577,7 +6734,17 @@
       groundVel.y = 0;
     }
 
-    if (canMove) {
+    // Đợt P2A: đang ngồi thiền, mọi ý định di chuyển = tự đứng dậy (rồi khung
+    // sau đi bình thường); cả khối di chuyển bị khóa trong lúc còn thiền.
+    if (meditation && canMove) {
+      if (keysDown.up || keysDown.down || keysDown.left || keysDown.right ||
+          joystickVector.x !== 0 || joystickVector.y !== 0) {
+        stopMeditation('move');
+      }
+    }
+    var meditationLock = !!meditation;
+
+    if (canMove && !meditationLock) {
       if (keysDown.up) vy -= 1;
       if (keysDown.down) vy += 1;
       if (keysDown.left) vx -= 1;
@@ -7163,6 +7330,8 @@
 
   function handleMonsterAttackPlayer(m) {
     lastCombatTime = performance.now();
+    // Đợt P2A: trúng đòn = tự đứng dậy khỏi thiền ngay (không chờ khung sau)
+    if (meditation) stopMeditation('damage');
     var stats = stateAPI ? stateAPI.deriveStats(player.paths, player.equipment) : { defense: 5 };
     var elemFac = combatAPI ? combatAPI.getElementFactor(m.element, 'moc') : 1.0;
     var rawDmg = m.damage;
@@ -11156,6 +11325,32 @@
     getPlayer: function () { return player; },
     isDanLoBurning: isDanLoBurning,
     performContextAction: performContextAction,
+    // Đợt P2A: móc thiền/thổ nạp cho UI + kiểm thử (không thêm nút HUD)
+    thienTu: {
+      isMeditating: isMeditating,
+      getMeditation: function () {
+        if (!meditation) return null;
+        return {
+          mapId: meditation.mapId,
+          landName: meditation.landName,
+          atLinhNhan: meditation.atLinhNhan,
+          risky: meditation.risky,
+          seconds: (performance.now() - meditation.startedAt) / 1000
+        };
+      },
+      start: function () { return startMeditation(null); },
+      stop: function (reason) { return stopMeditation(reason || 'manual'); },
+      landRate: function () {
+        var tt = getThienTuAPI();
+        return (tt && player) ? tt.tuRatePerMin(player, currentMapId, !!(meditation && meditation.atLinhNhan)) : null;
+      },
+      meridianList: function () {
+        var tt = getThienTuAPI();
+        return (tt && player) ? tt.meridianList(player) : [];
+      },
+      // Đọc lười: engine.js có thể được nạp trước thien-tu.js (test Node)
+      CONST: (function () { var tt = getThienTuAPI(); return tt ? tt.P2A_CONST : null; })()
+    },
     executeHarvestNode: executeHarvestNode,
     getActionContext: function () { return computeActionContext(); },
     startAutoQuestPath: startAutoQuestPath,
