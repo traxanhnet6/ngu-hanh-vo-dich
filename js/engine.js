@@ -2424,6 +2424,13 @@
 
   var userZoom = 1.0;
 
+  // Đợt RETINA: tỉ lệ backing store so với điểm ảnh CSS (DPR, trần 2) và
+  // kích thước viewport theo điểm ảnh CSS. Mọi tọa độ vẽ/chạm của game vẫn
+  // theo điểm ảnh CSS; chỉ mật độ điểm ảnh thật của canvas tăng lên.
+  var renderScale = 1;
+  var canvasCssW = 0;
+  var canvasCssH = 0;
+
   function getUserZoom() {
     return userZoom;
   }
@@ -2440,12 +2447,25 @@
     return camera.scale;
   }
 
+  // Đợt RETINA: DPR của thiết bị, trần 2 để cân bằng độ nét và hiệu năng
+  // (màn DPR 3 vẫn vẽ ở 2 — đủ nét, không tốn gấp 9 lần điểm ảnh).
+  function getCappedDpr() {
+    if (typeof window === 'undefined' || typeof window.devicePixelRatio !== 'number' ||
+        !isFinite(window.devicePixelRatio) || window.devicePixelRatio <= 0) return 1;
+    return Math.min(2, window.devicePixelRatio);
+  }
+
   function resizeCanvas() {
     if (!canvas || typeof window === 'undefined') return;
     var w = window.innerWidth;
     var h = window.innerHeight;
-    canvas.width = w;
-    canvas.height = h;
+    // Đợt RETINA: backing store = CSS × DPR (trần 2) để hình nét trên điện
+    // thoại; CSS của canvas vẫn 100%/100% nên bố cục không đổi.
+    renderScale = getCappedDpr();
+    canvasCssW = w;
+    canvasCssH = h;
+    canvas.width = Math.round(w * renderScale);
+    canvas.height = Math.round(h * renderScale);
 
     var baseScale = h / 720;
     var targetScale = baseScale * userZoom;
@@ -7983,9 +8003,18 @@
     // chung một giá trị nên không lệch nhau); ngoài cảnh độ kiếp là 0.
     playerLiftY = computeTribulationLift();
 
+    // Đợt RETINA: DPR có thể đổi (zoom trình duyệt) mà không qua resize —
+    // đồng bộ lại backing store khi thấy khác; render() đặt lại transform
+    // ngay sau đó nên khung hiện tại vẫn vẽ đúng.
+    if (typeof window !== 'undefined' && getCappedDpr() !== renderScale) resizeCanvas();
+
+    // Đợt RETINA: đặt transform DPR trước save() để toàn bộ mã vẽ hiện có
+    // (tọa độ CSS) không đổi mà vẫn ra đủ điểm ảnh thật; restore() cuối
+    // render() quay về đúng transform này cho phần vẽ không gian màn hình.
+    ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
     ctx.save();
     ctx.fillStyle = '#141a16';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, canvasCssW, canvasCssH);
 
     ctx.scale(camera.scale, camera.scale);
     var renderCamX = camera.x;
@@ -11014,7 +11043,8 @@
     ctx.font = 'bold 17px "Noto Serif", serif';
     var tw = ctx.measureText(best.label).width;
     var bw = tw + 34, bh = 38;
-    var bx = Math.max(8, Math.min(canvas.width - bw - 8, sx - bw / 2));
+    // Đợt RETINA: kẹp theo chiều rộng CSS — canvas.width giờ là điểm ảnh thật.
+    var bx = Math.max(8, Math.min(canvasCssW - bw - 8, sx - bw / 2));
     var by = Math.max(8, sy - bh);
     ctx.fillStyle = 'rgba(46, 32, 18, 0.94)';
     ctx.strokeStyle = '#c9a227';

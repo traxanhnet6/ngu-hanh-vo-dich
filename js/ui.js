@@ -49,6 +49,12 @@
   var minimapCtx = null;
   var minimapBgImg = null;
   var currentMinimapMapId = null;
+  // Đợt RETINA: hệ số backing/CSS của bản đồ nhỏ + kích thước CSS gốc.
+  // Lưu riêng vì gán canvas.width sẽ PHẢN CHIẾU lên attribute (đọc lại
+  // attribute sau khi gán sẽ ra kích thước backing, không còn 150×100).
+  var minimapScaleK = 1;
+  var minimapCssW = 150;
+  var minimapCssH = 100;
 
   var dialogueState = {
     active: false,
@@ -84,6 +90,21 @@
     minimapCanvas = document.getElementById('minimap-canvas');
     if (minimapCanvas) {
       minimapCtx = minimapCanvas.getContext('2d');
+      // Đợt RETINA: backing store × DPR (trần 2). Kích thước CSS gốc chỉ
+      // đọc đúng ở lần đầu (trước khi gán .width phản chiếu attribute),
+      // nên lần sau dùng lại biến đã lưu để không nhân dồn.
+      try {
+        var mmDpr = (typeof window !== 'undefined' && typeof window.devicePixelRatio === 'number' &&
+          isFinite(window.devicePixelRatio) && window.devicePixelRatio > 0) ? Math.min(2, window.devicePixelRatio) : 1;
+        if (!minimapCanvas.dataset.retinaSized) {
+          minimapCssW = parseInt(minimapCanvas.getAttribute('width') || '150', 10) || 150;
+          minimapCssH = parseInt(minimapCanvas.getAttribute('height') || '100', 10) || 100;
+          minimapCanvas.dataset.retinaSized = '1';
+        }
+        minimapScaleK = mmDpr;
+        minimapCanvas.width = Math.round(minimapCssW * mmDpr);
+        minimapCanvas.height = Math.round(minimapCssH * mmDpr);
+      } catch (e) {}
       updateMinimapBackground();
     }
 
@@ -3359,6 +3380,11 @@
     var mw = minimapCanvas.width;
     var mh = minimapCanvas.height;
 
+    // Đợt RETINA: hệ số backing/CSS của bản đồ nhỏ (2 khi DPR ≥ 2, 1 khi
+    // DPR 1), lấy từ biến lưu lúc init. Mọi bán kính chấm/viền cố định
+    // nhân hệ số này để giữ đúng cỡ hiển thị CSS như trước khi tăng backing.
+    var mmK = minimapScaleK || 1;
+
     minimapCtx.clearRect(0, 0, mw, mh);
 
     updateMinimapBackground();
@@ -3380,10 +3406,10 @@
 
       minimapCtx.save();
       minimapCtx.shadowColor = '#b870ff';
-      minimapCtx.shadowBlur = 6;
+      minimapCtx.shadowBlur = 6 * mmK;
       minimapCtx.fillStyle = '#b870ff';
       minimapCtx.beginPath();
-      minimapCtx.arc(lnx, lny, 3.5, 0, Math.PI * 2);
+      minimapCtx.arc(lnx, lny, 3.5 * mmK, 0, Math.PI * 2);
       minimapCtx.fill();
       minimapCtx.restore();
     }
@@ -3399,15 +3425,15 @@
         minimapCtx.save();
         if (m.isElite) {
           minimapCtx.shadowColor = '#ffe9a8';
-          minimapCtx.shadowBlur = 8;
+          minimapCtx.shadowBlur = 8 * mmK;
           minimapCtx.fillStyle = '#ffe9a8';
           minimapCtx.beginPath();
-          minimapCtx.arc(mx, my, 4.5, 0, Math.PI * 2);
+          minimapCtx.arc(mx, my, 4.5 * mmK, 0, Math.PI * 2);
           minimapCtx.fill();
         } else {
           minimapCtx.fillStyle = '#e85555';
           minimapCtx.beginPath();
-          minimapCtx.arc(mx, my, 2.2, 0, Math.PI * 2);
+          minimapCtx.arc(mx, my, 2.2 * mmK, 0, Math.PI * 2);
           minimapCtx.fill();
         }
         minimapCtx.restore();
@@ -3426,10 +3452,10 @@
           var dyMM = destMM.y * scaleY;
           minimapCtx.save();
           minimapCtx.shadowColor = '#ffd94d';
-          minimapCtx.shadowBlur = 7;
+          minimapCtx.shadowBlur = 7 * mmK;
           minimapCtx.fillStyle = '#ffd94d';
           minimapCtx.beginPath();
-          minimapCtx.arc(dxMM, dyMM, 3.4, 0, Math.PI * 2);
+          minimapCtx.arc(dxMM, dyMM, 3.4 * mmK, 0, Math.PI * 2);
           minimapCtx.fill();
           minimapCtx.restore();
         }
@@ -3442,12 +3468,12 @@
 
     minimapCtx.save();
     minimapCtx.shadowColor = '#ffffff';
-    minimapCtx.shadowBlur = 5;
+    minimapCtx.shadowBlur = 5 * mmK;
     minimapCtx.fillStyle = '#ffffff';
     minimapCtx.strokeStyle = '#222222';
-    minimapCtx.lineWidth = 1;
+    minimapCtx.lineWidth = 1 * mmK;
     minimapCtx.beginPath();
-    minimapCtx.arc(px, py, 3.8, 0, Math.PI * 2);
+    minimapCtx.arc(px, py, 3.8 * mmK, 0, Math.PI * 2);
     minimapCtx.fill();
     minimapCtx.stroke();
     minimapCtx.restore();
