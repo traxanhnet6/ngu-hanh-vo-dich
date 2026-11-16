@@ -388,7 +388,7 @@
       }
     }
 
-    if (inFog) {
+    if (inFog && !p2bBlocksDamage()) {
       poisonDecayTimer = 0;
       poisonTickTimer += dt;
       if (poisonTickTimer >= POISON_TICK_INTERVAL) {
@@ -603,6 +603,7 @@
    * đẩy về bờ gần nhất, dừng trượt, hủy đường đi. Trả về sát thương đã trừ.
    */
   function doIceFall(pl, tile) {
+    if (pl === player && p2bBlocksDamage()) return 0;
     var dmg = ICE_FALL_DMG;
     pl.hp = Math.max(0, (pl.hp || 0) - dmg);
     lastCombatTime = (typeof performance !== 'undefined' && performance.now) ? performance.now() : 0;
@@ -997,7 +998,7 @@
       // họng giữa chừng lúc đang phun vẫn dính một lần của đợt này — mốc
       // chu kỳ chỉ đặt khi thực sự gây sát thương).
       var vent = lavaVentAtPlayer(pl);
-      if (vent) {
+      if (vent && !(pl === player && p2bBlocksDamage())) {
         pl.hp = Math.max(0, (pl.hp || 0) - LAVA_DAMAGE);
         lastCombatTime = (typeof performance !== 'undefined' && performance.now) ? performance.now() : 0;
         spawnDamageNumber(pl.x, pl.y - 45, LAVA_DAMAGE, 'hoa', false);
@@ -1625,7 +1626,7 @@
           // Kiểm tra trúng người chơi
           var dx = pl.x - item.cx;
           var dy = pl.y - item.cy;
-          if (Math.sqrt(dx * dx + dy * dy) <= item.r) {
+          if (Math.sqrt(dx * dx + dy * dy) <= item.r && !(pl === player && p2bBlocksDamage())) {
             pl.hp = Math.max(0, pl.hp - SWORD_RAIN_DAMAGE);
             spawnFloatingText('-' + SWORD_RAIN_DAMAGE + ' (Kiếm Vũ)', pl.x, pl.y - 70, '#d8ecf8');
             if (pl.hp <= 0 && pl === player && typeof handlePlayerDeath === 'function') {
@@ -1693,7 +1694,7 @@
             break;
           }
         }
-        if (hit) {
+        if (hit && !(pl === player && p2bBlocksDamage())) {
           swordSweepHitCycle = cycle;
           pl.hp = Math.max(0, pl.hp - SWORD_SWEEP_DAMAGE);
           spawnFloatingText('-' + SWORD_SWEEP_DAMAGE + ' (Kiếm Khí)', pl.x, pl.y - 70, '#eaf4fc');
@@ -2584,6 +2585,41 @@
     }
   }
 
+  // ============================================================
+  // Đợt P2C: THÁP THÍ LUYỆN — sinh/thu quái theo đợt tầng
+  // ============================================================
+  // Ba hàm dưới đây chỉ là móc hẹp cho js/thap-tu-luyen.js: tạo quái bằng
+  // đúng monstersAPI.createMonster + steering hiện có, gắn nhãn `towerTag` để
+  // module biết con nào thuộc đợt tháp. Không sửa cách quái thường được sinh,
+  // cập nhật, rơi đồ (rollDrops giữ nguyên) hay hồi sinh.
+  function spawnTowerMonster(speciesId, x, y) {
+    if (!monstersAPI || !monstersAPI.createMonster) return null;
+    var m = monstersAPI.createMonster(speciesId, x, y, x, y, {
+      state: 'aggro',
+      spawnGraceTimer: 1.0
+    });
+    m.mapId = currentMapId;
+    m.towerTag = 'thap_tu_luyen';
+    fieldMonsters.push(m);
+    return m;
+  }
+
+  function removeTowerMonster(m) {
+    if (!m) return;
+    var idx = fieldMonsters.indexOf(m);
+    if (idx >= 0) fieldMonsters.splice(idx, 1);
+    if (targetMonster === m) targetMonster = null;
+  }
+
+  function clearTowerMonsters() {
+    for (var i = fieldMonsters.length - 1; i >= 0; i--) {
+      var m = fieldMonsters[i];
+      if (!m || !m.towerTag) continue;
+      if (targetMonster === m) targetMonster = null;
+      fieldMonsters.splice(i, 1);
+    }
+  }
+
   function setupInputs() {
     if (typeof window === 'undefined') return;
 
@@ -3234,7 +3270,7 @@
         executeN1Gather(it);
         break;
       case 'practice_dummy':
-        var stats = stateAPI ? stateAPI.deriveStats(player.paths, player.equipment) : { attack: 10 };
+        var stats = stateAPI ? stateAPI.deriveStats(player.paths, player.equipment, undefined, player) : { attack: 10 };
         var dmg = Math.round(stats.attack * (0.9 + Math.random() * 0.2));
         player.dir = getDirFromVelocity(it.x - player.x, it.y - player.y);
         if (audioAPI) audioAPI.playSlash();
@@ -3258,6 +3294,19 @@
       case 'locked_arena':
         if (typeof window !== 'undefined' && window.GameUI) {
           window.GameUI.showToast('Luận võ mở ở đợt sau');
+        }
+        break;
+      // Đợt P2C: Tháp Thí Luyện — mọi logic leo tháp nằm trong js/thap-tu-luyen.js
+      // (module tự sinh quái qua EngineAPI.tower, tự dừng khi gục/chuyển map).
+      // Ở đây chỉ mở cửa tháp + bảng tuần, không đụng luật chết/rơi đồ.
+      case 'thap_enter':
+        if (typeof window !== 'undefined' && window.GameThap && window.GameThap.enterTower) {
+          window.GameThap.enterTower();
+        }
+        break;
+      case 'thap_board':
+        if (typeof window !== 'undefined' && window.GameThap && window.GameThap.openBoard) {
+          window.GameThap.openBoard();
         }
         break;
       default:
@@ -4693,13 +4742,19 @@
         if (typeof window !== 'undefined' && window.GameUI) window.GameUI.showToast(eatRes.msg);
         return { ok: false, msg: eatRes.msg };
       }
+      // P2B (47§3): món ăn hồi máu hiện có là đường xóa trọng thương NGAY
+      // (không bịa thuốc mới; FOOD_DEFS là đường hồi máu thật trong mã).
+      var p2bFoodApi = getP2BApi();
+      var p2bWoundGone = p2bFoodApi ? p2bFoodApi.clearWound(player) : false;
+      var eatMsg = eatRes.msg + (p2bWoundGone ? ' Trọng thương đã tan.' : '');
+      if (p2bWoundGone && stateAPI) stateAPI.savePlayer(player);
       if (audioAPI && audioAPI.playChime) audioAPI.playChime();
-      spawnFloatingText('Linh Thực Hồi Phục!', player.x, player.y - 35, '#ffd700');
+      spawnFloatingText(p2bWoundGone ? 'Trọng thương tan!' : 'Linh Thực Hồi Phục!', player.x, player.y - 35, '#ffd700');
       if (typeof window !== 'undefined' && window.GameUI) {
-        window.GameUI.showToast(eatRes.msg);
+        window.GameUI.showToast(eatMsg);
         window.GameUI.refreshHUD();
       }
-      return { ok: true, msg: eatRes.msg, buff: eatRes.buff };
+      return { ok: true, msg: eatMsg, buff: eatRes.buff, woundCleared: p2bWoundGone };
     }
 
     return { ok: false, msg: 'Vật phẩm không thể sử dụng trực tiếp' };
@@ -4716,6 +4771,99 @@
       try { return require('./dotpha.js'); } catch (e) { return null; }
     }
     return null;
+  }
+
+  // =========================================================================
+  // ĐỢT P2B — HỒN / TRỌNG THƯƠNG / ĐIỂM TỬ / BÙA HỘ MỆNH / LOG CHẾT
+  // (hồ sơ 47 §3/§4/§7, 48 §2/§7/§8 — phần chơi đơn)
+  // Toàn bộ SỐ nằm trong js/p2b.js (P2B_CONST); engine chỉ móc luồng chơi thật.
+  // =========================================================================
+  var p2bLastSoulSec = 0;
+  var p2bReviveFx = null;      // { start, dur, color } — ánh sáng hồi sinh 48§7
+  var p2bDeathVignette = 0;    // 0..1 — xám mép màn hình khi gục
+  var p2bDeathHandled = false; // đã ghi log + mở hồn cho cái chết hiện tại chưa
+
+  function getP2BApi() {
+    if (typeof window !== 'undefined' && window.GameP2B) return window.GameP2B;
+    if (typeof global !== 'undefined' && global.GameP2B) return global.GameP2B;
+    if (typeof require !== 'undefined') {
+      try { return require('./p2b.js'); } catch (e) { return null; }
+    }
+    return null;
+  }
+
+  /** Đang vô địch sau khi bùa vỡ: chặn MỌI nguồn sát thương (quái/hazard/boss). */
+  function p2bBlocksDamage() {
+    var api = getP2BApi();
+    return !!(api && player && api.isInvulnerable(player, Date.now()));
+  }
+
+  function p2bStrongestColor() {
+    var api = getP2BApi();
+    var elem = api ? api.strongestElement(player) : 'moc';
+    return MEDITATE_ELEM_COLORS[elem] || '#55d882';
+  }
+
+  /** Tick mỗi khung (gameLoop, chạy cả khi hp = 0 nên hồn vẫn đếm giờ). */
+  function p2bTick() {
+    var api = getP2BApi();
+    if (!api || !player) return;
+    var nowMs = Date.now();
+    var res = api.tick(player, nowMs);
+
+    if (res.soulRemainingSec > 0 && res.soulRemainingSec !== p2bLastSoulSec) {
+      p2bLastSoulSec = res.soulRemainingSec;
+      if (typeof window !== 'undefined' && window.GameUI && window.GameUI.setDeathSoulStatus) {
+        window.GameUI.setDeathSoulStatus(res.soulRemainingSec);
+      }
+    }
+    if (res.soulEnded) {
+      p2bLastSoulSec = 0;
+      if (typeof window !== 'undefined' && window.GameUI) {
+        if (window.GameUI.setDeathSoulStatus) window.GameUI.setDeathSoulStatus(0);
+        // Hết giờ hồn -> modal chết như hiện tại (không kẹt).
+        if (window.GameUI.showDeathModal) window.GameUI.showDeathModal(player.revivalPool);
+      }
+    }
+    if (res.woundCleared) {
+      if (stateAPI) stateAPI.savePlayer(player);
+      if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.showToast('Trọng thương đã tan theo thời gian.');
+        window.GameUI.refreshHUD();
+      }
+    }
+
+    // Điểm tử tự xóa khi đã rời xa rồi quay lại đúng bán kính (47§4).
+    if (api.tickDeathPoint(player, currentMapId)) {
+      if (stateAPI) stateAPI.savePlayer(player);
+      spawnFloatingText('Điểm tử tan biến', player.x, player.y - 55, '#8fd8ff');
+      if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.showToast('Đã tới điểm tử — dấu chấm trên bản đồ tan biến.');
+      }
+    }
+  }
+
+  /** Sau hồi sinh thành công: gỡ hồn, cộng trọng thương, ghi log, diễn ánh sáng. */
+  function p2bOnRevived(type) {
+    var api = getP2BApi();
+    if (!api || !player) return;
+    api.endSoul();
+    var nowMs = Date.now();
+    var wound = api.applyWoundAfterRevive(player, nowMs);
+    api.noteRevive(player, type, nowMs);
+    p2bLastSoulSec = 0;
+    p2bReviveFx = { start: performance.now(), dur: 1100, color: p2bStrongestColor() };
+    if (stateAPI) stateAPI.savePlayer(player);
+    spawnFloatingText('Hoàn hồn!', player.x, player.y - 60, p2bReviveFx.color);
+
+    if (typeof window !== 'undefined' && window.GameUI) {
+      if (window.GameUI.setDeathSoulStatus) window.GameUI.setDeathSoulStatus(0);
+      var pct = Math.round(wound.penalty * 100);
+      var mins = Math.round(api.P2B_CONST.WOUND_DECAY_MS / 60000);
+      window.GameUI.showToast('Hồi sinh — trọng thương ' + wound.stacks + ' tầng: -' + pct +
+        '% công/thủ/bạo kích/hồi phục trong ' + mins + ' phút (ăn món hồi máu để tan ngay).');
+      window.GameUI.refreshHUD();
+    }
   }
 
   // =========================================================================
@@ -6114,7 +6262,7 @@
     }
     spawnReleaseBurst(player.x, player.y - 30, elem, def.tier);
 
-    var stats = stateAPI ? stateAPI.deriveStats(player.paths, player.equipment) : { attack: 10 };
+    var stats = stateAPI ? stateAPI.deriveStats(player.paths, player.equipment, undefined, player) : { attack: 10 };
     var baseRaw = 10 + (stats.attack - 10);
     var raw = baseRaw * (def.damage ? def.damage.ratio : 1) +
       (def.damage && def.damage.flat ? def.damage.flat : 0);
@@ -6477,6 +6625,9 @@
     lastFrameTime = currentTime;
 
     update(dt);
+    // Đợt P2B: đồng hồ hồn/trọng thương/điểm tử chạy cả khi hp = 0 (update
+    // return sớm lúc gục), nên tick riêng ở đây thay vì trong update.
+    p2bTick();
 
     // Đợt 3 (Note 3B): lớp nhạc chiến đấu bật/tắt theo trạng thái giao tranh
     if (typeof window !== 'undefined' && window.GameMusic) {
@@ -7126,7 +7277,7 @@
     // Đợt K1: thông số đòn thường đọc từ registry (id 'basic'); ratio 1.0 nên
     // số học giữ nguyên bản live từng ly.
     var basicDef = skillsAPI ? skillsAPI.getSkill('basic') : null;
-    var stats = stateAPI ? stateAPI.deriveStats(player.paths, player.equipment) : { attack: 10, critRate: 5 };
+    var stats = stateAPI ? stateAPI.deriveStats(player.paths, player.equipment, undefined, player) : { attack: 10, critRate: 5 };
     var raw = (10 + (stats.attack - 10)) * (basicDef && basicDef.damage ? basicDef.damage.ratio : 1);
     // Đợt K2: đòn thường cũng là một nhịp của Tương Sinh Liên Hoàn — bước
     // chuỗi TRƯỚC khi tính sát thương để hệ số khắc dùng đúng hệ vừa
@@ -7306,6 +7457,12 @@
         state: 'aggro',
         spawnGraceTimer: 0
       });
+      // Đợt P2C: quái triệu hồi của boss trong Tháp phải mang cùng nhãn tháp,
+      // nếu không chúng sẽ nằm lại sân tháp sau khi qua tầng và hồi sinh.
+      if (elite.towerTag) {
+        add.towerTag = elite.towerTag;
+        add.mapId = elite.mapId;
+      }
       fieldMonsters.push(add);
     }
     spawnFloatingText('Triệu hồi Thảo Tinh!', elite.x, elite.y - 65, '#ffe9a8');
@@ -7343,10 +7500,12 @@
   }
 
   function handleMonsterAttackPlayer(m) {
+    // P2B: bùa vỡ cho vài giây vô địch — quái đánh trúng cũng không mất máu.
+    if (p2bBlocksDamage()) return;
     lastCombatTime = performance.now();
     // Đợt P2A: trúng đòn = tự đứng dậy khỏi thiền ngay (không chờ khung sau)
     if (meditation) stopMeditation('damage');
-    var stats = stateAPI ? stateAPI.deriveStats(player.paths, player.equipment) : { defense: 5 };
+    var stats = stateAPI ? stateAPI.deriveStats(player.paths, player.equipment, undefined, player) : { defense: 5 };
     var elemFac = combatAPI ? combatAPI.getElementFactor(m.element, 'moc') : 1.0;
     var rawDmg = m.damage;
     var dealt = combatAPI ? combatAPI.calcDamage(rawDmg, elemFac, stats.defense) : rawDmg;
@@ -7371,7 +7530,7 @@
     spawnDamageNumber(player.x, player.y - 45, Math.round(dealt), 'player_damage', false);
 
     if (player.hp <= 0) {
-      handlePlayerDeath();
+      handlePlayerDeath({ cause: 'monster', killerId: m.speciesId || m.id || null, killerName: m.name || m.speciesId || '' });
     }
   }
 
@@ -7507,7 +7666,65 @@
     }
   }
 
-  function handlePlayerDeath() {
+  function handlePlayerDeath(info) {
+    info = info || {};
+    var api = getP2BApi();
+    var nowMs = Date.now();
+
+    if (api && player) {
+      api.ensureState(player);
+      // Đang ở trạng thái hồn: hazard/boss gọi lại cũng không mở lại chuông/modal.
+      if (api.isSoulActive(nowMs)) { player.hp = 0; return; }
+      // Cái chết này đã ghi log + mở hồn rồi (modal đang chờ người chơi chọn
+      // đường hồi sinh) — các nguồn sát thương nền gọi lại thì bỏ qua.
+      if (p2bDeathHandled) { player.hp = 0; return; }
+      // Lưới an toàn: đang vô địch sau khi bùa vỡ thì không thể chết.
+      if (api.isInvulnerable(player, nowMs)) {
+        player.hp = Math.max(1, Math.round((player.hpMax || 100) * 0.05));
+        return;
+      }
+      // Bùa Hộ Mệnh (47§7): bùa vỡ thay cho cái chết, mất 1 lá khỏi túi.
+      var saved = api.tryCharmSave(player, nowMs);
+      if (saved) {
+        if (stateAPI) stateAPI.savePlayer(player);
+        if (audioAPI && audioAPI.playChime) audioAPI.playChime();
+        spawnFloatingText('Bùa Hộ Mệnh vỡ!', player.x, player.y - 60, '#ffe9a8');
+        if (typeof window !== 'undefined' && window.GameUI) {
+          window.GameUI.showToast('Bùa Hộ Mệnh vỡ, cứu mạng! Còn ' + saved.hp + ' máu, vô địch ' +
+            saved.invulnSec + ' giây.');
+          window.GameUI.refreshHUD();
+        }
+        return;
+      }
+
+      p2bDeathHandled = true;
+      player.hp = 0;
+      if (stateAPI) stateAPI.breakHuntChain(player);
+      if (audioAPI) audioAPI.playDeathGong();
+
+      // Điểm tử (47§4) + log chết cho sổ tử P2F (48§7/§8), rồi mới vào hồn (48§2).
+      api.setDeathPoint(player, { x: player.x, y: player.y }, currentMapId, (mapData && mapData.name) || '', nowMs);
+      api.recordDeath(player, {
+        mapId: currentMapId,
+        mapName: (mapData && mapData.name) || '',
+        x: player.x,
+        y: player.y,
+        cause: info.cause || 'environment',
+        killerId: info.killerId || null,
+        killerName: info.killerName || '',
+        realm: player.realm || ''
+      }, nowMs);
+      api.beginSoul(nowMs, { x: player.x, y: player.y }, currentMapId);
+      p2bLastSoulSec = api.P2B_CONST.SOUL_MAX_SEC;
+      if (stateAPI) stateAPI.savePlayer(player);
+      if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.showDeathModal(player.revivalPool);
+        if (window.GameUI.setDeathSoulStatus) window.GameUI.setDeathSoulStatus(p2bLastSoulSec);
+      }
+      return;
+    }
+
+    // Đường lùi khi thiếu module P2B (không xảy ra trong luồng chơi thật).
     player.hp = 0;
     if (stateAPI) {
       stateAPI.breakHuntChain(player);
@@ -7520,6 +7737,7 @@
 
   function handleRevive(type) {
     autoPath.active = false; // Hồi sinh -> dừng tự tìm đường
+    var revived = false;
     if (type === 'spot') {
       if (stateAPI && stateAPI.revivePlayer(player, 'spot')) {
         // Đẩy lùi quái gần điểm chết về trạng thái roam/nhà
@@ -7529,6 +7747,7 @@
             m.state = 'return';
           }
         }
+        revived = true;
         if (typeof window !== 'undefined' && window.GameUI) {
           window.GameUI.hideDeathModal();
           window.GameUI.showToast('Đã hồi sinh tại chỗ');
@@ -7539,11 +7758,18 @@
       if (stateAPI) {
         stateAPI.revivePlayer(player, 'home');
       }
+      revived = true;
       if (typeof window !== 'undefined' && window.GameUI) {
         window.GameUI.hideDeathModal();
       }
       var templeSpawn = { x: 560, y: 620 };
       switchMap('mieu_hoang', templeSpawn);
+    }
+
+    // P2B: gỡ hồn, cộng trọng thương, ghi mốc hồi sinh vào log, ánh sáng hoàn hồn.
+    if (revived) {
+      p2bDeathHandled = false;
+      if (getP2BApi()) p2bOnRevived(type);
     }
   }
 
@@ -7670,7 +7896,7 @@
       // Xử lý nổ kỹ năng Rễ Trói khi hết 1.2s telegraph
       if (vfx.type === 'telegraph_re_troi' && vfx.timer <= 0) {
         var distToPlayer = Math.hypot(player.x - vfx.x, player.y - vfx.y);
-        if (distToPlayer <= vfx.radius) {
+        if (distToPlayer <= vfx.radius && !p2bBlocksDamage()) {
           player.hp = Math.max(0, player.hp - vfx.damage);
           // Đợt K2: nổ trấn vùng của boss cũng là đòn nặng — ngắt vận chiêu
           if (player.hp > 0) tryInterruptCast(vfx.damage);
@@ -7681,7 +7907,7 @@
           }
           spawnDamageNumber(player.x, player.y - 45, vfx.damage, 'player_damage', false);
           if (audioAPI) audioAPI.playHit();
-          if (player.hp <= 0) handlePlayerDeath();
+          if (player.hp <= 0) handlePlayerDeath({ cause: 'boss_skill', killerName: 'Rễ Trói' });
         }
       }
 
@@ -9029,6 +9255,9 @@
       }
     }
 
+    // 8b. Đợt P2B: điểm tử (47§4) — dấu dưới đất + mũi tên RIÊNG màu xanh
+    drawP2BDeathPoint();
+
     // 9. Chip thông báo lối thoát
     if (exitChip.timer > 0) {
       drawExitChip(player.x, player.y - 130, exitChip.text);
@@ -9050,6 +9279,102 @@
 
     // 11. Bảng tên cổng cỡ lớn theo không gian màn hình (Đợt 3, Note 4)
     drawSignPlate();
+
+    // 12. Đợt P2B: xám mép màn hình khi gục + ánh sáng hoàn hồn (48§7) —
+    // vẽ ở không gian MÀN HÌNH, không thêm ảnh/asset mới.
+    drawP2BOverlays();
+  }
+
+  /** Điểm tử (47§4): cùng map mới vẽ; mũi tên riêng màu xanh, khác mũi tên nhiệm vụ. */
+  function drawP2BDeathPoint() {
+    var api = getP2BApi();
+    if (!api || !player) return;
+    var dp = api.getDeathPoint(player);
+    if (!dp || dp.mapId !== currentMapId) return;
+    var dist = Math.hypot(player.x - dp.x, player.y - dp.y);
+    var pulse = 0.55 + 0.3 * Math.sin(performance.now() / 380);
+
+    ctx.save();
+    ctx.strokeStyle = 'rgba(143, 216, 255, ' + pulse.toFixed(3) + ')';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(dp.x, dp.y, 20, 9, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(dp.x, dp.y - 26, 8 + pulse * 3, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(143, 216, 255, ' + (pulse * 0.35).toFixed(3) + ')';
+    ctx.beginPath();
+    ctx.arc(dp.x, dp.y - 26, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    drawHintChip(dp.x, dp.y - 58, 'Điểm tử');
+    if (player.hp > 0 && dist > 70) {
+      drawGuidanceArrow(player.x, player.y, dp.x, dp.y, {
+        fill: '#8fd8ff',
+        stroke: '#1d4a5d',
+        shadow: 'rgba(88, 190, 235, 0.85)'
+      });
+    }
+  }
+
+  /** 48§7: xám dần từ mép vào khi gục, ánh sáng hệ mạnh nhất khi sống dậy. */
+  function drawP2BOverlays() {
+    var api = getP2BApi();
+    if (!api || !player) return;
+
+    var target = player.hp <= 0 ? 1 : 0;
+    p2bDeathVignette += (target - p2bDeathVignette) * 0.05;
+    if (p2bDeathVignette > 0.01) {
+      var w = camera.viewportW;
+      var h = camera.viewportH;
+      var cx = w / 2;
+      var cy = h / 2;
+      var g = ctx.createRadialGradient(cx, cy, Math.min(w, h) * 0.22, cx, cy, Math.max(w, h) * 0.62);
+      g.addColorStop(0, 'rgba(70, 72, 70, 0)');
+      g.addColorStop(1, 'rgba(58, 60, 58, ' + (0.6 * p2bDeathVignette).toFixed(3) + ')');
+      ctx.save();
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, w, h);
+      ctx.restore();
+    }
+
+    if (p2bReviveFx) {
+      var t = (performance.now() - p2bReviveFx.start) / p2bReviveFx.dur;
+      if (t >= 1) {
+        p2bReviveFx = null;
+      } else {
+        var a = Math.sin(Math.PI * Math.max(0, Math.min(1, t)));
+        var sx = (player.x - camera.x) * camera.scale;
+        var sy = (player.y - camera.y) * camera.scale;
+        var col = p2bReviveFx.color || '#55d882';
+        var rg = ctx.createRadialGradient(sx, sy - 20, 4, sx, sy - 20, 90 + t * 70);
+        rg.addColorStop(0, 'rgba(255, 255, 255, ' + (0.55 * a).toFixed(3) + ')');
+        rg.addColorStop(0.45, p2bHexToRgba(col, 0.35 * a));
+        rg.addColorStop(1, p2bHexToRgba(col, 0));
+        ctx.save();
+        ctx.fillStyle = rg;
+        ctx.fillRect(sx - 170, sy - 190, 340, 340);
+        ctx.strokeStyle = p2bHexToRgba(col, 0.65 * a);
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(sx, sy, 30 + 24 * (1 - a), 12 + 9 * (1 - a), 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+  }
+
+  function p2bHexToRgba(hex, alpha) {
+    var h = String(hex || '').replace('#', '');
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    var n = parseInt(h, 16);
+    if (!isFinite(n)) return 'rgba(255, 233, 168, ' + alpha + ')';
+    var r = (n >> 16) & 255;
+    var g = (n >> 8) & 255;
+    var b = n & 255;
+    return 'rgba(' + r + ', ' + g + ', ' + b + ', ' + alpha + ')';
   }
 
   function getNearestLivingThaoTinh() {
@@ -9175,7 +9500,7 @@
   function firePetSkill(pet, target, skillName) {
     var n2Api = getN2Api();
     if (!n2Api) return;
-    var stats = stateAPI ? stateAPI.deriveStats(player.paths, player.equipment) : { attack: 10 };
+    var stats = stateAPI ? stateAPI.deriveStats(player.paths, player.equipment, undefined, player) : { attack: 10 };
     var spec = n2Api.species(pet.speciesId) || { element: 'moc' };
     var raw = n2Api.petDamage(pet, stats.attack);
     projectiles.push({
@@ -9356,7 +9681,7 @@
       if (typeof window !== 'undefined' && window.GameUI) window.GameUI.showToast('Không có mục tiêu trong tầm hợp kích.');
       return { ok: false, msg: 'Không có mục tiêu.' };
     }
-    var stats = stateAPI ? stateAPI.deriveStats(player.paths, player.equipment) : { attack: 10 };
+    var stats = stateAPI ? stateAPI.deriveStats(player.paths, player.equipment, undefined, player) : { attack: 10 };
     var ownerElem = n2Api.strongestPath(player);
     var spec = n2Api.species(pet.speciesId) || { element: 'moc' };
     var dmg = n2Api.harmonyDamage(pet, stats.attack, ownerElem);
@@ -10955,7 +11280,7 @@
     ctx.restore();
   }
 
-  function drawGuidanceArrow(fromX, fromY, toX, toY) {
+  function drawGuidanceArrow(fromX, fromY, toX, toY, style) {
     var angle = Math.atan2(toY - fromY, toX - fromX);
     var dist = Math.hypot(toX - fromX, toY - fromY);
     if (dist < 70) return;
@@ -10967,10 +11292,11 @@
     ctx.save();
     ctx.translate(arrowX, arrowY);
     ctx.rotate(angle);
-    ctx.shadowColor = 'rgba(218, 175, 55, 0.8)';
+    // P2B: mũi tên điểm tử truyền bảng màu riêng; mũi tên nhiệm vụ giữ nguyên vàng.
+    ctx.shadowColor = (style && style.shadow) || 'rgba(218, 175, 55, 0.8)';
     ctx.shadowBlur = qualityShadow(8);
-    ctx.fillStyle = '#f3d94e';
-    ctx.strokeStyle = '#5d4a1e';
+    ctx.fillStyle = (style && style.fill) || '#f3d94e';
+    ctx.strokeStyle = (style && style.stroke) || '#5d4a1e';
     ctx.lineWidth = 1.2;
 
     ctx.beginPath();
@@ -11336,6 +11662,21 @@
       return out;
     },
     getGroundDrops: function () { return groundDrops; },
+    // Đợt P2C: móc hẹp cho Tháp Thí Luyện (js/thap-tu-luyen.js). Chỉ sinh/thu
+    // quái mang nhãn tháp trong fieldMonsters hiện có — không đổi cách quái
+    // được cập nhật, vẽ, rơi đồ hay hồi sinh của map thường.
+    tower: {
+      spawn: spawnTowerMonster,
+      remove: removeTowerMonster,
+      clear: clearTowerMonsters,
+      getMonsters: function () {
+        var out = [];
+        for (var i = 0; i < fieldMonsters.length; i++) {
+          if (fieldMonsters[i] && fieldMonsters[i].towerTag) out.push(fieldMonsters[i]);
+        }
+        return out;
+      }
+    },
     getPlayer: function () { return player; },
     isDanLoBurning: isDanLoBurning,
     performContextAction: performContextAction,

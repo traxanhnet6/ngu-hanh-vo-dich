@@ -875,6 +875,20 @@
     set('stats-bosses', s.bossKills || 0);
     set('stats-harvests', s.harvests || 0);
     set('stats-refines', s.refines || 0);
+    // Đợt P2B: dòng trạng thái trọng thương (không thêm nút HUD mới).
+    var p2bApi = (typeof window !== 'undefined') ? window.GameP2B : null;
+    var woundRow = document.getElementById('stats-wound-row');
+    var woundVal = document.getElementById('stats-wound');
+    if (woundRow && woundVal) {
+      var wInfo = (p2bApi && player) ? p2bApi.woundInfo(player, Date.now()) : null;
+      if (wInfo && wInfo.stacks > 0) {
+        woundRow.style.display = '';
+        woundVal.textContent = 'Trọng thương ' + wInfo.stacks + ' tầng (-' + Math.round(wInfo.penalty * 100) +
+          '% công/thủ/bạo kích/hồi phục, còn ' + Math.max(1, Math.ceil(wInfo.remainingSec / 60)) + ' phút)';
+      } else {
+        woundRow.style.display = 'none';
+      }
+    }
     renderStatsThienTu();
     modal.classList.remove('hidden');
   }
@@ -1411,12 +1425,15 @@
           slotDiv.appendChild(nameSpan);
         } else if (slotData && slotData.itemId) {
           var def = defs[slotData.itemId] || { name: slotData.itemId, iconCol: 0, iconRow: 0 };
-          var iconDiv = document.createElement('div');
-          iconDiv.className = 'bag-slot-icon';
-          var posX = -(def.iconCol || 0) * 32;
-          var posY = -(def.iconRow || 0) * 32;
-          iconDiv.style.backgroundPosition = posX + 'px ' + posY + 'px';
-          slotDiv.appendChild(iconDiv);
+          // P2B: vật phẩm chưa có sprite (Bùa Hộ Mệnh) -> để trống ô, không emoji.
+          if (!def.hideIcon) {
+            var iconDiv = document.createElement('div');
+            iconDiv.className = 'bag-slot-icon';
+            var posX = -(def.iconCol || 0) * 32;
+            var posY = -(def.iconRow || 0) * 32;
+            iconDiv.style.backgroundPosition = posX + 'px ' + posY + 'px';
+            slotDiv.appendChild(iconDiv);
+          }
 
           if (slotData.herbQuality !== undefined) { var qSpan = document.createElement('span'); qSpan.className = 'bag-slot-quality'; qSpan.textContent = (window.GameHerbQuality && window.GameHerbQuality.getQualityShortLabel) ? window.GameHerbQuality.getQualityShortLabel(slotData.herbQuality) : ['Hạ','Trung','Thượng','Cực'][slotData.herbQuality]; qSpan.style.borderColor = ['#8b8b8b','#4f9d69','#4f83c4','#b07ad6'][slotData.herbQuality] || '#8b8b8b'; slotDiv.appendChild(qSpan); }
 
@@ -1606,6 +1623,13 @@
 
   function setIconSprite(el, def, cellPx) {
     if (!el || !def) return;
+    // P2B: Bùa Hộ Mệnh chưa có sprite -> giấu icon (không emoji giữ chỗ).
+    if (def.hideIcon) {
+      el.style.backgroundImage = 'none';
+      el.style.width = cellPx + 'px';
+      el.style.height = cellPx + 'px';
+      return;
+    }
     var scale = cellPx / 32; // sheet gốc: 6x7 ô 32px (nền 192x224)
     el.style.backgroundImage = "url('assets/art/icons-sheet.png')";
     el.style.backgroundSize = (192 * scale) + 'px ' + (256 * scale) + 'px';
@@ -2943,6 +2967,23 @@
     if (modal) modal.classList.add('hidden');
   }
 
+  var deathSubtitleBase = '';
+  /**
+   * Đợt P2B (48§2): dòng phụ của modal chết đếm giờ trạng thái hồn. sec = 0
+   * thì trả lại câu gốc (hết hồn -> modal chết như hiện tại).
+   */
+  function setDeathSoulStatus(sec) {
+    var modal = document.getElementById('death-modal');
+    var el = modal ? modal.querySelector('.death-subtitle') : null;
+    if (!el) return;
+    if (!deathSubtitleBase) deathSubtitleBase = el.textContent;
+    if (sec > 0) {
+      el.textContent = 'Hồn lìa khỏi xác — còn ' + sec + ' giây quan sát (không thể đánh, không nhặt đồ).';
+    } else {
+      el.textContent = deathSubtitleBase;
+    }
+  }
+
   /**
    * Hiển thị bảng tổng kết farm
    */
@@ -3621,6 +3662,25 @@
         var engMM = (typeof window !== 'undefined' && window.GameEngine) ? window.GameEngine : null;
         var tInfoMM = (engMM && engMM.getQuestTargetInfo) ? engMM.getQuestTargetInfo() : null;
         var destMM = (tInfoMM && engMM.resolveQuestDestination) ? engMM.resolveQuestDestination(tInfoMM) : null;
+        // Đợt P2B: điểm tử — chấm xanh rỗng (khác chấm vàng nhiệm vụ), chỉ cùng map.
+        var p2bMM = (typeof window !== 'undefined') ? window.GameP2B : null;
+        var dpMM = (p2bMM && p2bMM.getDeathPoint && player) ? p2bMM.getDeathPoint(player) : null;
+        if (dpMM && dpMM.mapId === mapData.id) {
+          var dpx = dpMM.x * scaleX;
+          var dpy = dpMM.y * scaleY;
+          minimapCtx.save();
+          minimapCtx.strokeStyle = '#8fd8ff';
+          minimapCtx.lineWidth = 1.6 * mmK;
+          minimapCtx.beginPath();
+          minimapCtx.arc(dpx, dpy, 4.6 * mmK, 0, Math.PI * 2);
+          minimapCtx.stroke();
+          minimapCtx.fillStyle = '#8fd8ff';
+          minimapCtx.beginPath();
+          minimapCtx.arc(dpx, dpy, 1.5 * mmK, 0, Math.PI * 2);
+          minimapCtx.fill();
+          minimapCtx.restore();
+        }
+
         if (destMM && (!destMM.mapId || destMM.mapId === mapData.id)) {
           var dxMM = destMM.x * scaleX;
           var dyMM = destMM.y * scaleY;
@@ -5129,6 +5189,7 @@
     triggerSkillShake: triggerSkillShake,
     showDeathModal: showDeathModal,
     hideDeathModal: hideDeathModal,
+    setDeathSoulStatus: setDeathSoulStatus,
     showSessionSummary: showSessionSummary,
     openSettingsModal: openSettingsModal,
     applyDisplaySettings: applyDisplaySettings,

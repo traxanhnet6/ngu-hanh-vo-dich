@@ -219,6 +219,14 @@
     return null;
   }
 
+  /** API js/p2b.js (lười — tránh vòng nạp state <-> p2b ở Node). */
+  function getP2BApi() {
+    if (typeof window !== 'undefined' && window.GameP2B) return window.GameP2B;
+    if (typeof global !== 'undefined' && global.GameP2B) return global.GameP2B;
+    if (typeof require === 'function') { try { return require('./p2b.js'); } catch (e) { return null; } }
+    return null;
+  }
+
   function deriveStats(paths, equipment, kimDanPham, player) {
     var k = (paths && paths.kim && paths.kim.tuVi) || 0;
     var m = (paths && paths.moc && paths.moc.tuVi) || 0;
@@ -313,6 +321,24 @@
       }
     }
 
+    // Đợt P2B — TRỌNG THƯƠNG (47§3): giảm chỉ số CHIẾN ĐẤU theo số tầng, áp
+    // sau mọi nguồn cộng (đường tu/trang bị/phẩm). KHÔNG đụng hpMax/linhLucMax
+    // để hồi sinh không làm máu hiện tại vượt trần. Chỉ áp khi lời gọi có
+    // player (mọi lời gọi cũ không truyền -> hành vi y như trước đợt).
+    if (player) {
+      var _p2bApi = getP2BApi();
+      if (_p2bApi && _p2bApi.woundPenalty) {
+        var _wPen = _p2bApi.woundPenalty(player, Date.now());
+        if (_wPen > 0) {
+          var _wKeep = Math.max(0, 1 - _wPen);
+          attack = Math.max(1, Math.round(attack * _wKeep));
+          defense = Math.max(0, Math.round(defense * _wKeep));
+          critRate = +(critRate * _wKeep).toFixed(1);
+          regenRate = +(regenRate * _wKeep).toFixed(1);
+        }
+      }
+    }
+
     return {
       hpMax: hpMax,
       linhLucMax: linhLucMax,
@@ -383,6 +409,10 @@
       tieuMoc: { moc: 1, ngoDao: false, thangTinhAnh: false, focus: null },
       // Đợt P2A: trạng thái thiền/thổ nạp/kinh mạch (js/thien-tu.js chuẩn hóa khi nạp).
       thienTu: { meridians: [], fatigueUntil: 0, thoaHoaCount: 0, tuViThoNap: 0 },
+      // Đợt P2B: trọng thương + điểm tử + log chết (save cũ được p2b.ensureState
+      // chuẩn hóa lười khi chơi; mặc định ở đây cho nhân vật mới).
+      p2b: { wound: { stacks: 0, untilMs: 0, lastDeathMs: 0 }, invulnUntil: 0, deathPoint: null },
+      deathLog: [],
       bagLocks: {},
       // Đợt V1 chặng 0 + chặng 7: trạng thái cơ chế vùng và việc mở vùng (xem ensureV1).
       v1: { poisonStacks: 0, poisonResistUntil: 0, unlockedZones: {}, zoneQuests: { activeQuestId: null, tracked: false, completed: {} } },

@@ -154,6 +154,17 @@
       iconRow: 5,
       desc: 'Cháo Linh Mễ ninh cùng Linh Chi Rừng đại bổ. Ăn vào hồi +25 Khí Huyết và +22 Linh Lực mỗi 5 giây, liên tục trong 3 giờ.'
     },
+    // Đợt P2B (hồ sơ 47§7): Bùa Hộ Mệnh cứu mạng — CHỈ 1 entry mới, KHÔNG
+    // dùng lại 'bang-phu' (bùa chống rét Hồ Băng, vật phẩm nhiệm vụ khác).
+    // Chưa có sprite -> hideIcon: UI giấu icon, không dùng emoji giữ chỗ.
+    'bua-ho-menh': {
+      id: 'bua-ho-menh',
+      name: 'Bùa Hộ Mệnh',
+      type: 'quest',
+      stackable: false,
+      hideIcon: true,
+      desc: 'Lá bùa hộ mệnh do tông môn ban. Mang theo (tối đa một lá): khi nhận đòn kết liễu, bùa tự vỡ, cứu mạng với một phần máu nhỏ và vài giây vô địch — rồi mất khỏi túi.'
+    },
     'non-la': {
       id: 'non-la',
       name: 'Nón Lá',

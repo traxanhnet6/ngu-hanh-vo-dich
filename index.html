@@ -735,6 +735,8 @@
         <div class="summary-row"><span>Boss đã hạ:</span> <b id="stats-bosses">0</b></div>
         <div class="summary-row"><span>Lượt thu hoạch linh dược:</span> <b id="stats-harvests">0</b></div>
         <div class="summary-row"><span>Đan đã luyện thành:</span> <b id="stats-refines">0</b></div>
+        <!-- Đợt P2B: dòng trạng thái trọng thương (ẩn khi không có tầng nào) -->
+        <div class="summary-row" id="stats-wound-row" style="display: none;"><span>Trạng thái:</span> <b id="stats-wound"></b></div>
 
         <!-- Đợt P2A: linh khí theo đất + thổ nạp thật + kinh mạch (hồ sơ 45) -->
         <h3 class="stats-subtitle">LINH KHÍ NƠI ĐỨNG</h3>
@@ -1368,6 +1370,8 @@
   <script src="js/mapdata.js"></script>
   <!-- Đợt P2A: thiền/thổ nạp + linh khí theo đất + kinh mạch (hồ sơ 45) -->
   <script src="js/thien-tu.js"></script>
+  <!-- Đợt P2B: hồn/trọng thương/điểm tử/bùa hộ mệnh/log chết (hồ sơ 47/48) -->
+  <script src="js/p2b.js"></script>
   <script src="js/pathfind.js"></script>
   <script src="js/food-buff.js"></script>
   <script src="js/tong-mon-farm.js"></script>
@@ -1389,6 +1393,7 @@
   <script src="js/trangbi.js"></script>
   <script src="js/tui-kho.js"></script>
   <script src="js/bi-canh.js"></script>
+  <script src="js/thap-tu-luyen.js"></script>
   <script src="js/linh-thu.js"></script>
   <script src="js/nghe-luyenkhi.js"></script>
   <script src="js/nghe-luyenkhi-ui.js"></script>

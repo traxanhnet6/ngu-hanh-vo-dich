@@ -693,7 +693,7 @@
     {
       id: 'thap_tu_luyen',
       name: 'Tháp Tu Luyện',
-      desc: 'Tháp khiêu chiến theo tầng (mở ở đợt sau); chân tháp là nơi đả tọa hồi linh.',
+      desc: 'Tháp thí luyện leo tầng không đỉnh: mỗi tầng một đợt quái trong sân tháp, cứ 10 tầng có boss nhỏ; bảng leo tháp đặt lại theo tuần.',
       rect: { x: 1500, y: 380, w: 400, h: 520 }
     },
     {
@@ -1070,6 +1070,25 @@
       y: 770,
       radius: 50,
       action: 'practice_dummy'
+    },
+    // Đợt P2C: cửa Tháp Thí Luyện tại điểm đứng trước cửa tháp (1740,875 — đã
+    // forceWalkable ở dưới) + bảng leo tháp tuần đặt cùng sân, cách cửa 80px để
+    // vùng bấm không chồng lên cửa tháp.
+    {
+      id: 'interact_thap_enter',
+      label: 'Vào Tháp Tu Luyện',
+      x: 1740,
+      y: 875,
+      radius: 48,
+      action: 'thap_enter'
+    },
+    {
+      id: 'interact_thap_board',
+      label: 'Bảng Leo Tháp',
+      x: 1660,
+      y: 895,
+      radius: 48,
+      action: 'thap_board'
     },
     {
       id: 'interact_locked_portal',

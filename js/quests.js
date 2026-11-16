@@ -40,6 +40,13 @@
     try { return require('./engine.js'); } catch (e) { return null; }
   }
 
+  /** Đợt P2B: luật mang tối đa 1 Bùa Hộ Mệnh (47§7). */
+  function getP2BApi() {
+    if (typeof window !== 'undefined' && window.GameP2B) return window.GameP2B;
+    if (typeof global !== 'undefined' && global.GameP2B) return global.GameP2B;
+    try { return require('./p2b.js'); } catch (e) { return null; }
+  }
+
   function showToast(msg) {
     if (typeof window !== 'undefined' && window.GameUI && window.GameUI.showToast) {
       window.GameUI.showToast(msg);
@@ -589,7 +596,7 @@
       turnIn: { mapId: 'tong-mon', kind: 'npc', npcId: 'npc_chapsu' },
       target: { mapId: 'ho-bang', kind: 'monster', speciesId: 'giao_vuong', title: 'Giao Vương Đầu Đàn' },
       objectives: [{ id: 'kill_giao_vuong', kind: 'kill_monster', speciesId: 'giao_vuong', needed: 1 }],
-      rewards: { linhThach: 100, sectContribution: 50 },
+      rewards: { linhThach: 100, sectContribution: 50, items: [{ itemId: 'bua-ho-menh', count: 1 }] },
       repeatable: true,
       cooldownSec: 120
     }
@@ -1351,6 +1358,12 @@
     if (def.rewards && def.rewards.items) {
       for (var j = 0; j < def.rewards.items.length; j++) {
         var it = def.rewards.items[j];
+        // P2B: Bùa Hộ Mệnh chỉ mang 1 lá — đã có thì không nhận thêm.
+        var p2bReward = it.itemId === 'bua-ho-menh' ? getP2BApi() : null;
+        if (p2bReward && p2bReward.hasCharm(player)) {
+          rewardTextList.push('(đã có Bùa Hộ Mệnh — không nhận thêm)');
+          continue;
+        }
         if (st && st.addItemToBag) {
           st.addItemToBag(player, it.itemId, it.count || 1, mAPI ? mAPI.ITEM_DEFS : undefined);
         }
