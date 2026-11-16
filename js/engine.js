@@ -3309,6 +3309,11 @@
           window.GameThap.openBoard();
         }
         break;
+      case 'luan_vo':
+        if (typeof window !== 'undefined' && window.GameLuanVo && window.GameLuanVo.openModal) {
+          window.GameLuanVo.openModal();
+        }
+        break;
       default:
         break;
     }
@@ -6068,8 +6073,17 @@
     if (!skillsAPI) return;
     var def = skillsAPI.getSkill(skillId);
     if (!def) return;
+    // P2D: chặn chiêu sai hệ trong Sảnh/kỳ luận võ.
+    if (typeof window !== 'undefined' && window.GameLuanVo && window.GameLuanVo.checkSkill) {
+      var _lv = window.GameLuanVo.checkSkill(def);
+      if (!_lv.ok) {
+        if (typeof window !== 'undefined' && window.GameUI) window.GameUI.showToast(_lv.msg);
+        return;
+      }
+    }
     var hasPacks = mapData && mapData.monsterPacks && mapData.monsterPacks.length > 0;
-    if (!hasPacks && mapData.id !== 'rung-doc') {
+    var inLuanVo = (typeof window !== 'undefined' && window.GameLuanVo && (window.GameLuanVo.isInSanhThiDau() || window.GameLuanVo.getMatch()));
+    if (!inLuanVo && !hasPacks && mapData.id !== 'rung-doc') {
       if (typeof window !== 'undefined' && window.GameUI) {
         window.GameUI.showToast('Kỹ năng chỉ dùng trong khu vực săn bắn');
       }
@@ -7535,6 +7549,11 @@
   }
 
   function handleMonsterDeath(m) {
+    // P2D: bot luận võ không đi đường thưởng thường (tu vi/rơi đồ/chuỗi săn).
+    if (m && m.luanVoBot) {
+      if (targetMonster === m) targetMonster = null;
+      return;
+    }
     // 1. Tăng Chuỗi Săn (+1/kill, thời gian 20s)
     if (stateAPI) {
       stateAPI.incrementHuntChain(player);
@@ -7667,6 +7686,32 @@
   }
 
   function handlePlayerDeath(info) {
+    // P2D (sửa J1/J2 — nhánh này PHẢI đứng trước khối P2B): chết trong
+    // luận võ -> hồi sinh ngay tại sảnh chờ, không mất gì, không ăn bể
+    // lượt, không qua hồn/trọng thương của P2B (47§5). Trận đang chạy
+    // thắng kiểm vùng (vùng Sảnh chồng vùng tháp); lượt leo tháp đang
+    // chạy thì không áp luật luận võ — xem GameLuanVo.isLuanVoRuleActive.
+    var _lvRule = false;
+    if (typeof window !== 'undefined' && window.GameLuanVo) {
+      if (typeof window.GameLuanVo.isLuanVoRuleActive === 'function') {
+        _lvRule = window.GameLuanVo.isLuanVoRuleActive();
+      } else if (typeof window.GameLuanVo.isInSanhThiDau === 'function') {
+        _lvRule = window.GameLuanVo.isInSanhThiDau();
+      }
+    }
+    if (_lvRule && player) {
+      if (window.GameLuanVo.onPlayerDeathInSanh) window.GameLuanVo.onPlayerDeathInSanh();
+      player.hp = player.hpMax;
+      player.linhLuc = player.linhLucMax;
+      var spot = window.GameLuanVo.getWaitingSpot ? window.GameLuanVo.getWaitingSpot() : null;
+      if (spot) { player.x = spot.x; player.y = spot.y; }
+      if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.hideDeathModal();
+        window.GameUI.refreshHUD();
+        window.GameUI.showToast('Hồi sinh tại Sảnh Thi Đấu');
+      }
+      return;
+    }
     info = info || {};
     var api = getP2BApi();
     var nowMs = Date.now();
@@ -7732,6 +7777,33 @@
     if (audioAPI) audioAPI.playDeathGong();
     if (typeof window !== 'undefined' && window.GameUI) {
       window.GameUI.showDeathModal(player.revivalPool);
+    }
+  }
+
+  // P2D: móc hẹp cho Luận Võ (js/luan-vo.js) — sinh/thu bot trong fieldMonsters.
+  function spawnLuanVoBot(speciesId, x, y) {
+    if (!monstersAPI || !monstersAPI.createMonster) return null;
+    var m = monstersAPI.createMonster(speciesId, x, y, x, y, {
+      state: 'aggro',
+      spawnGraceTimer: 1.0
+    });
+    m.mapId = currentMapId;
+    m.luanVoBot = true;
+    fieldMonsters.push(m);
+    return m;
+  }
+  function removeLuanVoBot(m) {
+    if (!m) return;
+    var idx = fieldMonsters.indexOf(m);
+    if (idx >= 0) fieldMonsters.splice(idx, 1);
+    if (targetMonster === m) targetMonster = null;
+  }
+  function clearLuanVoBots() {
+    for (var i = fieldMonsters.length - 1; i >= 0; i--) {
+      var m = fieldMonsters[i];
+      if (!m || !m.luanVoBot) continue;
+      if (targetMonster === m) targetMonster = null;
+      fieldMonsters.splice(i, 1);
     }
   }
 
@@ -9859,6 +9931,13 @@
       ctx.shadowColor = '#000000';
       ctx.shadowBlur = qualityShadow(4);
       ctx.fillText(m.name, m.x, topY - 5);
+      // P2D (J3): bot luận võ có tông môn thì vẽ thêm dòng tông môn trên tên.
+      // Quái thường không có sectName nên không đổi cách vẽ.
+      if (m.sectName) {
+        ctx.font = '11px "Noto Serif", serif';
+        ctx.fillStyle = '#cfe3ff';
+        ctx.fillText(m.sectName, m.x, topY - 19);
+      }
       ctx.restore();
     }
 
@@ -11673,6 +11752,19 @@
         var out = [];
         for (var i = 0; i < fieldMonsters.length; i++) {
           if (fieldMonsters[i] && fieldMonsters[i].towerTag) out.push(fieldMonsters[i]);
+        }
+        return out;
+      }
+    },
+    // P2D: móc hẹp cho Luận Võ.
+    luanVo: {
+      spawn: spawnLuanVoBot,
+      remove: removeLuanVoBot,
+      clear: clearLuanVoBots,
+      getMonsters: function () {
+        var out = [];
+        for (var i = 0; i < fieldMonsters.length; i++) {
+          if (fieldMonsters[i] && fieldMonsters[i].luanVoBot) out.push(fieldMonsters[i]);
         }
         return out;
       }

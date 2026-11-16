@@ -705,7 +705,7 @@
     {
       id: 'sanh_thi_dau',
       name: 'Sảnh Thi Đấu',
-      desc: 'Đấu trường tròn cho luận võ xếp hạng (mở ở đợt sau).',
+      desc: 'Đấu trường tròn cho luận võ xếp hạng với bot (P2D).',
       rect: { x: 1180, y: 640, w: 520, h: 420 }
     }
   ];
@@ -1122,6 +1122,14 @@
       y: 700,
       radius: 56,
       action: 'locked_arena'
+    },
+    {
+      id: 'interact_luan_vo',
+      label: 'Luận Võ',
+      x: 1440,
+      y: 850,
+      radius: 56,
+      action: 'luan_vo'
     },
     // Đợt N1: điểm hành nghề + lò rèn + bảng đơn hàng. Lò rèn KHÔNG đặt ở
     // (1040,680) như thiết kế §4.1 vì điểm đó nằm trong vùng bấm của NPC
