@@ -452,6 +452,9 @@ body.uikit-pc #hud-right-controls {
   border: none;
   border-radius: 0;
   box-shadow: none;
+  /* Đợt PHONECTRL: nền vuông tối của .action-slot lộ ra ở 4 góc ảnh nút tròn
+     thành hình vuông nâu che joystick — nền phải trong suốt. */
+  background-color: transparent;
   background-image: var(--uk-round);
   background-size: 100% 100%;
   background-repeat: no-repeat;
@@ -479,6 +482,8 @@ body.uikit-pc #hud-right-controls {
   border: none;
   border-radius: 0;
   box-shadow: none;
+  /* Đợt PHONECTRL: như nút Đánh — nền vuông của .skill-slot lộ ở góc ảnh tròn. */
+  background-color: transparent;
   background-image: var(--uk-round-sm);
   background-size: 100% 100%;
   background-repeat: no-repeat;
@@ -506,6 +511,24 @@ body.uikit-pc #hud-right-controls {
 /* PC giữ cả hai. JS gắn/gỡ class uikit-dialogue-open ở open/closeDialogue. */
 .uikit-phone.uikit-dialogue-open #skill-bar {
   display: none;
+}
+
+/* ---------- Đợt PHONECTRL: cụm nút tròn lên trên dải skill (chỉ điện thoại) ---------- */
+/* Đo thật ở 390x844: nút Đánh nằm trong luồng ngang của thanh skill nên chồng
+   lên joystick 76x76px, nửa phải joystick bấm không ăn. Trên điện thoại, cụm
+   nút tròn (Đánh + Thuần Phục/Hợp Kích) tách khỏi luồng ngang, neo mép ngoài
+   phía trên dải skill — ngón cái phải bấm được, joystick trọn vẹn. PC giữ
+   nguyên bố cục ngang. Nút tròn vẫn nằm trong #skill-bar nên khi thoại mở
+   (quyết định 3) cả cụm vẫn ẩn theo. */
+.uikit-phone .uikit-action-cluster {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 12px);
+  z-index: 1;
+}
+body.lefty.uikit-phone .uikit-action-cluster {
+  right: auto;
+  left: 0;
 }
 
 /* ================= CẦN ĐIỀU KHIỂN ================= */

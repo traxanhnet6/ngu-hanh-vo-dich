@@ -997,15 +997,36 @@
     personalTimer.interval = setInterval(tick, 1000);
   }
 
+  /* Đợt PHONECTRL: trước đây chỉ nối nút "–" trong đầu bảng (getElementById
+     trả về nút đầu tiên mang id trùng), nút NV ngoài HUD bấm không có tác
+     dụng gì. Nay nối CẢ HAI nút, đồng bộ trạng thái nhìn thấy được + toast. */
   function wireQuestToggle() {
-    var btn = document.getElementById('btn-toggle-quest');
     var panel = document.getElementById('quest-panel');
-    if (!btn || !panel || btn.dataset.wired) return;
-    btn.dataset.wired = '1';
-    btn.addEventListener('click', function (e) {
-      e.stopPropagation();
+    var headerBtn = document.getElementById('btn-toggle-quest');
+    var hudBtn = document.getElementById('btn-toggle-quest-hud');
+    if (!panel || (!headerBtn && !hudBtn)) return;
+    var sync = function () {
+      var collapsed = panel.classList.contains('collapsed');
+      if (hudBtn) {
+        hudBtn.classList.toggle('is-collapsed', collapsed);
+        hudBtn.setAttribute('aria-label', collapsed ? 'Mở bảng nhiệm vụ' : 'Thu gọn bảng nhiệm vụ');
+      }
+      if (headerBtn) headerBtn.textContent = collapsed ? '+' : '–';
+    };
+    var toggle = function (e) {
+      if (e) e.stopPropagation();
       panel.classList.toggle('collapsed');
+      sync();
+      if (typeof showToast === 'function') {
+        showToast(panel.classList.contains('collapsed') ? 'Đã thu gọn bảng nhiệm vụ' : 'Đã mở bảng nhiệm vụ');
+      }
+    };
+    [headerBtn, hudBtn].forEach(function (btn) {
+      if (!btn || btn.dataset.wired) return;
+      btn.dataset.wired = '1';
+      btn.addEventListener('click', toggle);
     });
+    sync();
   }
 
   function startClockAndIdleWatch() {

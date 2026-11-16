@@ -1530,7 +1530,7 @@ button, .btn, .skill-slot, .char-select-btn {
     height: 69px;
   }
   .skill-bar {
-    bottom: 8px;
+    bottom: calc(8px + var(--safe-bottom));
     gap: 10px;
   }
   .skill-slot {
@@ -2108,6 +2108,21 @@ button, .btn, .skill-slot, .char-select-btn {
   min-height: 44px;
   font-size: 12px;
   font-weight: 800;
+}
+
+/* Đợt PHONECTRL: trạng thái nhìn thấy được của nút NV — bảng đang mở thì nút
+   sáng + mũi tên xuống (bấm để thu), bảng đã thu thì nút mờ + mũi tên lên. */
+.quest-toggle-btn::after {
+  content: '▾';
+  margin-left: 3px;
+  font-size: 11px;
+}
+.quest-toggle-btn.is-collapsed {
+  opacity: 0.62;
+  filter: saturate(0.65);
+}
+.quest-toggle-btn.is-collapsed::after {
+  content: '▴';
 }
 
 .bag-slot-lock {
