@@ -3122,6 +3122,18 @@
       case 'temple_door':
         triggerLockedDoorToast();
         break;
+      // Đợt P2H (15§6): đào kho báu tại điểm đào của bản đồ đang giữ.
+      // Điểm này do p2h.js cắm vào mapData.interactables; mọi kiểm tra
+      // (đúng vùng, đúng khoảng cách, có bản đồ) nằm trong module.
+      case 'p2h_dig':
+        if (typeof window !== 'undefined' && window.GameP2H && window.GameP2H.dig) {
+          // Sửa P2H-VERIFY-2: đào thất bại thì báo lý do, không im lặng.
+          var p2hDigRes = window.GameP2H.dig(player, it);
+          if (p2hDigRes && !p2hDigRes.ok && p2hDigRes.msg && window.GameUI && window.GameUI.showToast) {
+            window.GameUI.showToast(p2hDigRes.msg);
+          }
+        }
+        break;
       case 'door_enter':
         if (it.targetMap) {
           switchMap(it.targetMap, it.targetSpawn || { x: 600, y: 690 });
@@ -3615,6 +3627,20 @@
     if (!pl && typeof Engine !== 'undefined' && Engine.getPlayer) {
       pl = Engine.getPlayer();
     }
+
+    // Đợt P2H (15§6): DẪN ĐƯỜNG KHO BÁU TÀN ĐỒ — đứng TRƯỚC mọi bước nhiệm
+    // vụ, vì đây là ý người chơi bấm "Chỉ đường" trong bảng Tàn Đồ (không
+    // phụ thuộc tiến độ chuỗi chính). Module trả null khi chưa bấm, chưa có
+    // bản đồ, hoặc đã tới vùng đào — lúc đó dẫn đường quay về chuỗi chính.
+    // Mục tiêu chỉ tới VÙNG; tới vùng thì mũi tên tắt, người chơi tự tìm điểm đào.
+    if (pl) {
+      var p2hAPI = (typeof window !== 'undefined' && window.GameP2H) ? window.GameP2H : null;
+      if (p2hAPI && p2hAPI.getTrackedTargetInfo) {
+        var p2hTarget = p2hAPI.getTrackedTargetInfo(pl);
+        if (p2hTarget) return p2hTarget;
+      }
+    }
+
     if (!pl || !pl.quests) return null;
     var q = pl.quests;
     if (!q.talked_linhnhi) {
@@ -7685,6 +7711,24 @@
       });
     }
 
+    // Đợt P2H (15§6): TÀN ĐỒ — đường CỘNG THÊM sau rơi đồ thường.
+    // KHÔNG sửa `rollDrops`; module tự quyết tỉ lệ, engine chỉ thả xuống đất
+    // như mọi món rơi khác (cùng khóa chủ nhân/thời gian biến mất).
+    if (typeof window !== 'undefined' && window.GameP2H && window.GameP2H.rollKillDrop) {
+      var p2hDrop = window.GameP2H.rollKillDrop(player, m);
+      if (p2hDrop) {
+        groundDrops.push({
+          itemId: p2hDrop.itemId,
+          count: p2hDrop.count,
+          x: m.x + (Math.random() - 0.5) * 30,
+          y: m.y + (Math.random() - 0.5) * 20,
+          spawnTime: nowSec,
+          ownerUntil: nowSec + 30.0,
+          despawnTime: nowSec + 60.0
+        });
+      }
+    }
+
     if (targetMonster === m) {
       targetMonster = null;
     }
@@ -9335,6 +9379,10 @@
     // 8b. Đợt P2B: điểm tử (47§4) — dấu dưới đất + mũi tên RIÊNG màu xanh
     drawP2BDeathPoint();
 
+    // 8c. Đợt P2H (15§6): điểm đào kho báu trên map — dấu đất xới + chip tên
+    // khi lại gần (tới vùng rồi tự tìm; chỉ hiện chữ khi đã ở sát bên).
+    drawP2HDigPoint();
+
     // 9. Chip thông báo lối thoát
     if (exitChip.timer > 0) {
       drawExitChip(player.x, player.y - 130, exitChip.text);
@@ -9393,6 +9441,47 @@
         stroke: '#1d4a5d',
         shadow: 'rgba(88, 190, 235, 0.85)'
       });
+    }
+  }
+
+  /**
+   * Đợt P2H (15§6): điểm đào kho báu — chỉ vẽ khi bản đồ đang giữ trỏ đúng
+   * map hiện tại. Dấu đất xới bằng hình khối sẵn có của canvas (không thêm
+   * asset/hình mới); chữ "Điểm đào" chỉ hiện trong bán kính DIG_HINT_RADIUS.
+   */
+  function drawP2HDigPoint() {
+    if (typeof window === 'undefined' || !window.GameP2H || !player) return;
+    var api = window.GameP2H;
+    if (!api.getDigSpotForMap) return;
+    var spot = api.getDigSpotForMap(currentMapId);
+    if (!spot) return;
+    var pulse = 0.7 + 0.25 * Math.sin(performance.now() / 420);
+    ctx.save();
+    // nền đất xới (tối) để dấu nổi trên cỏ/nước
+    ctx.fillStyle = 'rgba(52, 38, 20, 0.45)';
+    ctx.beginPath();
+    ctx.ellipse(spot.x, spot.y, 26, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // vòng ngoài nhấp nháy
+    ctx.strokeStyle = 'rgba(226, 198, 128, ' + pulse.toFixed(3) + ')';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.ellipse(spot.x, spot.y, 26, 12, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    // ba vệt đất xới
+    ctx.strokeStyle = 'rgba(196, 164, 104, 0.95)';
+    ctx.lineWidth = 4;
+    for (var i = -1; i <= 1; i++) {
+      ctx.beginPath();
+      ctx.moveTo(spot.x + i * 11 - 5, spot.y - 3);
+      ctx.lineTo(spot.x + i * 11 + 5, spot.y + 5);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    var hintR = (api.P2H_CONST && api.P2H_CONST.DIG_HINT_RADIUS) ? api.P2H_CONST.DIG_HINT_RADIUS : 220;
+    if (Math.hypot(player.x - spot.x, player.y - spot.y) <= hintR) {
+      drawHintChip(spot.x, spot.y - 40, 'Điểm đào');
     }
   }
 

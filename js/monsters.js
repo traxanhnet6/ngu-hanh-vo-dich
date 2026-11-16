@@ -165,6 +165,24 @@
       hideIcon: true,
       desc: 'Lá bùa hộ mệnh do tông môn ban. Mang theo (tối đa một lá): khi nhận đòn kết liễu, bùa tự vỡ, cứu mạng với một phần máu nhỏ và vài giây vô địch — rồi mất khỏi túi.'
     },
+    // Đợt P2H (15§6): Tàn Đồ — mảnh vật phẩm rơi rất nhỏ khi farm/mở rương.
+    // TÊN TẠM, chờ Bui chốt. Chưa có sprite -> hideIcon (không emoji giữ chỗ).
+    'tan-do': {
+      id: 'tan-do',
+      name: 'Tàn Đồ',
+      type: 'quest',
+      stackable: true,
+      hideIcon: true,
+      desc: 'Mảnh bản đồ rách nát, mép cháy sém. Ghép đủ 5 mảnh thành một bản đồ kho báu chỉ tới một vị trí đào.'
+    },
+    'ban-do-kho-bau': {
+      id: 'ban-do-kho-bau',
+      name: 'Bản Đồ Kho Báu',
+      type: 'quest',
+      stackable: false,
+      hideIcon: true,
+      desc: 'Bản đồ ghép từ tàn đồ, chỉ một vị trí đào trong một vùng. Mở bảng Tàn Đồ để xem vùng và chỉ đường.'
+    },
     'non-la': {
       id: 'non-la',
       name: 'Nón Lá',

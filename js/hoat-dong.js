@@ -242,6 +242,12 @@
       parts.push('+' + chest.items[i].count + ' ' + itemLabel(chest.items[i].itemId));
     }
     showToast('Mở ' + chest.name + ': ' + parts.join(', '));
+    // Đợt P2H (15§6): mở rương = đường rơi tàn đồ thứ hai (tỉ lệ rất nhỏ).
+    // Đây là chỗ "mở rương" DUY NHẤT đang chạy thật trong game; module tự
+    // quyết tỉ lệ và tự báo kết quả, rương/thưởng của P2E không đổi.
+    if (typeof window !== 'undefined' && window.GameP2H && window.GameP2H.onChestOpened) {
+      try { window.GameP2H.onChestOpened(player, chest.name); } catch (e) {}
+    }
     renderIfOpen(player);
     return { ok: true, chestId: chest.id, items: chest.items };
   }
