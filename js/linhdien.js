@@ -749,6 +749,8 @@
     };
 
     st.savePlayer(player);
+    // P2E: gieo trồng tính là chăm ruộng trong việc ngày.
+    if (typeof window !== 'undefined' && window.GameHoatDong) window.GameHoatDong.note(player, 'farm');
     return { ok: true, msg: 'Đã gieo ' + plantDef.name + ' vào ô ' + (plotIndex + 1) + '.' };
   }
 
@@ -797,6 +799,8 @@
     // Dẫn Linh hồi độ phì đất
     player.linhDien.soilFertility = (player.linhDien.soilFertility || 0) + 1;
     st.savePlayer(player);
+    // P2E: thu hoạch tính là chăm ruộng trong việc ngày.
+    if (typeof window !== 'undefined' && window.GameHoatDong) window.GameHoatDong.note(player, 'farm');
 
     var herbName = plantDef ? plantDef.name : itemId;
     return {

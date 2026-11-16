@@ -216,6 +216,9 @@
 
     function openCharPanel() {
       if (audioAPI) audioAPI.playClick();
+      if (typeof window !== 'undefined' && window.GameP2F && window.GameP2F.evaluate && player) {
+        try { window.GameP2F.evaluate(player); } catch (e) {}
+      }
       updateCharPanelContent();
       charPanel.classList.remove('hidden');
     }
@@ -3303,6 +3306,9 @@
     }
 
     renderSkillBook();
+    if (typeof window !== 'undefined' && window.GameP2F && window.GameP2F.refreshTitle && player) {
+      try { window.GameP2F.refreshTitle(player); } catch (e) {}
+    }
   }
 
   /**

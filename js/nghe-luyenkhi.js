@@ -785,6 +785,11 @@
     // Tăng EXP nghề
     var expResult = addProfessionExp(player, node.profId, node.expGain || 20);
 
+    // P2E: thu hoạch điểm câu cá tính là việc ngày.
+    if (node.profId === 'fishing' && typeof window !== 'undefined' && window.GameHoatDong) {
+      window.GameHoatDong.note(player, 'fish');
+    }
+
     return {
       ok: true,
       nodeId: node.id,

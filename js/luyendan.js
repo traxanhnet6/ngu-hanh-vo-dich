@@ -706,6 +706,8 @@
     if (!player.stats) player.stats = { playSec: 0, kills: 0, bossKills: 0, harvests: 0, refines: 0 };
     player.stats.refines = (player.stats.refines || 0) + 1;
     st.savePlayer(player);
+    // P2E: luyện thành một mẻ đan tính là việc ngày.
+    if (typeof window !== 'undefined' && window.GameHoatDong) window.GameHoatDong.note(player, 'alchemy');
 
     var msgOk = 'Luyện thành ' + itemName(pillId) + ' — phẩm ' + gradeName + (danVan > 0 ? ', đan văn ' + danVan + ' vòng' : '') + '.';
     if (gradeIdx >= 3) msgOk += ' Dị tượng: hương đan lan ra.';

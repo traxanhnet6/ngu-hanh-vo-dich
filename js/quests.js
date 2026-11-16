@@ -1418,6 +1418,12 @@
     }
     qs.dailyCompletions.counts[questId] = (qs.dailyCompletions.counts[questId] || 0) + 1;
 
+    // P2E: nộp một phiếu treo thưởng trấn/tông môn tính là việc ngày.
+    if ((def.type === 'bounty_town' || def.type === 'bounty_sect') &&
+        typeof window !== 'undefined' && window.GameHoatDong) {
+      window.GameHoatDong.note(player, 'bounty');
+    }
+
     // Tự động nhận quest kế tiếp của chuỗi chính nếu có
     autoAdvanceMainChain(player, questId);
 

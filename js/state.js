@@ -1283,6 +1283,10 @@
     if (!player.huntChain) player.huntChain = { count: 0, timer: 0 };
     player.huntChain.count++;
     player.huntChain.timer = 20.0; // 20s duy trì chuỗi
+    // P2E: chuỗi săn đạt 5 mạng liên tiếp tính là một vòng săn trong ngày.
+    if (player.huntChain.count >= 5 && typeof window !== 'undefined' && window.GameHoatDong) {
+      window.GameHoatDong.note(player, 'hunt');
+    }
     return player.huntChain.count;
   }
 

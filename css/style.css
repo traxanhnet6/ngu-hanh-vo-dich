@@ -2309,6 +2309,14 @@ body.lefty .quest-toggle-btn { left: auto; right: 10px; }
   overflow-y: auto;
   min-height: 0;
 }
+/* CHARSCROLL (P2EF): Bảng Nhân Vật dài ~3360px mà .modal-box mặc định
+   overflow-y: visible nên không cuộn được — nút Sổ Thành Tựu & Sổ Tử ở cuối
+   bảng (y≈3326) và Sổ Chiêu dưới nếp gấp không bao giờ chạm được bằng chuột
+   thật. Chỉ cho hộp của #char-panel cuộn trong, không đụng hộp modal khác. */
+#char-panel .modal-box {
+  overflow-y: auto;
+  min-height: 0;
+}
 
 /* BAGFIX: Bố cục túi và trang bị trên màn hình hẹp (≤440px / màn 390px) */
 @media (max-width: 440px) {

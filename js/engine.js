@@ -3390,6 +3390,11 @@
       spawnFloatingText('+' + countItem + ' ' + name, player.x, player.y - 35, '#7ce898');
     }
 
+    // P2E: hái một điểm dược liệu tính là việc ngày (mỏ Linh Thạch không tính).
+    if (node.itemId !== 'linh-thach' && typeof window !== 'undefined' && window.GameHoatDong) {
+      window.GameHoatDong.note(player, 'herb');
+    }
+
     // Đợt N1: hái dược liệu sẵn có cũng luyện nghề Hái Thuốc (thiết kế
     // §3.3 — nghề này không có điểm N1 riêng). Chỉ cộng EXP, không đổi
     // lượng đồ, hồi chiêu hay âm thanh của điểm hái. Chỉ báo khi lên cấp.
