@@ -2703,6 +2703,11 @@
 
   function isNpcActive(npc) {
     if (!npc) return false;
+    // Đợt P2I: NPC có cổng hiển thị riêng (thương nhân lưu động / sạp chợ đêm).
+    if (npc.p2iGate) {
+      var p2iApi = (typeof window !== 'undefined') ? window.GameP2I : null;
+      if (!p2iApi || typeof p2iApi.isNpcVisible !== 'function' || !p2iApi.isNpcVisible(npc.id)) return false;
+    }
     if (!npc.questGate) return true;
     var s = (player && player.quests && player.quests.sectStage !== undefined) ? player.quests.sectStage : 0;
     if (npc.questGate === 'before_departure') return s < 1;
@@ -3001,6 +3006,10 @@
   }
 
   function handleNpcTalked(npcId) {
+    // Đợt P2I: đóng thoại khách lạ / sạp đêm -> mở bảng mua bán của đợt.
+    if (npcId && npcId.indexOf('p2i_') === 0 && typeof window !== 'undefined' && window.GameP2I) {
+      if (window.GameP2I.onNpcTalked(npcId)) return;
+    }
     if (!player || !player.quests) return;
     // Đợt E4: Kích hoạt hook nhiệm vụ dạng dữ liệu (quests.js)
     var qAPI = (typeof window !== 'undefined' && window.GameQuests)
@@ -3195,9 +3204,10 @@
       case 'notice_board':
         if (typeof window !== 'undefined' && window.GameBiCanh && window.GameUI) {
           var nb = window.GameBiCanh.getNoticeBoardData(player);
-          window.GameUI.showToast('Bảng Sự Kiện tuần: sự kiện sắp nhất còn ' + Math.round((nb.countdown || 0) / 60000) + ' phút.');
+          window.GameUI.showToast('Bảng Sự Kiện tuần: sự kiện sắp nhất còn ' + Math.round((nb.countdown || 0) / 60000) + ' phút. '
+            + (window.GameP2I && window.GameP2I.noticeLine ? window.GameP2I.noticeLine() : ''));
         } else if (typeof window !== 'undefined' && window.GameUI) {
-          window.GameUI.showToast('Bảng Sự Kiện tuần');
+          window.GameUI.showToast('Bảng Sự Kiện tuần' + (window.GameP2I && window.GameP2I.noticeLine ? '. ' + window.GameP2I.noticeLine() : ''));
         }
         break;
       case 'board_town':
@@ -6673,6 +6683,8 @@
     // Đợt P2B: đồng hồ hồn/trọng thương/điểm tử chạy cả khi hp = 0 (update
     // return sớm lúc gục), nên tick riêng ở đây thay vì trong update.
     p2bTick();
+    // Đợt P2I: đồng hồ thật của thương nhân lưu động / chợ đêm NPC (báo mập mờ).
+    if (typeof window !== 'undefined' && window.GameP2I && window.GameP2I.tick) window.GameP2I.tick();
 
     // Đợt 3 (Note 3B): lớp nhạc chiến đấu bật/tắt theo trạng thái giao tranh
     if (typeof window !== 'undefined' && window.GameMusic) {

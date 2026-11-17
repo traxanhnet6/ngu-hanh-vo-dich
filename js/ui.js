@@ -2908,6 +2908,9 @@
         if (it.hasDiscount) {
           priceHtml += ' <span style="color:#ffd700;font-size:10px;background:#4a3800;padding:1px 4px;border-radius:3px;">-20% Chân Truyền</span>';
         }
+        if (it.npcDiscountPct) {
+          priceHtml += ' <span style="color:#9fe870;font-size:10px;background:#1e3a12;padding:1px 4px;border-radius:3px;">-' + it.npcDiscountPct + '% Hảo Cảm</span>';
+        }
         meta.innerHTML = priceHtml;
 
         info.appendChild(title);
@@ -3853,10 +3856,20 @@
   function openDialogue(npc) {
     if (!npc || !npc.dialogue || npc.dialogue.length === 0) return;
 
+    // Đợt P2G: chèn thoại riêng theo mốc hảo cảm (chữ do đội viết, chờ Bui duyệt).
+    // Không sửa npc.dialogue: caller có thể truyền chính object NPC của mapdata.
+    var p2gLines = npc.dialogue;
+    if (typeof window !== 'undefined' && window.GameP2G && window.GameP2G.hasNpc && window.GameP2G.hasNpc(npc.id)) {
+      try {
+        var p2gExtra = window.GameP2G.extraDialogueFor(npc.id, player);
+        if (p2gExtra && p2gExtra.length) p2gLines = npc.dialogue.concat(p2gExtra);
+      } catch (e) {}
+    }
+
     dialogueState.active = true;
     dialogueState.npc = npc;
     dialogueState.step = 0;
-    dialogueState.lines = npc.dialogue;
+    dialogueState.lines = p2gLines;
     dialogueState.choiceShown = false;
     dialogueState.prevStepId = null;
     if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.getQuestTargetInfo) {
@@ -3935,6 +3948,11 @@
       showTruongLaoChoices();
     } else if (dialogueState.npc && dialogueState.npc.id === 'npc_duocsu' && !dialogueState.choiceShown) {
       showDuocSuChoices();
+    } else if (dialogueState.npc && typeof window !== 'undefined' && window.GameP2G &&
+               window.GameP2G.hasNpc && window.GameP2G.hasNpc(dialogueState.npc.id) &&
+               !dialogueState.choiceShown) {
+      // Đợt P2G: NPC trọng điểm chưa có menu riêng -> menu hảo cảm.
+      showAffectionChoices(dialogueState.npc.id);
     } else {
       closeDialogue();
     }
@@ -4178,6 +4196,40 @@
     mkBtn('Việc Vụ Tông Môn (Linh Mễ)', function () {
       closeDialogue();
       openSectQuestModal();
+    });
+    // Đợt P2G: mở bảng hảo cảm / tặng quà / tuyến ẩn của Chấp Sự.
+    if (typeof window !== 'undefined' && window.GameP2G && window.GameP2G.hasNpc && window.GameP2G.hasNpc('npc_chapsu')) {
+      mkBtn('Hảo cảm & Tặng Quà', function () {
+        closeDialogue();
+        window.GameP2G.openModal('npc_chapsu');
+      });
+    }
+    mkBtn('Rời đi', function () { closeDialogue(); });
+  }
+
+  // Đợt P2G: menu hảo cảm cho NPC trọng điểm không có menu dịch vụ riêng.
+  function showAffectionChoices(npcId) {
+    dialogueState.choiceShown = true;
+    var box = document.getElementById('dialogue-choices');
+    if (!box) { closeDialogue(); return; }
+    box.innerHTML = '';
+    box.classList.remove('hidden');
+    var mkBtn = function (label, fn) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn wood dialogue-choice-btn';
+      b.textContent = label;
+      b.addEventListener('click', function (e) {
+        e.stopPropagation();
+        fn();
+      });
+      box.appendChild(b);
+    };
+    mkBtn('Hảo cảm & Tặng Quà', function () {
+      closeDialogue();
+      if (typeof window !== 'undefined' && window.GameP2G && window.GameP2G.openModal) {
+        window.GameP2G.openModal(npcId);
+      }
     });
     mkBtn('Rời đi', function () { closeDialogue(); });
   }

@@ -606,6 +606,17 @@
     player.danPhong.activeQuestId = null;
     st.savePlayer(player);
 
+    // Đợt P2G: việc thu thập nộp tại Chấp Sự Đường cũng tính là "giúp việc" của NPC đó
+    // (bảng này có id trùng QUEST_DEFS nhưng nộp qua hàm riêng, không qua quests.js).
+    try {
+      var p2g = (typeof window !== 'undefined') ? window.GameP2G : null;
+      var qs = (typeof window !== 'undefined') ? window.GameQuests : null;
+      if (p2g && typeof p2g.onQuestTurnedIn === 'function') {
+        var realDef = (qs && qs.getQuestDef) ? qs.getQuestDef(def.id) : null;
+        p2g.onQuestTurnedIn(player, realDef || { turnIn: { npcId: 'npc_chapsu' } });
+      }
+    } catch (e) {}
+
     var rewardText = '+' + (def.rewardLT || 0) + ' Linh Thạch' + (danId ? ' và 1 ' + itemName(danId) : '');
     var msgOk = 'Hoàn thành "' + def.name + '"! Nhận ' + rewardText + '. Nhiệm vụ đã quay lại bảng — nhận lại bất cứ lúc nào.';
     playChime();

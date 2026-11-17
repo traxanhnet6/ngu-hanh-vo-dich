@@ -599,6 +599,132 @@
       rewards: { linhThach: 100, sectContribution: 50, items: [{ itemId: 'bua-ho-menh', count: 1 }] },
       repeatable: true,
       cooldownSec: 120
+    },
+
+    // --- TUYẾN ẨN NPC (Đợt P2G, P2-DESIGN §8 / hồ sơ 16§8) ---
+    // Type mới 'npc_secret' theo quy ước type hiện có của QUEST_DEFS.
+    // Chỉ mở ở mốc hảo cảm 3 của NPC tương ứng (gating nằm trong js/p2g.js);
+    // mọi tiêu đề/manh mối là TÊN TẠM — CHỜ BUI CHỐT.
+    // Bước 2 có prereq completedQuests bước 1. Thưởng dùng vật phẩm HIỆN CÓ.
+    'q_secret_linhnhi_1': {
+      id: 'q_secret_linhnhi_1',
+      type: 'npc_secret',
+      category: 'Tuyến Ẩn',
+      title: 'Sổ Tay Cũ Bên Miếu',
+      desc: 'Linh Nhi nhớ lại mẩu sổ tay của cha để lại ở Miếu Hoang. Dọn quái quanh miếu trước đã.',
+      prereq: { minRank: 0 },
+      giver: { mapId: 'mieu_hoang', kind: 'npc', npcId: 'npc_linhnhi' },
+      turnIn: { mapId: 'mieu_hoang', kind: 'npc', npcId: 'npc_linhnhi' },
+      target: { mapId: 'rung-doc', kind: 'monster', speciesId: 'thao_tinh', title: 'Thảo Tinh Quanh Miếu' },
+      objectives: [{ id: 'kill_thaotinh', kind: 'kill_monster', speciesId: 'thao_tinh', needed: 8 }],
+      rewards: { linhThach: 120, items: [{ itemId: 'linh-me', count: 5 }] },
+      repeatable: false
+    },
+    'q_secret_linhnhi_2': {
+      id: 'q_secret_linhnhi_2',
+      type: 'npc_secret',
+      category: 'Tuyến Ẩn',
+      title: 'Mảnh Giấy Cuối Cùng',
+      desc: 'Trong đống đồ cũ còn kẹp mảnh giấy vẽ dở. Nhện Xanh tha mất rồi — lấy lại từ chúng.',
+      prereq: { minRank: 0, completedQuests: ['q_secret_linhnhi_1'] },
+      giver: { mapId: 'mieu_hoang', kind: 'npc', npcId: 'npc_linhnhi' },
+      turnIn: { mapId: 'mieu_hoang', kind: 'npc', npcId: 'npc_linhnhi' },
+      target: { mapId: 'rung-doc', kind: 'monster', speciesId: 'nhen_xanh', title: 'Nhện Xanh Giữ Giấy' },
+      objectives: [{ id: 'kill_nhen', kind: 'kill_monster', speciesId: 'nhen_xanh', needed: 3 }],
+      rewards: { linhThach: 80, items: [{ itemId: 'linh-chi-ngan-nam', count: 1 }, { itemId: 'hat-giong-linh-me', count: 3 }] },
+      repeatable: false,
+      p2gFinal: true,
+      p2gHint: 'Cuối sổ tay có vẽ nửa tấm bản đồ dẫn về sau Miếu Hoang — vị trí chưa mở trong bản này.'
+    },
+    'q_secret_tiepdan_1': {
+      id: 'q_secret_tiepdan_1',
+      type: 'npc_secret',
+      category: 'Tuyến Ẩn',
+      title: 'Người Mang Ấn Cũ',
+      desc: 'Tiếp Dẫn Đệ Tử kể chuyện người mang ấn cũ. Ông muốn vành ngoài sạch quái trước khi kể tiếp.',
+      prereq: { minRank: 0 },
+      giver: { mapId: 'tong-mon', kind: 'npc', npcId: 'npc_tiepdan' },
+      turnIn: { mapId: 'tong-mon', kind: 'npc', npcId: 'npc_tiepdan' },
+      target: { mapId: 'rung-doc', kind: 'monster', speciesId: 'thao_tinh', title: 'Thảo Tinh Vành Ngoài' },
+      objectives: [{ id: 'kill_thaotinh', kind: 'kill_monster', speciesId: 'thao_tinh', needed: 6 }],
+      rewards: { linhThach: 100, items: [{ itemId: 'la-thanh-tuy', count: 3 }] },
+      repeatable: false
+    },
+    'q_secret_tiepdan_2': {
+      id: 'q_secret_tiepdan_2',
+      type: 'npc_secret',
+      category: 'Tuyến Ẩn',
+      title: 'Dấu Chân Trên Tháp',
+      desc: 'Dấu chân người lạ dẫn từ cổng lên Tháp Tu Luyện, ngang qua gốc cổ thụ có yêu thú canh.',
+      prereq: { minRank: 0, completedQuests: ['q_secret_tiepdan_1'] },
+      giver: { mapId: 'tong-mon', kind: 'npc', npcId: 'npc_tiepdan' },
+      turnIn: { mapId: 'tong-mon', kind: 'npc', npcId: 'npc_tiepdan' },
+      target: { mapId: 'rung-doc', kind: 'monster', speciesId: 'co_thu_yeu', title: 'Cổ Thụ Yêu Canh Lối' },
+      objectives: [{ id: 'kill_co_thu_yeu', kind: 'kill_monster', speciesId: 'co_thu_yeu', needed: 2 }],
+      rewards: { linhThach: 90, items: [{ itemId: 'bang-tuy-ngan-nam', count: 1 }, { itemId: 'hat-giong-linh-me', count: 2 }] },
+      repeatable: false,
+      p2gFinal: true,
+      p2gHint: 'Người đó đi thẳng lên Tháp Tu Luyện; đêm rằm có ánh sáng lạ trên tầng cao nhất.'
+    },
+    'q_secret_chuongmon_1': {
+      id: 'q_secret_chuongmon_1',
+      type: 'npc_secret',
+      category: 'Tuyến Ẩn',
+      title: 'Thử Thách Dưới Tàng Cây',
+      desc: 'Chưởng Môn muốn thử tâm tính trước khi nói chuyện lớn: dẹp Nhện Xanh quanh gốc cổ thụ.',
+      prereq: { minRank: 0 },
+      giver: { mapId: 'dai-dien', kind: 'npc', npcId: 'npc_chuongmon' },
+      turnIn: { mapId: 'dai-dien', kind: 'npc', npcId: 'npc_chuongmon' },
+      target: { mapId: 'rung-doc', kind: 'monster', speciesId: 'nhen_xanh', title: 'Nhện Xanh Dưới Tàng Cây' },
+      objectives: [{ id: 'kill_nhen', kind: 'kill_monster', speciesId: 'nhen_xanh', needed: 4 }],
+      rewards: { linhThach: 200, items: [{ itemId: 'linh-chi-ngan-nam', count: 1 }] },
+      repeatable: false
+    },
+    'q_secret_chuongmon_2': {
+      id: 'q_secret_chuongmon_2',
+      type: 'npc_secret',
+      category: 'Tuyến Ẩn',
+      title: 'Phong Ấn Cổ Vương',
+      desc: 'Cổ Vương dưới đáy Rừng Độc giữ thứ không thuộc về nó. Chưởng Môn cần ngươi lấy lại.',
+      prereq: { minRank: 0, completedQuests: ['q_secret_chuongmon_1'] },
+      giver: { mapId: 'dai-dien', kind: 'npc', npcId: 'npc_chuongmon' },
+      turnIn: { mapId: 'dai-dien', kind: 'npc', npcId: 'npc_chuongmon' },
+      target: { mapId: 'rung-doc', kind: 'monster', speciesId: 'boss_moc_linh_co_vuong', title: 'Mộc Linh Cổ Vương' },
+      objectives: [{ id: 'kill_boss_moc_linh', kind: 'kill_monster', speciesId: 'boss_moc_linh_co_vuong', needed: 1 }],
+      rewards: { linhThach: 250, items: [{ itemId: 'loi-viem-quan', count: 1 }, { itemId: 'hat-giong-linh-me', count: 3 }, { itemId: 'bua-ho-menh', count: 1 }] },
+      repeatable: false,
+      p2gFinal: true,
+      p2gHint: 'Ấn trong tay Cổ Vương trùng vân với ấn Chưởng Môn — có kẻ đã đổi ấn từ lâu.'
+    },
+    'q_secret_chapsu_1': {
+      id: 'q_secret_chapsu_1',
+      type: 'npc_secret',
+      category: 'Tuyến Ẩn',
+      title: 'Oan Hồn Quanh Miếu',
+      desc: 'Chấp Sự Đường cần người kín tiếng dọn quái quanh Miếu Hoang, không ghi vào sổ công.',
+      prereq: { minRank: 0, sectStage: 4 },
+      giver: { mapId: 'tong-mon', kind: 'npc', npcId: 'npc_chapsu' },
+      turnIn: { mapId: 'tong-mon', kind: 'npc', npcId: 'npc_chapsu' },
+      target: { mapId: 'rung-doc', kind: 'monster', speciesId: 'thao_tinh', title: 'Thảo Tinh Quanh Miếu' },
+      objectives: [{ id: 'kill_thaotinh', kind: 'kill_monster', speciesId: 'thao_tinh', needed: 12 }],
+      rewards: { linhThach: 150, sectContribution: 20 },
+      repeatable: false
+    },
+    'q_secret_chapsu_2': {
+      id: 'q_secret_chapsu_2',
+      type: 'npc_secret',
+      category: 'Tuyến Ẩn',
+      title: 'Sổ Nợ Không Tên',
+      desc: 'Cuốn sổ nợ trong két Chấp Sự bị Nhện Xanh tha đi khi chúng tràn vào kho.',
+      prereq: { minRank: 0, sectStage: 4, completedQuests: ['q_secret_chapsu_1'] },
+      giver: { mapId: 'tong-mon', kind: 'npc', npcId: 'npc_chapsu' },
+      turnIn: { mapId: 'tong-mon', kind: 'npc', npcId: 'npc_chapsu' },
+      target: { mapId: 'rung-doc', kind: 'monster', speciesId: 'nhen_xanh', title: 'Nhện Xanh Trong Kho' },
+      objectives: [{ id: 'kill_nhen', kind: 'kill_monster', speciesId: 'nhen_xanh', needed: 6 }],
+      rewards: { linhThach: 180, items: [{ itemId: 'truc-co-dan', count: 1 }, { itemId: 'linh-chi-ngan-nam', count: 1 }, { itemId: 'hat-giong-linh-me', count: 3 }] },
+      repeatable: false,
+      p2gFinal: true,
+      p2gHint: 'Sổ nợ ghi ba cái tên, hai đã gạch — người thứ ba họ Mã.'
     }
   };
 
@@ -1424,6 +1550,12 @@
       window.GameHoatDong.note(player, 'bounty');
     }
 
+    // Đợt P2G: nộp việc tại NPC trọng điểm -> tăng hảo cảm NPC đó.
+    var p2gAPI = getP2GAPI();
+    if (p2gAPI && typeof p2gAPI.onQuestTurnedIn === 'function') {
+      try { p2gAPI.onQuestTurnedIn(player, def); } catch (e) {}
+    }
+
     // Tự động nhận quest kế tiếp của chuỗi chính nếu có
     autoAdvanceMainChain(player, questId);
 
@@ -1839,24 +1971,41 @@
     }
   ];
 
+  // Đợt P2G: giảm giá sạp theo hảo cảm NPC (hiện chỉ Chấp Sự Đường có sạp).
+  function getP2GAPI() {
+    if (typeof window !== 'undefined' && window.GameP2G) return window.GameP2G;
+    if (typeof global !== 'undefined' && global.GameP2G) return global.GameP2G;
+    return null;
+  }
+
+  function getNpcShopDiscount(npcId, player) {
+    try {
+      var g = getP2GAPI();
+      if (g && typeof g.shopDiscount === 'function') return g.shopDiscount(npcId, player) || 0;
+    } catch (e) {}
+    return 0;
+  }
+
   function getSectShopItems(player) {
     if (!player) return [];
     ensureQuestState(player);
     var sect = player.questState.sect || { rank: 1, contribution: 0 };
     var hasDiscount = (sect.rank >= 3);
+    var npcDiscount = getNpcShopDiscount('npc_chapsu', player);
 
     return SECT_SHOP_CATALOG.map(function (it) {
       var costContrib = hasDiscount ? Math.round(it.baseContribution * 0.8) : it.baseContribution;
+      var costLT = Math.max(1, Math.round(it.baseLinhThach * (1 - npcDiscount)));
       var canBuy = (sect.rank >= it.minSectRank) &&
                    ((sect.contribution || 0) >= costContrib) &&
-                   ((player.linhThach || 0) >= it.baseLinhThach);
+                   ((player.linhThach || 0) >= costLT);
       var lockReason = '';
       if (sect.rank < it.minSectRank) {
         lockReason = 'Cần chức vụ ' + getSectRankInfo(it.minSectRank).name;
       } else if ((sect.contribution || 0) < costContrib) {
         lockReason = 'Thiếu ' + (costContrib - (sect.contribution || 0)) + ' điểm cống hiến';
-      } else if ((player.linhThach || 0) < it.baseLinhThach) {
-        lockReason = 'Thiếu ' + (it.baseLinhThach - (player.linhThach || 0)) + ' Linh Thạch';
+      } else if ((player.linhThach || 0) < costLT) {
+        lockReason = 'Thiếu ' + (costLT - (player.linhThach || 0)) + ' Linh Thạch';
       }
 
       return {
@@ -1866,7 +2015,8 @@
         minSectRank: it.minSectRank,
         baseContribution: it.baseContribution,
         costContribution: costContrib,
-        costLinhThach: it.baseLinhThach,
+        costLinhThach: costLT,
+        npcDiscountPct: Math.round(npcDiscount * 100),
         hasDiscount: hasDiscount,
         canBuy: canBuy,
         lockReason: lockReason
@@ -1894,7 +2044,8 @@
     }
 
     var costContrib = (curRank >= 3) ? Math.round(shopDef.baseContribution * 0.8) : shopDef.baseContribution;
-    var costLT = shopDef.baseLinhThach;
+    var npcDiscount = getNpcShopDiscount('npc_chapsu', player);
+    var costLT = Math.max(1, Math.round(shopDef.baseLinhThach * (1 - npcDiscount)));
 
     if ((sect.contribution || 0) < costContrib) {
       return { ok: false, reason: 'contrib_low', msg: 'Không đủ Điểm Cống Hiến (cần ' + costContrib + ' điểm, hiện có ' + (sect.contribution || 0) + ').' };

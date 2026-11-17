@@ -588,7 +588,7 @@
     collisionGrid: collisionGridRungDoc,
     isWalkable: isWalkableRungDoc,
     keyAnchors: RUNG_DOC_KEY_ANCHORS,
-    npcs: [],
+    npcs: [makeWanderMerchant('p2i_khach_la_rd')],
     // Đợt N1: điểm hành nghề (thiết kế §3.3, đã kiểm lưới va chạm).
     interactables: [
       {
@@ -995,8 +995,93 @@
       dialogueDefault: [
         'Căn nhà ở tông môn ấm áp hơn Miếu Hoang nhiều ca ca ạ! Nhưng muội vẫn lo tên Mã Tam ở thành Tây Lương kéo người tới tìm...'
       ]
+    },
+    // ĐỢT P2I: sạp chợ đêm NPC (TÊN TẠM, chờ Bui chốt). Khai sẵn để bitmap
+    // nạp theo map; hiện/ẩn bằng cổng p2iGate -> GameP2I.isNpcVisible.
+    // Toạ độ chân/điểm đứng đã kiểm isWalkable của map này.
+    {
+      id: 'p2i_stall_1',
+      name: 'Sạp Đêm · Dược Phòng',
+      asset: 'assets/art/npc-thuongnhan.png',
+      originalW: 259,
+      originalH: 560,
+      w: 56,
+      h: 120,
+      x: 302,
+      y: 1040,
+      feetX: 330,
+      feetY: 1160,
+      baseY: 1160,
+      collisionRadius: 14,
+      standTile: { x: 330, y: 1182 },
+      questGate: null,
+      p2iGate: 'market',
+      dialogueDefault: ['Sạp Đêm: chợ đêm cuối tuần mới mở. Hàng theo tuần, xem nhanh kẻo hết.']
+    },
+    {
+      id: 'p2i_stall_2',
+      name: 'Sạp Đêm · Khí Cụ',
+      asset: 'assets/art/npc-thuongnhan.png',
+      originalW: 259,
+      originalH: 560,
+      w: 56,
+      h: 120,
+      x: 392,
+      y: 1020,
+      feetX: 420,
+      feetY: 1140,
+      baseY: 1140,
+      collisionRadius: 14,
+      standTile: { x: 420, y: 1162 },
+      questGate: null,
+      p2iGate: 'market',
+      dialogueDefault: ['Sạp Đêm: quặng sắt, gỗ thiết mộc đủ cả. Cuối tuần mới bán, đừng hỏi ban ngày.']
+    },
+    {
+      id: 'p2i_stall_3',
+      name: 'Sạp Đêm · Hàng Lạ',
+      asset: 'assets/art/npc-thuongnhan.png',
+      originalW: 259,
+      originalH: 560,
+      w: 56,
+      h: 120,
+      x: 532,
+      y: 1000,
+      feetX: 560,
+      feetY: 1120,
+      baseY: 1120,
+      collisionRadius: 14,
+      standTile: { x: 560, y: 1142 },
+      questGate: null,
+      p2iGate: 'market',
+      dialogueDefault: ['Sạp Đêm: hàng tuần nay chỉ có một món lạ. Mua hay không thì tùy duyên.']
     }
   ];
+
+  // ĐỢT P2I: thương nhân lưu động — một NPC mỗi vùng, cùng một hình thương
+  // nhân đang có. Chỉ vùng đang trong lượt xuất hiện mới hiện NPC (cổng trong
+  // engine đọc GameP2I.isNpcVisible). Tên hiển thị là TÊN TẠM.
+  function makeWanderMerchant(npcId) {
+    return {
+      id: npcId,
+      name: 'Khách Lạ',
+      asset: 'assets/art/npc-thuongnhan.png',
+      originalW: 259,
+      originalH: 560,
+      w: 56,
+      h: 120,
+      x: 142,
+      y: 520,
+      feetX: 170,
+      feetY: 640,
+      baseY: 640,
+      collisionRadius: 14,
+      standTile: { x: 170, y: 662 },
+      questGate: null,
+      p2iGate: 'wander',
+      dialogueDefault: ['Khách Lạ: ta đi đường xa, chỉ dừng chân vài giờ. Hàng hiếm, mua thì nhanh tay.']
+    };
+  }
 
   var INTERACTABLES_TONG_MON = [
     {
@@ -2343,7 +2428,7 @@
     collisionGrid: collisionGridHoBang,
     isWalkable: isWalkableHoBang,
     keyAnchors: HO_BANG_KEY_ANCHORS,
-    npcs: [],
+    npcs: [makeWanderMerchant('p2i_khach_la_hb')],
     // Đợt N1: điểm hành nghề (thiết kế §3.3, đã kiểm lưới va chạm).
     interactables: [
       {
@@ -2496,7 +2581,7 @@
     collisionGrid: collisionGridMoLua,
     isWalkable: isWalkableMoLua,
     keyAnchors: MO_LUA_KEY_ANCHORS,
-    npcs: [],
+    npcs: [makeWanderMerchant('p2i_khach_la_ml')],
     // Đợt N1: điểm hành nghề (thiết kế §3.3, đã kiểm lưới va chạm).
     interactables: [
       {
@@ -2664,7 +2749,7 @@
     collisionGrid: collisionGridHoangMac,
     isWalkable: isWalkableHoangMac,
     keyAnchors: HOANG_MAC_KEY_ANCHORS,
-    npcs: [],
+    npcs: [makeWanderMerchant('p2i_khach_la_hm')],
     interactables: [],
     harvestNodes: HARVEST_NODES_HOANG_MAC,
     zoneHazards: ZONE_HAZARDS_HOANG_MAC, // Đợt V1 chặng 4: 7 ô cát lún (kind 'cat_lun')
@@ -2832,7 +2917,7 @@
     collisionGrid: collisionGridKiemTrung,
     isWalkable: isWalkableKiemTrung,
     keyAnchors: KIEM_TRUNG_KEY_ANCHORS,
-    npcs: [],
+    npcs: [makeWanderMerchant('p2i_khach_la_kt')],
     // Đợt N1: điểm hành nghề (thiết kế §3.3, đã kiểm lưới va chạm).
     interactables: [
       {
