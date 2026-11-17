@@ -507,6 +507,11 @@
       showMonsterHpText: false,
       minimapDestDot: true,
       fpsLimit: 60,
+      controlLayout: 'C',
+      targetLockMode: 'nearest',
+      // P2K đợt sửa tab Thông báo: công tắc kênh thông báo có thật trong game
+      showToasts: true,
+      showZoneTitle: true,
       // Hiển thị (Đợt 3, Note 8 & Đợt 6 Stage 2)
       uiScale: 1,
       joySize: 'vua',

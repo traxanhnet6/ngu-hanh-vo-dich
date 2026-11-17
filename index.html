@@ -397,7 +397,21 @@
       </div>
 
       <div class="settings-body">
-        <div class="settings-section-title">ÂM THANH</div>
+        <div class="settings-tabs" id="settings-tabs">
+          <button class="settings-tab active" data-tab="audio" type="button">Âm thanh</button>
+          <button class="settings-tab" data-tab="visual" type="button">Hình ảnh</button>
+          <button class="settings-tab" data-tab="control" type="button">Điều khiển</button>
+          <button class="settings-tab" data-tab="game" type="button">Trò chơi</button>
+          <button class="settings-tab" data-tab="notif" type="button">Thông báo</button>
+          <button class="settings-tab" data-tab="account" type="button">Tài khoản</button>
+        </div>
+        <div class="settings-search-wrap">
+          <input id="settings-search" type="search" placeholder="Tìm nhanh cài đặt..." aria-label="Tìm nhanh cài đặt">
+        </div>
+        <div class="settings-tab-reset">
+          <button id="btn-reset-settings-tab" class="btn wood" type="button">Khôi phục mặc định (tab hiện tại)</button>
+        </div>
+        <div class="settings-section-title" data-tab="audio">ÂM THANH</div>
 
         <div class="setting-item">
           <label for="setting-music-vol">Âm lượng Nhạc Nền</label>
@@ -456,6 +470,7 @@
             <option value="thap">Thấp (mượt trên máy yếu)</option>
             <option value="trung">Trung</option>
             <option value="cao" selected>Cao</option>
+            <option value="tu_dong">Tự động (theo máy)</option>
           </select>
         </div>
 
@@ -504,6 +519,15 @@
           <select id="setting-joy-mode" class="setting-select">
             <option value="co_dinh" selected>Cố định ở góc dưới-trái</option>
             <option value="linh_hoat">Linh hoạt (xuất hiện tại điểm chạm)</option>
+          </select>
+        </div>
+
+        <div class="setting-item">
+          <label for="setting-control-layout">Bố cục điều khiển</label>
+          <select id="setting-control-layout" class="setting-select">
+            <option value="A">A — Chuẩn Vô Sắc (cụm vòng cung)</option>
+            <option value="B">B — Tối giản điện ảnh</option>
+            <option value="C" selected>C — Thanh chiêu dưới đáy</option>
           </select>
         </div>
 
@@ -660,12 +684,39 @@
         </div>
 
         <div class="setting-item">
+          <label for="setting-target-lock">Khóa mục tiêu mềm</label>
+          <select id="setting-target-lock" class="setting-select">
+            <option value="nearest" selected>Gần nhất</option>
+            <option value="attacking">Đang đánh mình</option>
+            <option value="lowestHp">Ít máu nhất</option>
+          </select>
+        </div>
+
+        <div class="setting-item">
           <label for="setting-autopickup-rank">Tự nhặt đồ từ phẩm</label>
           <select id="setting-autopickup-rank" class="setting-select">
             <option value="1" selected>Phổ thông trở lên</option>
             <option value="2">Tốt trở lên</option>
             <option value="3">Hiếm trở lên</option>
           </select>
+        </div>
+
+        <div class="settings-section-title">THÔNG BÁO</div>
+
+        <div class="setting-item toggle-item">
+          <span>Thông báo nhanh trên màn hình</span>
+          <label class="switch">
+            <input id="setting-toast-toggle" type="checkbox" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-item toggle-item">
+          <span>Bảng tên vùng khi vào vùng mới</span>
+          <label class="switch">
+            <input id="setting-zone-title-toggle" type="checkbox" checked>
+            <span class="slider"></span>
+          </label>
         </div>
 
         <div class="settings-section-title">CÔNG CỤ &amp; HỖ TRỢ</div>

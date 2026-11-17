@@ -1932,6 +1932,96 @@
   var HH_GEN_DIRS = ['south', 'southeast', 'east', 'northeast', 'north', 'northwest', 'west', 'southwest'];
   var HH_GEN_DISPLAY_H = 112; // chiều cao nhân vật trên màn hình — khớp cỡ hình cũ (~111px đo thật)
   var hanhanGenData = { idle: null, walk: null };
+  // Đợt COMBAT-RIG (Bui duyệt 2026-11-17): dải động tác kiếm rig Godot —
+  // kiếm + bao nướng sẵn trong khung nên lúc phát dải combat thì TẮT lớp
+  // phủ vũ khí cầm tay (tránh 2 kiếm chồng nhau). Nạp lười (không chặn
+  // màn hình nạp); chưa sẵn sàng thì giữ nguyên hành vi live (vung + phủ).
+  var HH_COMBAT_MOVES = ['draw', 'slash_h', 'slash_d', 'thrust', 'chop'];
+  var HH_COMBAT_CYCLE = ['slash_h', 'slash_d', 'thrust', 'chop'];
+  var HH_COMBAT_STRIP_DUR = 0.45; // khớp hồi chiêu đòn thường 0,45s
+  var HH_COMBAT_SHEATHE_DELAY = 2.5; // giây yên sau đòn cuối thì thu kiếm
+  var hanhanCombatData = {}; // move -> buildCombatIndex (.dirs/.scaleFromMaster/.charH)
+  var combatAnim = null; // {move, dir, timer, duration, reverse}
+  var swordDrawn = false;
+  var combatMoveIdx = 0;
+  var combatLastStripEnd = 0;
+
+  function buildCombatIndex(json, move) {
+    if (!json || !Array.isArray(json.frames)) return null;
+    var dirs = {};
+    for (var ci = 0; ci < json.frames.length; ci++) {
+      var fr = json.frames[ci];
+      if (!fr || !fr.rect || !fr.pivot) continue;
+      var dir = String(fr.strip || '').replace(new RegExp('^' + move + '_'), '');
+      if (!dirs[dir]) dirs[dir] = [];
+      dirs[dir][fr.index] = {
+        x: fr.rect.x, y: fr.rect.y, w: fr.rect.w, h: fr.rect.h,
+        px: fr.pivot.x, py: fr.pivot.y, fps: fr.fps || 10,
+        // Grip theo toa do atlas (manifest combat) — chi dung cho VFX
+        // vet kiem, KHONG dung ve lai kiem (kiem nuong san trong khung).
+        gx: (fr.grip && fr.grip.x) || 0, gy: (fr.grip && fr.grip.y) || 0
+      };
+    }
+    return {
+      dirs: dirs,
+      scaleFromMaster: json.scale_from_master || 1,
+      charH: (json.master && json.master.char_height_px) || 440
+    };
+  }
+
+  function combatDataReady() {
+    for (var i = 0; i < HH_COMBAT_MOVES.length; i++) {
+      var mv = HH_COMBAT_MOVES[i];
+      var img = assets['hanhan_combat_' + mv];
+      if (!hanhanCombatData[mv] || !img || !img.complete ||
+          img.naturalWidth !== 2048 || img.naturalHeight !== 2048) return false;
+    }
+    return true;
+  }
+
+  function isSwordWeaponEquipped() {
+    if (!player || !player.equipment || !player.equipment.weapon) return false;
+    var wid = equipmentIdOf(player.equipment.weapon);
+    return typeof wid === 'string' && wid.indexOf('kiem') === 0;
+  }
+
+  // Bắt đầu một dải combat: đòn đầu sau lúc nghỉ thì rút kiếm, các đòn
+  // tiếp theo xoay vòng 4 đòn chém/đâm/bổ. Vũ khí không phải kiếm hoặc
+  // atlas chưa sẵn sàng thì không làm gì (giữ hành vi live).
+  function startCombatStrip() {
+    if (!isSwordWeaponEquipped() || !combatDataReady()) return;
+    var move;
+    if (combatAnim && combatAnim.move === 'draw' && combatAnim.reverse) {
+      swordDrawn = true; // đang thu kiếm thì đánh tiếp: chém luôn
+      move = HH_COMBAT_CYCLE[combatMoveIdx++ % HH_COMBAT_CYCLE.length];
+    } else if (!swordDrawn) {
+      move = 'draw';
+      swordDrawn = true;
+    } else {
+      move = HH_COMBAT_CYCLE[combatMoveIdx++ % HH_COMBAT_CYCLE.length];
+    }
+    combatAnim = { move: move, dir: player.dir || 0,
+      timer: HH_COMBAT_STRIP_DUR, duration: HH_COMBAT_STRIP_DUR, reverse: false };
+  }
+
+  // Cập nhật dải combat mỗi khung; yên quá lâu sau đòn cuối thì thu kiếm
+  // bằng cách chạy ngược dải rút (không có dải thu riêng).
+  function updateCombatAnim(dt) {
+    if (combatAnim) {
+      combatAnim.timer -= dt;
+      if (combatAnim.timer <= 0) {
+        if (combatAnim.reverse) swordDrawn = false;
+        combatAnim = null;
+        combatLastStripEnd = performance.now();
+      }
+      return;
+    }
+    if (swordDrawn && combatDataReady() &&
+        performance.now() - combatLastStripEnd > HH_COMBAT_SHEATHE_DELAY * 1000) {
+      combatAnim = { move: 'draw', dir: player.dir || 0,
+        timer: HH_COMBAT_STRIP_DUR, duration: HH_COMBAT_STRIP_DUR, reverse: true };
+    }
+  }
   var genFrameDest = null; // hộp đích của khung sinh hình vừa vẽ xong (lớp kiếm trang bị bám theo)
   var hanhanGenHat = null; // Đợt HATLAYER: dữ liệu lớp nón cho bộ sinh hình
 
@@ -2411,6 +2501,22 @@
         }).then(function (j) {
           if (j && j.gen && j.gen.idle && j.gen.walk) hanhanGrip = j;
         }).catch(function () {});
+        // Đợt COMBAT-RIG: nạp lười 5 atlas + JSON dải combat (không chặn
+        // màn hình nạp; lỗi thì dải combat vắng, game giữ hành vi live).
+        HH_COMBAT_MOVES.forEach(function (mv) {
+          try {
+            var cImg = new Image();
+            cImg.onload = function () { assets['hanhan_combat_' + mv] = cImg; };
+            cImg.onerror = function () {};
+            cImg.src = 'assets/chars/hanhan-combat-' + mv + '-v1.png';
+            fetch('assets/chars/hanhan-combat-' + mv + '-v1.json').then(function (r) {
+              return r && r.ok ? r.json() : null;
+            }).then(function (j) {
+              var idx = buildCombatIndex(j, mv);
+              if (idx) hanhanCombatData[mv] = idx;
+            }).catch(function () {});
+          } catch (e) {}
+        });
       } catch (e) {}
     }
   }
@@ -3587,13 +3693,13 @@
         Math.hypot(player.x - targetMonster.x, player.y - targetMonster.y) <= 60) {
       m = targetMonster;
     } else {
-      var best = 60;
+      var cands = [];
       for (var i = 0; i < fieldMonsters.length; i++) {
         var fm = fieldMonsters[i];
         if (fm.state === 'dead' || fm.hp <= 0) continue;
-        var fd = Math.hypot(player.x - fm.x, player.y - fm.y);
-        if (fd <= best) { best = fd; m = fm; }
+        cands.push(fm);
       }
+      m = chooseTargetByMode(cands, 60);
     }
     if (basicAttackCd > 0) return;
     basicAttackCd = 0.45;
@@ -3610,6 +3716,7 @@
         target: null, struck: false, whiff: true, whiffDir: player.dir,
         armed: !!(player.equipment && player.equipment.weapon)
       };
+      startCombatStrip(); // Đợt COMBAT-RIG: vung hụt cũng phát dải combat
       lastCombatTime = performance.now();
     }
     if (typeof window !== 'undefined') {
@@ -4477,6 +4584,7 @@
       castState = null; // đổi map = ngắt chiêu đang vận
       skillCastAnim = null; // Đợt K2: khung tung chiêu + chuỗi Liên Hoàn cũng gãy khi đổi map
       basicSwing = null; // Đợt SWINGFIX: đổi map = nhịp vung gãy theo cùng luật
+      combatAnim = null; swordDrawn = false; // Đợt COMBAT-RIG: đổi map = gãy dải combat, kiếm về bao
       lienHoanState = { elem: null, stacks: 0 };
       groundDrops = [];
       visualEffects = [];
@@ -6592,24 +6700,58 @@
     return true;
   }
 
+  function getTargetLockMode() {
+    try { return (getSettingsCached().targetLockMode || 'nearest'); } catch (e) { return 'nearest'; }
+  }
+  // Chọn quái theo kiểu khóa mục tiêu mềm (P2K): gần nhất / đang đánh mình / ít máu nhất
+  function chooseTargetByMode(pool, maxRange) {
+    if (!pool || !pool.length) return null;
+    var mode = getTargetLockMode();
+    var list = pool.slice();
+    // Lọc trong tầm
+    var inRange = [];
+    for (var i = 0; i < list.length; i++) {
+      var m = list[i];
+      if (!m || m.state === 'dead' || (typeof m.hp === 'number' && m.hp <= 0)) continue;
+      var dist = Math.hypot(player.x - m.x, player.y - m.y);
+      if (dist <= maxRange) inRange.push({ m: m, dist: dist });
+    }
+    if (inRange.length === 0) return null;
+    if (mode === 'lowestHp') {
+      var best = inRange[0];
+      for (var j = 1; j < inRange.length; j++) {
+        if ((inRange[j].m.hp || 0) < (best.m.hp || 0)) best = inRange[j];
+      }
+      return best.m;
+    }
+    if (mode === 'attacking') {
+      var attackers = inRange.filter(function (o) { return o.m.state === 'attack' || o.m.state === 'aggro'; });
+      var src = attackers.length ? attackers : inRange;
+      var bestA = src[0];
+      for (var k = 1; k < src.length; k++) {
+        if (src[k].dist < bestA.dist) bestA = src[k];
+      }
+      return bestA.m;
+    }
+    // mặc định: gần nhất
+    var bestN = inRange[0];
+    for (var n = 1; n < inRange.length; n++) {
+      if (inRange[n].dist < bestN.dist) bestN = inRange[n];
+    }
+    return bestN.m;
+  }
   function getSkillTarget(maxRange) {
     if (targetMonster && targetMonster.state !== 'dead') {
       var d = Math.hypot(player.x - targetMonster.x, player.y - targetMonster.y);
       if (d <= maxRange) return targetMonster;
     }
-    // Tìm quái gần nhất trong tầm
-    var closest = null;
-    var closestDist = maxRange + 1;
+    var candidates = [];
     for (var i = 0; i < fieldMonsters.length; i++) {
       var m = fieldMonsters[i];
       if (m.state === 'dead') continue;
-      var dist = Math.hypot(player.x - m.x, player.y - m.y);
-      if (dist <= maxRange && dist < closestDist) {
-        closestDist = dist;
-        closest = m;
-      }
+      candidates.push(m);
     }
-    return closest;
+    return chooseTargetByMode(candidates, maxRange);
   }
 
   function start() {
@@ -6677,7 +6819,21 @@
     }
     var dt = (currentTime - lastFrameTime) / 1000;
     if (dt > 0.1) dt = 0.1;
+    if (dt <= 0) dt = 0.016;
     lastFrameTime = currentTime;
+    // P2K: chất lượng 'Tự động' — đo FPS thật trong vòng lặp, tự hạ khi máy yếu
+    try {
+      var _qSet = getSettingsCached().quality;
+      if (_qSet === 'tu_dong') {
+        var _fps = 1 / dt;
+        var _tq = 'cao';
+        if (_fps < 30) _tq = 'thap';
+        else if (_fps < 48) _tq = 'trung';
+        setQuality(_tq);
+      } else {
+        setQuality(_qSet || 'cao');
+      }
+    } catch (e) { /* bỏ qua */ }
 
     update(dt);
     // Đợt P2B: đồng hồ hồn/trọng thương/điểm tử chạy cả khi hp = 0 (update
@@ -6789,6 +6945,7 @@
       castState = null; // gục ngã = ngắt chiêu đang vận (K1: ngắt khi gục/đổi map)
       skillCastAnim = null; // Đợt K2: khung tung chiêu + chuỗi Liên Hoàn cũng gãy khi gục
       basicSwing = null; // Đợt SWINGFIX: gục ngã = nhịp vung gãy, đòn chưa phát thì mất
+      combatAnim = null; swordDrawn = false; // Đợt COMBAT-RIG: gục ngã = gãy dải combat, kiếm về bao
       lienHoanState = { elem: null, stacks: 0 };
       return;
     }
@@ -6802,6 +6959,8 @@
     updateCast(dt);
     // Cập nhật nhịp vung đòn thường (tới pha ra đòn -> phát đúng một đòn)
     updateBasicSwing(dt);
+    // Đợt COMBAT-RIG: cập nhật dải combat + thu kiếm khi yên quá lâu
+    updateCombatAnim(dt);
 
     // Cập nhật hiệu ứng khống chế lên người chơi (Trói chân / Làm chậm)
     var canMove = true;
@@ -7291,6 +7450,7 @@
       target: m, struck: false, whiff: false,
       armed: !!(player && player.equipment && player.equipment.weapon)
     };
+    startCombatStrip(); // Đợt COMBAT-RIG: đòn trúng phát dải combat
   }
 
   /** Cập nhật nhịp vung mỗi khung; tới pha ra đòn thì phát đúng một đòn. */
@@ -9266,7 +9426,37 @@
         var genDirName = HH_GEN_DIRS[(player.dir || 0) % 8];
         var genDrawn = false;
         var genFrameObj = null;
-        if (playerMoving) {
+        // Đợt COMBAT-RIG: đang phát dải combat thì vẽ khung combat (kiếm +
+        // bao đã nướng sẵn trong khung) thay cho idle/walk, và KHÔNG phủ
+        // thêm lớp vũ khí cầm tay. Dải khóa theo hướng lúc ra đòn.
+        var combatDrawn = false;
+        if (combatAnim) {
+          var cData = hanhanCombatData[combatAnim.move];
+          var cImg = assets['hanhan_combat_' + combatAnim.move];
+          if (cData && cImg) {
+            var cDirName = HH_GEN_DIRS[(combatAnim.dir || 0) % 8];
+            var cProg = 1 - (combatAnim.timer / combatAnim.duration);
+            var cIdx = Math.min(7, Math.max(0, Math.floor(cProg * 8)));
+            if (combatAnim.reverse) cIdx = 7 - cIdx;
+            var cFrameObj = drawGenFrame(cImg, cData, cDirName, cIdx);
+            if (cFrameObj) {
+              combatDrawn = true;
+              genDrawn = true;
+              // Vet kiem SWINGFIX lay tam tu lastGripWorld: cap nhat theo
+              // grip do that cua khung combat dang ve (keo lech huong/tam
+              // khi don danh doi huong ve phia muc tieu).
+              if (cFrameObj.gx > 0) {
+                var ck = HH_GEN_DISPLAY_H / (cData.charH * cData.scaleFromMaster);
+                lastGripWorld = {
+                  x: player.x + (cFrameObj.gx - cFrameObj.px) * ck,
+                  y: player.y - playerLiftY + (cFrameObj.gy - cFrameObj.py) * ck,
+                  dirName: cDirName
+                };
+              }
+            }
+          }
+        }
+        if (!combatDrawn && playerMoving) {
           var genWalkFrames = hanhanGenData.walk && hanhanGenData.walk.dirs[genDirName];
           var genWalkCount = genWalkFrames ? genWalkFrames.length : 8;
           var genWalkFrame = Math.floor(walkDist / WALK_CYCLE_DIST * genWalkCount) % genWalkCount;
@@ -9275,7 +9465,7 @@
           if (genDrawn && isHat) {
             drawGenHat(assets.hanhan_gen_hat, 'walk', genDirName, genWalkFrame, genFrameObj, hanhanGenData.walk);
           }
-        } else {
+        } else if (!combatDrawn) {
           var genIdleFrames = hanhanGenData.idle && hanhanGenData.idle.dirs[genDirName];
           var genIdleFps = (genIdleFrames && genIdleFrames[0] && genIdleFrames[0].fps) || 6;
           var genIdleFrame = Math.floor(performance.now() / 1000 * genIdleFps);
@@ -9289,7 +9479,9 @@
         // Đợt JOYFIX: kiếm trang bị cầm tay trên bộ sinh hình (vẽ ngay sau thân)
         // Đợt GRIPFIX: truyền kèm khung đang vẽ để kiếm bám nắm tay đo thật
         // của đúng khung đó + vá nắm tay phủ lên chuôi sau khi vẽ kiếm.
-        if (genDrawn) {
+        // Đợt COMBAT-RIG: đang phát dải combat thì không phủ vũ khí (kiếm
+        // đã nướng sẵn trong khung); các nhánh khác giữ nguyên.
+        if (genDrawn && !combatDrawn) {
           drawHeldWeapon(genFrameDest, genDirName,
             playerMoving ? HH_HAND_GEN_WALK : HH_HAND_GEN_IDLE,
             playerMoving

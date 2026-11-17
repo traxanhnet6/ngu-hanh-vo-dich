@@ -544,6 +544,21 @@
   var idleState = { lastActive: Date.now(), mutedByIdle: false };
   var personalTimer = { endAt: 0, interval: null };
 
+  function applyControlLayout(s) {
+    if (typeof document === 'undefined') return;
+    var layout = (s && s.controlLayout) ? String(s.controlLayout).toUpperCase() : 'C';
+    if (layout !== 'A' && layout !== 'B' && layout !== 'C') layout = 'C';
+    var lows = layout.toLowerCase();
+    document.body.classList.remove('layout-a','layout-b','layout-c','ctl-layout-a','ctl-layout-b','ctl-layout-c','control-layout-a','control-layout-b','control-layout-c');
+    document.body.classList.add('layout-' + lows, 'ctl-layout-' + lows, 'control-layout-' + lows);
+    if (document.body.dataset) document.body.dataset.controlLayout = layout;
+    var sb = document.getElementById('skill-bar');
+    if (sb) {
+      sb.classList.remove('layout-a','layout-b','layout-c','ctl-layout-a','ctl-layout-b','ctl-layout-c','control-layout-a','control-layout-b','control-layout-c');
+      sb.classList.add('layout-' + lows, 'ctl-layout-' + lows, 'control-layout-' + lows);
+      if (sb.dataset) sb.dataset.controlLayout = layout;
+    }
+  }
   function applyExtraDisplaySettings(s) {
     if (!s || typeof document === 'undefined') return;
     var root = document.documentElement;
@@ -553,6 +568,7 @@
     var canvas = document.getElementById('game-canvas');
     if (canvas) canvas.style.filter = 'brightness(' + ((typeof s.brightness === 'number') ? s.brightness : 1) + ')';
     document.body.classList.toggle('lefty', !!s.lefty);
+    applyControlLayout(s);
     var dlg = document.getElementById('dialogue-box');
     if (dlg) {
       dlg.classList.remove('dlg-size-nho', 'dlg-size-vua', 'dlg-size-lon');
@@ -605,6 +621,9 @@
     bindToggle('setting-monster-hp-toggle', 'showMonsterHpText');
     bindToggle('setting-ring-toggle', 'showAggroRing');
     bindToggle('setting-dest-dot-toggle', 'minimapDestDot');
+    // P2K đợt sửa tab Thông báo: công tắc kênh thông báo có thật trong game
+    bindToggle('setting-toast-toggle', 'showToasts');
+    bindToggle('setting-zone-title-toggle', 'showZoneTitle');
 
     var bindSel = function (id, key, after) {
       var el = document.getElementById(id);
@@ -4450,6 +4469,12 @@
   var toastTimer = null;
   function showToast(message) {
     if (typeof document === 'undefined') return;
+    // P2K đợt sửa tab Thông báo: công tắc "Thông báo nhanh trên màn hình" —
+    // tắt thì không hiện toast; đọc lỗi thì giữ hành vi live (vẫn hiện).
+    try {
+      var toastSt = stateAPI || (typeof window !== 'undefined' ? window.GameState : null);
+      if (toastSt && toastSt.loadSettings && toastSt.loadSettings().showToasts === false) return;
+    } catch (e) {}
     var toast = document.getElementById('game-toast');
     if (!toast) return;
 
@@ -4469,6 +4494,12 @@
 
   var zoneTitleTimer = null;
   function showZoneTitle(name, desc) {
+    // P2K đợt sửa tab Thông báo: công tắc "Bảng tên vùng khi vào vùng mới" —
+    // tắt thì không hiện bảng tên vùng; đọc lỗi thì giữ hành vi live (vẫn hiện).
+    try {
+      var zoneSt = stateAPI || (typeof window !== 'undefined' ? window.GameState : null);
+      if (zoneSt && zoneSt.loadSettings && zoneSt.loadSettings().showZoneTitle === false) return;
+    } catch (e) {}
     var chip = document.getElementById('zone-title');
     var nameEl = document.getElementById('zone-title-name');
     var descEl = document.getElementById('zone-title-desc');
@@ -4716,6 +4747,7 @@
     if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.setQuality) {
       window.GameEngine.setQuality(s.quality || 'cao');
     }
+    if (typeof applyExtraDisplaySettings === 'function') applyExtraDisplaySettings(s);
     updateFullscreenButton();
   }
 
@@ -4787,7 +4819,7 @@
     var joy = document.getElementById('setting-joy-size');
     if (joy) joy.value = JOY_SCALES[s.joySize] ? s.joySize : 'vua';
     var qual = document.getElementById('setting-quality');
-    if (qual) qual.value = (s.quality === 'thap' || s.quality === 'trung' || s.quality === 'cao') ? s.quality : 'cao';
+    if (qual) qual.value = (s.quality === 'thap' || s.quality === 'trung' || s.quality === 'cao' || s.quality === 'tu_dong') ? s.quality : 'cao';
     updateFullscreenButton();
   }
 
@@ -4832,12 +4864,19 @@
     setChk('setting-monster-hp-toggle', !!s.showMonsterHpText);
     setChk('setting-ring-toggle', !!s.showAggroRing);
     setChk('setting-dest-dot-toggle', s.minimapDestDot !== false);
+    // P2K đợt sửa tab Thông báo
+    setChk('setting-toast-toggle', s.showToasts !== false);
+    setChk('setting-zone-title-toggle', s.showZoneTitle !== false);
     var dlgSel = document.getElementById('setting-dialog-size');
     if (dlgSel) dlgSel.value = s.dialogTextSize || 'vua';
     var rankSel = document.getElementById('setting-autopickup-rank');
     if (rankSel) rankSel.value = String(s.autoPickupRank || 1);
     var fpsSel = document.getElementById('setting-fps');
     if (fpsSel) fpsSel.value = String(s.fpsLimit || 60);
+    var clSel = document.getElementById('setting-control-layout');
+    if (clSel) clSel.value = (s.controlLayout === 'A' || s.controlLayout === 'B' || s.controlLayout === 'C') ? s.controlLayout : 'C';
+    var tlSel = document.getElementById('setting-target-lock');
+    if (tlSel) tlSel.value = (s.targetLockMode === 'nearest' || s.targetLockMode === 'attacking' || s.targetLockMode === 'lowestHp') ? s.targetLockMode : 'nearest';
     var camSel2 = document.getElementById('setting-camera-dist');
     if (camSel2) {
       var zv = (typeof s.zoom === 'number') ? s.zoom : 1;
@@ -4881,13 +4920,163 @@
         showToast(joyModeEl.value === 'linh_hoat' ? 'Cần gậy: Linh hoạt (hiện tại điểm chạm)' : 'Cần gậy: Cố định');
       });
     }
+    var clEl = document.getElementById('setting-control-layout');
+    if (clEl && !clEl.dataset.wired) {
+      clEl.dataset.wired = '1';
+      clEl.addEventListener('change', function () {
+        var merged = st.saveSettings({ controlLayout: clEl.value });
+        applyControlLayout(merged);
+        if (typeof window !== 'undefined' && window.GameUI && window.GameUI.showToast) window.GameUI.showToast('Bố cục điều khiển: ' + clEl.value);
+      });
+    }
+    var tlEl = document.getElementById('setting-target-lock');
+    if (tlEl && !tlEl.dataset.wired) {
+      tlEl.dataset.wired = '1';
+      tlEl.addEventListener('change', function () {
+        st.saveSettings({ targetLockMode: tlEl.value });
+      });
+    }
     wireDisplayControls();
+  }
+
+  var SETTINGS_TAB_MAP = {
+    'ÂM THANH': 'audio',
+    'HIỂN THỊ': 'visual',
+    'ĐIỀU KHIỂN': 'control',
+    'TRÒ CHƠI & CHỈ ĐƯỜNG': 'game',
+    'LINH THÚ': 'game',
+    'HIỂN THỊ & ĐIỀU KHIỂN (BỔ SUNG)': 'visual',
+    'CHIẾN ĐẤU & BẢN ĐỒ': 'game',
+    'THÔNG BÁO': 'notif',
+    'CÔNG CỤ & HỖ TRỢ': 'account'
+  };
+
+  function setupSettingsTabs() {
+    var tabsWrap = document.getElementById('settings-tabs');
+    if (!tabsWrap || tabsWrap.dataset.ready) return;
+    var body = document.querySelector('.settings-body');
+    if (!body) return;
+    var nodes = Array.prototype.slice.call(body.children);
+    var currentTab = 'audio';
+    for (var i = 0; i < nodes.length; i++) {
+      var node = nodes[i];
+      if (node.classList && (node.classList.contains('settings-tabs') || node.classList.contains('settings-search-wrap') || node.classList.contains('settings-tab-reset'))) {
+        node.dataset.tab = 'all';
+        continue;
+      }
+      if (node.classList && node.classList.contains('settings-section-title')) {
+        var title = (node.textContent || '').trim().toUpperCase();
+        currentTab = SETTINGS_TAB_MAP[title] || currentTab;
+        node.dataset.tab = currentTab;
+      } else {
+        if (!node.dataset.tab) node.dataset.tab = currentTab;
+      }
+    }
+    var btns = tabsWrap.querySelectorAll('.settings-tab');
+    for (var b = 0; b < btns.length; b++) {
+      btns[b].addEventListener('click', (function (btn) {
+        return function () {
+          for (var x = 0; x < btns.length; x++) btns[x].classList.remove('active');
+          btn.classList.add('active');
+          var tab = btn.dataset.tab;
+          for (var j = 0; j < nodes.length; j++) {
+            var nd = nodes[j];
+            if (nd.dataset.tab === 'all') continue;
+            var show = (nd.dataset.tab === tab);
+            nd.classList.toggle('hidden', !show);
+          }
+        };
+      })(btns[b]));
+    }
+    // initial active
+    var activeBtn = tabsWrap.querySelector('.settings-tab.active') || btns[0];
+    if (activeBtn) activeBtn.click();
+    tabsWrap.dataset.ready = '1';
+  }
+
+  function wireSettingsSearch() {
+    var input = document.getElementById('settings-search');
+    if (!input || input.dataset.wired) return;
+    input.dataset.wired = '1';
+    input.addEventListener('input', function () {
+      var q = (input.value || '').trim().toLowerCase();
+      if (!q) return;
+      var items = document.querySelectorAll('.settings-body .setting-item');
+      for (var i = 0; i < items.length; i++) {
+        var txt = (items[i].textContent || '').toLowerCase();
+        if (txt.indexOf(q) !== -1) {
+          var tab = items[i].dataset.tab;
+          if (tab && tab !== 'all') {
+            var btn = document.querySelector('#settings-tabs .settings-tab[data-tab="' + tab + '"]');
+            if (btn) btn.click();
+          }
+          try { items[i].scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) { items[i].scrollIntoView(); }
+          items[i].classList.add('settings-highlight');
+          (function (el) { setTimeout(function () { el.classList.remove('settings-highlight'); }, 1500); })(items[i]);
+          break;
+        }
+      }
+    });
+  }
+
+  function resetSettingsTabValues(tab) {
+    var st = stateAPI || (typeof window !== 'undefined' ? window.GameState : null);
+    if (!st) return;
+    var def = st.defaultSettings();
+    var patch = {};
+    if (tab === 'audio') {
+      patch.musicVol = def.musicVol; patch.sfxVol = def.sfxVol; patch.ambVol = def.ambVol; patch.voiceVol = def.voiceVol;
+      patch.voiceEnabled = def.voiceEnabled; patch.muted = def.muted; patch.duckMusic = def.duckMusic; patch.idleMute = def.idleMute;
+    } else if (tab === 'visual') {
+      patch.uiScale = def.uiScale; patch.joySize = def.joySize; patch.quality = def.quality; patch.zoom = def.zoom;
+      patch.flourishEffects = def.flourishEffects; patch.screenShake = def.screenShake; patch.showDamageNumbers = def.showDamageNumbers;
+      patch.brightness = def.brightness; patch.ctlOpacity = def.ctlOpacity; patch.hideHat = def.hideHat; patch.showClock = def.showClock;
+      patch.dialogTextSize = def.dialogTextSize; patch.lefty = def.lefty;
+    } else if (tab === 'control') {
+      patch.joystickMode = def.joystickMode; patch.joyDeadzone = def.joyDeadzone; patch.lefty = def.lefty;
+      patch.ctlOpacity = def.ctlOpacity; patch.controlLayout = def.controlLayout; patch.targetLockMode = def.targetLockMode;
+    } else if (tab === 'game') {
+      patch.arrowGuidance = def.arrowGuidance; patch.autoPickup = def.autoPickup; patch.autoPickupRank = def.autoPickupRank;
+      patch.showBossTelegraph = def.showBossTelegraph; patch.showMonsterHpText = def.showMonsterHpText; patch.showAggroRing = def.showAggroRing;
+      patch.minimapDestDot = def.minimapDestDot; patch.targetLockMode = def.targetLockMode; patch.fpsLimit = def.fpsLimit;
+    } else if (tab === 'notif') {
+      patch.showToasts = def.showToasts; patch.showZoneTitle = def.showZoneTitle;
+    } else if (tab === 'account') {
+      // Tab Tài khoản toàn nút hành động; chỉ 2 ô nhập có giá trị: hẹn giờ (mặc định 25)
+      // và mã quà tặng (mặc định rỗng). Ô mã cấu hình là bảng nháp xuất/nhập nên không xóa.
+      var timerEl = document.getElementById('timer-minutes');
+      if (timerEl) timerEl.value = '25';
+      var giftEl = document.getElementById('giftcode-input');
+      if (giftEl) giftEl.value = '';
+      return;
+    } else {
+      return;
+    }
+    var merged = st.saveSettings(patch);
+    if (typeof refreshSettingsControls === 'function') refreshSettingsControls();
+    if (typeof refreshDisplayControls === 'function') refreshDisplayControls();
+    if (typeof applyDisplaySettings === 'function') applyDisplaySettings(merged);
+    if (typeof applyExtraDisplaySettings === 'function') applyExtraDisplaySettings(merged);
+  }
+
+  function wireSettingsTabReset() {
+    var btn = document.getElementById('btn-reset-settings-tab');
+    if (!btn || btn.dataset.wired) return;
+    btn.dataset.wired = '1';
+    btn.addEventListener('click', function () {
+      var active = document.querySelector('#settings-tabs .settings-tab.active');
+      var tab = active ? active.dataset.tab : 'audio';
+      resetSettingsTabValues(tab);
+    });
   }
 
   function openSettingsModal() {
     var modal = document.getElementById('settings-modal');
     if (!modal) return;
     wireSettingsControls();
+    setupSettingsTabs();
+    wireSettingsSearch();
+    wireSettingsTabReset();
     refreshSettingsControls();
     modal.classList.remove('hidden');
     // Ở màn hình bắt đầu, initUI chưa chạy nên nút đóng chưa có sự kiện: gắn tại đây (một lần duy nhất)

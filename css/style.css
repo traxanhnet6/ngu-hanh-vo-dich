@@ -4985,3 +4985,17 @@ body.photo-mode #toast-container { visibility: hidden; }
   color: #cdefff;
   box-shadow: 0 0 6px rgba(127, 212, 255, 0.35);
 }
+
+/* P2K: tab cài đặt + tìm nhanh */
+.settings-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.settings-tab { padding: 6px 10px; border: 1px solid #555; background: #222; color: #ddd; border-radius: 6px; cursor: pointer; font-size: 13px; }
+.settings-tab.active { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+.settings-search-wrap { margin: 8px 0; }
+#settings-search { width: 100%; min-height: 36px; padding: 6px 8px; border-radius: 6px; border: 1px solid #555; background: #111; color: #fff; }
+.settings-tab-reset { margin: 6px 0 10px; }
+.settings-highlight { outline: 2px solid #f59e0b; background: rgba(245,158,11,0.15); }
+
+/* P2K: bố cục điều khiển A/B/C */
+body.layout-a .skill-bar, body.ctl-layout-a .skill-bar, body.control-layout-a .skill-bar { flex-direction: row-reverse; }
+body.layout-b .skill-bar, body.ctl-layout-b .skill-bar, body.control-layout-b .skill-bar { flex-direction: column; align-items: flex-end; opacity: 0.92; }
+body.layout-c .skill-bar, body.ctl-layout-c .skill-bar, body.control-layout-c .skill-bar { flex-direction: row; }
