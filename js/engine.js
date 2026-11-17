@@ -2028,8 +2028,8 @@
   // sword_hand_v1.png (414×2160, điểm nắm đo thật (206,1672)) — lưỡi to
   // bản, đốc vàng chạm trổ, tua đỏ theo đúng ảnh mẫu của Bui. Chỉ dùng cho
   // vũ khí họ kiếm (id bắt đầu bằng 'kiem-'); dao/gậy giữ đường icon cũ.
-  // Hiển thị 168px = 1,5× chiều cao nhân vật (112px) — dưới cỡ này hoa văn
-  // đốc + tua đỏ mất nét. Góc xoay canvas (độ, dương = chiều kim đồng hồ)
+  // Hiển thị 90px (Bui chốt 2026-11-17, từ 150) — nhân vật cao 112px.
+  // Góc xoay canvas (độ, dương = chiều kim đồng hồ)
   // theo bảng tránh mặt đã kiểm trên khung thật: lưỡi nghiêng ra ngoài,
   // không che mặt (south/southwest từ ART-GATE v1–v3, giữ nguyên).
   // Đợt GRIPFIX2 2026-11-15: 6 hướng còn lại để 0° nên lưỡi dựng đứng
@@ -2037,7 +2037,7 @@
   // cho cả 6 hướng nghiêng ra ngoài theo phía tay (đông/tây nghiêng về
   // phía trước mặt), cùng phía tay khi nghỉ và khi đi nên không lật
   // phía lúc bắt đầu/dừng đi; cỡ kiếm giữ nguyên.
-  var HH_SWORD_DISPLAY = 150;
+  var HH_SWORD_DISPLAY = 90;
   var HH_SWORD_GRIP = [206, 1672];
   var HH_SWORD_ANGLE = {
     south: -35, southwest: 25, north: -35, northwest: 35,
