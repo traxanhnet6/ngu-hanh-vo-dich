@@ -70,7 +70,7 @@ body.uikit-pc {
   --uk-slot-size: 58px;
   --uk-action-size: 64px;
   --uk-pet-size: 48px;
-  --uk-farm-size: 52px;
+  --uk-farm-size: 40px;
   --uk-tab-height: 34px;
   --uk-skill-icon: 36px;
   --uk-hotkey-font: 11px;
@@ -137,8 +137,8 @@ body.uikit-phone {
   --uk-slot-size: 72px;
   --uk-action-size: 80px;
   --uk-pet-size: 60px;
-  /* Ô pháp quyết Linh Điền 60px: 4 ô + dải vừa khổ 360dp (xem § farm). */
-  --uk-farm-size: 60px;
+  /* Ô pháp quyết Linh Điền 36px: 4 ô + dải vừa khổ 360dp (xem § farm). */
+  --uk-farm-size: 36px;
   --uk-tab-height: 42px;
   --uk-skill-icon: 44px;
   --uk-hotkey-font: 12px;
@@ -684,7 +684,7 @@ body.lefty.uikit-phone .uikit-action-cluster {
    pháp quyết là dữ liệu live của game, giữ nguyên. */
 .uikit .farm-skill-bar {
   box-sizing: border-box;
-  padding: 14px 16px 12px;
+  padding: 6px 8px;
   border-style: solid;
   border-width: var(--uk-panel-sm-width);
   border-color: transparent;

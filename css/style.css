@@ -3206,27 +3206,27 @@ body.photo-mode #toast-container { visibility: hidden; }
 
 /* Đợt DANSKILL: thẻ Kỹ Năng Luyện Đan (tái dùng khung danphong-card) */
 .danskill-effect {
-  font-size: 12px;
+  font-size: 11px;
   color: #ffd978;
-  margin: 4px 0;
-  line-height: 1.45;
+  margin: 2px 0;
+  line-height: 1.35;
 }
 
 .danskill-meta {
-  font-size: 12px;
+  font-size: 11px;
   color: #b7b09d;
-  margin: 4px 0 8px;
-  line-height: 1.45;
+  margin: 2px 0 5px;
+  line-height: 1.35;
 }
 
 .danskill-buff-note {
-  font-size: 12px;
+  font-size: 11px;
   color: #9fd6a4;
   border: 1px solid #4f9d69;
   border-radius: 6px;
-  padding: 8px 10px;
-  margin-bottom: 12px;
-  line-height: 1.45;
+  padding: 5px 7px;
+  margin-bottom: 6px;
+  line-height: 1.35;
 }
 
 /* Đợt DANBOARD: ván luyện đan 4 bước trong modal Đan Phòng */
@@ -3408,8 +3408,8 @@ body.photo-mode #toast-container { visibility: hidden; }
   background: linear-gradient(180deg, #282015, #16110a);
   border: 1.5px solid #6b5329;
   border-radius: 8px;
-  padding: 10px 12px;
-  margin-bottom: 10px;
+  padding: 6px 8px;
+  margin-bottom: 6px;
 }
 
 .danphong-card.locked {
@@ -3429,8 +3429,8 @@ body.photo-mode #toast-container { visibility: hidden; }
 .danphong-card-head {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 6px;
+  gap: 6px;
+  margin-bottom: 3px;
 }
 
 .danphong-card-icon {
@@ -3445,7 +3445,7 @@ body.photo-mode #toast-container { visibility: hidden; }
 }
 
 .danphong-card-name {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   color: #ffe9a8;
 }
@@ -3506,7 +3506,10 @@ body.photo-mode #toast-container { visibility: hidden; }
 }
 
 .danphong-btn {
-  min-width: 110px;
+  min-width: 88px;
+  min-height: 34px;
+  padding: 5px 10px;
+  font-size: 13px;
 }
 
 .danphong-btn:disabled {
@@ -4445,7 +4448,7 @@ body.photo-mode #toast-container { visibility: hidden; }
   backdrop-filter: blur(4px);
 }
 .farm-skill-bar-title {
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 700;
   color: #ffd700;
   letter-spacing: 0.5px;
@@ -4453,11 +4456,11 @@ body.photo-mode #toast-container { visibility: hidden; }
 }
 .farm-skill-bar-slots {
   display: flex;
-  gap: 10px;
+  gap: 4px;
 }
 .farm-skill-btn {
-  width: 52px;
-  height: 52px;
+  width: 40px;
+  height: 40px;
   border-radius: 8px;
   background: linear-gradient(180deg, #2a3d2e, #142117);
   border: 1.5px solid #6b8c6e;
@@ -4482,11 +4485,11 @@ body.photo-mode #toast-container { visibility: hidden; }
   border-color: #475569;
 }
 .farm-skill-icon {
-  font-size: 20px;
+  font-size: 14px;
   line-height: 1;
 }
 .farm-skill-cost {
-  font-size: 9px;
+  font-size: 7px;
   font-weight: 700;
   color: #7fd2ff;
   margin-top: 2px;
@@ -5017,4 +5020,103 @@ body.layout-c .skill-bar, body.ctl-layout-c .skill-bar, body.control-layout-c .s
 .farm-skill-bar .farm-skill-bar-title,
 .farm-skill-bar .farm-skill-btn {
   pointer-events: auto;
+}
+
+/* ROUNDBTN (Bui lệnh): 4 pháp quyết canh tác thành nút tròn bên cạnh nút Đánh.
+   Đo thật 390px: nút Đánh 80px, mép phải cách mép màn 16px, đáy cách đáy màn
+   142px. Hàng tròn 44px căn giữa dọc theo nút Đánh: right 104px,
+   bottom = 142 + (80-44)/2 = 160px (+ safe-area). PC: hàng nổi trên dải
+   skill, không chồng dải dù đủ 8 chiêu. Tay trái: gương sang trái. */
+#farm-skill-bar {
+  left: auto;
+  right: 104px;
+  bottom: calc(160px + var(--safe-bottom, 0px));
+  transform: none;
+  flex-direction: row;
+  background: transparent;
+  border: none;
+  border-image: none;
+  box-shadow: none;
+  padding: 0;
+}
+body.uikit-pc #farm-skill-bar {
+  bottom: calc(122px + var(--safe-bottom, 0px));
+}
+body.lefty #farm-skill-bar {
+  right: auto;
+  left: 104px;
+}
+#farm-skill-bar .farm-skill-bar-title {
+  display: none;
+}
+#farm-skill-bar .farm-skill-bar-slots {
+  gap: 6px;
+}
+#farm-skill-bar .farm-skill-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1.5px solid #6b8c6e;
+  background-image: none;
+  background: linear-gradient(180deg, #2a3d2e, #142117);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
+  padding: 0;
+}
+#farm-skill-bar .farm-skill-icon {
+  font-size: 15px;
+}
+#farm-skill-bar .farm-skill-cost {
+  font-size: 7px;
+  margin-top: 1px;
+}
+#farm-skill-bar .farm-skill-cd-overlay {
+  border-radius: 50%;
+}
+
+/* ARCBTN (Bui lệnh "nút bao quanh nút đánh"): trên điện thoại, 4 nút tròn xếp
+   thành vòng cung quanh nút Đánh, bán kính 80px tính từ tâm nút Đánh (góc
+   180/145/110/75 độ, nút đầu ở bên trái, nút cuối ở trên-phải). Thanh neo
+   0x0 đúng tâm nút Đánh: right 56px = 16 mép + 40 nửa nút Đánh, bottom
+   182px = 142 đáy nút Đánh + 40. PC giữ hàng ngang khối ROUNDBTN. Tay trái:
+   gương ngang toàn bộ. */
+body.uikit-phone #farm-skill-bar {
+  right: 56px;
+  bottom: calc(182px + var(--safe-bottom, 0px));
+  width: 0;
+  height: 0;
+  overflow: visible;
+}
+body.uikit-phone #farm-skill-bar .farm-skill-btn {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+body.uikit-phone #farm-skill-bar .farm-skill-btn:nth-child(1) {
+  transform: translate(-50%, -50%) translate(-80px, 0);
+}
+body.uikit-phone #farm-skill-bar .farm-skill-btn:nth-child(2) {
+  transform: translate(-50%, -50%) translate(-66px, -46px);
+}
+body.uikit-phone #farm-skill-bar .farm-skill-btn:nth-child(3) {
+  transform: translate(-50%, -50%) translate(-27px, -75px);
+}
+body.uikit-phone #farm-skill-bar .farm-skill-btn:nth-child(4) {
+  transform: translate(-50%, -50%) translate(21px, -77px);
+}
+body.lefty.uikit-phone #farm-skill-bar {
+  right: auto;
+  left: 56px;
+}
+body.lefty.uikit-phone #farm-skill-bar .farm-skill-btn:nth-child(1) {
+  transform: translate(-50%, -50%) translate(80px, 0);
+}
+body.lefty.uikit-phone #farm-skill-bar .farm-skill-btn:nth-child(2) {
+  transform: translate(-50%, -50%) translate(66px, -46px);
+}
+body.lefty.uikit-phone #farm-skill-bar .farm-skill-btn:nth-child(3) {
+  transform: translate(-50%, -50%) translate(27px, -75px);
+}
+body.lefty.uikit-phone #farm-skill-bar .farm-skill-btn:nth-child(4) {
+  transform: translate(-50%, -50%) translate(-21px, -77px);
 }
