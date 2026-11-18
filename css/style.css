@@ -5081,7 +5081,7 @@ body.lefty #farm-skill-bar {
    182px = 142 đáy nút Đánh + 40. PC giữ hàng ngang khối ROUNDBTN. Tay trái:
    gương ngang toàn bộ. */
 body.uikit-phone #farm-skill-bar {
-  right: 56px;
+  right: calc(56px + var(--safe-right, 0px));
   bottom: calc(182px + var(--safe-bottom, 0px));
   width: 0;
   height: 0;
@@ -5106,7 +5106,7 @@ body.uikit-phone #farm-skill-bar .farm-skill-btn:nth-child(4) {
 }
 body.lefty.uikit-phone #farm-skill-bar {
   right: auto;
-  left: 56px;
+  left: 54px;
 }
 body.lefty.uikit-phone #farm-skill-bar .farm-skill-btn:nth-child(1) {
   transform: translate(-50%, -50%) translate(80px, 0);
@@ -5119,4 +5119,81 @@ body.lefty.uikit-phone #farm-skill-bar .farm-skill-btn:nth-child(3) {
 }
 body.lefty.uikit-phone #farm-skill-bar .farm-skill-btn:nth-child(4) {
   transform: translate(-50%, -50%) translate(-21px, -77px);
+}
+
+/* COMBATARC (Bui lệnh "nút phi diệp với dây leo ... nữa"): trên điện thoại,
+   các ô kỹ năng chiến đấu thành nút tròn xếp vòng cung PHÍA DƯỚI nút Đánh,
+   nối tiếp vòng cung pháp quyết phía trên (góc 215/250/285 độ, bán kính 80px
+   từ tâm nút Đánh). Các ô neo TUYỆT ĐỐI theo #skill-bar: tâm nút Đánh nằm ở
+   (214-40, -(12+40)) = (174, -52) so với góc #skill-bar (cụm nút right:0,
+   bottom:100%+12, nút Đánh 80px). KHÔNG dùng position:fixed cho dải skill:
+   #skill-bar có opacity < 1 nên thành khối chứa của fixed, neo fixed bị
+   lệch đúng 16px (đã vấp 3 probe mới ra). #skill-bar giữ kích thước đo thật
+   214x114 để cụm nút Đánh không đổi vị trí. PC giữ nguyên dải ngang. Tay
+   trái: gương ngang (tâm nút Đánh ở (40, -52)).
+   Chú ý: hiện DOM chỉ có 2 ô (skill-slot-1/2); ô 3 có sẵn vị trí, ô 4 trở
+   lên cần thêm vị trí khi DOM có thêm ô. */
+body.uikit-phone #skill-bar {
+  width: 214px;
+  height: 114px;
+}
+body.uikit-phone #skill-strip {
+  width: 0;
+  height: 0;
+  padding: 0;
+  border: none;
+  border-image: none;
+  background: transparent;
+  overflow: visible;
+  gap: 0;
+}
+body.uikit-phone #skill-strip .skill-slot {
+  position: absolute;
+  left: 174px;
+  top: -52px;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  border-radius: 50%;
+  border: 1.5px solid #2e7d48;
+  background-image: none;
+  background: linear-gradient(180deg, #1d2f22, #101b13);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
+}
+body.uikit-phone #skill-strip .skill-slot:nth-child(1) {
+  transform: translate(-50%, -50%) translate(-66px, 46px);
+}
+body.uikit-phone #skill-strip .skill-slot:nth-child(2) {
+  transform: translate(-50%, -50%) translate(-27px, 75px);
+}
+body.uikit-phone #skill-strip .skill-slot:nth-child(3) {
+  transform: translate(-50%, -50%) translate(21px, 77px);
+}
+body.uikit-phone #skill-strip .skill-icon {
+  width: 30px;
+  height: 30px;
+  margin-top: 0;
+}
+body.uikit-phone #skill-strip .skill-hotkey,
+body.uikit-phone #skill-strip .skill-name-tag {
+  display: none;
+}
+body.uikit-phone #skill-strip .skill-cd-overlay {
+  border-radius: 50%;
+}
+body.uikit-phone #skill-strip .skill-cd-text {
+  font-size: 14px;
+}
+body.lefty.uikit-phone #skill-strip .skill-slot {
+  left: 40px;
+  top: -52px;
+}
+body.lefty.uikit-phone #skill-strip .skill-slot:nth-child(1) {
+  transform: translate(-50%, -50%) translate(66px, 46px);
+}
+body.lefty.uikit-phone #skill-strip .skill-slot:nth-child(2) {
+  transform: translate(-50%, -50%) translate(27px, 75px);
+}
+body.lefty.uikit-phone #skill-strip .skill-slot:nth-child(3) {
+  transform: translate(-50%, -50%) translate(-21px, 77px);
 }
