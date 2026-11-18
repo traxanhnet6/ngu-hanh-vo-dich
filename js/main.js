@@ -187,6 +187,10 @@
 
       engineAPI.init(canvas, player, mapData, function () {
         uiAPI.init(player, mapData);
+        // PHONEFIX2: nối sống hệ thống hướng dẫn tân thủ (chỉ chạy 1 lần cho save mới)
+        if (typeof window !== 'undefined' && window.GameTutorial && typeof window.GameTutorial.init === 'function') {
+          window.GameTutorial.init();
+        }
         engineAPI.start();
       });
     }

@@ -296,6 +296,10 @@ html, body {
   display: flex;
   align-items: center;
   gap: 8px;
+  pointer-events: none;
+}
+.hud-top-row > * {
+  pointer-events: auto;
 }
 
 .char-portrait {
@@ -618,8 +622,11 @@ html, body {
 /* Bảng nhân vật */
 .char-details-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 16px;
+}
+.char-detail-col {
+  min-width: 0;
 }
 
 .detail-row {
@@ -693,6 +700,8 @@ html, body {
 .stat-row {
   display: flex;
   justify-content: space-between;
+  flex-wrap: wrap;
+  min-width: 0;
   font-size: 12.5px;
   margin-bottom: 5px;
 }
@@ -941,7 +950,10 @@ input:checked + .slider:before {
     height: 73px;
   }
   .char-details-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .detail-row {
+    flex-wrap: wrap;
   }
 }
 
@@ -4415,6 +4427,7 @@ body.photo-mode #toast-container { visibility: hidden; }
 /* ================= THANH KỸ NĂNG RUỘNG & PHÁP QUYẾT (Đợt LINHME-MAP) ================= */
 
 .farm-skill-bar {
+  pointer-events: none;
   position: fixed;
   bottom: 80px;
   left: 50%;
@@ -4999,3 +5012,9 @@ body.photo-mode #toast-container { visibility: hidden; }
 body.layout-a .skill-bar, body.ctl-layout-a .skill-bar, body.control-layout-a .skill-bar { flex-direction: row-reverse; }
 body.layout-b .skill-bar, body.ctl-layout-b .skill-bar, body.control-layout-b .skill-bar { flex-direction: column; align-items: flex-end; opacity: 0.92; }
 body.layout-c .skill-bar, body.ctl-layout-c .skill-bar, body.control-layout-c .skill-bar { flex-direction: row; }
+
+/* PHONEFIX2: thanh pháp quyết canh tác chỉ nhận bấm đúng nút, nền xuyên bấm */
+.farm-skill-bar .farm-skill-bar-title,
+.farm-skill-bar .farm-skill-btn {
+  pointer-events: auto;
+}
