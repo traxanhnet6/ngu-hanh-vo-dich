@@ -4918,9 +4918,14 @@ body.photo-mode #toast-container { visibility: hidden; }
 }
 #quest-panel-header,
 #btn-auto-path,
+#hud-homuoi-chip,
 .hud-zoom-row button {
   pointer-events: auto;
 }
+/* Đợt BANHBAO (2026-11-20): chip Hộ Muội là phần tử tương tác thật trong
+   bảng nhiệm vụ (bấm mở bảng Hộ Muội để cho Linh Nhi ăn) nhưng không có
+   trong danh sách cho bấm trở lại của PLOTFIX2 — chip nhìn thấy mà bấm
+   không được, đường cho ăn trong miếu bị kẹt. */
 /* ================= ĐỢT PLOTFIX GIAI ĐOẠN 2: thẻ ô giống luống ngoài map ================= */
 /* Thẻ ô trong modal Linh Điền dùng cùng ngôn ngữ hình với 4 luống ngoài map Tông Môn:
    miếng đất luống cắt từ nền V7 + cây HERB-REDRAW theo đúng giai đoạn/trạng thái.

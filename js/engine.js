@@ -2979,14 +2979,20 @@
       npcsToCheck = npcsToCheck.concat([mapData.linhnhi]);
     }
     if (npcsToCheck.length > 0) {
+      // Đợt BANHBAO (2026-11-20): dấu "!" nhiệm vụ vẽ nổi trên đầu NPC
+      // (tâm ở npc.y - 18, bán kính 11) nhưng hộp bấm cũ bắt đầu ở npc.y - 10
+      // nên chạm đúng tâm "!" trượt ra ngoài — mở rộng hộp lên trên khi NPC
+      // này đang là mục tiêu nhiệm vụ (lúc có vẽ "!").
+      var qTargetClick = (typeof getQuestTargetInfo === 'function') ? getQuestTargetInfo() : null;
       for (var n = 0; n < npcsToCheck.length; n++) {
         var npc = npcsToCheck[n];
         if (!isNpcActive(npc)) continue;
+        var isQTarget = !!(qTargetClick && qTargetClick.kind === 'npc' && qTargetClick.npcId === npc.id);
         var bounds = {
           x: npc.x - 10,
-          y: npc.y - 10,
+          y: isQTarget ? npc.y - 36 : npc.y - 10,
           w: npc.w + 20,
-          h: npc.h + 20
+          h: isQTarget ? npc.h + 46 : npc.h + 20
         };
         if (worldX >= bounds.x && worldX <= bounds.x + bounds.w &&
             worldY >= bounds.y && worldY <= bounds.y + bounds.h) {
@@ -3009,6 +3015,39 @@
           }
           return;
         }
+      }
+    }
+
+    // 2b. Đợt BANHBAO (2026-11-20): Linh Nhi đang đi theo (follower) vẽ ở vị
+    // trí sống, không còn ở điểm tĩnh trong mapData — hộp bấm tĩnh không bao
+    // giờ trúng nên chạm vào cô bé (hay dấu "!" trên đầu, tâm ở f.y - 136)
+    // đều không có tác dụng. Kiểm tra thêm hộp quanh follower: gần thì mở
+    // thoại ngay, xa thì đi tới rồi mở thoại đúng một lần khi tới nơi.
+    if (typeof modauFollower !== 'undefined' && modauFollower.init &&
+        mapData && mapData.linhnhi && isNpcActive(mapData.linhnhi)) {
+      var fBounds = {
+        x: modauFollower.x - 35,
+        y: modauFollower.y - 150,
+        w: 70,
+        h: 170
+      };
+      if (worldX >= fBounds.x && worldX <= fBounds.x + fBounds.w &&
+          worldY >= fBounds.y && worldY <= fBounds.y + fBounds.h) {
+        var distF = Math.hypot(player.x - modauFollower.x, player.y - modauFollower.y);
+        if (distF <= INTERACTION_RANGE) {
+          currentPath = [];
+          pendingInteraction = null;
+          if (player) player.path = currentPath;
+          triggerDialogue(mapData.linhnhi);
+        } else {
+          (function (fX, fY, fNpc) {
+            triggerPathTo(fX, fY, {
+              type: 'npc',
+              onArrive: function () { triggerDialogue(fNpc); }
+            });
+          })(modauFollower.x, modauFollower.y, mapData.linhnhi);
+        }
+        return;
       }
     }
 
