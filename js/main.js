@@ -22,11 +22,20 @@
     var charList = stateAPI.listCharacters();
     var activeCharName = window.localStorage ? window.localStorage.getItem(stateAPI.STORAGE_PREFIX + 'active_char') : null;
 
+    // Đợt P2J: trạng thái bảng chọn hình dáng — khai báo TRƯỚC khi dựng
+    // bảng (initPortraitPicker) để thẻ mặc định F04 được tô chọn ngay.
+    var selectedPortraitCode = (window.GamePortraits && window.GamePortraits.DEFAULT_CODE) || 'F04';
+    var activePortraitTab = 'all';
+
     if (!activeCharName && charList.length > 0) {
       activeCharName = charList[0];
     }
 
     renderStartScreen(charList, activeCharName);
+
+    // Đợt P2J: dựng bảng chọn hình dáng tu sĩ trong khối tạo nhân vật.
+    // Dựng ngay cả khi khối tạo đang ẩn (có save cũ) để hình được nạp sẵn.
+    initPortraitPicker();
 
     if (window.GameIntro && window.GameIntro.init) {
       window.GameIntro.init();
@@ -61,31 +70,49 @@
     }
 
     // Xử lý tạo nhân vật mới
+    // (Đợt P2J: tên bắt buộc + không trùng tên save đã có trên máy —
+    // luật tên duy nhất; phía máy chủ thuộc pha online. Chân dung +
+    // giới tính chọn trong bảng lấy từ GamePortraits.)
     var btnStartNew = document.getElementById('btn-start-game');
     if (btnStartNew) {
       btnStartNew.addEventListener('click', function () {
         if (audioAPI) audioAPI.init();
         if (window.GameMusic) window.GameMusic.unlock();
         var nameInput = document.getElementById('input-char-name');
-        var charName = (nameInput && nameInput.value.trim()) || 'Hà Nhân';
+        var charName = (nameInput && nameInput.value.trim()) || '';
+        var errorEl = document.getElementById('create-error');
+
+        if (!charName) {
+          if (errorEl) {
+            errorEl.textContent = 'Hãy nhập tên nhân vật.';
+            errorEl.classList.remove('hidden');
+          }
+          return;
+        }
+        var existingNames = stateAPI.listCharacters();
+        if (existingNames.indexOf(charName) !== -1) {
+          if (errorEl) {
+            errorEl.textContent = 'Tên "' + charName + '" đã có nhân vật. Hãy chọn tên khác.';
+            errorEl.classList.remove('hidden');
+          }
+          return;
+        }
+        if (errorEl) errorEl.classList.add('hidden');
 
         // Đợt COSTUMEPREP: đọc select trang phục ở màn bắt đầu (mặc định Hà Nhân).
         var outfitSel = document.getElementById('input-char-outfit');
         var chosenOutfit = (outfitSel && outfitSel.value) || 'hanhan-live';
 
-        var player = stateAPI.loadPlayer(charName);
-        if (!player) {
-          player = stateAPI.createPlayer(charName, {
-            x: mapData.spawn.x,
-            y: mapData.spawn.y,
-            dir: 0,
-            outfit: chosenOutfit
-          });
-          stateAPI.savePlayer(player);
-        } else if (stateAPI.setPlayerOutfit) {
-          stateAPI.setPlayerOutfit(player, chosenOutfit);
-          stateAPI.savePlayer(player);
-        }
+        var portraitChoice = getSelectedPortrait();
+        var player = stateAPI.createPlayer(charName, {
+          x: mapData.spawn.x,
+          y: mapData.spawn.y,
+          dir: 0,
+          outfit: chosenOutfit,
+          portrait: portraitChoice ? portraitChoice.code : null,
+          gender: portraitChoice ? portraitChoice.gender : null
+        });
+        stateAPI.savePlayer(player);
         kickCostumeLoad(chosenOutfit);
 
         var introAPI = window.GameIntro;
@@ -98,6 +125,99 @@
           launchGame(player);
         }
       });
+    }
+
+    // Đợt P2J: bảng chọn hình dáng tu sĩ (tab lọc ngoại hình + lưới thẻ).
+    // (selectedPortraitCode / activePortraitTab khai báo ở đầu boot.)
+    function getSelectedPortrait() {
+      if (window.GamePortraits && window.GamePortraits.getPortrait) {
+        return window.GamePortraits.getPortrait(selectedPortraitCode);
+      }
+      return null;
+    }
+
+    function initPortraitPicker() {
+      if (!window.GamePortraits) return;
+      renderPortraitTabs();
+      renderPortraitGroups();
+    }
+
+    function renderPortraitTabs() {
+      var tabsEl = document.getElementById('portrait-tabs');
+      if (!tabsEl) return;
+      tabsEl.innerHTML = '';
+      var tabs = window.GamePortraits.TABS || [];
+      for (var i = 0; i < tabs.length; i++) {
+        (function (tab) {
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'portrait-tab' + (tab.id === activePortraitTab ? ' active' : '');
+          btn.textContent = tab.label;
+          btn.setAttribute('role', 'tab');
+          btn.setAttribute('aria-selected', tab.id === activePortraitTab ? 'true' : 'false');
+          btn.addEventListener('click', function () {
+            if (audioAPI) audioAPI.playClick();
+            activePortraitTab = tab.id;
+            renderPortraitTabs();
+            renderPortraitGroups();
+          });
+          tabsEl.appendChild(btn);
+        })(tabs[i]);
+      }
+    }
+
+    function renderPortraitGroups() {
+      var groupsEl = document.getElementById('portrait-groups');
+      if (!groupsEl || !window.GamePortraits) return;
+      groupsEl.innerHTML = '';
+      var list = window.GamePortraits.listByTab(activePortraitTab);
+      var genders = [
+        { id: 'nu', label: 'Nữ tu' },
+        { id: 'nam', label: 'Nam tu' }
+      ];
+      for (var g = 0; g < genders.length; g++) {
+        (function (gender) {
+          var items = [];
+          for (var i = 0; i < list.length; i++) {
+            if (list[i].gender === gender.id) items.push(list[i]);
+          }
+          if (items.length === 0) return;
+          var title = document.createElement('div');
+          title.className = 'portrait-group-title';
+          title.textContent = gender.label;
+          groupsEl.appendChild(title);
+          var grid = document.createElement('div');
+          grid.className = 'portrait-grid';
+          for (var j = 0; j < items.length; j++) {
+            (function (entry) {
+              var card = document.createElement('button');
+              card.type = 'button';
+              card.className = 'portrait-card' + (entry.code === selectedPortraitCode ? ' selected' : '');
+              card.setAttribute('data-code', entry.code);
+              card.setAttribute('aria-label', entry.code + ' — ' + (entry.desc || ''));
+              var img = document.createElement('img');
+              img.src = window.GamePortraits.portraitUrl(entry.code);
+              img.alt = entry.code;
+              img.draggable = false;
+              var codeEl = document.createElement('span');
+              codeEl.className = 'portrait-code';
+              codeEl.textContent = entry.code;
+              card.appendChild(img);
+              card.appendChild(codeEl);
+              card.addEventListener('click', function () {
+                if (audioAPI) audioAPI.playClick();
+                selectedPortraitCode = entry.code;
+                var cards = groupsEl.querySelectorAll('.portrait-card');
+                for (var k = 0; k < cards.length; k++) {
+                  cards[k].classList.toggle('selected', cards[k].getAttribute('data-code') === selectedPortraitCode);
+                }
+              });
+              grid.appendChild(card);
+            })(items[j]);
+          }
+          groupsEl.appendChild(grid);
+        })(genders[g]);
+      }
     }
 
     // Xử lý nút xem mở đầu ở màn hình bắt đầu
@@ -187,6 +307,8 @@
         var btnShowNewForm = document.getElementById('btn-show-new-form');
         if (btnShowNewForm) {
           btnShowNewForm.onclick = function () {
+            var errorEl = document.getElementById('create-error');
+            if (errorEl) errorEl.classList.add('hidden');
             if (continueBox) continueBox.classList.add('hidden');
             if (createBox) createBox.classList.remove('hidden');
           };
@@ -194,6 +316,9 @@
 
         var btnBackToContinue = document.getElementById('btn-back-continue');
         if (btnBackToContinue) {
+          // Đợt P2J: nút Hủy phải hiện khi mở khối tạo từ danh sách (trước
+          // đây nút này mang sẵn class hidden mà không nơi nào gỡ).
+          btnBackToContinue.classList.remove('hidden');
           btnBackToContinue.onclick = function () {
             if (createBox) createBox.classList.add('hidden');
             if (continueBox) continueBox.classList.remove('hidden');

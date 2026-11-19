@@ -69,10 +69,15 @@
           Tên nhân vật
           <input id="input-char-name" type="text" value="Hà Nhân" maxlength="16">
         </label>
-        <div class="face-template-note">
-          <span class="note-title">Khuôn mặt:</span> Quyết tâm (mặc định theo phim — các khuôn mẫu khác mở ở đợt sau)
+        <!-- Đợt P2J: chọn hình dáng tu sĩ theo ảnh mẫu Bui gửi. 4 tab CHỈ
+             lọc ngoại hình, không chọn đường tu (chọn đường sau Trúc Cơ).
+             Lưới thẻ do js/main.js dựng từ js/portraits.js. -->
+        <div class="portrait-picker">
+          <div class="portrait-picker-title">Hình Dáng Tu Sĩ <span class="portrait-picker-note">— chỉ đổi ngoại hình</span></div>
+          <div id="portrait-tabs" class="portrait-tabs" role="tablist"></div>
+          <div id="portrait-groups" class="portrait-groups"></div>
         </div>
-<label class="form-label">
+        <label class="form-label">
           Trang phục (CHƯA NGHIỆM THU)
           <select id="input-char-outfit" class="n1-select">
             <option value="hanhan-live" selected>Bộ gốc live (Hà Nhân)</option>
@@ -103,8 +108,9 @@
             <option value="M10">M10 — Nam (CHƯA NGHIỆM THU)</option>
           </select>
         </label>
-        <button id="btn-start-game" class="btn btn-main wide">Bắt Đầu</button>
-        <button id="btn-back-continue" class="btn wood wide hidden" style="margin-top:10px;">Quay lại chọn nhân vật</button>
+        <div id="create-error" class="create-error hidden" role="alert"></div>
+        <button id="btn-start-game" class="btn btn-main wide">Lưu</button>
+        <button id="btn-back-continue" class="btn wood wide hidden" style="margin-top:10px;">Hủy</button>
       </div>
 
       <div class="start-footer">
@@ -383,6 +389,12 @@
 
       <div class="char-details-grid">
         <div class="char-detail-col">
+          <!-- Đợt P2J: chân dung đã chọn lúc tạo nhân vật (save cũ không có
+               thì khối này ẩn, giữ mặc định Hà Nhân). -->
+          <div id="char-panel-portrait-wrap" class="char-panel-portrait-wrap hidden">
+            <div id="char-panel-portrait" class="char-panel-portrait"></div>
+            <span id="char-panel-portrait-code" class="char-panel-portrait-code"></span>
+          </div>
           <div class="detail-row"><span>Nhân vật:</span> <b id="char-panel-name">Hà Nhân</b></div>
           <div class="detail-row"><span>Cảnh giới:</span> <b id="char-panel-realm">Phàm Nhân</b></div>
           <div class="detail-row" id="char-panel-kimdan-row" style="display:none"><span>Phẩm Kim Đan:</span> <b id="char-panel-kimdan-pham" class="gold-text">—</b></div>
@@ -1576,6 +1588,7 @@
   <script src="js/p2i.js"></script>
   <script src="js/intro.js"></script>
   <script src="js/mo-dau.js"></script>
+  <script src="js/portraits.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

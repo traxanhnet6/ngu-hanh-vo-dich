@@ -3154,9 +3154,33 @@
    * Cập nhật thông số HUD
    */
   var hatFaceProbe = null; // null | 'loading' | 'ok' | 'fail'
+
+  // Đợt P2J: URL chân dung đã chọn lúc tạo nhân vật, hoặc null khi save cũ
+  // (không có trường portrait) hay mã lạ — mọi chỗ hiển thị giữ mặc định.
+  function portraitUrlForPlayer(p) {
+    if (!p || !p.portrait) return null;
+    if (typeof window !== 'undefined' && window.GamePortraits &&
+        window.GamePortraits.getPortrait && window.GamePortraits.getPortrait(p.portrait)) {
+      return window.GamePortraits.portraitUrl(p.portrait);
+    }
+    return null;
+  }
+
   function refreshPortraitHat() {
     var el = document.getElementById('hud-portrait');
     if (!el || !player) return;
+    // Đợt P2J: chân dung chọn lúc tạo thắng mọi mặc định (kể cả mặt đội
+    // nón — mặt nón là hình Hà Nhân, không hợp chân dung khác). Chân dung
+    // là hình toàn thân nên neo đầu trên, phủ kín ô avatar.
+    var pUrl = portraitUrlForPlayer(player);
+    if (pUrl) {
+      el.style.backgroundImage = "url('" + pUrl + "')";
+      el.style.backgroundPosition = 'center top';
+      el.style.backgroundSize = 'cover';
+      return;
+    }
+    el.style.backgroundPosition = '';
+    el.style.backgroundSize = '';
     var s = stateAPI ? stateAPI.loadSettings() : null;
     var wearing = player.equipment && equipmentIdOf(player.equipment.head) === 'non-la' && !(s && s.hideHat);
     if (wearing) {
@@ -3305,6 +3329,21 @@
 
     if (nameEl) nameEl.textContent = player.name;
     if (realmEl) realmEl.textContent = player.realm || 'Phàm Nhân';
+
+    // Đợt P2J: chân dung đã chọn lúc tạo nhân vật (save cũ không có thì ẩn).
+    var portraitWrap = document.getElementById('char-panel-portrait-wrap');
+    var portraitEl = document.getElementById('char-panel-portrait');
+    var portraitCodeEl = document.getElementById('char-panel-portrait-code');
+    var pUrlPanel = portraitUrlForPlayer(player);
+    if (portraitWrap) {
+      if (pUrlPanel) {
+        portraitWrap.classList.remove('hidden');
+        if (portraitEl) portraitEl.style.backgroundImage = "url('" + pUrlPanel + "')";
+        if (portraitCodeEl) portraitCodeEl.textContent = player.portrait;
+      } else {
+        portraitWrap.classList.add('hidden');
+      }
+    }
 
     // Đợt T3: hàng PHẨM KIM ĐAN trong Bảng Nhân Vật (cùng khối ở refreshHUD).
     var kdRowEl2 = document.getElementById('char-panel-kimdan-row');

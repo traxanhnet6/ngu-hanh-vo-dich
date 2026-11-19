@@ -408,6 +408,11 @@
         starterSwordGranted: false
       },
       face: options.face || 'Quyết tâm',
+      // Đợt P2J: chân dung + giới tính chọn lúc tạo nhân vật (màn tạo nhân
+      // vật). Save cũ không có 2 trường này -> null, mọi chỗ hiển thị giữ
+      // mặc định Hà Nhân. Sprite trên map vẫn dùng bộ Hà Nhân.
+      portrait: options.portrait || null,
+      gender: options.gender || null,
       linhThach: options.linhThach || 0,
       // Đợt M2: tiền đồng phàm tục — tân thủ bắt đầu với 3 đồng (đúng truyện:
       // bó củi bị ép giá còn ba đồng). Save cũ: 0 (migration trong ensureState).
