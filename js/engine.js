@@ -1970,6 +1970,13 @@
   }
 
   function combatDataReady() {
+    // Đợt COSTUMEPREP: đang mặc đồng phục thì cổng combat là dữ liệu combat
+    // của mã đó (attack + bao + atlas đã nạp); chưa đủ thì không phát dải
+    // combat (giữ hành vi live cũ) thay vì vẽ nửa vời.
+    if (player && player.outfit && typeof window !== 'undefined' &&
+        window.CostumeOutfits && window.CostumeOutfits.isCostumeCode(player.outfit)) {
+      return window.CostumeOutfits.combatReady(player.outfit);
+    }
     for (var i = 0; i < HH_COMBAT_MOVES.length; i++) {
       var mv = HH_COMBAT_MOVES[i];
       var img = assets['hanhan_combat_' + mv];
@@ -2071,6 +2078,19 @@
     ctx.drawImage(img, f.x, f.y, f.w, f.h,
       genFrameDest.x, genFrameDest.y, genFrameDest.w, genFrameDest.h);
     return f;
+  }
+
+  // Đợt COSTUMEPREP: vẽ 1 khung đồng phục — chọn ĐÚNG atlas theo
+  // frame.atlas rồi mới gọi drawGenFrame (drawGenFrame chỉ nhận 1 ảnh).
+  // Trả false khi mã chưa nạp đủ để nơi gọi lùi về Hà Nhân.
+  function drawCostumeFrame(code, mode, sub, dirName, frameIdx) {
+    var CO = (typeof window !== 'undefined') ? window.CostumeOutfits : null;
+    if (!CO) return false;
+    var got = CO.frameFor(code, mode, sub, dirName, frameIdx);
+    if (!got || !got.img) return false;
+    var data = CO.getData(code, mode, sub);
+    if (!data) return false;
+    return drawGenFrame(got.img, data, dirName, frameIdx);
   }
 
   // Đợt JOYFIX 2026-11-09: LỚP KIẾM TRANG BỊ CẦM TAY cho nhân vật.
@@ -9426,32 +9446,59 @@
         var genDirName = HH_GEN_DIRS[(player.dir || 0) % 8];
         var genDrawn = false;
         var genFrameObj = null;
+        // Đợt COSTUMEPREP: mã đồng phục đang mặc (null = Hà Nhân gốc).
+        // Chưa nạp đủ thì useCostume=false, render lùi về Hà Nhân và kích
+        // nạp lười; không bao giờ vẽ nửa vời.
+        var costumeCode = (player && player.outfit && typeof window !== 'undefined' &&
+          window.CostumeOutfits && window.CostumeOutfits.isCostumeCode(player.outfit)) ? player.outfit : null;
+        var useCostume = false;
+        var useCostumeCombat = false;
+        if (costumeCode) {
+          var CO0 = window.CostumeOutfits;
+          useCostume = CO0.isReady(costumeCode, 'idle') && CO0.isReady(costumeCode, 'walk');
+          useCostumeCombat = useCostume && CO0.combatReady(costumeCode);
+          if (!useCostume || !useCostumeCombat) CO0.ensureCode(costumeCode);
+        }
         // Đợt COMBAT-RIG: đang phát dải combat thì vẽ khung combat (kiếm +
         // bao đã nướng sẵn trong khung) thay cho idle/walk, và KHÔNG phủ
         // thêm lớp vũ khí cầm tay. Dải khóa theo hướng lúc ra đòn.
         var combatDrawn = false;
         if (combatAnim) {
-          var cData = hanhanCombatData[combatAnim.move];
-          var cImg = assets['hanhan_combat_' + combatAnim.move];
-          if (cData && cImg) {
-            var cDirName = HH_GEN_DIRS[(combatAnim.dir || 0) % 8];
-            var cProg = 1 - (combatAnim.timer / combatAnim.duration);
-            var cIdx = Math.min(7, Math.max(0, Math.floor(cProg * 8)));
-            if (combatAnim.reverse) cIdx = 7 - cIdx;
-            var cFrameObj = drawGenFrame(cImg, cData, cDirName, cIdx);
+          var cDirName = HH_GEN_DIRS[(combatAnim.dir || 0) % 8];
+          var cProg = 1 - (combatAnim.timer / combatAnim.duration);
+          var cIdx = Math.min(7, Math.max(0, Math.floor(cProg * 8)));
+          if (combatAnim.reverse) cIdx = 7 - cIdx;
+          if (useCostumeCombat) {
+            // Ánh xạ combat đồng phục (PROVISIONAL, cần Bui phán): draw -> bao
+            // (bao ngược = rút kiếm, bao xuôi = tra kiếm — engine đã đảo
+            // chiều dải draw khi thu kiếm), 4 đòn chém/đâm/bổ -> attack chung.
+            var cSub = (combatAnim.move === 'draw') ? 'bao' : 'attack';
+            var cFrameObj = drawCostumeFrame(costumeCode, 'combat', cSub, cDirName, cIdx);
             if (cFrameObj) {
               combatDrawn = true;
               genDrawn = true;
-              // Vet kiem SWINGFIX lay tam tu lastGripWorld: cap nhat theo
-              // grip do that cua khung combat dang ve (keo lech huong/tam
-              // khi don danh doi huong ve phia muc tieu).
-              if (cFrameObj.gx > 0) {
-                var ck = HH_GEN_DISPLAY_H / (cData.charH * cData.scaleFromMaster);
-                lastGripWorld = {
-                  x: player.x + (cFrameObj.gx - cFrameObj.px) * ck,
-                  y: player.y - playerLiftY + (cFrameObj.gy - cFrameObj.py) * ck,
-                  dirName: cDirName
-                };
+              // Khung đồng phục không có grip -> không cập nhật
+              // lastGripWorld (vệt kiếm dùng vị trí cũ).
+            }
+          } else {
+            var cData = hanhanCombatData[combatAnim.move];
+            var cImg = assets['hanhan_combat_' + combatAnim.move];
+            if (cData && cImg) {
+              var cFrameObj = drawGenFrame(cImg, cData, cDirName, cIdx);
+              if (cFrameObj) {
+                combatDrawn = true;
+                genDrawn = true;
+                // Vet kiem SWINGFIX lay tam tu lastGripWorld: cap nhat theo
+                // grip do that cua khung combat dang ve (keo lech huong/tam
+                // khi don danh doi huong ve phia muc tieu).
+                if (cFrameObj.gx > 0) {
+                  var ck = HH_GEN_DISPLAY_H / (cData.charH * cData.scaleFromMaster);
+                  lastGripWorld = {
+                    x: player.x + (cFrameObj.gx - cFrameObj.px) * ck,
+                    y: player.y - playerLiftY + (cFrameObj.gy - cFrameObj.py) * ck,
+                    dirName: cDirName
+                  };
+                }
               }
             }
           }
@@ -9460,19 +9507,31 @@
           var genWalkFrames = hanhanGenData.walk && hanhanGenData.walk.dirs[genDirName];
           var genWalkCount = genWalkFrames ? genWalkFrames.length : 8;
           var genWalkFrame = Math.floor(walkDist / WALK_CYCLE_DIST * genWalkCount) % genWalkCount;
-          genFrameObj = drawGenFrame(assets.hanhan_gen_walk, hanhanGenData.walk, genDirName, genWalkFrame);
-          genDrawn = !!genFrameObj;
-          if (genDrawn && isHat) {
-            drawGenHat(assets.hanhan_gen_hat, 'walk', genDirName, genWalkFrame, genFrameObj, hanhanGenData.walk);
+          if (useCostume) {
+            genFrameObj = drawCostumeFrame(costumeCode, 'walk', 'walk', genDirName, genWalkFrame);
+            genDrawn = !!genFrameObj;
+            // Đồng phục: TẮT nón (không có dữ liệu hat cho 25 mã).
+          } else {
+            genFrameObj = drawGenFrame(assets.hanhan_gen_walk, hanhanGenData.walk, genDirName, genWalkFrame);
+            genDrawn = !!genFrameObj;
+            if (genDrawn && isHat) {
+              drawGenHat(assets.hanhan_gen_hat, 'walk', genDirName, genWalkFrame, genFrameObj, hanhanGenData.walk);
+            }
           }
         } else if (!combatDrawn) {
           var genIdleFrames = hanhanGenData.idle && hanhanGenData.idle.dirs[genDirName];
           var genIdleFps = (genIdleFrames && genIdleFrames[0] && genIdleFrames[0].fps) || 6;
           var genIdleFrame = Math.floor(performance.now() / 1000 * genIdleFps);
-          genFrameObj = drawGenFrame(assets.hanhan_gen_idle, hanhanGenData.idle, genDirName, genIdleFrame);
-          genDrawn = !!genFrameObj;
-          if (genDrawn && isHat) {
-            drawGenHat(assets.hanhan_gen_hat, 'idle', genDirName, genIdleFrame, genFrameObj, hanhanGenData.idle);
+          if (useCostume) {
+            genFrameObj = drawCostumeFrame(costumeCode, 'idle', 'idle', genDirName, genIdleFrame);
+            genDrawn = !!genFrameObj;
+            // Đồng phục: TẮT nón (không có dữ liệu hat cho 25 mã).
+          } else {
+            genFrameObj = drawGenFrame(assets.hanhan_gen_idle, hanhanGenData.idle, genDirName, genIdleFrame);
+            genDrawn = !!genFrameObj;
+            if (genDrawn && isHat) {
+              drawGenHat(assets.hanhan_gen_hat, 'idle', genDirName, genIdleFrame, genFrameObj, hanhanGenData.idle);
+            }
           }
         }
 
@@ -9482,11 +9541,18 @@
         // Đợt COMBAT-RIG: đang phát dải combat thì không phủ vũ khí (kiếm
         // đã nướng sẵn trong khung); các nhánh khác giữ nguyên.
         if (genDrawn && !combatDrawn) {
-          drawHeldWeapon(genFrameDest, genDirName,
-            playerMoving ? HH_HAND_GEN_WALK : HH_HAND_GEN_IDLE,
-            playerMoving
-              ? { mode: 'walk', frameIdx: genWalkFrame, img: assets.hanhan_gen_walk, f: genFrameObj }
-              : { mode: 'idle', frameIdx: genIdleFrame, img: assets.hanhan_gen_idle, f: genFrameObj });
+          if (useCostume) {
+            // Đồng phục: CẤM dùng grip Hà Nhân (lệch nắm + vá sai atlas —
+            // lỗi outfitswap §2.4) — chỉ neo tĩnh, không vá nắm tay.
+            drawHeldWeapon(genFrameDest, genDirName,
+              playerMoving ? HH_HAND_GEN_WALK : HH_HAND_GEN_IDLE);
+          } else {
+            drawHeldWeapon(genFrameDest, genDirName,
+              playerMoving ? HH_HAND_GEN_WALK : HH_HAND_GEN_IDLE,
+              playerMoving
+                ? { mode: 'walk', frameIdx: genWalkFrame, img: assets.hanhan_gen_walk, f: genFrameObj }
+                : { mode: 'idle', frameIdx: genIdleFrame, img: assets.hanhan_gen_idle, f: genFrameObj });
+          }
         }
 
         var walkSheet = assets.hanhan_walk;

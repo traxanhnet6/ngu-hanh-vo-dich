@@ -374,6 +374,11 @@
       x: options.x !== undefined ? options.x : 560,
       y: options.y !== undefined ? options.y : 620,
       dir: options.dir !== undefined ? options.dir : 0, // 0: nam (front)
+      // Đợt COSTUMEPREP: bộ trang phục đang mặc ('hanhan-live' = Hà Nhân gốc;
+      // 'F01'..'F15'/'M01'..'M10' = đồng phục tông môn, CHƯA NGHIỆM THU).
+      // Mặc định vẫn là Hà Nhân — không đổi diện mạo nhân vật chính khi
+      // chưa có lệnh Bui. Cơ chế lõi kế thừa OUTFITSWAP (rebase lên cbeb723).
+      outfit: options.outfit || 'hanhan-live',
       hp: stats.hpMax,
       hpMax: stats.hpMax,
       linhLuc: stats.linhLucMax,
@@ -632,6 +637,8 @@
       if (!data.stats || typeof data.stats !== 'object') {
         data.stats = { playSec: 0, kills: 0, bossKills: 0, harvests: 0, refines: 0 };
       }
+      // Đợt COSTUMEPREP: save cũ chưa có outfit -> mặc định Hà Nhân gốc.
+      if (!data.outfit || typeof data.outfit !== 'string') data.outfit = 'hanhan-live';
       if (!data.usedGiftcodes || typeof data.usedGiftcodes !== 'object') {
         data.usedGiftcodes = {};
       }
@@ -1418,6 +1425,39 @@
     return countItemInBag(player, itemId) >= cnt;
   }
 
+  // Đợt COSTUMEPREP — danh mục trang phục (kế thừa lõi OUTFITSWAP, mở
+  // rộng từ 2 mục lên 25 mã đồng phục + bộ gốc). owned:true cứng là TẠM
+  // (PROVISIONAL): hệ mở khóa thật (nhiệm vụ/cửa hàng) là đợt sau; toàn bộ
+  // 25 bộ vẫn CHƯA NGHIỆM THU, chỉ chọn được ở màn hình bắt đầu.
+  var COSTUME_CODES = [];
+  (function () {
+    var ci;
+    for (ci = 1; ci <= 15; ci++) COSTUME_CODES.push('F' + (ci < 10 ? '0' + ci : '' + ci));
+    for (ci = 1; ci <= 10; ci++) COSTUME_CODES.push('M' + (ci < 10 ? '0' + ci : '' + ci));
+  })();
+
+  function getOutfitCatalog() {
+    var list = [{ id: 'hanhan-live', name: 'Bộ gốc live (Hà Nhân)', owned: true }];
+    for (var ci = 0; ci < COSTUME_CODES.length; ci++) {
+      var code = COSTUME_CODES[ci];
+      list.push({
+        id: code,
+        name: code + ' — ' + (code.charAt(0) === 'F' ? 'Nữ' : 'Nam') + ' (CHƯA NGHIỆM THU)',
+        owned: true
+      });
+    }
+    return list;
+  }
+
+  function setPlayerOutfit(player, outfitId) {
+    if (!player) return false;
+    var ok = false;
+    getOutfitCatalog().forEach(function (o) { if (o.id === outfitId && o.owned) ok = true; });
+    if (!ok) return false;
+    player.outfit = outfitId;
+    return true;
+  }
+
   function removeItemFromBag(player, itemId, count) {
     ensureTuiKho(player);
     var tk = __tk();
@@ -1518,6 +1558,10 @@
     },
     addItemToBag: addItemToBag,
     addHerbToBag: addHerbToBag,
+    // Đợt COSTUMEPREP: cơ chế đổi trang phục (lõi OUTFITSWAP rebase lên cbeb723).
+    COSTUME_CODES: COSTUME_CODES,
+    getOutfitCatalog: getOutfitCatalog,
+    setPlayerOutfit: setPlayerOutfit,
     countItemInBag: countItemInBag,
     hasItemInBag: hasItemInBag,
     removeItemFromBag: removeItemFromBag,

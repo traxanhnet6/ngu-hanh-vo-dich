@@ -51,6 +51,15 @@
       else window.addEventListener('load', registerSW);
     }
 
+    function kickCostumeLoad(outfitId) {
+      // Đợt COSTUMEPREP: kích nạp lười atlas của mã vừa chọn; render lùi
+      // về Hà Nhân cho tới khi đủ dữ liệu (không chặn vào game).
+      if (typeof window !== 'undefined' && window.CostumeOutfits &&
+          window.CostumeOutfits.isCostumeCode(outfitId)) {
+        window.CostumeOutfits.ensureCode(outfitId);
+      }
+    }
+
     // Xử lý tạo nhân vật mới
     var btnStartNew = document.getElementById('btn-start-game');
     if (btnStartNew) {
@@ -60,15 +69,24 @@
         var nameInput = document.getElementById('input-char-name');
         var charName = (nameInput && nameInput.value.trim()) || 'Hà Nhân';
 
+        // Đợt COSTUMEPREP: đọc select trang phục ở màn bắt đầu (mặc định Hà Nhân).
+        var outfitSel = document.getElementById('input-char-outfit');
+        var chosenOutfit = (outfitSel && outfitSel.value) || 'hanhan-live';
+
         var player = stateAPI.loadPlayer(charName);
         if (!player) {
           player = stateAPI.createPlayer(charName, {
             x: mapData.spawn.x,
             y: mapData.spawn.y,
-            dir: 0
+            dir: 0,
+            outfit: chosenOutfit
           });
           stateAPI.savePlayer(player);
+        } else if (stateAPI.setPlayerOutfit) {
+          stateAPI.setPlayerOutfit(player, chosenOutfit);
+          stateAPI.savePlayer(player);
         }
+        kickCostumeLoad(chosenOutfit);
 
         var introAPI = window.GameIntro;
         if (introAPI && introAPI.shouldShowIntroForPlayer && introAPI.shouldShowIntroForPlayer(player)) {
@@ -126,6 +144,14 @@
               player = stateAPI.createPlayer(targetName);
               stateAPI.savePlayer(player);
             }
+            // Đợt COSTUMEPREP: áp trang phục đã chọn ở màn tiếp tục.
+            var cSel = document.getElementById('continue-outfit-select');
+            var cOutfit = (cSel && cSel.value) || 'hanhan-live';
+            if (stateAPI.setPlayerOutfit) {
+              stateAPI.setPlayerOutfit(player, cOutfit);
+              stateAPI.savePlayer(player);
+            }
+            kickCostumeLoad(cOutfit);
             var introAPI = window.GameIntro;
             if (introAPI && introAPI.shouldShowIntroForPlayer && introAPI.shouldShowIntroForPlayer(player)) {
               if (screenStart) screenStart.classList.add('hidden');
