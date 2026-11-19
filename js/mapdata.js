@@ -7,6 +7,7 @@
  *  - son-coc: Sơn Cốc U Tịch (1152x768)
  *  - dai-truyen-tong: Đài Truyền Tống Cổ Trận (960x672)
  *  - tay-luong: Thành Tây Lương (1600x1000, Đợt M2)
+ *  - dinh-tien-mon: Đỉnh Tiên Môn (1920x1280, Đợt PENDING — map các phong)
  *
  * Tương thích cả Browser và Node.js.
  * Theo chuẩn Brief Đợt 3 & Hồ sơ 22-chuan-tong-mon.
@@ -1033,6 +1034,18 @@
       targetSpawn: { x: 576, y: 690 }
     },
     {
+      // Đợt PENDING (map các phong): cổng bắc lên Đỉnh Tiên Môn. Rect nằm
+      // trên mép bắc trong khu Đỉnh Tiên Môn (650,10,620,260); biên bắc đã
+      // chừa khe 920-1000 (xem SCENERY_OBSTACLES_TONG_MON).
+      id: 'exit_to_dinh_tien_mon',
+      name: 'Đỉnh Tiên Môn',
+      rect: { x: 920, y: 10, w: 80, h: 30 },
+      chipLabel: 'Đỉnh Tiên Môn',
+      target: { x: 960, y: 25 },
+      targetMap: 'dinh-tien-mon',
+      targetSpawn: { x: 962, y: 1210 }
+    },
+    {
       id: 'exit_to_teleport',
       name: 'Đài Truyền Tống',
       rect: { x: 1425, y: 1245, w: 130, h: 35 },
@@ -1579,9 +1592,10 @@
   ];
 
   var SCENERY_OBSTACLES_TONG_MON = [
-    // Biên bản đồ chừa cổng: nam về miếu 905-1015, nam xuống đài 1425-1555, bắc lên sơn cốc 425-495
+    // Biên bản đồ chừa cổng: nam về miếu 905-1015, nam xuống đài 1425-1555, bắc lên sơn cốc 425-495, bắc lên đỉnh Tiên Môn 920-1000 (Đợt PENDING)
     { rect: { x: 0, y: 0, w: 425, h: 25 } },
-    { rect: { x: 495, y: 0, w: 1425, h: 25 } },
+    { rect: { x: 495, y: 0, w: 425, h: 25 } },
+    { rect: { x: 1000, y: 0, w: 920, h: 25 } },
     { rect: { x: 0, y: 1255, w: 905, h: 25 } },
     { rect: { x: 1015, y: 1255, w: 410, h: 25 } },
     { rect: { x: 1555, y: 1255, w: 365, h: 25 } },
@@ -1750,6 +1764,132 @@
     exits: EXITS_TONG_MON,
     collisionGrid: collisionGridTongMon,
     isWalkable: isWalkableTongMon
+  };
+
+  // ============================================================
+  // MAP: ĐỈNH TIÊN MÔN (1920 x 1280) — Đợt PENDING (map các phong)
+  // Nền + sprite từ cây game-ngu-hanh-peakmaps (vòng 2 hùng vĩ, bản 4;
+  // md5 nền 94c671bf…). Tên 6 khu là PROVISIONAL theo manifest (chờ Bui
+  // phán); bảng hiệu Đại Điện để trống không chữ; không thêm vườn/sàn đấu.
+  // Vào từ Tông Môn qua cổng bắc (920,10,80,30); ra bằng thềm cổng mép
+  // trên (845,0,230,110). Spawn ở chân Lối Lên Đỉnh.
+  // Vị trí đặt thử theo manifest preview_placements (chân đế + cỡ hiển
+  // thị); va chạm: Đại Điện dùng baseRect đo thật, vật còn lại ellipse.
+  // ============================================================
+
+  var SPAWN_DINH_TIEN_MON = { x: 962, y: 1210 };
+
+  var EXITS_DINH_TIEN_MON = [
+    {
+      id: 'exit_to_tong_mon',
+      name: 'Tông Môn',
+      rect: { x: 845, y: 0, w: 230, h: 60 },
+      chipLabel: 'Tông Môn',
+      target: { x: 960, y: 30 },
+      targetMap: 'tong-mon',
+      // Điểm rơi cách cổng 80px về phía nam để người chơi không đứng trong
+      // vùng cổng khi tới nơi (tránh nảy ngược khi còn giữ phím đi lên).
+      targetSpawn: { x: 960, y: 120 }
+    }
+  ];
+
+  // Đại Điện: hiển thị rộng 260px (cao 251), chân đế (1372,410). baseRect
+  // suy từ collision_rect_local (19,937,1098,138) × tỉ lệ 260/1150.
+  var STAND_OBJECTS_DINH_TIEN_MON = [
+    { id: 'dai_dien', asset: 'assets/art/obj-dai-dien.png', originalW: 1150, originalH: 1109, w: 260, h: 251, x: 1242, y: 159, baseY: 410, baseRect: { x: 1246, y: 371, w: 248, h: 31 } },
+    { id: 'pine_dtm1', asset: 'assets/art/obj-peak-pine.png', originalW: 1083, originalH: 1756, w: 148, h: 240, x: 73, y: 440, baseY: 680, ellipse: { cx: 150, cy: 660, rx: 35, ry: 10 } },
+    { id: 'pine_dtm2', asset: 'assets/art/obj-peak-pine.png', originalW: 1083, originalH: 1756, w: 148, h: 240, x: 1073, y: 60, baseY: 300, ellipse: { cx: 1150, cy: 280, rx: 35, ry: 10 } },
+    { id: 'rock_dtm1', asset: 'assets/art/obj-peak-rock.png', originalW: 1218, originalH: 1084, w: 124, h: 110, x: 806, y: 990, baseY: 1100, ellipse: { cx: 870, cy: 1076, rx: 51, ry: 18 } },
+    { id: 'railing_dtm1', asset: 'assets/art/obj-peak-railing.png', originalW: 2099, originalH: 722, w: 204, h: 70, x: 548, y: 130, baseY: 200, ellipse: { cx: 650, cy: 186, rx: 92, ry: 8 } },
+    { id: 'lantern_dtm1', asset: 'assets/art/obj-peak-lantern.png', originalW: 938, originalH: 1789, w: 79, h: 150, x: 841, y: 390, baseY: 540, ellipse: { cx: 880, cy: 524, rx: 18, ry: 8 } },
+    { id: 'lantern_dtm2', asset: 'assets/art/obj-peak-lantern.png', originalW: 938, originalH: 1789, w: 79, h: 150, x: 1011, y: 390, baseY: 540, ellipse: { cx: 1050, cy: 524, rx: 18, ry: 8 } },
+    { id: 'dummy_dtm1', asset: 'assets/art/obj-peak-dummy.png', originalW: 783, originalH: 1913, w: 53, h: 130, x: 1173, y: 593, baseY: 723, ellipse: { cx: 1194, cy: 707, rx: 13, ry: 8 } },
+    { id: 'dummy_dtm2', asset: 'assets/art/obj-peak-dummy.png', originalW: 783, originalH: 1913, w: 53, h: 130, x: 1309, y: 592, baseY: 722, ellipse: { cx: 1330, cy: 706, rx: 13, ry: 8 } },
+    { id: 'dummy_dtm3', asset: 'assets/art/obj-peak-dummy.png', originalW: 783, originalH: 1913, w: 53, h: 130, x: 1173, y: 710, baseY: 840, ellipse: { cx: 1194, cy: 824, rx: 13, ry: 8 } },
+    { id: 'dummy_dtm4', asset: 'assets/art/obj-peak-dummy.png', originalW: 783, originalH: 1913, w: 53, h: 130, x: 1310, y: 709, baseY: 839, ellipse: { cx: 1331, cy: 823, rx: 13, ry: 8 } }
+  ];
+
+  var SCENERY_OBSTACLES_DINH_TIEN_MON = [
+    { rect: { x: 0, y: 0, w: 845, h: 25 } },
+    { rect: { x: 1075, y: 0, w: 845, h: 25 } },
+    { rect: { x: 0, y: 1255, w: 1920, h: 25 } },
+    { rect: { x: 0, y: 0, w: 25, h: 1280 } },
+    { rect: { x: 1895, y: 0, w: 25, h: 1280 } }
+  ];
+
+  var ZONES_DINH_TIEN_MON = [
+    { id: 'san_luan_vo', name: 'Sàn Luận Võ', desc: 'Sàn đá tròn, khu vực chính của đỉnh.', rect: { x: 790, y: 230, w: 340, h: 290 } },
+    { id: 'noi_tinh_toa', name: 'Nơi Tĩnh Tọa', desc: 'Thềm đá tĩnh tọa ngắm mây.', rect: { x: 210, y: 265, w: 205, h: 175 } },
+    { id: 'sanh_phong', name: 'Sảnh Phong (sàn)', desc: 'Sàn Sảnh Phong, nơi đặt Đại Điện.', rect: { x: 1230, y: 260, w: 285, h: 200 } },
+    { id: 'vuon_duoc', name: 'Vườn Dược', desc: 'Vườn dược của đỉnh.', rect: { x: 415, y: 485, w: 420, h: 530 } },
+    { id: 'san_luyen', name: 'Sân Luyện', desc: 'Sân luyện công với 4 đĩa mộc nhân.', rect: { x: 1045, y: 590, w: 395, h: 335 } },
+    { id: 'loi_len_dinh', name: 'Lối Lên Đỉnh', desc: 'Đường bậc thang lên xuống đỉnh.', rect: { x: 925, y: 900, w: 75, h: 380 } }
+  ];
+
+  function isWalkableDinhTienMon(x, y) {
+    if (x < 10 || x > 1920 - 10 || y < 10 || y > 1280 - 10) {
+      var inExit = false;
+      for (var e = 0; e < EXITS_DINH_TIEN_MON.length; e++) {
+        var er = EXITS_DINH_TIEN_MON[e].rect;
+        if (x >= er.x && x <= er.x + er.w && y >= er.y && y <= er.y + er.h) {
+          inExit = true;
+          break;
+        }
+      }
+      if (!inExit) return false;
+    }
+    for (var si = 0; si < STAND_OBJECTS_DINH_TIEN_MON.length; si++) {
+      var so = STAND_OBJECTS_DINH_TIEN_MON[si];
+      if (so.baseRect) {
+        if (x >= so.baseRect.x && x <= so.baseRect.x + so.baseRect.w && y >= so.baseRect.y && y <= so.baseRect.y + so.baseRect.h) return false;
+      } else if (so.ellipse) {
+        if (pointInEllipse(x, y, so.ellipse)) return false;
+      }
+    }
+    for (var j = 0; j < SCENERY_OBSTACLES_DINH_TIEN_MON.length; j++) {
+      var obs = SCENERY_OBSTACLES_DINH_TIEN_MON[j];
+      if (obs.rect) {
+        var inExitZone = false;
+        for (var k = 0; k < EXITS_DINH_TIEN_MON.length; k++) {
+          var exr = EXITS_DINH_TIEN_MON[k].rect;
+          if (x >= exr.x && x <= exr.x + exr.w && y >= exr.y && y <= exr.y + exr.h) {
+            inExitZone = true;
+            break;
+          }
+        }
+        if (!inExitZone && x >= obs.rect.x && x <= obs.rect.x + obs.rect.w &&
+            y >= obs.rect.y && y <= obs.rect.y + obs.rect.h) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  var collisionGridDinhTienMon = buildGrid(1920, 1280, isWalkableDinhTienMon);
+  forceWalkable(collisionGridDinhTienMon, SPAWN_DINH_TIEN_MON.x, SPAWN_DINH_TIEN_MON.y);
+  forceWalkable(collisionGridDinhTienMon, EXITS_DINH_TIEN_MON[0].target.x, EXITS_DINH_TIEN_MON[0].target.y);
+
+  var MAP_DINH_TIEN_MON = {
+    id: 'dinh-tien-mon',
+    name: 'Đỉnh Tiên Môn',
+    width: 1920,
+    height: 1280,
+    gridSize: GRID_SIZE,
+    cols: Math.ceil(1920 / GRID_SIZE),
+    rows: Math.ceil(1280 / GRID_SIZE),
+    bgImage: 'assets/art/map-dinh-tien-mon-bg.png',
+    spawn: SPAWN_DINH_TIEN_MON,
+    standees: STAND_OBJECTS_DINH_TIEN_MON,
+    npcs: [],
+    interactables: [],
+    harvestNodes: [],
+    monsterPacks: [],
+    zones: ZONES_DINH_TIEN_MON,
+    obstacles: SCENERY_OBSTACLES_DINH_TIEN_MON,
+    exits: EXITS_DINH_TIEN_MON,
+    collisionGrid: collisionGridDinhTienMon,
+    isWalkable: isWalkableDinhTienMon
   };
 
   // ============================================================
@@ -3469,7 +3609,8 @@
     'mo-lua': MAP_MO_LUA,
     'hoang-mac': MAP_HOANG_MAC,
     'kiem-trung': MAP_KIEM_TRUNG,
-    'tay-luong': MAP_TAY_LUONG
+    'tay-luong': MAP_TAY_LUONG,
+    'dinh-tien-mon': MAP_DINH_TIEN_MON
   };
 
   // Đợt N2: Tuần Thú Sư — quà gặp đầu (Linh Thú Hoàn) còn nhận được không?

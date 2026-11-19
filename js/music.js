@@ -178,7 +178,8 @@
     'ho-bang': 'ice', 'ho_bang': 'ice',
     'mo-lua': 'fire', 'mo_lua': 'fire',
     'hoang-mac': 'desert', 'hoang_mac': 'desert',
-    'kiem-trung': 'sword', 'kiem_trung': 'sword'
+    'kiem-trung': 'sword', 'kiem_trung': 'sword',
+    'dinh-tien-mon': 'sect', 'dinh_tien_mon': 'sect'
   };
   var DEFAULT_THEME_ID = 'temple';
 
