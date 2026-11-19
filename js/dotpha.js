@@ -483,7 +483,7 @@
     bodyEl = document.getElementById('dotpha-body');
     if (!modalEl || !bodyEl) return;
     wired = true;
-    var closeX = document.getElementById('dotpha-close');
+    var closeX = document.getElementById('close-dotpha-modal');
     if (closeX) closeX.addEventListener('click', closePanel);
     modalEl.addEventListener('click', function (ev) {
       if (ev.target === modalEl) closePanel();

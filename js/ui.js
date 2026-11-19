@@ -1941,6 +1941,13 @@
     if (btnQuick) {
       btnQuick.classList.toggle('hidden', !!equipped || selectedBagSlot === null || selectedBagSlot === undefined);
     }
+    // FIXSMALL-2: nút "Lấy ra" chỉ hiện khi đang xem đồ trong Rương Tạm.
+    var btnTakeout = document.getElementById('btn-card-takeout');
+    if (btnTakeout) {
+      var inTempChest = !equipped && selectedBagSlot !== null && selectedBagSlot !== undefined &&
+        player.tuiKho && selectedBagContainerId === player.tuiKho.tempChestId;
+      btnTakeout.classList.toggle('hidden', !inTempChest);
+    }
     disarmDrop();
   }
 
@@ -2021,6 +2028,24 @@
         if (r && r.ok) showToast('Đã gắn vào ô dùng nhanh ' + (idx + 1));
         else showToast('Không gắn được ô dùng nhanh');
         renderQuickSlots();
+        afterBagAction();
+      });
+    }
+    // FIXSMALL-2: "Lấy ra" — chuyển đồ từ Rương Tạm về túi chính.
+    var btnTakeout = document.getElementById('btn-card-takeout');
+    if (btnTakeout && !btnTakeout.dataset.wired) {
+      btnTakeout.dataset.wired = '1';
+      btnTakeout.addEventListener('click', function () {
+        if (selectedBagSlot === null) return;
+        if (!tuiKhoAPI || !tuiKhoAPI.takeFromTempChest) return;
+        var r = tuiKhoAPI.takeFromTempChest(player, selectedBagSlot);
+        if (r && r.ok) {
+          var def = itemDefs()[r.itemId];
+          showToast('Đã lấy ra ' + (r.count || 1) + ' ' + (def ? def.name : r.itemId));
+        } else {
+          showToast((r && r.msg) || 'Không lấy ra được');
+        }
+        selectedBagSlot = null;
         afterBagAction();
       });
     }
@@ -3153,7 +3178,7 @@
   /**
    * Cập nhật thông số HUD
    */
-  var hatFaceProbe = null; // null | 'loading' | 'ok' | 'fail'
+  // FIXSMALL-3: biến hatFaceProbe đã gỡ cùng khối thăm dò hanhan-face-hat.png.
 
   // Đợt P2J: URL chân dung đã chọn lúc tạo nhân vật, hoặc null khi save cũ
   // (không có trường portrait) hay mã lạ — mọi chỗ hiển thị giữ mặc định.
@@ -3181,21 +3206,10 @@
     }
     el.style.backgroundPosition = '';
     el.style.backgroundSize = '';
-    var s = stateAPI ? stateAPI.loadSettings() : null;
-    var wearing = player.equipment && equipmentIdOf(player.equipment.head) === 'non-la' && !(s && s.hideHat);
-    if (wearing) {
-      if (hatFaceProbe === null) {
-        hatFaceProbe = 'loading';
-        var img = new Image();
-        img.onload = function () { hatFaceProbe = 'ok'; refreshPortraitHat(); };
-        img.onerror = function () { hatFaceProbe = 'fail'; };
-        img.src = 'assets/chars/hanhan-face-hat.png';
-      }
-      if (hatFaceProbe === 'ok') {
-        el.style.backgroundImage = "url('assets/chars/hanhan-face-hat.png')";
-        return;
-      }
-    }
+    // FIXSMALL-3: đã gỡ lần thăm dò hanhan-face-hat.png — tệp chưa từng
+    // tồn tại ở bất kỳ cây nào nên mỗi lần đội nón là 1 lỗi 404; chân dung
+    // đội nón đã lùi về mặt thường (nền CSS hanhan-face.png) như trước.
+    // Khi nào có hình mặt đội nón thật thì thêm lại khối thăm dò này.
     el.style.backgroundImage = '';
   }
 

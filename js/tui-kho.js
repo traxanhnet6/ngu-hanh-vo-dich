@@ -912,13 +912,28 @@
     if (!s || isContainerItem(s)) return { ok: false, reason: 'empty' };
     var cnt = (count !== undefined && count !== null) ? count : (s.count || 1);
     if (cnt > (s.count || 1)) cnt = s.count || 1;
+    var full = cnt >= (s.count || 1);
+    var savedCount = s.count || 1;
     // remove from temp
-    if (cnt >= (s.count || 1)) tc.slots[slotIndex] = null;
+    if (full) tc.slots[slotIndex] = null;
     else s.count -= cnt;
     // add to carried default (chuyển tiếp toàn bộ extra/s để giữ herbQuality)
     var r = addItemToPlayer(player, s.itemId, cnt, undefined, s);
-    if (!r.success) {
-      // revert? keep removed but fail? We'll return fail with msg
+    if (!r.success || r.tempChest) {
+      // FIXSMALL-2 (sửa lần 2): addItemToPlayer báo success:true kèm
+      // tempChest:true khi túi đầy — đồ tràn NGƯỢC vào Rương Tạm. Phải coi
+      // là thất bại, nếu không người chơi thấy "Đã lấy ra" mà đồ vẫn ở
+      // rương. Gỡ bản sao vừa tràn vào rương (dồn stack hoặc ô mới) rồi mới
+      // khôi phục ô gốc, tránh nhân đôi đồ.
+      if (r.tempChest) {
+        var back = tc.slots[r.slot];
+        if (back && !isContainerItem(back) && back.itemId === s.itemId) {
+          if ((back.count || 1) > cnt) back.count -= cnt;
+          else tc.slots[r.slot] = null;
+        }
+      }
+      if (full) tc.slots[slotIndex] = s;
+      else s.count = savedCount;
       return { ok: false, reason: 'bag_full', msg: 'Túi đầy, không lấy ra được.' };
     }
     return { ok: true, itemId: s.itemId, count: cnt };

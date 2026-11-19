@@ -2366,21 +2366,15 @@
       'assets/art/icons-sheet.png',
       'assets/chars/hanhan-thaicuc-atlas.png',
       'assets/chars/fx-thaicuc-yinyang.png',
-      // Đợt KIẾP VÂN vòng 3: tài sản thật của cảnh độ kiếp — mây bão + sương
-      // (vòng 1), tia lôi kiếp sinh hình trắng–tím (thang nặng dần 1→4),
-      // cung điện bò trong mây (2 tím + 1 hồng đỏ), khung bùng nổ tia cuối.
-      'assets/art/fx-kiep-van-1.png',
-      'assets/art/fx-kiep-van-2.png',
-      'assets/art/fx-kiep-van-3.png',
-      'assets/art/fx-kiep-suong.png',
-      'assets/art/fx-loi-kiep-1.png',
-      'assets/art/fx-loi-kiep-2.png',
-      'assets/art/fx-loi-kiep-3.png',
-      'assets/art/fx-loi-kiep-4.png',
-      'assets/art/fx-cung-dien-1.png',
-      'assets/art/fx-cung-dien-2.png',
-      'assets/art/fx-cung-dien-3.png',
-      'assets/art/fx-bung-no.png',
+      // FIXSMALL-3: 11 tệp vòng 3 dưới đây ĐÃ GỠ khỏi danh sách nạp — tệp
+      // chưa từng có trong cây deploy nên mỗi lần mở game là 11 lỗi 404 +
+      // 11 dòng console.error, trong khi mọi chỗ vẽ đều đã có đường lùi
+      // (kiểm naturalWidth > 0; mây kiếp vân vẽ thủ tục, tia/cung/bùng
+      // nổ/sương bỏ qua). Tệp gốc có trong cây đợt kiepvan3 (CHƯA NGHIỆM
+      // THU) — khi nào Bui duyệt hình thì thêm lại đúng 11 dòng này +
+      // 11 bí danh bên dưới, không cần sửa code vẽ.
+      // (đã gỡ: fx-kiep-van-1/2/3, fx-kiep-suong, fx-loi-kiep-1..4,
+      //  fx-cung-dien-1..3, fx-bung-no — xem FIXSMALL-REPORT.md mục 3)
       // Đợt KIẾP VÂN vòng 4: bộ mây bão sinh thật nhiều tầng có thể tích
       // (trần bão xa, bụng mây xoáy sấm, hai cụm mây gần cuộn trào gờ sáng)
       'assets/art/fx-kiep-van4-xa.png',
@@ -2479,18 +2473,8 @@
         if (url === 'assets/art/icons-sheet.png') assets['icons_sheet'] = img;
         if (url === 'assets/chars/hanhan-thaicuc-atlas.png') assets['thaicuc_atlas'] = img;
         if (url === 'assets/chars/fx-thaicuc-yinyang.png') assets['thaicuc_yinyang'] = img;
-        if (url === 'assets/art/fx-kiep-van-1.png') assets['kiep_van_1'] = img;
-        if (url === 'assets/art/fx-kiep-van-2.png') assets['kiep_van_2'] = img;
-        if (url === 'assets/art/fx-kiep-van-3.png') assets['kiep_van_3'] = img;
-        if (url === 'assets/art/fx-kiep-suong.png') assets['kiep_suong'] = img;
-        if (url === 'assets/art/fx-loi-kiep-1.png') assets['loi_kiep_1'] = img;
-        if (url === 'assets/art/fx-loi-kiep-2.png') assets['loi_kiep_2'] = img;
-        if (url === 'assets/art/fx-loi-kiep-3.png') assets['loi_kiep_3'] = img;
-        if (url === 'assets/art/fx-loi-kiep-4.png') assets['loi_kiep_4'] = img;
-        if (url === 'assets/art/fx-cung-dien-1.png') assets['cung_dien_1'] = img;
-        if (url === 'assets/art/fx-cung-dien-2.png') assets['cung_dien_2'] = img;
-        if (url === 'assets/art/fx-cung-dien-3.png') assets['cung_dien_3'] = img;
-        if (url === 'assets/art/fx-bung-no.png') assets['bung_no'] = img;
+        // FIXSMALL-3: bí danh vòng 3 đã gỡ cùng danh sách nạp (xem trên) —
+        // tệp chưa có trong cây deploy; code vẽ đã kiểm naturalWidth > 0.
         if (url === 'assets/art/fx-kiep-van4-xa.png') assets['kiep_van4_xa'] = img;
         if (url === 'assets/art/fx-kiep-van4-bung.png') assets['kiep_van4_bung'] = img;
         if (url === 'assets/art/fx-kiep-van4-gan-1.png') assets['kiep_van4_gan_1'] = img;
@@ -2508,19 +2492,11 @@
       } catch (e) {}
     }
 
-    if (typeof Image !== 'undefined') {
-      try {
-        var hIdle = new Image();
-        hIdle.onload = function () { assets.hanhan_hat_idle = hIdle; };
-        hIdle.onerror = function () { assets.hanhan_hat_idle = null; };
-        hIdle.src = 'assets/chars/hanhan-hat-idle.png';
-
-        var hWalk = new Image();
-        hWalk.onload = function () { assets.hanhan_hat_walk = hWalk; };
-        hWalk.onerror = function () { assets.hanhan_hat_walk = null; };
-        hWalk.src = 'assets/chars/hanhan-hat-walk.png';
-      } catch (e) {}
-    }
+    // FIXSMALL-3: đã gỡ 2 lần nạp thăm dò hanhan-hat-idle/walk.png — tệp
+    // chưa từng tồn tại ở bất kỳ cây nào nên mỗi lần mở game là 2 lỗi 404;
+    // nón hiện vẽ qua atlas hanhan-gen-hat-v1 (drawGenHat), còn đường sheet
+    // cũ đã kiểm hatWalk/hatIdle truthy nên thiếu tệp cũng bỏ qua như trước.
+    // Khi nào có tệp nón rời thật thì thêm lại khối nạp này.
 
     // Đợt CHARINTEG: nạp JSON tọa độ khung của hai atlas sinh hình. Không
     // chặn vòng nạp chính — bộ máy vẽ tự lùi về sheet cũ cho tới khi dữ

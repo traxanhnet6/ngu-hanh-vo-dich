@@ -989,7 +989,13 @@
       id: 'thap_tu_luyen',
       name: 'Tháp Tu Luyện',
       desc: 'Tháp thí luyện leo tầng không đỉnh: mỗi tầng một đợt quái trong sân tháp, cứ 10 tầng có boss nhỏ; bảng leo tháp đặt lại theo tuần.',
-      rect: { x: 1500, y: 380, w: 400, h: 520 }
+      // FIXSMALL-4: tách ranh giới với Sảnh Thi Đấu — mép tây cũ x=1500 chồng
+      // lên nửa đông sàn đấu (sàn đấu tới x=1700), đứng ở nửa đông sàn đấu
+      // vẫn hiện "Tháp Tu Luyện" vì updateZone lấy vùng đầu tiên khớp.
+      // Ranh mới x=1560: giữa vành đông đấu trường (1496,892, theo ghi chú
+      // TOWERPATH) và tường tây tháp (x=1600) — bảng leo tháp (1660,895),
+      // cửa tháp (1740,875) và điểm đả tọa (1610,525) vẫn trong vùng tháp.
+      rect: { x: 1560, y: 380, w: 340, h: 520 }
     },
     {
       id: 'ho_linh_tuyen',
@@ -1001,7 +1007,9 @@
       id: 'sanh_thi_dau',
       name: 'Sảnh Thi Đấu',
       desc: 'Đấu trường tròn cho luận võ xếp hạng với bot (P2D).',
-      rect: { x: 1180, y: 640, w: 520, h: 420 }
+      // FIXSMALL-4: mép đông cũ x=1700 chồng lên sân tháp — thu về x=1560
+      // (chung ranh với vùng tháp), nửa đông sàn đấu hiện đúng "Sảnh Thi Đấu".
+      rect: { x: 1180, y: 640, w: 380, h: 420 }
     }
   ];
 
