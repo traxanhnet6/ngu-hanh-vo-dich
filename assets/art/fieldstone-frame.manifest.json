@@ -1,0 +1,21 @@
+{
+  "asset": "assets/art/fieldstone-frame.png",
+  "source": "media-generation-stone-frame-v1 (1792x1216), magenta-keyed, trimmed, 0.5x",
+  "size_px": [
+    849,
+    552
+  ],
+  "draw_rect_world": {
+    "x": 1154,
+    "y": 864,
+    "w": 482,
+    "h": 313
+  },
+  "opening_world": {
+    "x": 1205,
+    "y": 909,
+    "w": 380,
+    "h": 222
+  },
+  "status": "CHUA NGHIEM THU"
+}

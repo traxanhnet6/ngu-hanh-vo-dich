@@ -84,7 +84,7 @@
   })();
   var FIELD_CENTER = { x: 1395, y: 1020 };
   var FIELD_SKILL_RADIUS = 260; // hiện thanh kỹ năng khi cách tâm ruộng ≤ bán kính này
-  var FIELD_SIGN = { x: 1210, y: 890 }; // bia đá "Linh Điền" vẽ bằng mã
+  var FIELD_SIGN = { x: 1369, y: 824 }; // bia đá "Linh Điền" vẽ bằng mã; FIELDSTONE dời lên giữa phía trên khung đá (khung cao tới y~864) để không đè đá
 
   function getFieldPlotsConfig() { return FIELD_PLOTS_CONFIG; }
   function getFieldCenter() { return FIELD_CENTER; }

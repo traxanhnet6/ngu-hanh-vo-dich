@@ -10795,7 +10795,17 @@
     var frame = Math.floor((nowSec || 0) * 8) % 8;
     var bedImg = getLinhDienFieldImg('assets/art/herb-redraw/bed-soil.png');
 
-    // Bia đá "Linh Điền" phía tây-bắc ruộng (vẽ bằng mã, không tệp hình mới).
+    var frameImg = getLinhDienFieldImg('assets/art/fieldstone-frame.png');
+    // FIELDSTONE (Bui 17:29 2026-11-13): khung đá bao quanh ruộng, hình
+    // sinh trực tiếp bám nền map (xem fieldstone-frame.manifest.json).
+    // Vẽ TRƯỚC luống + bia: khung nằm ở lớp đất, không che cây/nhân vật,
+    // không chặn bấm ô (vẽ canvas thuần, va chạm giữ nguyên). Hình CHƯA
+    // NGHIỆM THU. Lỗ khung (1205,909,380×222) ôm ngoài 12 luống.
+    if (frameImg) {
+      ctx.drawImage(frameImg, 1154, 864, 482, 313);
+    }
+
+    // Bia đá "Linh Điền" giữa phía trên khung đá (vẽ bằng mã, không tệp hình mới).
     var sign = ldApi.FIELD_SIGN || { x: 1210, y: 890 };
     ctx.save();
     ctx.fillStyle = '#655848';
