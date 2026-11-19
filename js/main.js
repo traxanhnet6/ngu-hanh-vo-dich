@@ -284,6 +284,19 @@
           };
         }
 
+        // Đợt PENDING (OUTFITSWAP §2.2): màn tiếp tục phải giữ đúng trang
+        // phục đã lưu — trước đây select luôn mặc định 'hanhan-live' nên
+        // bấm Tiếp Tục là ghi đè mất bộ đã chọn trong bảng nhân vật.
+        var cSelSync = document.getElementById('continue-outfit-select');
+        if (cSelSync) {
+          var savedOutfit = null;
+          try {
+            var savedPl = stateAPI.loadPlayer(activeName || list[0]);
+            if (savedPl && savedPl.outfit) savedOutfit = savedPl.outfit;
+          } catch (e) {}
+          if (savedOutfit) cSelSync.value = savedOutfit;
+        }
+
         // Danh sách các nhân vật đã lưu
         if (savedListContainer) {
           savedListContainer.innerHTML = '';

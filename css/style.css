@@ -2508,6 +2508,13 @@ body.photo-mode #toast-container { visibility: hidden; }
 
 /* ===== Đợt K2: Sổ Chiêu trong Bảng Nhân Vật + đĩa hệ cho chiêu mới ===== */
 .skill-book-wrap { margin-top: 14px; }
+
+/* Đợt PENDING (OUTFITSWAP §2.2): mục đổi trang phục trong bảng nhân vật. */
+.outfit-swap-wrap { margin-top: 14px; }
+.outfit-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.outfit-list .btn.active { border-color: #ffd978; box-shadow: 0 0 0 1px #ffd978, 0 0 8px rgba(255, 217, 120, 0.45); }
+.outfit-group-label { width: 100%; font-size: 12px; color: #e9d9a8; margin: 8px 0 2px; }
+.outfit-group-label:first-child { margin-top: 0; }
 .sb-group { margin-bottom: 10px; }
 .sb-group-title {
   font-weight: 700; color: #f3d74e; margin: 8px 0 6px;

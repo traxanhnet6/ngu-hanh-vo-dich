@@ -3334,6 +3334,84 @@
   /**
    * Cập nhật Bảng Nhân Vật & Ngũ Hành (Popup)
    */
+  // Đợt PENDING (OUTFITSWAP §2.2): mục đổi trang phục trong bảng nhân vật.
+  // Liệt kê các bộ đang sở hữu (danh mục COSTUMES: bộ gốc + 25 mã đồng
+  // phục); chọn là đổi hình nhân vật trên map ngay — engine tự nạp lười
+  // atlas rồi vẽ bộ mới khi đủ dữ liệu, trước đó vẫn vẽ Hà Nhân.
+  // Đổi bộ không đụng trang bị/chỉ số/nhiệm vụ; lựa chọn lưu vào save.
+  var lastOutfitPickAt = 0;
+  function isOutfitLoading(code) {
+    if (!code || code === 'hanhan-live') return false;
+    if (typeof window === 'undefined' || !window.CostumeOutfits) return false;
+    var CO = window.CostumeOutfits;
+    if (typeof CO.isCostumeCode !== 'function' || !CO.isCostumeCode(code)) return false;
+    if (typeof CO.isReady !== 'function') return false;
+    return !(CO.isReady(code, 'idle') && CO.isReady(code, 'walk'));
+  }
+  function renderOutfitList() {
+    var listEl = document.getElementById('char-panel-outfit-list');
+    var nameEl = document.getElementById('char-panel-outfit-name');
+    if (!listEl || !player || !stateAPI) return;
+    var cat = (typeof stateAPI.getOutfitCatalog === 'function') ? stateAPI.getOutfitCatalog() : [];
+    var current = (player && player.outfit) ? player.outfit : 'hanhan-live';
+    var curDef = null;
+    cat.forEach(function (o) { if (o.id === current) curDef = o; });
+    var loading = isOutfitLoading(current) && (Date.now() - lastOutfitPickAt < 20000);
+    if (nameEl) nameEl.textContent = (curDef ? curDef.name : current) + (loading ? ' (đang nạp…)' : '');
+    listEl.innerHTML = '';
+    var groups = [
+      { label: 'Bộ gốc', test: function (o) { return o.id === 'hanhan-live'; } },
+      { label: 'Nữ', test: function (o) { return o.id.charAt(0) === 'F'; } },
+      { label: 'Nam', test: function (o) { return o.id.charAt(0) === 'M'; } }
+    ];
+    groups.forEach(function (g) {
+      var items = cat.filter(function (o) { return o.owned && g.test(o); });
+      if (!items.length) return;
+      var lab = document.createElement('div');
+      lab.className = 'outfit-group-label';
+      lab.textContent = g.label;
+      listEl.appendChild(lab);
+      items.forEach(function (o) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn wood small' + (o.id === current ? ' active' : '');
+        btn.textContent = o.name + (o.id === current ? ' (đang mặc)' : '');
+        btn.addEventListener('click', function () {
+          if (o.id === current) return;
+          var ok = false;
+          try { ok = (typeof stateAPI.setPlayerOutfit === 'function') ? stateAPI.setPlayerOutfit(player, o.id) : false; } catch (e) { ok = false; }
+          if (!ok) { if (typeof showToast === 'function') { try { showToast('Không đổi được trang phục này.'); } catch (e2) {} } return; }
+          lastOutfitPickAt = Date.now();
+          if (window.CostumeOutfits && typeof window.CostumeOutfits.ensureCode === 'function') {
+            try { window.CostumeOutfits.ensureCode(o.id); } catch (e) {}
+          }
+          try { if (typeof stateAPI.savePlayer === 'function') stateAPI.savePlayer(player); } catch (e) {}
+          renderOutfitList();
+          pollOutfitReady(o.id);
+        });
+        listEl.appendChild(btn);
+      });
+    });
+  }
+  // Sau khi chọn mã đồng phục: chờ atlas nạp đủ rồi vẽ lại dấu "đang mặc"
+  // (tới lúc đó engine vẫn vẽ Hà Nhân — không chặn người chơi).
+  var outfitPollTimer = null;
+  function pollOutfitReady(code) {
+    if (typeof window === 'undefined' || !window.CostumeOutfits) return;
+    if (outfitPollTimer) { clearInterval(outfitPollTimer); outfitPollTimer = null; }
+    var tries = 0;
+    outfitPollTimer = setInterval(function () {
+      tries++;
+      var panel = document.getElementById('char-panel');
+      var panelOpen = !!(panel && !panel.classList.contains('hidden'));
+      if (!isOutfitLoading(code) || tries > 50 || !panelOpen) {
+        clearInterval(outfitPollTimer);
+        outfitPollTimer = null;
+        if (panelOpen) renderOutfitList();
+      }
+    }, 300);
+  }
+
   function updateCharPanelContent() {
     if (!player || !stateAPI) return;
 
@@ -3450,6 +3528,7 @@
     }
 
     renderSkillBook();
+    renderOutfitList();
     if (typeof window !== 'undefined' && window.GameP2F && window.GameP2F.refreshTitle && player) {
       try { window.GameP2F.refreshTitle(player); } catch (e) {}
     }
