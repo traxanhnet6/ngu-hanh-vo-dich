@@ -1,0 +1,10 @@
+# Ngũ Hành Vô Địch — online (CHƯA DEPLOY ở chặng 1; chỉ chuẩn bị sẵn theo mẫu Tiên Lộ).
+services:
+  - type: web
+    name: ngu-hanh-online
+    env: node
+    plan: free
+    region: singapore
+    buildCommand: ""
+    startCommand: npm start
+    healthCheckPath: /

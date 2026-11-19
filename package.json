@@ -1,0 +1,1 @@
+{"description":"Ngũ Hành Vô Địch — online chặng 1 (khung tối thiểu, local only)","engines":{"node":">=18"},"name":"ngu-hanh-online","private":true,"scripts":{"start":"node server/server.mjs","test":"node server/test-online.mjs"},"type":"module","version":"0.1.0-stage1"}

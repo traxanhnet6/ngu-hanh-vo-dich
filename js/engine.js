@@ -2093,6 +2093,74 @@
     return drawGenFrame(got.img, data, dirName, frameIdx);
   }
 
+  // Đợt ONLINE chặng 1: vẽ 1 khung sinh hình tại tọa độ bất kỳ (cho người
+  // chơi khác) — cùng phép tính pivot như drawGenFrame, chỉ khác neo tại
+  // (px, py) thay vì (player.x, player.y). Trả false khi chưa sẵn sàng.
+  function drawGenFrameAt(img, data, dirName, frameIdx, px, py) {
+    if (!img || !img.complete || !data) return false;
+    if (img.naturalWidth !== 2048 || img.naturalHeight !== 2048) return false;
+    var frames = data.dirs[dirName];
+    if (!frames || !frames.length) return false;
+    var f = frames[frameIdx % frames.length];
+    if (!f) return false;
+    if (!(f.w > 0 && f.h > 0) || f.x < 0 || f.y < 0 ||
+        f.x + f.w > img.naturalWidth || f.y + f.h > img.naturalHeight) return false;
+    if (!isFinite(f.px) || !isFinite(f.py)) return false;
+    var k = HH_GEN_DISPLAY_H / (data.charH * data.scaleFromMaster);
+    ctx.drawImage(img, f.x, f.y, f.w, f.h, px - f.px * k, py - f.py * k, f.w * k, f.h * k);
+    return f;
+  }
+
+  // Đợt ONLINE chặng 1: vẽ một người chơi khác (hình Hà Nhân + tên trên đầu).
+  // Chặng 1 chưa vẽ theo đồng phục riêng của từng người (chặng 2 mới nối
+  // costume lazy-load). Vẽ trong try/catch: lỗi vẽ người khác không bao giờ
+  // được làm chết vòng lặp game.
+  function drawRemoteFigure(r) {
+    try {
+      if (!r || typeof r.x !== 'number' || typeof r.y !== 'number') return;
+      var dirName = HH_GEN_DIRS[(r.dir || 0) % 8];
+      var st = remoteAnimState[r.id] || (remoteAnimState[r.id] = { x: r.x, y: r.y, walkDist: 0 });
+      var moved = Math.hypot(r.x - st.x, r.y - st.y);
+      st.walkDist += moved;
+      st.x = r.x; st.y = r.y;
+      var moving = moved > 0.5;
+      ctx.save();
+      ctx.fillStyle = 'rgba(10, 15, 10, 0.35)';
+      ctx.beginPath();
+      ctx.ellipse(r.x, r.y, 26, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      var drawn = false;
+      if (moving && hanhanGenData.walk && assets.hanhan_gen_walk) {
+        var wFrames = hanhanGenData.walk.dirs[dirName];
+        if (wFrames && wFrames.length) {
+          var wIdx = Math.floor(st.walkDist / WALK_CYCLE_DIST * wFrames.length) % wFrames.length;
+          drawn = !!drawGenFrameAt(assets.hanhan_gen_walk, hanhanGenData.walk, dirName, wIdx, r.x, r.y);
+        }
+      }
+      if (!drawn && hanhanGenData.idle && assets.hanhan_gen_idle) {
+        var iFrames = hanhanGenData.idle.dirs[dirName];
+        if (iFrames && iFrames.length) {
+          var iFps = (iFrames[0] && iFrames[0].fps) || 6;
+          var iIdx = Math.floor(performance.now() / 1000 * iFps) % iFrames.length;
+          drawn = !!drawGenFrameAt(assets.hanhan_gen_idle, hanhanGenData.idle, dirName, iIdx, r.x, r.y);
+        }
+      }
+      if (!drawn && assets.hanhan_idle && assets.hanhan_idle.complete) {
+        ctx.drawImage(assets.hanhan_idle, 0, (r.dir || 0) * 120, 96, 120, r.x - 48, r.y - 118, 96, 120);
+      }
+      ctx.save();
+      ctx.font = 'bold 13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.strokeText(r.name || '?', r.x, r.y - 122);
+      ctx.fillStyle = '#9fe8ff';
+      ctx.fillText(r.name || '?', r.x, r.y - 122);
+      ctx.restore();
+    } catch (e) { /* không để lỗi vẽ người khác giết vòng lặp */ }
+  }
+
   // Đợt JOYFIX 2026-11-09: LỚP KIẾM TRANG BỊ CẦM TAY cho nhân vật.
   // Triệu chứng người chơi báo: trang bị kiếm mà nhân vật không cầm kiếm —
   // đường vẽ cũ lẫn bộ sinh hình đều không có lớp vũ khí (khung gốc tay không).
@@ -9887,6 +9955,20 @@
       }
     });
 
+    // Đợt ONLINE chặng 1: người chơi khác trong cùng map — vẽ như thực thể
+    // cùng loại (đúng chiều sâu theo baseY, Painter's sort lo phần còn lại).
+    // Tắt hoàn toàn khi không online (remotePlayers rỗng thì không vẽ gì,
+    // game đơn không đổi một dòng hành vi).
+    for (var rp = 0; rp < remotePlayers.length; rp++) {
+      (function (remote) {
+        entities.push({
+          type: 'remote-player',
+          baseY: remote.y,
+          draw: function () { drawRemoteFigure(remote); }
+        });
+      })(remotePlayers[rp]);
+    }
+
     // Sắp xếp Painter's algorithm với tie-break < 4px: vẽ NPC/quái trước player (Brief §8 fix 3)
     entities.sort(function (a, b) {
       if (Math.abs(a.baseY - b.baseY) < 4) {
@@ -13088,6 +13170,11 @@
     return dirMap[octant] !== undefined ? dirMap[octant] : 0;
   }
 
+  // Đợt ONLINE chặng 1: người chơi khác trong cùng map (net.js đẩy vào qua
+  // setRemotePlayers; rỗng = game đơn, không vẽ gì).
+  var remotePlayers = [];
+  var remoteAnimState = {};
+
   var EngineAPI = {
     init: initEngine,
     start: start,
@@ -13121,6 +13208,14 @@
     handleRevive: handleRevive,
     setPlayer: function (p) { player = p; },
     getPlayer: function () { return player; },
+    // Đợt ONLINE chặng 1: nhận danh sách người chơi khác (net.js đẩy vào).
+    setRemotePlayers: function (list) {
+      remotePlayers = Array.isArray(list) ? list : [];
+      var seen = {};
+      for (var i = 0; i < remotePlayers.length; i++) seen[remotePlayers[i].id] = true;
+      for (var id in remoteAnimState) if (!seen[id]) delete remoteAnimState[id];
+    },
+    getRemotePlayers: function () { return remotePlayers; },
     isDanLoBurning: isDanLoBurning,
     switchMap: switchMap,
     teleportTo: teleportTo,
