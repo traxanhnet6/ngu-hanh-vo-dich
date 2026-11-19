@@ -634,6 +634,19 @@ html, body {
   margin-bottom: 5px;
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.detail-row > span {
+  flex-shrink: 0;
+}
+
+.detail-row > b {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: right;
 }
 
 .gold-text {
@@ -679,15 +692,22 @@ html, body {
 
 .pillar-desc {
   flex: 1;
+  min-width: 0;
   font-size: 11px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .pillar-role {
   color: #d8c9a3;
+  min-width: 0;
 }
 
 .pillar-val {
   color: #ffd978;
+  flex-shrink: 0;
 }
 
 .stat-card {
@@ -701,9 +721,14 @@ html, body {
   display: flex;
   justify-content: space-between;
   flex-wrap: wrap;
+  gap: 8px;
   min-width: 0;
   font-size: 12.5px;
   margin-bottom: 5px;
+}
+
+.stat-row > b {
+  text-align: right;
 }
 
 .stat-row:last-child {
@@ -715,6 +740,30 @@ html, body {
   color: #9d927d;
   line-height: 1.45;
   margin-top: 10px;
+}
+
+/* Hàng 3 nút Đột Phá: lưới 3 cột đều nhau, không ép cột lưới phình
+   (CHARPANEL-TIDY: trước đây 3 nút min-width 150px nhồi trong 1 hàng
+   flex đã đẩy .char-details-grid lên 477px, tràn ngang modal). */
+.dotpha-btn-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 2px 0 5px;
+}
+
+.dotpha-btn-grid .btn {
+  min-width: 0;
+  width: 100%;
+  padding: 7px 4px;
+  min-height: 40px;
+  font-size: 12.5px;
+  line-height: 1.25;
+}
+
+/* Bảng nhân vật không bao giờ cuộn ngang; cuộn dọc giữ nguyên. */
+#char-panel .char-modal {
+  overflow-x: hidden;
 }
 
 /* Modal Cài Đặt */
@@ -954,6 +1003,17 @@ input:checked + .slider:before {
   }
   .detail-row {
     flex-wrap: wrap;
+  }
+  /* Sổ Chiêu trên màn hình hẹp: trạng thái/nút xuống hàng dưới để phần
+     chữ chiêu có đủ chiều rộng (CHARPANEL-TIDY: trước đây .sb-state lấy
+     hết max-content khiến .sb-main chỉ còn ~100px, chữ bóp thành cột).
+     Dùng #char-panel để thắng quy tắc gốc .sb-state ở cuối tệp. */
+  #char-panel .sb-row {
+    flex-wrap: wrap;
+  }
+  #char-panel .sb-state {
+    flex: 1 1 100%;
+    text-align: left;
   }
 }
 
