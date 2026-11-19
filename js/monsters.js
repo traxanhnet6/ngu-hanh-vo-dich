@@ -18,6 +18,17 @@
     'yen-linh-thu': { id: 'yen-linh-thu', name: 'Yên Linh Thú', type: 'pet-gear', slot: 'saddle', stackable: false, iconCol: 4, iconRow: 0, desc: 'Tăng sức chứa túi yên.' },
     'chuong-linh-thu': { id: 'chuong-linh-thu', name: 'Chuông Linh Thú', type: 'pet-gear', slot: 'collar', stackable: false, iconCol: 4, iconRow: 1, desc: 'Tăng sức chiêu thú.' },
     'giap-linh-thu': { id: 'giap-linh-thu', name: 'Giáp Linh Thú', type: 'pet-gear', slot: 'armor', stackable: false, iconCol: 4, iconRow: 1, def: 3, desc: 'Tăng máu và đỡ đòn.' },
+    // Đợt M2: 8 vật phẩm phàm tục của phần mở đầu. Bảng icons-sheet 6x8 đã
+    // kín cả 48 ô nên không còn ô trống — mỗi món tái dùng ô icon gần nghĩa
+    // nhất có sẵn (ghi rõ trong M2-REPORT.md; nợ icon riêng ART-DEBT-M2-08).
+    'bo-cui': { id: 'bo-cui', name: 'Bó Củi', type: 'material', stackable: true, iconCol: 3, iconRow: 0, desc: 'Bó củi chặt ở rừng sau miếu, bán lấy tiền đồng ở chợ Tây Lương.' },
+    'banh-bao': { id: 'banh-bao', name: 'Bánh Bao', type: 'consumable', stackable: true, iconCol: 0, iconRow: 1, desc: 'Bánh bao nóng ở sạp bánh thành Tây Lương. Ăn hoặc cho Linh Nhi.' },
+    'thuoc-cam': { id: 'thuoc-cam', name: 'Thuốc', type: 'consumable', stackable: true, iconCol: 1, iconRow: 0, desc: 'Thuốc cảm của hiệu thuốc thành Tây Lương. Uống hoặc cho Linh Nhi.' },
+    'cui-suoi': { id: 'cui-suoi', name: 'Củi Sưởi', type: 'consumable', stackable: true, iconCol: 3, iconRow: 1, desc: 'Củi khô đốt sưởi ấm tại miếu cho Linh Nhi.' },
+    'ga-rung': { id: 'ga-rung', name: 'Gà Rừng', type: 'material', stackable: true, iconCol: 2, iconRow: 0, desc: 'Gà rừng săn ở rừng sau miếu. Tay chân Mã Tam đòi món này.' },
+    'bay-san': { id: 'bay-san', name: 'Bẫy Săn', type: 'consumable', stackable: true, iconCol: 3, iconRow: 6, desc: 'Bẫy săn đặt trước trận giữ miếu: nổ khi quái giẫm phải.' },
+    'thu-gui': { id: 'thu-gui', name: 'Thư Gửi', type: 'quest', stackable: false, iconCol: 3, iconRow: 7, desc: 'Bức thư lão già bị tố nhờ đưa cho Chấp Sự.' },
+    'vat-chung': { id: 'vat-chung', name: 'Vật Chứng', type: 'quest', stackable: false, iconCol: 2, iconRow: 5, desc: 'Vật chứng tìm được ở góc tối sau Đại Điện.' },
     'linh-thach': {
       id: 'linh-thach',
       name: 'Linh Thạch',
@@ -1518,6 +1529,144 @@
         lowHpThreshold: 0.5,
         firstDelay: 4.0
       }
+    },
+    // --- 5 loài phần mở đầu (Đợt M2, M2-DESIGN.md §4+§6) ---
+    // Số PROVISIONAL theo thiết kế. tuViAmount = 0: giai đoạn phàm nhân
+    // chưa tu luyện nên hạ quái không nhận tu vi (tu vi khởi đầu cấp ở
+    // cổng đêm oán linh). DropTable KHÔNG chứa linh-thach (khóa §2.5).
+    // Đợt M2MERGE: ma_tam/ga_rung/oan_linh dùng sheet riêng (M2ART, CHƯA
+    // NGHIỆM THU) + frameCounts phát hết khung mượt; tay_chan_matam vẫn
+    // mượn sheet Thiết Giáp (nợ hình riêng, ngoài đợt này).
+    tay_chan_matam: {
+      id: 'tay_chan_matam',
+      name: 'Tay Chân Mã Tam',
+      element: 'tho',
+      hp: 30,
+      damage: 4,
+      armor: 0,
+      speed: 90,
+      aggroRange: 200,
+      attackRange: 44,
+      attackCd: 1.2,
+      tuViMoc: 0,
+      tuViAmount: 0,
+      isElite: false,
+      respawnTime: 60,
+      leashDistance: 900,
+      sheetAsset: 'assets/chars/thietgiap-sheet.png',
+      cellW: 128,
+      cellH: 96,
+      feetOffsetX: 64,
+      feetOffsetY: 82,
+      drawScale: 1.0,
+      dropTable: []
+    },
+    ma_tam: {
+      id: 'ma_tam',
+      name: 'Mã Tam',
+      element: 'tho',
+      hp: 120,
+      damage: 6,
+      armor: 0,
+      speed: 95,
+      aggroRange: 220,
+      attackRange: 48,
+      attackCd: 1.3,
+      tuViMoc: 0,
+      tuViAmount: 0,
+      isElite: true,
+      respawnTime: 60,
+      leashDistance: 900,
+      sheetAsset: 'assets/chars/ma-tam-sheet-smooth.png',
+      cellW: 128,
+      cellH: 112,
+      feetOffsetX: 64,
+      feetOffsetY: 98,
+      frameCounts: { idle: 6, walk: 8, attack: 6, hit: 4, death: 6 },
+      drawScale: 1.0,
+      dropTable: []
+    },
+    ga_rung: {
+      id: 'ga_rung',
+      name: 'Gà Rừng',
+      element: 'moc',
+      hp: 10,
+      damage: 0,
+      armor: 0,
+      speed: 70,
+      aggroRange: 0,
+      attackRange: 30,
+      attackCd: 1.5,
+      tuViMoc: 0,
+      tuViAmount: 0,
+      isElite: false,
+      respawnTime: 90,
+      passive: true,
+      sheetAsset: 'assets/chars/ga-rung-sheet-smooth.png',
+      cellW: 72,
+      cellH: 72,
+      feetOffsetX: 36,
+      feetOffsetY: 60,
+      frameCounts: { idle: 6, walk: 8, attack: 6, hit: 4, death: 6 },
+      drawScale: 0.85,
+      dropTable: [
+        { id: 'ga-rung', chance: 1.0, min: 1, max: 1, isMaterial: true }
+      ]
+    },
+    oan_linh: {
+      id: 'oan_linh',
+      name: 'Oán Linh',
+      element: 'tho',
+      hp: 22,
+      damage: 3,
+      armor: 0,
+      speed: 55,
+      aggroRange: 400,
+      attackRange: 40,
+      attackCd: 1.4,
+      tuViMoc: 0,
+      tuViAmount: 0,
+      isElite: false,
+      respawnTime: 60,
+      leashDistance: 900,
+      sheetAsset: 'assets/chars/oan-linh-sheet-smooth.png',
+      cellW: 112,
+      cellH: 96,
+      feetOffsetX: 56,
+      feetOffsetY: 82,
+      frameCounts: { idle: 6, walk: 8, attack: 6, hit: 4, death: 6 },
+      drawScale: 1.0,
+      dropTable: [
+        { id: 'la-thanh-tuy', chance: 0.30, min: 1, max: 1, isMaterial: true }
+      ]
+    },
+    oan_linh_dau_dan: {
+      id: 'oan_linh_dau_dan',
+      name: 'Oán Linh Đầu Đàn',
+      element: 'tho',
+      hp: 90,
+      damage: 5,
+      armor: 0,
+      speed: 60,
+      aggroRange: 450,
+      attackRange: 46,
+      attackCd: 1.4,
+      tuViMoc: 0,
+      tuViAmount: 0,
+      isElite: true,
+      respawnTime: 60,
+      leashDistance: 900,
+      sheetAsset: 'assets/chars/oan-linh-sheet-smooth.png',
+      cellW: 112,
+      cellH: 96,
+      feetOffsetX: 56,
+      feetOffsetY: 82,
+      frameCounts: { idle: 6, walk: 8, attack: 6, hit: 4, death: 6 },
+      drawScale: 1.3,
+      dropTable: [
+        { id: 'la-thanh-tuy', chance: 1.0, min: 1, max: 1, isMaterial: true },
+        { id: 'linh-chi-rung', chance: 0.25, min: 1, max: 1, isMaterial: true }
+      ]
     }
   };
 
@@ -1918,7 +2067,17 @@
     }
 
     // Bị đánh thì aggro ngay (nếu không đang leash)
-    if (m.state !== 'return') {
+    // Đợt M2: loài bị động (passive: Gà Rừng) không đuổi — bị đánh thì bỏ
+    // chạy chậm ra xa kẻ đánh, giữ trạng thái roam. Các loài khác giữ nguyên.
+    var specHit = SPECIES[m.speciesId];
+    if (specHit && specHit.passive) {
+      if (m.state !== 'return' && playerPos && typeof playerPos.x === 'number') {
+        var fx = m.x - playerPos.x, fy = m.y - playerPos.y;
+        var fd = Math.hypot(fx, fy) || 1;
+        m.state = 'roam';
+        m.roamTarget = { x: m.x + (fx / fd) * 120, y: m.y + (fy / fd) * 120 };
+      }
+    } else if (m.state !== 'return') {
       m.state = 'aggro';
     }
 

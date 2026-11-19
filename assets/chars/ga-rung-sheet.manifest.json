@@ -1,0 +1,657 @@
+{
+  "speciesId": "ga_rung",
+  "name": "Gà Rừng",
+  "sheetAsset": "assets/chars/ga-rung-sheet.png",
+  "cellW": 72,
+  "cellH": 72,
+  "feetOffsetX": 36,
+  "feetOffsetY": 60,
+  "drawScale": 0.85,
+  "drawScaleNote": "Đường vẽ quái chính của engine (drawMonster, js/engine.js) hiện không áp drawScale — hiển thị thật 72x72 px. Giá trị 0.85 chỉ ghi để dùng sau nếu engine áp.",
+  "frameCounts": {
+    "idle": 6,
+    "walk": 8,
+    "attack": 6,
+    "hit": 4,
+    "death": 6
+  },
+  "engineColumnMapping": {
+    "idle": [
+      0,
+      2,
+      4,
+      5
+    ],
+    "walk": [
+      0,
+      2,
+      5,
+      7
+    ],
+    "attack": [
+      0,
+      2,
+      4,
+      5
+    ],
+    "hit": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "death": [
+      0,
+      2,
+      4,
+      5
+    ]
+  },
+  "engineColumnMappingNote": "Cột c lấy khung mượt theo danh sách trên (đúng danh sách khóa trong brief). Lưu ý: công thức round(c*(N-1)/3) tính trực tiếp cho N=6 ra [0,2,3,5], khác danh sách khóa [0,2,4,5]; bản này theo DANH SÁCH KHÓA. Engine thực tế chỉ đọc: idle cột 0-1, walk cột 0-3, attack cột 0-2, hit cột 0-1, death cột 0-2 (giữ cột 2).",
+  "rowOrder": [
+    "idle",
+    "walk",
+    "attack",
+    "hit",
+    "death"
+  ],
+  "scales": {
+    "idle": 0.0795,
+    "walk": 0.1015,
+    "attack": 0.0795,
+    "hit": 0.0638,
+    "death": 0.0811
+  },
+  "scaleNote": "Mỗi dải một tỉ lệ chung: chiều cao trung vị của dải -> 52px, chặn khung cao nhất <= 58px để không cắt đuôi/mũ; dải death dùng trung bình 4 dải còn lại để xác cùng cỡ gà sống.",
+  "pivots": {
+    "idle": [
+      {
+        "frame": "ga-rung_idle_00.png",
+        "sourceBBox": [
+          3,
+          220,
+          488,
+          813
+        ],
+        "bbox": [
+          13,
+          12,
+          51,
+          59
+        ],
+        "feetX": 36.1,
+        "feetY": 60,
+        "devX": 0.1,
+        "devY": 0
+      },
+      {
+        "frame": "ga-rung_idle_01.png",
+        "sourceBBox": [
+          482,
+          83,
+          910,
+          811
+        ],
+        "bbox": [
+          16,
+          2,
+          50,
+          59
+        ],
+        "feetX": 35.8,
+        "feetY": 60,
+        "devX": -0.2,
+        "devY": 0
+      },
+      {
+        "frame": "ga-rung_idle_02.png",
+        "sourceBBox": [
+          912,
+          106,
+          1372,
+          814
+        ],
+        "bbox": [
+          18,
+          3,
+          54,
+          59
+        ],
+        "feetX": 35.8,
+        "feetY": 60,
+        "devX": -0.2,
+        "devY": 0
+      },
+      {
+        "frame": "ga-rung_idle_03.png",
+        "sourceBBox": [
+          1339,
+          165,
+          1769,
+          804
+        ],
+        "bbox": [
+          15,
+          9,
+          49,
+          59
+        ],
+        "feetX": 35.6,
+        "feetY": 60,
+        "devX": -0.4,
+        "devY": 0
+      },
+      {
+        "frame": "ga-rung_idle_04.png",
+        "sourceBBox": [
+          1776,
+          224,
+          2207,
+          804
+        ],
+        "bbox": [
+          16,
+          13,
+          50,
+          59
+        ],
+        "feetX": 35.5,
+        "feetY": 60,
+        "devX": -0.5,
+        "devY": 0
+      },
+      {
+        "frame": "ga-rung_idle_05.png",
+        "sourceBBox": [
+          2213,
+          201,
+          2715,
+          810
+        ],
+        "bbox": [
+          12,
+          11,
+          51,
+          59
+        ],
+        "feetX": 35.6,
+        "feetY": 60,
+        "devX": -0.4,
+        "devY": 0
+      }
+    ],
+    "walk": [
+      {
+        "frame": "ga-rung_walk_00.png",
+        "sourceBBox": [
+          19,
+          23,
+          557,
+          530
+        ],
+        "bbox": [
+          7,
+          8,
+          61,
+          59
+        ],
+        "feetX": 35.7,
+        "feetY": 60,
+        "devX": -0.3,
+        "devY": 0
+      },
+      {
+        "frame": "ga-rung_walk_01.png",
+        "sourceBBox": [
+          566,
+          33,
+          1129,
+          541
+        ],
+        "bbox": [
+          7,
+          8,
+          64,
+          59
+        ],
+        "feetX": 35.6,
+        "feetY": 60,
+        "devX": -0.4,
+        "devY": 0
+      },
+      {
+        "frame": "ga-rung_walk_02.png",
+        "sourceBBox": [
+          1140,
+          25,
+          1662,
+          539
+        ],
+        "bbox": [
+          10,
+          7,
+          63,
+          59
+        ],
+        "feetX": 35.6,
+        "feetY": 60,
+        "devX": -0.4,
+        "devY": 0
+      },
+      {
+        "frame": "ga-rung_walk_03.png",
+        "sourceBBox": [
+          1688,
+          23,
+          2174,
+          541
+        ],
+        "bbox": [
+          7,
+          7,
+          56,
+          59
+        ],
+        "feetX": 35.9,
+        "feetY": 60,
+        "devX": -0.1,
+        "devY": 0
+      },
+      {
+        "frame": "ga-rung_walk_04.png",
+        "sourceBBox": [
+          19,
+          574,
+          499,
+          1085
+        ],
+        "bbox": [
+          7,
+          7,
+          55,
+          59
+        ],
+        "feetX": 36.2,
+        "feetY": 60,
+        "devX": 0.2,
+        "devY": 0
+      },
+      {
+        "frame": "ga-rung_walk_05.png",
+        "sourceBBox": [
+          570,
+          574,
+          1120,
+          1086
+        ],
+        "bbox": [
+          4,
+          7,
+          60,
+          59
+        ],
+        "feetX": 36.0,
+        "feetY": 60,
+        "devX": -0.0,
+        "devY": 0
+      },
+      {
+        "frame": "ga-rung_walk_06.png",
+        "sourceBBox": [
+          1142,
+          582,
+          1641,
+          1091
+        ],
+        "bbox": [
+          9,
+          8,
+          59,
+          59
+        ],
+        "feetX": 35.9,
+        "feetY": 60,
+        "devX": -0.1,
+        "devY": 0
+      },
+      {
+        "frame": "ga-rung_walk_07.png",
+        "sourceBBox": [
+          1693,
+          574,
+          2185,
+          1091
+        ],
+        "bbox": [
+          5,
+          7,
+          55,
+          59
+        ],
+        "feetX": 35.7,
+        "feetY": 60,
+        "devX": -0.3,
+        "devY": 0
+      }
+    ],
+    "attack": [
+      {
+        "frame": "ga-rung_attack_00.png",
+        "sourceBBox": [
+          17,
+          232,
+          447,
+          841
+        ],
+        "bbox": [
+          18,
+          11,
+          52,
+          59
+        ],
+        "feetX": 36.1,
+        "feetY": 60,
+        "devX": 0.1,
+        "devY": 0
+      },
+      {
+        "frame": "ga-rung_attack_01.png",
+        "sourceBBox": [
+          456,
+          105,
+          854,
+          833
+        ],
+        "bbox": [
+          18,
+          2,
+          49,
+          59
+        ],
+        "feetX": 35.6,
+        "feetY": 60,
+        "devX": -0.4,
+        "devY": 0
+      },
+      {
+        "frame": "ga-rung_attack_02.png",
+        "sourceBBox": [
+          875,
+          314,
+          1379,
+          825
+        ],
+        "bbox": [
+          17,
+          19,
+          57,
+          59
+        ],
+        "feetX": 36.1,
+        "feetY": 60,
+        "devX": 0.1,
+        "devY": 0
+      },
+      {
+        "frame": "ga-rung_attack_03.png",
+        "sourceBBox": [
+          1359,
+          314,
+          1852,
+          826
+        ],
+        "bbox": [
+          17,
+          19,
+          56,
+          59
+        ],
+        "feetX": 36.2,
+        "feetY": 60,
+        "devX": 0.2,
+        "devY": 0
+      },
+      {
+        "frame": "ga-rung_attack_04.png",
+        "sourceBBox": [
+          1853,
+          118,
+          2233,
+          833
+        ],
+        "bbox": [
+          19,
+          3,
+          49,
+          59
+        ],
+        "feetX": 35.7,
+        "feetY": 60,
+        "devX": -0.3,
+        "devY": 0
+      },
+      {
+        "frame": "ga-rung_attack_05.png",
+        "sourceBBox": [
+          2266,
+          223,
+          2707,
+          838
+        ],
+        "bbox": [
+          18,
+          11,
+          53,
+          59
+        ],
+        "feetX": 36.5,
+        "feetY": 60,
+        "devX": 0.5,
+        "devY": 0
+      }
+    ],
+    "hit": [
+      {
+        "frame": "ga-rung_hit_00.png",
+        "sourceBBox": [
+          25,
+          39,
+          712,
+          875
+        ],
+        "bbox": [
+          12,
+          6,
+          55,
+          59
+        ],
+        "feetX": 35.7,
+        "feetY": 60,
+        "devX": -0.3,
+        "devY": 0
+      },
+      {
+        "frame": "ga-rung_hit_01.png",
+        "sourceBBox": [
+          725,
+          31,
+          1397,
+          875
+        ],
+        "bbox": [
+          14,
+          6,
+          56,
+          59
+        ],
+        "feetX": 36.0,
+        "feetY": 60,
+        "devX": 0.0,
+        "devY": 0
+      },
+      {
+        "frame": "ga-rung_hit_02.png",
+        "sourceBBox": [
+          1415,
+          70,
+          2109,
+          840
+        ],
+        "bbox": [
+          19,
+          10,
+          63,
+          59
+        ],
+        "feetX": 36.2,
+        "feetY": 60,
+        "devX": 0.2,
+        "devY": 0
+      },
+      {
+        "frame": "ga-rung_hit_03.png",
+        "sourceBBox": [
+          2065,
+          91,
+          2686,
+          881
+        ],
+        "bbox": [
+          11,
+          9,
+          50,
+          59
+        ],
+        "feetX": 35.6,
+        "feetY": 60,
+        "devX": -0.4,
+        "devY": 0
+      }
+    ],
+    "death": [
+      {
+        "frame": "ga-rung_death_00.png",
+        "sourceBBox": [
+          12,
+          222,
+          490,
+          741
+        ],
+        "bbox": [
+          17,
+          17,
+          55,
+          59
+        ],
+        "feetX": 36.0,
+        "feetY": 60,
+        "devX": 0.0,
+        "devY": 0
+      },
+      {
+        "frame": "ga-rung_death_01.png",
+        "sourceBBox": [
+          502,
+          324,
+          881,
+          724
+        ],
+        "bbox": [
+          21,
+          27,
+          51,
+          59
+        ],
+        "feetX": 36.0,
+        "feetY": 60,
+        "devX": 0.0,
+        "devY": 0
+      },
+      {
+        "frame": "ga-rung_death_02.png",
+        "sourceBBox": [
+          884,
+          312,
+          1354,
+          744
+        ],
+        "bbox": [
+          17,
+          24,
+          55,
+          59
+        ],
+        "feetX": 36.0,
+        "feetY": 60,
+        "devX": 0.0,
+        "devY": 0
+      },
+      {
+        "frame": "ga-rung_death_03.png",
+        "sourceBBox": [
+          1337,
+          365,
+          1809,
+          732
+        ],
+        "bbox": [
+          17,
+          30,
+          55,
+          59
+        ],
+        "feetX": 36.0,
+        "feetY": 60,
+        "devX": 0.0,
+        "devY": 0
+      },
+      {
+        "frame": "ga-rung_death_04.png",
+        "sourceBBox": [
+          1804,
+          372,
+          2253,
+          735
+        ],
+        "bbox": [
+          18,
+          30,
+          54,
+          59
+        ],
+        "feetX": 36.0,
+        "feetY": 60,
+        "devX": 0.0,
+        "devY": 0
+      },
+      {
+        "frame": "ga-rung_death_05.png",
+        "sourceBBox": [
+          2252,
+          379,
+          2715,
+          735
+        ],
+        "bbox": [
+          18,
+          31,
+          55,
+          59
+        ],
+        "feetX": 36.5,
+        "feetY": 60,
+        "devX": 0.5,
+        "devY": 0
+      }
+    ]
+  },
+  "sources": {
+    "idle": "media-generation-ga-rung-idle-v2-0-5d3c96cb-10f3-4e4b-8c0d-37520d781cda.png",
+    "walk": "media-generation-ga-rung-walk-v5-0-03bcdb37-1f4a-4cf5-8bd3-ccd361aeee55.png",
+    "attack": "media-generation-ga-rung-attack-v3-0-a428655e-d75b-416d-9ca6-095fceb519b8.png",
+    "hit": "media-generation-ga-rung-hit-0-b2c9d20b-8e97-4627-bf75-4f5d63d50aec.png",
+    "death": "media-generation-ga-rung-death-v4-0-e1f50b9b-02a8-4718-b131-0a6ba77401af.png"
+  },
+  "keyPose": "key-pose.png",
+  "status": "CHƯA NGHIỆM THU"
+}

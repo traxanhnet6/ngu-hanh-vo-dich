@@ -409,6 +409,12 @@
       },
       face: options.face || 'Quyết tâm',
       linhThach: options.linhThach || 0,
+      // Đợt M2: tiền đồng phàm tục — tân thủ bắt đầu với 3 đồng (đúng truyện:
+      // bó củi bị ép giá còn ba đồng). Save cũ: 0 (migration trong ensureState).
+      tienDong: (options.tienDong !== undefined ? options.tienDong : 3),
+      // Đợt M2: trạng thái phần mở đầu (kỷ nguyên phàm nhân). ensureState ở
+      // mo-dau.js chuẩn hóa khi nạp + migration save cũ.
+      moDau: { gatePassed: false, kiemTracDone: false, day: 1, dayPlaySec: 0, step: 'chop', matam: { stage: 0 }, hoMuoi: { anNo: 60, am: 60, khoe: 60, milestones: {}, told: {} }, linhNhiFollows: false, siege: { active: false, wave: 0, kills: 0, startedAt: 0, done: false }, giaVien: { tier: 0 }, fakeSect: { stage: 0, hasLetter: false, hasEvidence: false, heardBoth: false }, trapsPlaced: [], battle: { id: null, kills: 0, total: 0 }, progress: { chopped: 0, sold: false, bought: false, fed: false }, decayAcc: 0, meditation: { active: false, accSec: 0, sessionSec: 0 } },
       stats: { playSec: 0, kills: 0, bossKills: 0, harvests: 0, refines: 0 },
       usedGiftcodes: {},
       tieuMoc: { moc: 1, ngoDao: false, thangTinhAnh: false, focus: null },
@@ -676,6 +682,15 @@
       } else {
         try { var _qs2 = require('./quests.js'); if (_qs2 && _qs2.ensureQuestState) _qs2.ensureQuestState(data); } catch (e) {}
       }
+      // Đợt M2: save cũ chưa có trạng thái mở đầu -> bổ sung + migration
+      // (save đã qua phần đầu được coi như đã qua cổng, luồng chơi không đổi).
+      try {
+        var _md = null;
+        if (typeof window !== 'undefined' && window.GameMoDau && window.GameMoDau.ensureState) _md = window.GameMoDau;
+        else if (typeof global !== 'undefined' && global.GameMoDau && global.GameMoDau.ensureState) _md = global.GameMoDau;
+        else { try { _md = require('./mo-dau.js'); } catch (e) { _md = null; } }
+        if (_md && _md.ensureState) _md.ensureState(data);
+      } catch (e) {}
       if (!data.bagLocks || typeof data.bagLocks !== 'object') {
         data.bagLocks = {};
       }
@@ -1377,6 +1392,20 @@
       return require('./tui-kho.js');
     } catch (e) { return null; }
   }
+  // Đợt M2: cửa lấy module mở đầu (không phụ thuộc cứng — thiếu module thì
+  // khóa mở như cũ, hành vi cũ giữ nguyên).
+  function __modau() {
+    try {
+      if (typeof global !== 'undefined' && global.GameMoDau) return global.GameMoDau;
+      if (typeof window !== 'undefined' && window.GameMoDau) return window.GameMoDau;
+      return require('./mo-dau.js');
+    } catch (e) { return null; }
+  }
+  function ensureMoDau(player) {
+    var md = __modau();
+    if (md && md.ensureState) return md.ensureState(player);
+    return player ? player.moDau : null;
+  }
   function ensureTuiKho(player) {
     var tk = __tk();
     if (tk && tk.ensureState) return tk.ensureState(player);
@@ -1384,6 +1413,15 @@
     return player.tuiKho;
   }
   function addItemToBag(player, itemId, count, itemDefs, extra) {
+    // Đợt M2 (§2.5 điểm 4): Linh Thạch còn khóa (chưa qua đêm oán linh) thì
+    // không cộng, trả { success: false, locked: true } — người gọi hiện
+    // thông báo. Chặn TRƯỚC khi ủy quyền cho Túi/Kho (nơi cộng linhThach).
+    if (itemId === 'linh-thach' && player) {
+      var _mdGate = __modau();
+      if (_mdGate && _mdGate.isLinhThachLocked && _mdGate.isLinhThachLocked(player)) {
+        return { success: false, locked: true, reason: 'linh_thach_locked' };
+      }
+    }
     ensureTuiKho(player);
     var tk = __tk();
     if (tk && tk.addItemToPlayer) {
@@ -1501,6 +1539,7 @@
     addTuViCapped: addTuViCapped,
     ensureKimDan: ensureKimDan,
     ensureV1: ensureV1,
+    ensureMoDau: ensureMoDau,
     ensureLinhDien: ensureLinhDien,
     ensureLuyenDan: ensureLuyenDan,
     ensureTrangBi: function (player) {

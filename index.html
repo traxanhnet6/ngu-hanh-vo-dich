@@ -127,6 +127,11 @@
           <div class="char-summary">
             <div id="hud-player-name" class="hud-name">Hà Nhân</div>
             <div id="hud-player-realm" class="hud-realm">Phàm Nhân</div>
+            <!-- Đợt M2: hàng tiền tệ — Linh Thạch hiện "Khóa" trước đêm oán linh; Tiền Đồng luôn hiện khi có tiền hoặc còn khóa -->
+            <div class="hud-currency-row">
+              <span id="hud-linhthach-chip" class="hud-currency-chip">Linh Thạch: <b id="hud-linhthach-val">0</b></span>
+              <span id="hud-tiendong-chip" class="hud-currency-chip hidden">Tiền: <b id="hud-tiendong-val">0</b></span>
+            </div>
           </div>
           <!-- Vòng Tương Sinh SVG dạng tròn (~84px) -->
           <div id="tuong-sinh-ring" class="ring-container" title="Bấm để xem chi tiết ngũ hành"></div>
@@ -167,6 +172,13 @@
           <div id="quest-title" class="quest-title">Nói chuyện với Linh Nhi</div>
           <div id="quest-desc" class="quest-desc">Linh Nhi đang đợi ở trước miếu hoang.</div>
           <div id="quest-dist" class="quest-dist">Khoảng cách: ~0 bước</div>
+          <!-- Đợt M2: chip Hộ Muội — chỉ hiện ở miếu/Tây Lương trước cổng; bấm mở bảng Hộ Muội -->
+          <div id="hud-homuoi-chip" class="homuoi-chip hidden" title="Hộ Muội — bấm để xem">
+            <span class="homuoi-name">Linh Nhi</span>
+            <span class="homuoi-bar" title="Ăn No"><i id="homuoi-bar-an" class="homuoi-fill an"></i></span>
+            <span class="homuoi-bar" title="Ấm"><i id="homuoi-bar-am" class="homuoi-fill am"></i></span>
+            <span class="homuoi-bar" title="Khỏe"><i id="homuoi-bar-khoe" class="homuoi-fill khoe"></i></span>
+          </div>
           <button id="btn-auto-path" class="btn wood auto-path-btn hidden" type="button">Tự Tìm Đường</button>
         </div>
       </div>
@@ -1142,6 +1154,21 @@
     </div>
   </div>
 
+  <!-- Modal dùng chung Đợt M2: cửa hàng phàm nhân, Hộ Muội, chọn người dùng,
+       chuẩn bị trận, gia viên, hai lời kể — nội dung dựng bằng JS -->
+  <div id="modau-modal" class="modal-overlay hidden">
+    <div class="panel modal-box modau-box" style="max-width: 440px; width: 92%;">
+      <div class="modal-header">
+        <h2 id="modau-modal-title" class="modal-title">MỞ ĐẦU</h2>
+        <button id="close-modau-modal" class="btn-close" type="button" aria-label="Đóng">×</button>
+      </div>
+      <div id="modau-modal-body" class="modau-body" style="padding: 12px;"></div>
+      <div class="modal-actions" style="margin-top: 4px; padding: 0 12px 12px; text-align: center;">
+        <button id="btn-close-modau-modal" class="btn wood" type="button">Đóng</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal Linh Thú (Đợt N2) -->
   <div id="linh-thu-modal" class="modal-overlay hidden">
     <div class="panel modal-box linh-thu-box" style="max-width: 560px; width: 94%;">
@@ -1548,6 +1575,7 @@
   <!-- Đợt P2I: thương nhân lưu động + chợ đêm NPC -->
   <script src="js/p2i.js"></script>
   <script src="js/intro.js"></script>
+  <script src="js/mo-dau.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

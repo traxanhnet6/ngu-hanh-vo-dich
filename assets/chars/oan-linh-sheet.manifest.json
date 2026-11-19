@@ -1,0 +1,875 @@
+{
+  "status": "CHƯA NGHIỆM THU",
+  "batch": "OANLINH-V2",
+  "species": "Oán Linh (oan_linh) + biến thể tinh anh Oán Linh Đầu Đàn (oan_linh_dau_dan), dùng chung sheet",
+  "speciesIds": [
+    "oan_linh",
+    "oan_linh_dau_dan"
+  ],
+  "targetSheetAsset": "assets/chars/oan-linh-sheet.png",
+  "previousVersion": "oan-linh/ (v1, M2ART) — v2 vẽ lại toàn bộ 30 khung: thân đầy đặn hơn + đuôi khói walk ổn định. Thư mục v1 giữ nguyên vẹn, không sửa.",
+  "engineFormat": {
+    "layout": "hàng = trạng thái (0 idle, 1 walk, 2 attack, 3 hit, 4 death), cột = khung; MỘT hướng duy nhất, engine tự lật X khi quay trái",
+    "cellW": 112,
+    "cellH": 96,
+    "feetOffsetX": 56,
+    "feetOffsetY": 82,
+    "drawScale": {
+      "oan_linh": 1.0,
+      "oan_linh_dau_dan": 1.3
+    },
+    "engineSheetSize": [
+      448,
+      480
+    ],
+    "smoothSheetSize": [
+      896,
+      480
+    ]
+  },
+  "frameCounts": {
+    "idle": 6,
+    "walk": 8,
+    "attack": 6,
+    "hit": 4,
+    "death": 6
+  },
+  "totalSmoothFrames": 30,
+  "engineColumnMap": {
+    "note": "Ánh xạ theo đúng liệt kê trong brief M2ART (cột c lấy khung mượt; hàng 6 khung: 0,2,4,5 — KHÔNG phải round(c*5/3) thuần vì round(10/3)=3).",
+    "map": {
+      "idle": [
+        0,
+        2,
+        4,
+        5
+      ],
+      "walk": [
+        0,
+        2,
+        5,
+        7
+      ],
+      "attack": [
+        0,
+        2,
+        4,
+        5
+      ],
+      "hit": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "death": [
+        0,
+        2,
+        4,
+        5
+      ]
+    }
+  },
+  "engineColumnUsageInCode": {
+    "note": "js/engine.js drawMonster (đo thật, đợt v1): idle dùng cột 0-1, walk 0-3, attack 0-2, hit 0-1, death 0-2. Các cột còn lại của sheet engine vẫn đủ theo ánh xạ brief.",
+    "idle": [
+      0,
+      1
+    ],
+    "walk": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "attack": [
+      0,
+      1,
+      2
+    ],
+    "hit": [
+      0,
+      1
+    ],
+    "death": [
+      0,
+      1,
+      2
+    ]
+  },
+  "perRowStripScale": {
+    "idle": 0.1147,
+    "walk": 0.134,
+    "attack": 0.1111,
+    "hit": 0.0933,
+    "death": 0.114
+  },
+  "perRowRefFrame": {
+    "idle": 0,
+    "walk": 0,
+    "attack": 5,
+    "hit": 3,
+    "death": 0
+  },
+  "anchorMethod": "Mỗi dải neo theo khung tham chiếu gần tư thế nghỉ nhất (idle 0, walk 0, attack 5, hit 3, death 0): bbox khung tham chiếu (alpha>10%) co về cao 78px, đáy y=82, tâm x=56; cùng một phép biến đổi cho mọi khung trong dải nên chuyển động tương đối được giữ nguyên, không co kéo từng khung. Độ lệch neo từng khung đo thật trong pivots (bbox alpha>7, tức ngưỡng 0.03 như script).",
+  "v2GoalsMeasured": {
+    "idleBboxWidths": [
+      50,
+      49,
+      66,
+      70,
+      53,
+      51
+    ],
+    "idleBboxWidthAvg": 56.5,
+    "idleBboxWidthTarget": "54-62px (v1 ~42px)",
+    "walkTailBottoms": [
+      82,
+      83,
+      83,
+      82,
+      84,
+      81,
+      82,
+      82
+    ],
+    "walkTailBottomTarget": "82±2px mọi khung; walk_07 vs walk_00 lệch 0px",
+    "walkTailBottomsV1": [
+      82,
+      78,
+      81,
+      82,
+      74,
+      71,
+      69,
+      82
+    ]
+  },
+  "pivots": {
+    "idle": [
+      {
+        "file": "oan-linh_idle_00.png",
+        "anchorMeasured": {
+          "x": 55.5,
+          "y": 82
+        },
+        "anchorDeviationFromFeetOffset": {
+          "dx": -0.5,
+          "dy": 0
+        },
+        "semiTransparentFrac": 0.43,
+        "meanAlphaInBbox": 0.784,
+        "stripWindowX": [
+          0,
+          460
+        ],
+        "bboxAlphaGt7": [
+          31,
+          5,
+          80,
+          81
+        ]
+      },
+      {
+        "file": "oan-linh_idle_01.png",
+        "anchorMeasured": {
+          "x": 64.0,
+          "y": 82
+        },
+        "anchorDeviationFromFeetOffset": {
+          "dx": 8.0,
+          "dy": 0
+        },
+        "semiTransparentFrac": 0.395,
+        "meanAlphaInBbox": 0.796,
+        "stripWindowX": [
+          460,
+          991
+        ],
+        "bboxAlphaGt7": [
+          40,
+          5,
+          88,
+          81
+        ]
+      },
+      {
+        "file": "oan-linh_idle_02.png",
+        "anchorMeasured": {
+          "x": 64.5,
+          "y": 82
+        },
+        "anchorDeviationFromFeetOffset": {
+          "dx": 8.5,
+          "dy": 0
+        },
+        "semiTransparentFrac": 0.34,
+        "meanAlphaInBbox": 0.831,
+        "stripWindowX": [
+          991,
+          1608
+        ],
+        "bboxAlphaGt7": [
+          32,
+          6,
+          97,
+          81
+        ]
+      },
+      {
+        "file": "oan-linh_idle_03.png",
+        "anchorMeasured": {
+          "x": 62.5,
+          "y": 82
+        },
+        "anchorDeviationFromFeetOffset": {
+          "dx": 6.5,
+          "dy": 0
+        },
+        "semiTransparentFrac": 0.325,
+        "meanAlphaInBbox": 0.84,
+        "stripWindowX": [
+          1608,
+          2214
+        ],
+        "bboxAlphaGt7": [
+          28,
+          5,
+          97,
+          81
+        ]
+      },
+      {
+        "file": "oan-linh_idle_04.png",
+        "anchorMeasured": {
+          "x": 60.0,
+          "y": 82
+        },
+        "anchorDeviationFromFeetOffset": {
+          "dx": 4.0,
+          "dy": 0
+        },
+        "semiTransparentFrac": 0.409,
+        "meanAlphaInBbox": 0.797,
+        "stripWindowX": [
+          2214,
+          2725
+        ],
+        "bboxAlphaGt7": [
+          34,
+          5,
+          86,
+          81
+        ]
+      },
+      {
+        "file": "oan-linh_idle_05.png",
+        "anchorMeasured": {
+          "x": 64.0,
+          "y": 82
+        },
+        "anchorDeviationFromFeetOffset": {
+          "dx": 8.0,
+          "dy": 0
+        },
+        "semiTransparentFrac": 0.441,
+        "meanAlphaInBbox": 0.782,
+        "stripWindowX": [
+          2725,
+          3312
+        ],
+        "bboxAlphaGt7": [
+          39,
+          4,
+          89,
+          81
+        ]
+      }
+    ],
+    "walk": [
+      {
+        "file": "oan-linh_walk_00.png",
+        "anchorMeasured": {
+          "x": 55.0,
+          "y": 82
+        },
+        "anchorDeviationFromFeetOffset": {
+          "dx": -1.0,
+          "dy": 0
+        },
+        "semiTransparentFrac": 0.421,
+        "meanAlphaInBbox": 0.785,
+        "stripWindowX": [
+          0,
+          414
+        ],
+        "bboxAlphaGt7": [
+          29,
+          4,
+          81,
+          81
+        ]
+      },
+      {
+        "file": "oan-linh_walk_01.png",
+        "anchorMeasured": {
+          "x": 59.5,
+          "y": 83
+        },
+        "anchorDeviationFromFeetOffset": {
+          "dx": 3.5,
+          "dy": 1
+        },
+        "semiTransparentFrac": 0.339,
+        "meanAlphaInBbox": 0.828,
+        "stripWindowX": [
+          414,
+          902
+        ],
+        "bboxAlphaGt7": [
+          27,
+          7,
+          92,
+          82
+        ]
+      },
+      {
+        "file": "oan-linh_walk_02.png",
+        "anchorMeasured": {
+          "x": 62.0,
+          "y": 83
+        },
+        "anchorDeviationFromFeetOffset": {
+          "dx": 6.0,
+          "dy": 1
+        },
+        "semiTransparentFrac": 0.356,
+        "meanAlphaInBbox": 0.821,
+        "stripWindowX": [
+          902,
+          1388
+        ],
+        "bboxAlphaGt7": [
+          33,
+          5,
+          91,
+          82
+        ]
+      },
+      {
+        "file": "oan-linh_walk_03.png",
+        "anchorMeasured": {
+          "x": 65.5,
+          "y": 82
+        },
+        "anchorDeviationFromFeetOffset": {
+          "dx": 9.5,
+          "dy": 0
+        },
+        "semiTransparentFrac": 0.419,
+        "meanAlphaInBbox": 0.788,
+        "stripWindowX": [
+          1388,
+          1880
+        ],
+        "bboxAlphaGt7": [
+          39,
+          4,
+          92,
+          81
+        ]
+      },
+      {
+        "file": "oan-linh_walk_04.png",
+        "anchorMeasured": {
+          "x": 69.5,
+          "y": 84
+        },
+        "anchorDeviationFromFeetOffset": {
+          "dx": 13.5,
+          "dy": 2
+        },
+        "semiTransparentFrac": 0.338,
+        "meanAlphaInBbox": 0.829,
+        "stripWindowX": [
+          1880,
+          2452
+        ],
+        "bboxAlphaGt7": [
+          36,
+          6,
+          103,
+          83
+        ]
+      },
+      {
+        "file": "oan-linh_walk_05.png",
+        "anchorMeasured": {
+          "x": 57.5,
+          "y": 81
+        },
+        "anchorDeviationFromFeetOffset": {
+          "dx": 1.5,
+          "dy": -1
+        },
+        "semiTransparentFrac": 0.266,
+        "meanAlphaInBbox": 0.871,
+        "stripWindowX": [
+          2452,
+          2911
+        ],
+        "bboxAlphaGt7": [
+          28,
+          5,
+          87,
+          80
+        ]
+      },
+      {
+        "file": "oan-linh_walk_06.png",
+        "anchorMeasured": {
+          "x": 57.5,
+          "y": 82
+        },
+        "anchorDeviationFromFeetOffset": {
+          "dx": 1.5,
+          "dy": 0
+        },
+        "semiTransparentFrac": 0.33,
+        "meanAlphaInBbox": 0.838,
+        "stripWindowX": [
+          2911,
+          3375
+        ],
+        "bboxAlphaGt7": [
+          27,
+          6,
+          88,
+          81
+        ]
+      },
+      {
+        "file": "oan-linh_walk_07.png",
+        "anchorMeasured": {
+          "x": 56.0,
+          "y": 82
+        },
+        "anchorDeviationFromFeetOffset": {
+          "dx": 0.0,
+          "dy": 0
+        },
+        "semiTransparentFrac": 0.422,
+        "meanAlphaInBbox": 0.785,
+        "stripWindowX": [
+          3375,
+          3840
+        ],
+        "bboxAlphaGt7": [
+          27,
+          4,
+          85,
+          81
+        ]
+      }
+    ],
+    "attack": [
+      {
+        "file": "oan-linh_attack_00.png",
+        "anchorMeasured": {
+          "x": 57.5,
+          "y": 82
+        },
+        "anchorDeviationFromFeetOffset": {
+          "dx": 1.5,
+          "dy": 0
+        },
+        "semiTransparentFrac": 0.38,
+        "meanAlphaInBbox": 0.809,
+        "stripWindowX": [
+          0,
+          481
+        ],
+        "bboxAlphaGt7": [
+          33,
+          3,
+          82,
+          81
+        ]
+      },
+      {
+        "file": "oan-linh_attack_01.png",
+        "anchorMeasured": {
+          "x": 58.0,
+          "y": 82
+        },
+        "anchorDeviationFromFeetOffset": {
+          "dx": 2.0,
+          "dy": 0
+        },
+        "semiTransparentFrac": 0.343,
+        "meanAlphaInBbox": 0.824,
+        "stripWindowX": [
+          481,
+          987
+        ],
+        "bboxAlphaGt7": [
+          30,
+          3,
+          86,
+          81
+        ]
+      },
+      {
+        "file": "oan-linh_attack_02.png",
+        "anchorMeasured": {
+          "x": 71.5,
+          "y": 81
+        },
+        "anchorDeviationFromFeetOffset": {
+          "dx": 15.5,
+          "dy": -1
+        },
+        "semiTransparentFrac": 0.371,
+        "meanAlphaInBbox": 0.814,
+        "stripWindowX": [
+          987,
+          1661
+        ],
+        "bboxAlphaGt7": [
+          40,
+          13,
+          103,
+          80
+        ]
+      },
+      {
+        "file": "oan-linh_attack_03.png",
+        "anchorMeasured": {
+          "x": 60.5,
+          "y": 82
+        },
+        "anchorDeviationFromFeetOffset": {
+          "dx": 4.5,
+          "dy": 0
+        },
+        "semiTransparentFrac": 0.364,
+        "meanAlphaInBbox": 0.814,
+        "stripWindowX": [
+          1661,
+          2216
+        ],
+        "bboxAlphaGt7": [
+          30,
+          4,
+          91,
+          81
+        ]
+      },
+      {
+        "file": "oan-linh_attack_04.png",
+        "anchorMeasured": {
+          "x": 64.0,
+          "y": 82
+        },
+        "anchorDeviationFromFeetOffset": {
+          "dx": 8.0,
+          "dy": 0
+        },
+        "semiTransparentFrac": 0.345,
+        "meanAlphaInBbox": 0.821,
+        "stripWindowX": [
+          2216,
+          2837
+        ],
+        "bboxAlphaGt7": [
+          30,
+          3,
+          98,
+          81
+        ]
+      },
+      {
+        "file": "oan-linh_attack_05.png",
+        "anchorMeasured": {
+          "x": 56.0,
+          "y": 82
+        },
+        "anchorDeviationFromFeetOffset": {
+          "dx": 0.0,
+          "dy": 0
+        },
+        "semiTransparentFrac": 0.362,
+        "meanAlphaInBbox": 0.819,
+        "stripWindowX": [
+          2837,
+          3312
+        ],
+        "bboxAlphaGt7": [
+          30,
+          11,
+          82,
+          81
+        ]
+      }
+    ],
+    "hit": [
+      {
+        "file": "oan-linh_hit_00.png",
+        "anchorMeasured": {
+          "x": 53.5,
+          "y": 82
+        },
+        "anchorDeviationFromFeetOffset": {
+          "dx": -2.5,
+          "dy": 0
+        },
+        "semiTransparentFrac": 0.442,
+        "meanAlphaInBbox": 0.777,
+        "stripWindowX": [
+          0,
+          644
+        ],
+        "bboxAlphaGt7": [
+          26,
+          1,
+          81,
+          81
+        ]
+      },
+      {
+        "file": "oan-linh_hit_01.png",
+        "anchorMeasured": {
+          "x": 57.0,
+          "y": 82
+        },
+        "anchorDeviationFromFeetOffset": {
+          "dx": 1.0,
+          "dy": 0
+        },
+        "semiTransparentFrac": 0.429,
+        "meanAlphaInBbox": 0.786,
+        "stripWindowX": [
+          644,
+          1345
+        ],
+        "bboxAlphaGt7": [
+          28,
+          3,
+          86,
+          81
+        ]
+      },
+      {
+        "file": "oan-linh_hit_02.png",
+        "anchorMeasured": {
+          "x": 51.5,
+          "y": 82
+        },
+        "anchorDeviationFromFeetOffset": {
+          "dx": -4.5,
+          "dy": 0
+        },
+        "semiTransparentFrac": 0.47,
+        "meanAlphaInBbox": 0.764,
+        "stripWindowX": [
+          1345,
+          1982
+        ],
+        "bboxAlphaGt7": [
+          22,
+          6,
+          81,
+          81
+        ]
+      },
+      {
+        "file": "oan-linh_hit_03.png",
+        "anchorMeasured": {
+          "x": 57.5,
+          "y": 82
+        },
+        "anchorDeviationFromFeetOffset": {
+          "dx": 1.5,
+          "dy": 0
+        },
+        "semiTransparentFrac": 0.319,
+        "meanAlphaInBbox": 0.836,
+        "stripWindowX": [
+          1982,
+          2736
+        ],
+        "bboxAlphaGt7": [
+          26,
+          4,
+          89,
+          81
+        ]
+      }
+    ],
+    "death": [
+      {
+        "file": "oan-linh_death_00.png",
+        "anchorMeasured": {
+          "x": 56.0,
+          "y": 82
+        },
+        "anchorDeviationFromFeetOffset": {
+          "dx": 0.0,
+          "dy": 0
+        },
+        "semiTransparentFrac": 0.433,
+        "meanAlphaInBbox": 0.778,
+        "stripWindowX": [
+          0,
+          474
+        ],
+        "bboxAlphaGt7": [
+          31,
+          4,
+          81,
+          81
+        ]
+      },
+      {
+        "file": "oan-linh_death_01.png",
+        "anchorMeasured": {
+          "x": 69.0,
+          "y": 82
+        },
+        "anchorDeviationFromFeetOffset": {
+          "dx": 13.0,
+          "dy": 0
+        },
+        "semiTransparentFrac": 0.429,
+        "meanAlphaInBbox": 0.784,
+        "stripWindowX": [
+          474,
+          1054
+        ],
+        "bboxAlphaGt7": [
+          45,
+          10,
+          93,
+          81
+        ]
+      },
+      {
+        "file": "oan-linh_death_02.png",
+        "anchorMeasured": {
+          "x": 69.0,
+          "y": 77
+        },
+        "anchorDeviationFromFeetOffset": {
+          "dx": 13.0,
+          "dy": -5
+        },
+        "semiTransparentFrac": 0.36,
+        "meanAlphaInBbox": 0.826,
+        "stripWindowX": [
+          1054,
+          1675
+        ],
+        "bboxAlphaGt7": [
+          40,
+          23,
+          98,
+          76
+        ]
+      },
+      {
+        "file": "oan-linh_death_03.png",
+        "anchorMeasured": {
+          "x": 66.0,
+          "y": 78
+        },
+        "anchorDeviationFromFeetOffset": {
+          "dx": 10.0,
+          "dy": -4
+        },
+        "semiTransparentFrac": 0.467,
+        "meanAlphaInBbox": 0.753,
+        "stripWindowX": [
+          1675,
+          2205
+        ],
+        "bboxAlphaGt7": [
+          45,
+          25,
+          87,
+          77
+        ]
+      },
+      {
+        "file": "oan-linh_death_04.png",
+        "anchorMeasured": {
+          "x": 52.5,
+          "y": 76
+        },
+        "anchorDeviationFromFeetOffset": {
+          "dx": -3.5,
+          "dy": -6
+        },
+        "semiTransparentFrac": 0.399,
+        "meanAlphaInBbox": 0.81,
+        "stripWindowX": [
+          2205,
+          2640
+        ],
+        "bboxAlphaGt7": [
+          28,
+          38,
+          77,
+          75
+        ]
+      },
+      {
+        "file": "oan-linh_death_05.png",
+        "anchorMeasured": {
+          "x": 78.5,
+          "y": 75
+        },
+        "anchorDeviationFromFeetOffset": {
+          "dx": 22.5,
+          "dy": -7
+        },
+        "semiTransparentFrac": 0.976,
+        "meanAlphaInBbox": 0.256,
+        "stripWindowX": [
+          2640,
+          3312
+        ],
+        "bboxAlphaGt7": [
+          70,
+          52,
+          87,
+          74
+        ]
+      }
+    ]
+  },
+  "translucency": {
+    "method": "Difference-key nền magenta + unblend (xem PRODUCTION-NOTES.md); KHÔNG cắt alpha toàn cục.",
+    "semiTransparentFracRange": "khung thường 0.27-0.47; death_05 0.98 (tàn khói mờ)."
+  },
+  "files": {
+    "frames": "frames/oan-linh_<idle|walk|attack|hit|death>_<00..>.png (30 khung RGBA 112x96)",
+    "engineSheet": "oan-linh-sheet.png (448x480, 4 cot x 5 hang)",
+    "smoothSheet": "oan-linh-sheet-smooth.png (896x480, 8 cot x 5 hang, o thua trong suot)",
+    "keyArtRef": "_gen/key-art-ref.png (ban sao anh khoa v1, chi de tham chieu)",
+    "broadPoseRef": "_gen/ref-broad-pose.png (khung tu the rong cat tu dai idle v2a bi loai, dung lam tham chieu tu the)",
+    "strips": "_gen/strip-<idle|walk|attack|hit|death>.png (dai goc da duyet); _gen/rejected/ (20 dai bi loai, giu de doi chieu)",
+    "processScript": "_gen/process.py (sao tu v1, doi BASE, bo ghi de bien cat + don mep cua v1)",
+    "processReport": "_gen/process-report.json",
+    "qa": "qa/ (dai vong lap, doi chieu v1-v2, clip, bang lien he, script build_qa.py)"
+  },
+  "source": "Sinh trực tiếp bằng công cụ tạo ảnh theo dải từng hàng, neo theo ảnh khóa + ảnh tham chiếu tư thế rộng; không vẽ thủ tục bằng mã, không nội suy khung. Xem PRODUCTION-NOTES.md.",
+  "speciesId": "oan_linh",
+  "sheetAsset": "assets/chars/oan-linh-sheet.png",
+  "cellW": 112,
+  "cellH": 96,
+  "feetOffsetX": 56,
+  "feetOffsetY": 82,
+  "drawScale": 1.0,
+  "drawScaleNote": "oan_linh_dau_dan dùng chung sheet với drawScale 1.3 (xem engineFormat.drawScale).",
+  "bboxThresholdNote": "bbox đo ở ngưỡng alpha > 7 (≈3%), đúng ngưỡng mask trong script xử lý."
+}

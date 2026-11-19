@@ -2614,6 +2614,22 @@
     }
 
 
+    // Đợt M2: đảm bảo trạng thái mở đầu + đặt lại trận/đêm còn dở nếu lần
+    // chơi trước thoát giữa chừng (đánh lại từ đầu, không kẹt cổng).
+    try {
+      var mdInit = getMoDauAPI();
+      if (mdInit && player) {
+        var stInit = mdInit.ensureState(player);
+        if (stInit.battle.id) mdInit.resetBattle(player);
+        if (stInit.siege.active) mdInit.resetSiege(player);
+        stInit.meditation.active = false;
+        modauFollower.init = false;
+        modauSiegeRestTimer = 0;
+        modauCycle = null;
+        modauControlLock = 0;
+        modauMeditating = false;
+      }
+    } catch (e) {}
     onReadyCallback = onReady;
 
     if (canvas) resizeCanvas();
@@ -3013,6 +3029,8 @@
     if (mapData.interactables && mapData.interactables.length > 0) {
       for (var i = 0; i < mapData.interactables.length; i++) {
         var it = mapData.interactables[i];
+        // Đợt M2: điểm tương tác theo bước chỉ hiện đúng bước/trạng thái.
+        if (!modauInteractableVisible(it)) continue;
         var ir = it.radius || 48;
         if (Math.hypot(worldX - it.x, worldY - it.y) <= ir) {
           var distToIt = Math.hypot(player.x - it.x, player.y - it.y);
@@ -3049,6 +3067,22 @@
     var stepInfo = getQuestTargetInfo();
     var isTarget = stepInfo && stepInfo.kind === 'npc' && stepInfo.npcId === npc.id;
     var lines = (isTarget && npc.dialogueQuest && npc.dialogueQuest.length > 0) ? npc.dialogueQuest : (npc.dialogueDefault || npc.dialogue || []);
+    // Đợt M2: hội thoại theo trạng thái mở đầu (Linh Nhi cột mốc Hộ Muội,
+    // kiểm trắc Chưởng Môn, lão già + Chấp Sự tuyến giả mạo tông chủ).
+    var mdDlg = getMoDauAPI();
+    if (mdDlg && player) {
+      if (npc.id === 'npc_linhnhi' && player.quests && player.quests.talked_linhnhi) {
+        var ln = mdDlg.getLinhNhiLines(player);
+        if (ln && ln.lines) lines = ln.lines;
+      } else if (npc.id === 'npc_chuongmon' && mdDlg.canKiemTrac(player)) {
+        lines = mdDlg.KIEM_TRAC_LINES.slice();
+      } else if (npc.id === 'npc_lao_gia') {
+        lines = mdDlg.getFakeSectLines(player, 'laoGia');
+      } else if (npc.id === 'npc_chapsu' && mdDlg.fakeSectEligible(player) &&
+          mdDlg.ensureState(player).fakeSect.hasLetter) {
+        lines = mdDlg.FAKE_CHAPSU_LINES.slice();
+      }
+    }
     var resolvedNpc = Object.assign({}, npc, { dialogue: lines });
     lastOpenedDialogue = resolvedNpc;
 
@@ -3145,7 +3179,42 @@
       qAPI.onNpcTalked(player, npcId);
     }
     var q = player.quests;
+    // Đợt M2: hội thoại mở đầu — đối thoại kịch bản Mã Tam (đóng hội thoại
+    // thì bắt đầu trận), đối thoại nội tâm (không hiệu ứng), cửa hàng phàm
+    // nhân, lão già tuyến giả mạo tông chủ.
+    var mdTalk = getMoDauAPI();
+    if (mdTalk) {
+      if (npcId === 'npc_matam_intro_matam1' || npcId === 'npc_matam_intro_matam2' ||
+          npcId === 'npc_matam_intro_matam3' || npcId === 'npc_matam_intro_matam4') {
+        modauBeginBattle(npcId.replace('npc_matam_intro_', ''));
+        return;
+      }
+      if (npcId === 'npc_matam' || npcId === 'modau_inner') return;
+      if (npcId === 'npc_cho_cui') {
+        if (typeof window !== 'undefined' && window.GameUI && window.GameUI.openModauShop) window.GameUI.openModauShop('cho');
+        return;
+      }
+      if (npcId === 'npc_banh_bao') {
+        if (typeof window !== 'undefined' && window.GameUI && window.GameUI.openModauShop) window.GameUI.openModauShop('banh');
+        return;
+      }
+      if (npcId === 'npc_hieu_thuoc') {
+        if (typeof window !== 'undefined' && window.GameUI && window.GameUI.openModauShop) window.GameUI.openModauShop('thuoc');
+        return;
+      }
+      if (npcId === 'npc_lao_gia') {
+        modauTalkLaoGia();
+        return;
+      }
+    }
     if (npcId === 'npc_linhnhi') {
+      // Đợt M2: mỗi lần nói chuyện với Linh Nhi (trước cổng) đều bật chế độ
+      // đi theo; cột mốc Hộ Muội đã kể thì đánh dấu đã nghe.
+      if (mdTalk) {
+        mdTalk.onEvent(player, 'talk:npc_linhnhi');
+        var lnLines = mdTalk.getLinhNhiLines(player);
+        if (lnLines && lnLines.pendingMilestone) mdTalk.acknowledgeMilestone(player, lnLines.pendingMilestone);
+      }
       if (!q.talked_linhnhi) {
         q.talked_linhnhi = true;
         q.current = 'hunt';
@@ -3155,7 +3224,17 @@
         if (audioAPI) audioAPI.playChime();
         if (typeof window !== 'undefined' && window.GameUI) {
           window.GameUI.refreshHUD();
-          window.GameUI.showToast('Nhiệm vụ mới: Săn Thảo Tinh ở Rừng Độc (0/5)');
+          // Đợt M2: người chơi mới bắt đầu kỷ nguyên phàm nhân (chặt củi),
+          // không phải săn Thảo Tinh; save cũ đã qua cổng vẫn hiện bước cũ.
+          var mdFirst = mdTalk && mdTalk.ensureState(player);
+          window.GameUI.showToast((mdFirst && !mdFirst.gatePassed)
+            ? 'Nhiệm vụ mới: Chặt 3 Bó Củi ở rừng sau miếu'
+            : 'Nhiệm vụ mới: Săn Thảo Tinh ở Rừng Độc (0/5)');
+        }
+      } else if (mdTalk && mdTalk.canStartSiege(player) && currentMapId === 'mieu_hoang') {
+        // Đợt M2: đã kiểm trắc + nói chuyện Linh Nhi tại miếu -> mời thủ miếu.
+        if (typeof window !== 'undefined' && window.GameUI && window.GameUI.openModauSiegeStart) {
+          window.GameUI.openModauSiegeStart();
         }
       } else if (q.huntCompleted && (q.sectStage || 0) === 0) {
         q.sectStage = 1;
@@ -3179,7 +3258,17 @@
         grantStarterSword(true);
       }
     } else if (npcId === 'npc_chuongmon') {
-      if ((q.sectStage || 0) === 2) {
+      // Đợt M2: kiểm trắc linh căn (sau trận Mã Tam, trước mọi bước tông
+      // môn) — chỉ ghi dấu, không đổi sectStage, không mở Linh Thạch.
+      if (mdTalk && mdTalk.canKiemTrac(player)) {
+        mdTalk.applyKiemTrac(player);
+        if (stateAPI) stateAPI.savePlayer(player);
+        if (audioAPI) audioAPI.playChime();
+        if (typeof window !== 'undefined' && window.GameUI) {
+          window.GameUI.refreshHUD();
+          window.GameUI.showToast('Kiểm trắc xong: Ngũ Hành tạp linh căn. Đêm nay thủ miếu cùng Linh Nhi.');
+        }
+      } else if ((q.sectStage || 0) === 2) {
         q.sectStage = 3;
         player.linhThach = (player.linhThach || 0) + 20;
         if (audioAPI) audioAPI.playChime();
@@ -3223,6 +3312,21 @@
           q.elderQuest = { stage: 1, demoDone: false, completed: false };
         }
       } else if ((q.sectStage || 0) >= 4) {
+        // Đợt M2: giao Thư Gửi cho Chấp Sự (tuyến giả mạo tông chủ kỳ 1) —
+        // không đổi sectStage/mainStage; xong thì hiện cả hai lời kể.
+        var mdDeliver = mdTalk ? mdTalk.deliverLetter(player) : null;
+        if (mdDeliver && mdDeliver.ok) {
+          if (stateAPI) stateAPI.removeItemFromBag(player, 'thu-gui', 1);
+          player.linhThach = (player.linhThach || 0) + (mdDeliver.rewardLt || 10);
+          spawnFloatingText('+' + (mdDeliver.rewardLt || 10) + ' Linh Thạch', player.x, player.y - 35, '#ffe9a8');
+          if (audioAPI) audioAPI.playChime();
+          if (stateAPI) stateAPI.savePlayer(player);
+          if (typeof window !== 'undefined' && window.GameUI) {
+            window.GameUI.refreshHUD();
+            if (window.GameUI.openModauTwoTales) window.GameUI.openModauTwoTales(mdDeliver.rewardLt || 10);
+          }
+          return;
+        }
         if (q.mainStage === 8) {
           var countItem = function (id) {
             return stateAPI ? stateAPI.countItemInBag(player, id) : 0;
@@ -3253,6 +3357,21 @@
 
   function executeInteractableAction(it) {
     if (!it || !it.action) return;
+    // Đợt M2: điểm đối đầu Mã Tam, gia viên, thiền định, vật chứng.
+    if (it.action === 'modau_matam_house') { modauTriggerBattle('matam1'); return; }
+    if (it.action === 'modau_ambush') { modauTriggerBattle('matam2'); return; }
+    if (it.action === 'modau_temple_front') {
+      var mdFront = getMoDauAPI();
+      var stFront = mdFront ? mdFront.ensureState(player) : null;
+      modauTriggerBattle(stFront && stFront.step === 'matam4' ? 'matam4' : 'matam3');
+      return;
+    }
+    if (it.action === 'modau_giavien') {
+      if (typeof window !== 'undefined' && window.GameUI && window.GameUI.openModauGiaVien) window.GameUI.openModauGiaVien();
+      return;
+    }
+    if (it.action === 'modau_meditate') { modauToggleMeditate(); return; }
+    if (it.action === 'modau_fake_evidence') { modauPickupEvidence(); return; }
     switch (it.action) {
       case 'temple_door':
         triggerLockedDoorToast();
@@ -3520,6 +3639,16 @@
       }
       return;
     }
+    // Đợt M2: điểm hái Linh Thạch còn khóa thì không hái được — chặn rò
+    // Linh Thạch qua hái (vd. mỏ Sơn Cốc) trước đêm oán linh; không tiêu
+    // thời gian hồi của điểm hái.
+    if (node.itemId === 'linh-thach') {
+      var mdHarv = getMoDauAPI();
+      if (mdHarv && mdHarv.isLinhThachLocked(player)) {
+        modauToast('Linh Thạch còn khóa — qua đêm oán linh mới nhận được');
+        return;
+      }
+    }
     harvestReadyTimes[node.id] = nowSec + (node.respawnSec || 90);
     if (!player.stats) player.stats = { playSec: 0, kills: 0, bossKills: 0, harvests: 0, refines: 0 };
     player.stats.harvests = (player.stats.harvests || 0) + 1;
@@ -3565,6 +3694,20 @@
     if (typeof window !== 'undefined' && window.GameUI) {
       window.GameUI.refreshHUD();
     }
+    // Đợt M2: chặt củi đẩy bước tân thủ (3 bó -> bán ở chợ).
+    if (node.itemId === 'bo-cui') {
+      var mdChop = getMoDauAPI();
+      if (mdChop) {
+        var chopEv = mdChop.onEvent(player, 'chop');
+        if (chopEv && chopEv.advanced) {
+          var chopTarget = getQuestTargetInfo();
+          modauChime();
+          modauToast('Nhiệm vụ mới: ' + (chopTarget && chopTarget.title ? chopTarget.title : 'Bán Củi Ở Chợ'));
+          if (stateAPI) stateAPI.savePlayer(player);
+          modauRefreshHUD();
+        }
+      }
+    }
   }
 
   // ============================================================
@@ -3574,6 +3717,13 @@
     var drop = groundDrops[i];
     if (!drop) return false;
     if (drop.itemId === 'linh-thach') {
+      // Đợt M2: Linh Thạch còn khóa thì không nhặt được — để đồ lại trên
+      // đất, không cộng, không mất lượt nhặt.
+      var mdDrop = getMoDauAPI();
+      if (mdDrop && mdDrop.isLinhThachLocked(player)) {
+        modauToast('Linh Thạch còn khóa — qua đêm oán linh mới nhận được');
+        return false;
+      }
       // Tính Linh Thạch qua trần farm theo ngày (Hồ sơ 50 §7 — đợt T1: trần
       // theo ĐẠI CẢNH GIỚI của người chơi, không còn ngưỡng cứng 300/600)
       var gainedLt = stateAPI ? stateAPI.calcLinhThachGain(todayData.farmLinhThach, drop.count, player) : drop.count;
@@ -3665,6 +3815,8 @@
     if (mapData.interactables) {
       for (var i = 0; i < mapData.interactables.length; i++) {
         var it = mapData.interactables[i];
+        // Đợt M2: điểm tương tác theo bước chỉ hiện đúng bước/trạng thái.
+        if (!modauInteractableVisible(it)) continue;
         if (Math.hypot(player.x - it.x, player.y - it.y) <= (it.radius || 48)) {
           return { mode: 'interact', label: it.label || 'Tương Tác', interactable: it };
         }
@@ -3783,6 +3935,14 @@
     if (!q.talked_linhnhi) {
       return { stepId: 'talk_linhnhi', stage: 0, mapId: 'mieu_hoang', kind: 'npc', npcId: 'npc_linhnhi' };
     }
+    // Đợt M2: kỷ nguyên phàm nhân chèn giữa lần nói chuyện đầu và săn Thảo
+    // Tinh — còn bước M2 thì dẫn tới đích M2; hết bước (qua cổng) thì trả
+    // null và chuỗi cũ chảy tiếp (hunt -> sectStage).
+    var mdQuest = getMoDauAPI();
+    if (mdQuest) {
+      var mdTarget = mdQuest.getQuestTargetInfo(pl);
+      if (mdTarget) return mdTarget;
+    }
     if (!q.huntCompleted) {
       return { stepId: 'hunt', stage: 0, mapId: 'rung-doc', kind: 'hunt' };
     }
@@ -3886,6 +4046,14 @@
     if (kdAPI2 && kdAPI2.getTrackedTargetInfo) {
       var kdTarget = kdAPI2.getTrackedTargetInfo(pl);
       if (kdTarget) return kdTarget;
+    }
+
+    // Đợt M2: tuyến giả mạo tông chủ (kỳ 1-2) — dẫn đường chỉ khi chuỗi
+    // M2 chính đã hết và không còn nhiệm vụ bảng/vùng/đột phá được theo
+    // dõi; không bao giờ nhảy lên trước các móc trên.
+    if (mdQuest && mdQuest.getFakeSectTarget) {
+      var fakeTarget = mdQuest.getFakeSectTarget(pl);
+      if (fakeTarget) return fakeTarget;
     }
 
     // Khi sectStage >= 4: Chuỗi nhiệm vụ chính (Đợt 6 - Việc 1)
@@ -4537,6 +4705,30 @@
    * Chuyển đổi giữa 2 bản đồ với hiệu ứng mờ dần (Fade)
    */
   function switchMap(targetMapId, targetSpawn) {
+    // Đợt M2: chặn vào Rừng Độc trước cổng (§6.4) + khóa cổng map giữa trận
+    // theo kịch bản/đêm oán linh (§4, §6.1). Thông báo hạn chế 1 lần/2 giây
+    // để đứng trong vùng cổng không spam toast mỗi khung hình.
+    if (player) {
+      var mdSw = getMoDauAPI();
+      if (mdSw) {
+        var stSw = mdSw.ensureState(player);
+        var nowSw = (typeof performance !== 'undefined') ? performance.now() : 0;
+        if (targetMapId === 'rung-doc' && !stSw.gatePassed) {
+          if (nowSw - modauExitToastAt > 2000) {
+            modauExitToastAt = nowSw;
+            modauToast('Phải qua đêm oán linh mới vào được Rừng Độc');
+          }
+          return;
+        }
+        if ((stSw.battle.id || stSw.siege.active) && targetMapId !== currentMapId) {
+          if (nowSw - modauExitToastAt > 2000) {
+            modauExitToastAt = nowSw;
+            modauToast('Đang giao chiến — không thể rời khỏi đây!');
+          }
+          return;
+        }
+      }
+    }
     // Đợt P2A: đổi map = rời nơi đang thiền -> đứng dậy, không mang trạng thái thiền sang map mới.
     if (meditation) stopMeditation('map');
     if (mapFade.alpha > 0 || mapFade.dir !== 0) {
@@ -4796,6 +4988,19 @@
       return { ok: false, msg: msgNoItem };
     }
 
+    // Đợt M2: vật phẩm phàm tục dùng cho mình hoặc cho Linh Nhi (hỏi qua
+    // modal chọn); Bẫy Săn đặt ngay tại chỗ đứng.
+    if (itemId === 'banh-bao' || itemId === 'thuoc-cam' || itemId === 'cui-suoi') {
+      if (typeof window !== 'undefined' && window.GameUI && window.GameUI.openModauUseChoice) {
+        window.GameUI.openModauUseChoice(itemId);
+        return { ok: true, msg: 'Chọn người dùng vật phẩm.' };
+      }
+      return applyModauUse(itemId, 'self');
+    }
+    if (itemId === 'bay-san') {
+      return modauPlaceTrap();
+    }
+
     // Đợt N2: dùng trứng trong túi = bắt đầu ấp (thẻ chi tiết túi có nút
     // Dùng; bảng thú cũng có nút Ấp riêng). Trứng rời túi vào danh sách ấp.
     var n2UseApi = (typeof window !== 'undefined') ? window.GameLinhThu : null;
@@ -4932,6 +5137,18 @@
     }
 
     return { ok: false, msg: 'Vật phẩm không thể sử dụng trực tiếp' };
+  }
+
+  // Đợt M2: module mở đầu (js/mo-dau.js) giữ luật + dữ liệu phần mở đầu.
+  // Engine lấy qua một cửa duy nhất — trình duyệt đọc window, Node đọc
+  // global/require như các module khác.
+  function getMoDauAPI() {
+    if (typeof window !== 'undefined' && window.GameMoDau) return window.GameMoDau;
+    if (typeof global !== 'undefined' && global.GameMoDau) return global.GameMoDau;
+    if (typeof require !== 'undefined') {
+      try { return require('./mo-dau.js'); } catch (e) { return null; }
+    }
+    return null;
   }
 
   // Đợt T2: module Đột Phá Đại Cảnh Giới (js/dotpha.js) giữ CẤU HÌNH (tỉ lệ
@@ -6107,6 +6324,15 @@
 
   function exchangePill(elem) {
     if (!player) return { ok: false, msg: 'Chưa khởi tạo nhân vật' };
+    // Đợt M2 (§2.5 điểm 3): Linh Thạch còn khóa thì từ chối đổi đan, không trừ tiền.
+    var mdGate = getMoDauAPI();
+    if (mdGate && mdGate.isLinhThachLocked && mdGate.isLinhThachLocked(player)) {
+      var msgLocked = 'Linh Thạch còn khóa — qua đêm oán linh mới dùng được.';
+      if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.showToast(msgLocked);
+      }
+      return { ok: false, reason: 'linh_thach_locked', msg: msgLocked };
+    }
     var valid = ['kim', 'moc', 'thuy', 'hoa', 'tho'];
     if (valid.indexOf(elem) === -1) {
       return { ok: false, reason: 'invalid_element', msg: 'Hệ không hợp lệ' };
@@ -6903,6 +7129,11 @@
     if (!player.stats) player.stats = { playSec: 0, kills: 0, bossKills: 0, harvests: 0, refines: 0 };
     player.stats.playSec = (player.stats.playSec || 0) + dt;
 
+    // Đợt M2: ngày phàm nhân + hao Hộ Muội + đợt oán linh + vận vòng + thiền.
+    modauTick(dt);
+    // Đợt M2: Linh Nhi đi theo sau người chơi (miếu/Tây Lương, trước cổng).
+    updateLinhNhiFollower(dt);
+
     // Đợt V1 chặng 0: đồng hồ nhịp vùng chạy theo dt (đồng bộ mọi cơ chế vùng
     // chặng 1–5 + nhịp chiêu boss Hỏa ở chặng 3).
     updateZoneClock(dt);
@@ -6986,6 +7217,11 @@
     var canMove = true;
     if (playerSnareTimer > 0) {
       playerSnareTimer = Math.max(0, playerSnareTimer - dt);
+      canMove = false;
+    }
+    // Đợt M2: khóa điều khiển 3 giây khi vận vòng tương sinh lần đầu (§6.3).
+    if (modauControlLock > 0) {
+      modauControlLock = Math.max(0, modauControlLock - dt);
       canMove = false;
     }
     var currentSpeed = SPEED;
@@ -7417,6 +7653,9 @@
       updateFieldMonsters(dt);
     }
 
+    // Đợt M2: bẫy săn nổ khi quái trận/đêm giẫm phải.
+    modauUpdateTraps();
+
     // Cập nhật vùng (Zones)
     updateZone();
 
@@ -7555,6 +7794,11 @@
 
       // Xử lý quái đã chết -> đếm thời gian hồi sinh (Brief §4: thường 60s, elite 600s)
       if (m.state === 'dead') {
+        // Đợt M2: quái trận theo kịch bản/đêm oán linh KHÔNG hồi sinh.
+        if (m._modauNoRespawn) {
+          m.deathTimer += dt;
+          continue;
+        }
         var spec = monstersAPI.SPECIES[m.speciesId];
         var respawnTotal = spec.respawnTime || 60;
         if (m.deathTimer >= respawnTotal) {
@@ -7576,7 +7820,8 @@
       }
 
       // Kỹ năng tinh anh: triệu hồi 2 Thảo Tinh ở mốc 50% HP (Brief §4)
-      if (m.isElite && m.hp <= m.maxHp * 0.5 && !m.summonedAdds) {
+      // Đợt M2: tinh anh trận kịch bản/đêm oán linh không triệu hồi thêm.
+      if (m.isElite && m.hp <= m.maxHp * 0.5 && !m.summonedAdds && !m._modauBattle && !m._modauSiege) {
         m.summonedAdds = true;
         spawnEliteAdds(m);
       }
@@ -7742,6 +7987,8 @@
     lastCombatTime = performance.now();
     // Đợt P2A: trúng đòn = tự đứng dậy khỏi thiền ngay (không chờ khung sau)
     if (meditation) stopMeditation('damage');
+    // Đợt M2: dính đòn thì dừng thiền định (giữ phần đã tích).
+    if (modauMeditating) modauStopMeditation('hit');
     var stats = stateAPI ? stateAPI.deriveStats(player.paths, player.equipment, undefined, player) : { defense: 5 };
     var elemFac = combatAPI ? combatAPI.getElementFactor(m.element, 'moc') : 1.0;
     var rawDmg = m.damage;
@@ -7831,10 +8078,15 @@
 
     var tuViNames = { moc: 'Mộc', thuy: 'Thủy', hoa: 'Hỏa', tho: 'Thổ', kim: 'Kim' };
     var tuViColors = { moc: '#55d882', thuy: '#7fd4ff', hoa: '#ff9a5c', tho: '#e8c56b', kim: '#e8ecf2' };
-    if (cappedAtMoc && gainedTuVi <= 0) {
-      spawnFloatingText('Tu vi ' + (tuViNames[tuViElem] || 'Mộc') + ' đã đầy trần mốc — hãy Đột Phá Tiểu Mốc!', m.x, m.y - 25, '#ffd76a');
-    } else {
-      spawnFloatingText('+' + gainedTuVi + ' Tu vi ' + (tuViNames[tuViElem] || 'Mộc'), m.x, m.y - 25, tuViColors[tuViElem] || '#55d882');
+    // Đợt M2: loài phàm nhân/oán linh có tuViAmount 0 (chưa tu luyện) — không
+    // hiện dòng tu vi "+0" gây nhiễu; các loài khác giữ nguyên.
+    var modauNoTuViText = (m.speciesId === 'tay_chan_matam' || m.speciesId === 'ma_tam' || m.speciesId === 'ga_rung' || m.speciesId === 'oan_linh' || m.speciesId === 'oan_linh_dau_dan');
+    if (!modauNoTuViText) {
+      if (cappedAtMoc && gainedTuVi <= 0) {
+        spawnFloatingText('Tu vi ' + (tuViNames[tuViElem] || 'Mộc') + ' đã đầy trần mốc — hãy Đột Phá Tiểu Mốc!', m.x, m.y - 25, '#ffd76a');
+      } else {
+        spawnFloatingText('+' + gainedTuVi + ' Tu vi ' + (tuViNames[tuViElem] || 'Mộc'), m.x, m.y - 25, tuViColors[tuViElem] || '#55d882');
+      }
     }
 
     // Đợt T1: hạ quái TINH ANH trong lúc ở tầng 6 = hoàn thành tiểu bình cảnh
@@ -7920,6 +8172,8 @@
         });
       }
     }
+    // Đợt M2: tiền đồng rơi + đếm hạ quái trận Mã Tam/đêm oán linh.
+    modauOnMonsterDeath(m);
 
     if (targetMonster === m) {
       targetMonster = null;
@@ -8012,6 +8266,19 @@
 
     // Đường lùi khi thiếu module P2B (không xảy ra trong luồng chơi thật).
     player.hp = 0;
+    // Đợt M2: chết -> trận theo kịch bản + đêm oán linh đặt lại từ đầu,
+    // đánh lại vô hạn, không mất đồ/mất tiền; thiền định dừng.
+    var mdDeath = getMoDauAPI();
+    if (mdDeath && player) {
+      mdDeath.resetBattle(player);
+      mdDeath.resetSiege(player);
+      mdDeath.stopMeditation(player);
+      modauSiegeRestTimer = 0;
+      modauCycle = null;
+      modauControlLock = 0;
+      modauMeditating = false;
+      modauClearScriptedMonsters();
+    }
     if (stateAPI) {
       stateAPI.breakHuntChain(player);
     }
@@ -8752,7 +9019,11 @@
     // bgImage null rơi về assets.map_bg (nền Miếu Hoang, luôn nạp sẵn).
     // Đợt DANMAP: Phòng Luyện Đan vẽ nền thủ tục nội thất gian phòng nếu chưa có ảnh PNG
     var bgImg = assets[mapData.bgImage] || (mapData.id === 'rung-doc' ? assets.map_rung_doc_bg : assets.map_bg);
-    if (mapData.id === 'ruong-linh-me' || currentMapId === 'ruong-linh-me') {
+    // Đợt M2: Tây Lương chưa có tranh nền — vẽ nền thủ tục theo map id,
+    // không dùng nền của map khác (tránh nền sai + cổng minimap).
+    if (currentMapId === 'tay-luong') {
+      renderTayLuongBg();
+    } else if (mapData.id === 'ruong-linh-me' || currentMapId === 'ruong-linh-me') {
       drawRuongLinhMeProceduralBg(ctx, mapData.width, mapData.height, nowSecH);
     } else if (mapData.id === 'phong-luyen-dan' || currentMapId === 'phong-luyen-dan') {
       var pldImg = assets[mapData.bgImage];
@@ -9273,6 +9544,10 @@
       try { window.GameVFX.draw(ctx); } catch (e) {}
     }
 
+    // Đợt M2: vòng trận đỏ + bàn tay xanh + bẫy + vòng thiền (vẽ dưới đất,
+    // trước mọi thực thể).
+    renderModauGround();
+
     // 5. Thu thập toàn bộ thực thể hiển thị và sắp xếp chiều sâu Painter's Algorithm
     var entities = [];
 
@@ -9324,6 +9599,9 @@
       for (var n = 0; n < mapData.npcs.length; n++) {
         (function (npc) {
           if (!isNpcActive(npc)) return;
+          // Đợt M2: Linh Nhi đang đi theo thì vẽ ở vị trí follower (dưới),
+          // không vẽ thêm bản đứng yên tại miếu.
+          if (npc.id === 'npc_linhnhi' && modauFollower.init) return;
           entities.push({
             type: 'npc',
             baseY: npc.baseY || npc.feetY,
@@ -9396,6 +9674,15 @@
           draw: function () { drawPet(petDraw); }
         });
       })(petForDraw);
+    }
+    // Đợt M2: Linh Nhi đi theo vẽ như thực thể theo chiều sâu (chân neo
+    // đúng điểm đứng, có dấu ! khi là đích nhiệm vụ).
+    if (modauFollower.init) {
+      entities.push({
+        type: 'linhnhi-follower',
+        baseY: modauFollower.y,
+        draw: function () { drawLinhNhiFollower(); }
+      });
     }
     entities.push({
       type: 'player',
@@ -9662,6 +9949,9 @@
     // (giảm tầm nhìn đúng nghĩa) nhưng dưới màn đen chuyển cảnh.
     drawSandStormOverlay();
 
+    // Đợt M2: trời tối đêm oán linh — phủ tối trên thực thể, dưới màn đen.
+    renderModauDarkness();
+
     // 10. Màn đen chuyển cảnh (Fade)
     if (mapFade.alpha > 0) {
       ctx.save();
@@ -9829,6 +10119,741 @@
     return nearest;
   }
 
+
+  // ================= ĐỢT M2: PHẦN MỞ ĐẦU (KỶ NGUYÊN PHÀM NHÂN) =================
+  // Mọi luật + dữ liệu nằm trong js/mo-dau.js; khối này chỉ là phần chạy
+  // trong engine: Linh Nhi đi theo, trận Mã Tam, đêm oán linh, bẫy, thiền
+  // định, nền Tây Lương + vòng trận vẽ thủ tục. Mọi móc vào hàm cũ đều có
+  // comment "// Đợt M2:" tại chỗ móc.
+  var modauFollower = { x: 0, y: 0, init: false, facingLeft: false };
+  var modauSiegeRestTimer = 0;
+  var modauCycle = null;
+  var modauControlLock = 0;
+  var modauExitToastAt = 0;
+  var modauMeditating = false;
+  var modauMeditateLastHp = 0;
+  var modauCycleElems = ['kim', 'thuy', 'moc', 'hoa', 'tho'];
+  var tayLuongSpeckles = null;
+
+  function modauToast(msg) {
+    if (typeof window !== 'undefined' && window.GameUI) window.GameUI.showToast(msg);
+  }
+  function modauRefreshHUD() {
+    if (typeof window !== 'undefined' && window.GameUI) window.GameUI.refreshHUD();
+  }
+  function modauChime() {
+    if (audioAPI) audioAPI.playChime();
+  }
+
+  // Điểm tương tác M2 chỉ hiện đúng bước/trạng thái (đọc trường modauStep/
+  // modauSteps/modauGate trong mapdata.js). Điểm thường luôn hiện như cũ.
+  function modauInteractableVisible(it) {
+    if (!it) return true;
+    if (!it.modauStep && !it.modauSteps && !it.modauGate) return true;
+    var api = getMoDauAPI();
+    if (!api || !player) return false;
+    var st = api.ensureState(player);
+    if (it.modauStep) return st.step === it.modauStep && !st.battle.id;
+    if (it.modauSteps) return it.modauSteps.indexOf(st.step) !== -1 && !st.battle.id;
+    if (it.modauGate === 'after') return st.gatePassed;
+    if (it.modauGate === 'tier2') return st.gatePassed && st.giaVien.tier >= 2;
+    if (it.modauGate === 'fakeK2') {
+      return api.fakeSectEligible(player) && st.fakeSect.stage === 2 && !st.fakeSect.hasEvidence;
+    }
+    return true;
+  }
+
+  function modauIsDialogueOpen() {
+    if (typeof document === 'undefined') return false;
+    var dlg = document.getElementById('dialogue-box');
+    return !!(dlg && !dlg.classList.contains('hidden'));
+  }
+
+  // Linh Nhi đi theo: đuổi theo điểm sau lưng người chơi, dừng khi cách
+  // <= 60px hoặc khi hội thoại mở; trong trận/đêm oán linh về vị trí an
+  // toàn trong vòng trận; sang map khác thì ở lại miếu (follower tắt).
+  function updateLinhNhiFollower(dt) {
+    var api = getMoDauAPI();
+    if (!api || !player) { modauFollower.init = false; return; }
+    var st = api.ensureState(player);
+    var active = st.linhNhiFollows && !st.gatePassed &&
+      (currentMapId === 'mieu_hoang' || currentMapId === 'tay-luong');
+    if (!active) { modauFollower.init = false; return; }
+    if (!modauFollower.init) {
+      modauFollower.x = player.x - 30;
+      modauFollower.y = player.y + 30;
+      modauFollower.init = true;
+    }
+    var tx, ty;
+    if ((st.battle.id || st.siege.active) && currentMapId === 'mieu_hoang') {
+      tx = 480; ty = 490; // cửa miếu, trong vòng trận
+    } else {
+      var dv = (typeof DIR_VECTORS !== 'undefined' && DIR_VECTORS[player.dir]) ? DIR_VECTORS[player.dir] : { x: 0, y: 1 };
+      tx = player.x - dv.x * 44;
+      ty = player.y - dv.y * 44;
+    }
+    var dx = tx - modauFollower.x, dy = ty - modauFollower.y;
+    var dist = Math.hypot(dx, dy);
+    var distPlayer = Math.hypot(player.x - modauFollower.x, player.y - modauFollower.y);
+    if (modauIsDialogueOpen()) return;
+    if ((st.battle.id || st.siege.active) && dist <= 10) return;
+    if (!(st.battle.id || st.siege.active) && distPlayer <= 60) return;
+    if (dist > 2) {
+      var step = Math.min(dist, SPEED * dt);
+      modauFollower.x += (dx / dist) * step;
+      modauFollower.y += (dy / dist) * step;
+      if (dx < -2) modauFollower.facingLeft = true;
+      else if (dx > 2) modauFollower.facingLeft = false;
+    }
+  }
+
+  // Vị trí Linh Nhi để kiểm bán kính "Cho Linh Nhi": follower khi đang
+  // theo, nếu không thì điểm đứng gốc tại miếu.
+  function getLinhNhiPosition() {
+    if (modauFollower.init) return { x: modauFollower.x, y: modauFollower.y };
+    if (currentMapId === 'mieu_hoang' && mapData && mapData.linhnhi) {
+      return { x: mapData.linhnhi.feetX, y: mapData.linhnhi.feetY };
+    }
+    return null;
+  }
+
+  function modauFindWalkable(x, y) {
+    if (!mapData || !mapData.isWalkable) return { x: x, y: y };
+    if (mapData.isWalkable(x, y)) return { x: x, y: y };
+    for (var r = 24; r <= 240; r += 24) {
+      for (var a = 0; a < 12; a++) {
+        var ang = (Math.PI * 2 * a) / 12;
+        var nx = Math.round(x + Math.cos(ang) * r), ny = Math.round(y + Math.sin(ang) * r);
+        if (mapData.isWalkable(nx, ny)) return { x: nx, y: ny };
+      }
+    }
+    return { x: x, y: y };
+  }
+
+  // ---- Chuỗi Mã Tam ----
+  var MODAU_BATTLE_INTROS = {
+    matam1: ['Tiểu tử, bó củi của ngươi chỉ đáng ba đồng. Ở thành Tây Lương này, Mã Tam ta nói giá nào thì giá đó!', 'Không phục ư? Tay chân, dạy cho nó một bài học!'],
+    matam2: ['Đứng lại! Gà rừng đâu? Ông chủ Mã Tam dặn rồi: hai con gà rừng, thiếu một con cũng không được qua!', 'Không có gà thì để lại nắm đấm vậy! Anh em, lên!'],
+    matam3: ['Mã Tam ca bảo rồi: hôm nay không có tiền thì đừng hòng yên thân! Con bé trong miếu kia... cũng phải theo chúng ta đi!', 'Anh em, lên! Đừng để nó chạy!'],
+    matam4: ['Tiểu tử, ngươi dám đánh người của ta! Hôm nay ta đích thân tới đây, xem ngươi còn giở trò gì!', 'Lên hết cho ta! Đốt cả cái miếu rách này!']
+  };
+
+  function modauTriggerBattle(battleId) {
+    var api = getMoDauAPI();
+    if (!api || !player) return;
+    var st = api.ensureState(player);
+    if (st.step !== battleId || st.battle.id) return;
+    if (battleId === 'matam2' && stateAPI && stateAPI.countItemInBag(player, 'ga-rung') >= 2) {
+      if (typeof window !== 'undefined' && window.GameUI && window.GameUI.openModauBattlePrep) {
+        window.GameUI.openModauBattlePrep('matam2', true);
+        return;
+      }
+    }
+    if (battleId === 'matam4') {
+      if (typeof window !== 'undefined' && window.GameUI && window.GameUI.openModauBattlePrep) {
+        window.GameUI.openModauBattlePrep('matam4', false);
+        return;
+      }
+    }
+    modauShowBattleIntro(battleId);
+  }
+
+  function modauShowBattleIntro(battleId) {
+    var lines = MODAU_BATTLE_INTROS[battleId];
+    if (typeof window !== 'undefined' && window.GameUI && window.GameUI.openDialogue && lines) {
+      window.GameUI.openDialogue({
+        id: 'npc_matam_intro_' + battleId,
+        name: 'Mã Tam',
+        asset: 'assets/art/npc-thuongnhan.png',
+        originalW: 259,
+        originalH: 560,
+        dialogue: lines.slice()
+      });
+    } else {
+      modauBeginBattle(battleId);
+    }
+  }
+
+  function modauBeginBattle(battleId) {
+    var api = getMoDauAPI();
+    if (!api || !player || !monstersAPI) return { ok: false };
+    var res = api.startBattle(player, battleId);
+    if (!res.ok) return res;
+    cancelAutoPath(true);
+    cancelTravel();
+    for (var i = 0; i < res.spawns.length; i++) {
+      var sp = modauFindWalkable(res.spawns[i].x, res.spawns[i].y);
+      var m = monstersAPI.createMonster(res.spawns[i].speciesId, sp.x, sp.y, sp.x, sp.y, { state: 'aggro', spawnGraceTimer: 0 });
+      m._modauBattle = true;
+      m._modauNoRespawn = true;
+      m.leashDistance = 1200;
+      m.mapId = currentMapId;
+      fieldMonsters.push(m);
+    }
+    modauToast('Trận chiến bắt đầu!');
+    return { ok: true };
+  }
+
+  function modauOnBattleCompleted(nextStep) {
+    modauChime();
+    modauRefreshHUD();
+    if (stateAPI) stateAPI.savePlayer(player);
+    if (nextStep === 'kiemtrac') {
+      modauToast('Mã Tam rút lui! Tới Đại Điện gặp Chưởng Môn kiểm trắc linh căn.');
+      var api = getMoDauAPI();
+      if (typeof window !== 'undefined' && window.GameUI && window.GameUI.openDialogue && api) {
+        window.GameUI.openDialogue({
+          id: 'npc_matam',
+          name: 'Mã Tam',
+          asset: 'assets/art/npc-thuongnhan.png',
+          originalW: 259,
+          originalH: 560,
+          dialogue: api.MATAM_RETREAT_LINES.slice()
+        });
+      }
+    } else {
+      var t = getQuestTargetInfo();
+      modauToast(t && t.title ? ('Nhiệm vụ mới: ' + t.title) : 'Thắng trận!');
+    }
+  }
+
+  function modauGiveChickens() {
+    var api = getMoDauAPI();
+    if (!api || !player || !stateAPI) return { ok: false, reason: 'no_api' };
+    if (stateAPI.countItemInBag(player, 'ga-rung') < 2) {
+      return { ok: false, reason: 'no_chickens' };
+    }
+    stateAPI.removeItemFromBag(player, 'ga-rung', 2);
+    var done = api.completeBattle(player, 'matam2');
+    if (!done.ok) return done;
+    if (stateAPI) stateAPI.savePlayer(player);
+    modauChime();
+    modauToast('Đã giao 2 Gà Rừng — tay chân Mã Tam bỏ đi.');
+    modauRefreshHUD();
+    return { ok: true };
+  }
+
+  function modauClearScriptedMonsters() {
+    fieldMonsters = fieldMonsters.filter(function (m) { return !m._modauBattle && !m._modauSiege; });
+  }
+
+  // Hạ quái trong trận/đêm: tiền đồng + đếm kill + kiểm đợt clear.
+  function modauOnMonsterDeath(m) {
+    var api = getMoDauAPI();
+    if (!api || !player) return;
+    if (m._modauBattle) {
+      if (m.speciesId === 'tay_chan_matam') {
+        var coins = api.CONSTANTS.TAY_CHAN_COIN_MIN +
+          Math.floor(Math.random() * (api.CONSTANTS.TAY_CHAN_COIN_MAX - api.CONSTANTS.TAY_CHAN_COIN_MIN + 1));
+        player.tienDong = (player.tienDong || 0) + coins;
+        spawnFloatingText('+' + coins + ' tiền đồng', m.x, m.y - 45, '#ffd76a');
+      } else if (m.speciesId === 'ma_tam') {
+        player.tienDong = (player.tienDong || 0) + api.CONSTANTS.MATAM_PURSE_COINS;
+        spawnFloatingText('Túi Tiền Mã Tam: +20 tiền đồng', m.x, m.y - 45, '#ffd76a');
+      }
+      var res = api.onEvent(player, 'kill:' + m.speciesId);
+      if (res && res.battle && res.battle.completed) {
+        modauOnBattleCompleted(res.battle.nextStep);
+      } else if (stateAPI) {
+        stateAPI.savePlayer(player);
+      }
+      modauRefreshHUD();
+    }
+    if (m._modauSiege) {
+      api.onEvent(player, 'kill:' + m.speciesId);
+      var anyAlive = false;
+      for (var i = 0; i < fieldMonsters.length; i++) {
+        var fm = fieldMonsters[i];
+        if (fm._modauSiege && fm.state !== 'dead' && fm.hp > 0) { anyAlive = true; break; }
+      }
+      if (!anyAlive) {
+        var w = api.onEvent(player, 'siegeWaveClear');
+        if (w && w.allCleared) {
+          modauStartCycle();
+        } else if (w && w.nextWave) {
+          modauSiegeRestTimer = api.CONSTANTS.SIEGE_REST_SEC;
+          modauToast('Đợt oán linh đã tan — đợt sau tới trong 8 giây!');
+        }
+        if (stateAPI) stateAPI.savePlayer(player);
+      }
+    }
+  }
+
+  // ---- Bẫy Săn ----
+  function modauPlaceTrap() {
+    var api = getMoDauAPI();
+    if (!api || !player || !stateAPI) return { ok: false, msg: 'Chưa khởi tạo nhân vật' };
+    var st = api.ensureState(player);
+    if (currentMapId !== 'mieu_hoang') {
+      var msgMap = 'Chỉ đặt bẫy được ở Miếu Hoang.';
+      modauToast(msgMap);
+      return { ok: false, msg: msgMap };
+    }
+    if (st.step !== 'matam4' && !st.battle.id) {
+      var msgStep = 'Bẫy Săn chỉ dùng cho trận giữ miếu.';
+      modauToast(msgStep);
+      return { ok: false, msg: msgStep };
+    }
+    if (!stateAPI.hasItemInBag(player, 'bay-san', 1)) {
+      var msgNo = 'Không có Bẫy Săn trong túi — mua ở hiệu thuốc thành Tây Lương.';
+      modauToast(msgNo);
+      return { ok: false, msg: msgNo };
+    }
+    var res = api.placeTrap(player, player.x, player.y);
+    if (!res.ok) {
+      var msgMax = 'Đã đặt tối đa 3 bẫy.';
+      modauToast(msgMax);
+      return { ok: false, msg: msgMax };
+    }
+    stateAPI.removeItemFromBag(player, 'bay-san', 1);
+    if (stateAPI) stateAPI.savePlayer(player);
+    modauToast('Đã đặt Bẫy Săn (' + res.count + '/3).');
+    modauRefreshHUD();
+    return { ok: true, msg: 'Đã đặt Bẫy Săn.' };
+  }
+
+  function modauUpdateTraps() {
+    var api = getMoDauAPI();
+    if (!api || !player || !monstersAPI) return;
+    var st = api.ensureState(player);
+    if (!st.trapsPlaced || st.trapsPlaced.length === 0) return;
+    for (var i = 0; i < fieldMonsters.length; i++) {
+      var m = fieldMonsters[i];
+      if (m.state === 'dead' || m.hp <= 0) continue;
+      if (!m._modauBattle && !m._modauSiege) continue;
+      for (var t = 0; t < st.trapsPlaced.length; t++) {
+        var tr = st.trapsPlaced[t];
+        if (tr.exploded) continue;
+        if (Math.hypot(m.x - tr.x, m.y - tr.y) <= api.CONSTANTS.TRAP_TRIGGER_RADIUS) {
+          api.explodeTrap(player, t);
+          monstersAPI.damageMonster(m, api.CONSTANTS.TRAP_DAMAGE, player);
+          m.slowTimer = api.CONSTANTS.TRAP_SLOW_SEC;
+          m.slowRatio = api.CONSTANTS.TRAP_SLOW_RATIO;
+          spawnFloatingText('Bẫy nổ! -' + api.CONSTANTS.TRAP_DAMAGE, m.x, m.y - 50, '#ffd76a');
+          if (m.hp <= 0) handleMonsterDeath(m);
+          break;
+        }
+      }
+    }
+  }
+
+  // ---- Đêm oán linh ----
+  function modauStartSiege() {
+    var api = getMoDauAPI();
+    if (!api || !player) return { ok: false, reason: 'no_api' };
+    var res = api.startSiege(player);
+    if (!res.ok) return res;
+    cancelAutoPath(true);
+    cancelTravel();
+    modauSpawnWave(1);
+    if (stateAPI) stateAPI.savePlayer(player);
+    modauToast('Đêm xuống — oán linh vây miếu! Thủ vững vòng trận!');
+    return { ok: true };
+  }
+
+  function modauSpawnWave(wave) {
+    var api = getMoDauAPI();
+    if (!api || !player || !monstersAPI) return;
+    var spec = api.getWaveSpec(wave);
+    for (var i = 0; i < spec.spawns.length; i++) {
+      var sp = modauFindWalkable(spec.spawns[i].x, spec.spawns[i].y);
+      var m = monstersAPI.createMonster(spec.spawns[i].speciesId, sp.x, sp.y, sp.x, sp.y, { state: 'aggro', spawnGraceTimer: 0 });
+      m._modauSiege = true;
+      m._modauNoRespawn = true;
+      m.leashDistance = 1200;
+      m.mapId = currentMapId;
+      fieldMonsters.push(m);
+    }
+    modauToast('Đợt ' + wave + ': oán linh kéo tới!');
+  }
+
+  function modauStartCycle() {
+    modauCycle = { t: 0, bursts: 0 };
+    modauControlLock = 3;
+    spawnFloatingText('Vòng tương sinh...', player.x, player.y - 55, '#ffe9a8');
+  }
+
+  function modauPassGate() {
+    var api = getMoDauAPI();
+    if (!api || !player) return;
+    api.passGate(player, stateAPI);
+    if (stateAPI) stateAPI.savePlayer(player);
+    modauChime();
+    modauRefreshHUD();
+    modauToast('Qua đêm oán linh! Linh Thạch và Rừng Độc đã mở.');
+    if (typeof window !== 'undefined' && window.GameUI && window.GameUI.openDialogue) {
+      window.GameUI.openDialogue({
+        id: 'modau_inner',
+        name: 'Hà Nhân',
+        asset: 'assets/chars/hanhan-face.png',
+        originalW: 176,
+        originalH: 176,
+        dialogue: [
+          'Năm dòng khí nhỏ xíu vừa chuyển động trong người ta... Kim sinh Thủy, Thủy sinh Mộc, Mộc sinh Hỏa, Hỏa sinh Thổ, Thổ sinh Kim.',
+          'Đây chính là vòng tương sinh ư? Từ đêm nay, ta bắt đầu tu luyện thật rồi!'
+        ]
+      });
+    }
+  }
+
+  // ---- Dùng vật phẩm phàm tục ----
+  function modauGiveFailMsg(reason) {
+    if (reason === 'too_far') return 'Linh Nhi ở xa quá — lại gần trong 200px mới cho được.';
+    if (reason === 'linhnhi_not_here') return 'Linh Nhi không ở đây.';
+    if (reason === 'mieu_only') return 'Củi Sưởi chỉ đốt tại miếu để sưởi cho Linh Nhi.';
+    return 'Không cho được lúc này.';
+  }
+
+  function applyModauUse(itemId, target) {
+    var api = getMoDauAPI();
+    if (!api || !player || !stateAPI) return { ok: false, msg: 'Chưa khởi tạo nhân vật' };
+    if (!stateAPI.hasItemInBag(player, itemId, 1)) {
+      return { ok: false, msg: 'Không có vật phẩm trong túi đồ.' };
+    }
+    if (target === 'linhnhi') {
+      var pos = getLinhNhiPosition();
+      var g = api.giveToLinhNhi(player, itemId, {
+        mapId: currentMapId,
+        distToLinhNhi: pos ? Math.hypot(player.x - pos.x, player.y - pos.y) : 99999
+      });
+      if (!g.ok) {
+        var msgFail = modauGiveFailMsg(g.reason);
+        modauToast(msgFail);
+        return { ok: false, msg: msgFail };
+      }
+      stateAPI.removeItemFromBag(player, itemId, 1);
+      stateAPI.savePlayer(player);
+      var names = { 'banh-bao': 'Bánh Bao', 'thuoc-cam': 'Thuốc', 'cui-suoi': 'Củi Sưởi' };
+      var msg = 'Đã cho Linh Nhi ' + (names[itemId] || itemId) + '.';
+      if (g.milestones && g.milestones.length > 0) {
+        modauChime();
+        msg += ' Linh Nhi muốn kể chuyện — nói chuyện với cô bé nhé.';
+      }
+      if (g.advanced) {
+        var t = getQuestTargetInfo();
+        if (t && t.title) msg += ' Nhiệm vụ mới: ' + t.title + '.';
+      }
+      modauToast(msg);
+      modauRefreshHUD();
+      return { ok: true, msg: msg };
+    }
+    var u = api.useForSelf(player, itemId);
+    if (!u.ok) {
+      var msgSelf = u.reason === 'mieu_only'
+        ? 'Củi Sưởi chỉ đốt tại miếu để sưởi cho Linh Nhi.'
+        : 'Vật phẩm không thể sử dụng trực tiếp';
+      modauToast(msgSelf);
+      return { ok: false, msg: msgSelf };
+    }
+    stateAPI.removeItemFromBag(player, itemId, 1);
+    stateAPI.savePlayer(player);
+    var msgOk = 'Hồi +' + u.healed + ' Khí Huyết.';
+    modauToast(msgOk);
+    modauRefreshHUD();
+    return { ok: true, msg: msgOk };
+  }
+
+  // ---- Gia viên + thiền định ----
+  function modauUpgradeGiaVien(tier) {
+    var api = getMoDauAPI();
+    if (!api || !player || !stateAPI) return { ok: false, reason: 'no_api' };
+    var rank = (stateAPI.getRealmRank) ? stateAPI.getRealmRank(player) : 0;
+    var check = api.canUpgradeGiaVien(player, tier, {
+      boCui: stateAPI.countItemInBag(player, 'bo-cui'),
+      daNung: stateAPI.countItemInBag(player, 'da-nung')
+    }, rank);
+    if (!check.ok) return check;
+    var res = api.applyGiaVienUpgrade(player, tier, stateAPI);
+    if (res.ok) {
+      stateAPI.savePlayer(player);
+      modauChime();
+      modauToast(tier === 1 ? 'Đã sửa miếu! Điểm nghỉ tại miếu đã mở.' : 'Đã dựng sân thiền! Thiền định tại sân để tích tu vi.');
+      modauRefreshHUD();
+    }
+    return res;
+  }
+
+  function modauRestAtTemple() {
+    var api = getMoDauAPI();
+    if (!api || !player) return { ok: false, reason: 'no_api' };
+    var res = api.restAtTemple(player);
+    if (res.ok) {
+      if (stateAPI) stateAPI.savePlayer(player);
+      spawnFloatingText('Khí huyết & Linh lực đầy!', player.x, player.y - 35, '#7ce898');
+      modauChime();
+      modauToast('Đã nghỉ ngơi tại miếu.');
+      modauRefreshHUD();
+    }
+    return res;
+  }
+
+  function modauToggleMeditate() {
+    var api = getMoDauAPI();
+    if (!api || !player) return { ok: false };
+    if (modauMeditating) {
+      modauStopMeditation('stop');
+      return { ok: true, stopped: true };
+    }
+    if (currentMapId !== 'mieu_hoang') {
+      modauToast('Chỉ thiền định được tại sân thiền ở miếu.');
+      return { ok: false, reason: 'wrong_map' };
+    }
+    var res = api.startMeditation(player);
+    if (!res.ok) {
+      modauToast('Chưa dựng sân thiền (gia viên nấc 2) thì chưa thiền được.');
+      return res;
+    }
+    modauMeditating = true;
+    modauMeditateLastHp = player.hp;
+    cancelAutoPath(true);
+    cancelTravel();
+    modauToast('Đang thiền định — đứng dậy hoặc dính đòn sẽ dừng, giữ phần đã tích.');
+    return { ok: true };
+  }
+
+  function modauStopMeditation(reason) {
+    var api = getMoDauAPI();
+    if (!modauMeditating) return false;
+    modauMeditating = false;
+    if (api) api.stopMeditation(player);
+    if (reason === 'hit') modauToast('Dính đòn — thiền định dừng lại.');
+    else if (reason === 'move') modauToast('Đứng dậy — thiền định dừng lại, giữ phần đã tích.');
+    else modauToast('Dừng thiền định, giữ phần đã tích.');
+    return true;
+  }
+
+  function modauPickupEvidence() {
+    var api = getMoDauAPI();
+    if (!api || !player || !stateAPI) return { ok: false };
+    var res = api.pickupEvidence(player);
+    if (!res.ok) return res;
+    stateAPI.addItemToBag(player, 'vat-chung', 1);
+    stateAPI.savePlayer(player);
+    modauChime();
+    modauToast('Nhặt được Vật Chứng: nửa miếng ngọc bội. Mang về giao cho lão già.');
+    modauRefreshHUD();
+    return { ok: true };
+  }
+
+  function modauTalkLaoGia() {
+    var api = getMoDauAPI();
+    if (!api || !player || !stateAPI) return;
+    var res = api.talkLaoGia(player);
+    if (!res || !res.ok) return;
+    if (res.action === 'give_letter') {
+      stateAPI.addItemToBag(player, 'thu-gui', 1);
+      modauToast('Nhận Thư Gửi — mang tới Chấp Sự Đường.');
+    } else if (res.action === 'accept_k2') {
+      modauToast('Nhận việc: tìm vật chứng ở góc tối sau Đại Điện.');
+    } else if (res.action === 'deliver_evidence') {
+      stateAPI.removeItemFromBag(player, 'vat-chung', 1);
+      player.linhThach = (player.linhThach || 0) + res.rewardLt;
+      spawnFloatingText('+' + res.rewardLt + ' Linh Thạch', player.x, player.y - 35, '#ffe9a8');
+      modauToast('Lão già cảm tạ: nhận ' + res.rewardLt + ' Linh Thạch.');
+    }
+    stateAPI.savePlayer(player);
+    modauChime();
+    modauRefreshHUD();
+  }
+
+  // Tick M2 mỗi khung: ngày phàm nhân + hao Hộ Muội + nghỉ giữa đợt +
+  // vận vòng tương sinh + thiền định.
+  function modauTick(dt) {
+    var api = getMoDauAPI();
+    if (!api || !player) return;
+    var st = api.ensureState(player);
+    var tk = api.tick(player, dt);
+    if (tk && tk.dayChanged) {
+      modauToast('Sang ngày ' + st.day + ' — giá củi hôm nay: ' + api.getWoodPrice(player) + ' đồng/bó.');
+      modauRefreshHUD();
+    }
+    if (modauSiegeRestTimer > 0) {
+      modauSiegeRestTimer -= dt;
+      if (modauSiegeRestTimer <= 0) {
+        modauSiegeRestTimer = 0;
+        if (st.siege.active && !st.siege.done) modauSpawnWave(st.siege.wave);
+      }
+    }
+    if (modauCycle) {
+      modauCycle.t += dt;
+      var want = Math.min(5, Math.floor(modauCycle.t / 0.5) + 1);
+      while (modauCycle.bursts < want && modauCycle.bursts < 5) {
+        spawnReleaseBurst(player.x, player.y - 30, modauCycleElems[modauCycle.bursts], 1);
+        modauCycle.bursts++;
+      }
+      if (modauCycle.t >= api.CONSTANTS.CYCLE_LOCK_SEC) {
+        modauCycle = null;
+        modauPassGate();
+      }
+    }
+    if (modauMeditating) {
+      if (keysDown.up || keysDown.down || keysDown.left || keysDown.right ||
+          joystickVector.x !== 0 || joystickVector.y !== 0 ||
+          currentPath.length > 0 || autoPath.active) {
+        modauStopMeditation('move');
+      } else if (player.hp < modauMeditateLastHp) {
+        modauStopMeditation('hit');
+      } else {
+        var mt = api.meditateTick(player, dt, stateAPI);
+        modauMeditateLastHp = player.hp;
+        if (mt && mt.granted) {
+          spawnFloatingText('+' + mt.perPath + ' tu vi mỗi đường', player.x, player.y - 45, '#7ce898');
+          modauRefreshHUD();
+        }
+        if (mt && mt.sessionEnded) {
+          modauMeditating = false;
+          modauToast('Đã thiền đủ 30 phút của phiên này.');
+        }
+      }
+    }
+  }
+
+  // ---- Vẽ thủ tục: nền Tây Lương, vòng trận, bàn tay, bẫy, thiền, đêm ----
+  function renderTayLuongBg() {
+    ctx.fillStyle = '#7a6a4d';
+    ctx.fillRect(0, 0, mapData.width, mapData.height);
+    ctx.fillStyle = '#8d8a80';
+    ctx.fillRect(0, 470, 1600, 90);
+    ctx.fillStyle = '#9a8a68';
+    ctx.fillRect(560, 330, 480, 180);
+    ctx.fillStyle = '#8d8a80';
+    ctx.fillRect(770, 40, 60, 930);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
+    for (var x = 0; x < 1600; x += 80) ctx.fillRect(x, 470, 2, 90);
+    if (!tayLuongSpeckles) {
+      tayLuongSpeckles = [];
+      var seed = 12345;
+      for (var i = 0; i < 220; i++) {
+        seed = (seed * 1103515245 + 12345) % 2147483648;
+        var sx = seed % 1600;
+        seed = (seed * 1103515245 + 12345) % 2147483648;
+        var sy = seed % 1000;
+        tayLuongSpeckles.push({ x: sx, y: sy, r: 1 + (seed % 3) });
+      }
+    }
+    ctx.fillStyle = 'rgba(240, 244, 250, 0.5)';
+    for (var j = 0; j < tayLuongSpeckles.length; j++) {
+      var sp = tayLuongSpeckles[j];
+      ctx.beginPath();
+      ctx.arc(sp.x, sp.y, sp.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.strokeStyle = 'rgba(40, 32, 20, 0.6)';
+    ctx.lineWidth = 6;
+    ctx.strokeRect(20, 20, 1560, 960);
+  }
+
+  function renderModauGround() {
+    var api = getMoDauAPI();
+    if (!api || !player) return;
+    var st = api.ensureState(player);
+    var nowSec = performance.now() / 1000;
+    if (st.siege.active && currentMapId === 'mieu_hoang') {
+      var C = api.POINTS.SIEGE_CENTER;
+      var pulse = 0.5 + 0.5 * Math.sin(nowSec * 2.2);
+      ctx.save();
+      ctx.strokeStyle = 'rgba(220, 60, 50, ' + (0.55 + pulse * 0.3) + ')';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(C.x, C.y, api.CONSTANTS.SIEGE_CIRCLE_RADIUS, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(220, 60, 50, 0.3)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(C.x, C.y, api.CONSTANTS.SIEGE_CIRCLE_RADIUS - 20, 0, Math.PI * 2);
+      ctx.stroke();
+      var cols = ['#e8ecf2', '#8be26b', '#7fd4ff', '#ff9a5c', '#e8c56b'];
+      for (var k = 0; k < 5; k++) {
+        var a = -Math.PI / 2 + k * (Math.PI * 2 / 5);
+        ctx.fillStyle = cols[k];
+        ctx.beginPath();
+        ctx.arc(C.x + Math.cos(a) * api.CONSTANTS.SIEGE_CIRCLE_RADIUS, C.y + Math.sin(a) * api.CONSTANTS.SIEGE_CIRCLE_RADIUS, 7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+      for (var hI = 0; hI < api.CONSTANTS.SIEGE_HANDS; hI++) {
+        var ha = (Math.PI * 2 * hI) / api.CONSTANTS.SIEGE_HANDS + 0.3;
+        var hx = C.x + Math.cos(ha) * 300, hy = C.y + Math.sin(ha) * 300 * 0.85;
+        var sway = Math.sin(nowSec * 1.4 + hI * 1.1) * 6;
+        var alpha = 0.35 + 0.25 * Math.sin(nowSec * 1.8 + hI);
+        ctx.save();
+        ctx.strokeStyle = 'rgba(110, 230, 130, ' + alpha + ')';
+        ctx.fillStyle = 'rgba(110, 230, 130, ' + (alpha * 0.5) + ')';
+        ctx.lineWidth = 4;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.ellipse(hx + sway * 0.4, hy, 10, 14, 0, 0, Math.PI * 2);
+        ctx.fill();
+        for (var f = 0; f < 5; f++) {
+          var fa = -Math.PI / 2 + (f - 2) * 0.35 + sway * 0.01;
+          ctx.beginPath();
+          ctx.moveTo(hx + sway * 0.4, hy - 8);
+          ctx.lineTo(hx + sway * 0.4 + Math.cos(fa) * 16, hy - 8 + Math.sin(fa) * 16);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+    }
+    if (st.trapsPlaced && st.trapsPlaced.length > 0 && currentMapId === 'mieu_hoang') {
+      for (var t = 0; t < st.trapsPlaced.length; t++) {
+        var tr = st.trapsPlaced[t];
+        if (tr.exploded) continue;
+        ctx.save();
+        ctx.strokeStyle = '#c9a86a';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(tr.x, tr.y, 12, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(tr.x - 8, tr.y);
+        ctx.lineTo(tr.x + 8, tr.y);
+        ctx.moveTo(tr.x, tr.y - 8);
+        ctx.lineTo(tr.x, tr.y + 8);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+    if (modauMeditating) {
+      ctx.save();
+      var mp = 0.5 + 0.5 * Math.sin(nowSec * 1.6);
+      ctx.strokeStyle = 'rgba(126, 231, 183, ' + (0.4 + mp * 0.3) + ')';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.ellipse(player.x, player.y, 34, 16, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  function renderModauDarkness() {
+    var api = getMoDauAPI();
+    if (!api || !player) return;
+    var st = api.ensureState(player);
+    if (st.siege.active && currentMapId === 'mieu_hoang') {
+      ctx.save();
+      ctx.fillStyle = 'rgba(6, 8, 20, 0.45)';
+      ctx.fillRect(camera.x, camera.y, camera.viewportW, camera.viewportH);
+      ctx.restore();
+    }
+  }
+
+  function drawLinhNhiFollower() {
+    var img = assets.linhnhi || assets['assets/art/npc-linhnhi.png'];
+    ctx.save();
+    ctx.fillStyle = 'rgba(10, 15, 10, 0.4)';
+    ctx.beginPath();
+    ctx.ellipse(modauFollower.x, modauFollower.y, 18, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    if (img && img.complete && img.naturalWidth > 0 && img.naturalHeight > 0) {
+      var w = 118 * img.naturalWidth / img.naturalHeight;
+      ctx.drawImage(img, modauFollower.x - w / 2, modauFollower.y - 118, w, 118);
+    }
+    var qT = getQuestTargetInfo();
+    if (qT && qT.kind === 'npc' && qT.npcId === 'npc_linhnhi') {
+      drawQuestExclamation(modauFollower.x, modauFollower.y - 136 + Math.sin(performance.now() / 250) * 4);
+    }
+  }
 
   // ================= ĐỢT N2: LINH THÚ ĐI CÙNG =================
   function getN2Api() {
@@ -10218,12 +11243,18 @@
       var row = m.animRow || 0;
       var col = 0;
 
-      // Tính khung hình hoạt ảnh theo hàng
-      if (row === 0) col = Math.floor(m.animTime * 2.5) % 2; // Idle 2 frames
-      else if (row === 1) col = Math.floor(m.animTime * 6.0) % 4; // Walk 4 frames
-      else if (row === 2) col = Math.floor(m.animTime * 5.0) % 3; // Attack 3 frames
-      else if (row === 3) col = Math.floor(m.animTime * 4.0) % 2; // Hit 2 frames
-      else if (row === 4) col = Math.min(2, Math.floor(m.deathTimer * 3.0)); // Death 3 frames
+      // Tính khung hình hoạt ảnh theo hàng.
+      // Đợt M2MERGE: loài khai frameCounts (sheet mượt 8 cột) phát hết khung
+      // của nó; loài không khai giữ đúng số khung cũ (2/4/3/2/3) — sheet cũ
+      // chỉ có 4 cột nên KHÔNG được đổi hằng số toàn cục.
+      var fc = spec.frameCounts || {};
+      var nIdle = fc.idle || 2, nWalk = fc.walk || 4, nAtk = fc.attack || 3,
+          nHit = fc.hit || 2, nDeath = fc.death || 3;
+      if (row === 0) col = Math.floor(m.animTime * 2.5) % nIdle; // Idle
+      else if (row === 1) col = Math.floor(m.animTime * 6.0) % nWalk; // Walk
+      else if (row === 2) col = Math.floor(m.animTime * 5.0) % nAtk; // Attack
+      else if (row === 3) col = Math.floor(m.animTime * 4.0) % nHit; // Hit
+      else if (row === 4) col = Math.min(nDeath - 1, Math.floor(m.deathTimer * 3.0)); // Death, giữ khung cuối
 
       // Đợt 4A: đang diễn chiêu boss -> phát skill-sheet (1 hàng x 4 cột), không nhún thở
       var skillSheetImg = (m.skillAnimTimer > 0) ? assets[m.speciesId + '_skill_sheet'] : null;
@@ -12188,6 +13219,23 @@
     planTravelRoute: planTravelRoute,
     getTravelState: function () { return travelState; },
     useItem: useItem,
+    // Đợt M2: phần mở đầu — UI gọi qua các hàm này; getModauState để
+    // kiểm thử/driver đọc trạng thái thật.
+    modauShowBattleIntro: modauShowBattleIntro,
+    modauBeginBattle: modauBeginBattle,
+    modauGiveChickens: modauGiveChickens,
+    modauPlaceTrap: modauPlaceTrap,
+    applyModauUse: applyModauUse,
+    modauUpgradeGiaVien: modauUpgradeGiaVien,
+    modauRestAtTemple: modauRestAtTemple,
+    modauToggleMeditate: modauToggleMeditate,
+    modauStartSiege: modauStartSiege,
+    getLinhNhiPosition: getLinhNhiPosition,
+    modauTriggerBattle: modauTriggerBattle,
+    getModauState: function () {
+      var api = getMoDauAPI();
+      return api && player ? api.ensureState(player) : null;
+    },
     // Đợt N2: Linh Thú
     attemptTame: attemptTame,
     harmonyStrike: harmonyStrike,

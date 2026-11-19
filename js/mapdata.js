@@ -6,6 +6,7 @@
  *  - dai-dien: Đại Điện Tông Môn (1200x800)
  *  - son-coc: Sơn Cốc U Tịch (1152x768)
  *  - dai-truyen-tong: Đài Truyền Tống Cổ Trận (960x672)
+ *  - tay-luong: Thành Tây Lương (1600x1000, Đợt M2)
  *
  * Tương thích cả Browser và Node.js.
  * Theo chuẩn Brief Đợt 3 & Hồ sơ 22-chuan-tong-mon.
@@ -189,6 +190,18 @@
       target: { x: 830, y: 1250 },
       targetMap: 'tong-mon',
       targetSpawn: { x: 960, y: 1150 }
+    },
+    // Đợt M2: cổng phía tây sang thành Tây Lương (đi được từ đầu game, cả
+    // hai chiều). Rect nằm trong tường biên tây — isWalkableMieu đã có
+    // ngoại lệ vùng cổng nên đi qua được; không chồng exit_right/exit_bottom.
+    {
+      id: 'exit_west',
+      name: 'Thành Tây Lương',
+      rect: { x: 0, y: 560, w: 50, h: 100 },
+      chipLabel: null,
+      target: { x: 25, y: 610 },
+      targetMap: 'tay-luong',
+      targetSpawn: { x: 120, y: 500 }
     }
   ];
 
@@ -237,7 +250,66 @@
       y: 490,
       radius: 48,
       action: 'board_town'
+    },
+    // Đợt M2: điểm đối đầu chuỗi Mã Tam + gia viên. Trường modauStep/
+    // modauSteps/modauGate do engine đọc để chỉ hiện đúng bước (xem
+    // modauInteractableVisible trong engine.js); dữ liệu đứng đây để
+    // dẫn đường + click đều thấy cùng một điểm.
+    {
+      id: 'modau_ambush',
+      label: 'Đối đầu',
+      x: 280,
+      y: 640,
+      radius: 48,
+      action: 'modau_ambush',
+      modauStep: 'matam2'
+    },
+    {
+      id: 'modau_temple_front',
+      label: 'Đối đầu',
+      x: 480,
+      y: 580,
+      radius: 48,
+      action: 'modau_temple_front',
+      modauSteps: ['matam3', 'matam4']
+    },
+    {
+      id: 'modau_giavien',
+      label: 'Gia Viên Miếu Hoang',
+      x: 580,
+      y: 560,
+      radius: 44,
+      action: 'modau_giavien',
+      modauGate: 'after'
+    },
+    {
+      id: 'modau_meditate',
+      label: 'Thiền Định',
+      x: 850,
+      y: 560,
+      radius: 44,
+      action: 'modau_meditate',
+      modauGate: 'tier2'
     }
+  ];
+
+  // Đợt M2: 5 điểm chặt củi ở rừng sau miếu (đúng schema harvestNodes của
+  // engine: id/itemId/name/x/y/radius/respawnSec/count). Tọa độ đã đo đi
+  // được trên lưới (xem test_modau_maps.js).
+  var HARVEST_NODES_MIEU = [
+    { id: 'harvest_mieu_cui_1', itemId: 'bo-cui', name: 'Gốc Củi', x: 170, y: 300, radius: 48, respawnSec: 60, count: 1 },
+    { id: 'harvest_mieu_cui_2', itemId: 'bo-cui', name: 'Gốc Củi', x: 300, y: 180, radius: 48, respawnSec: 60, count: 1 },
+    { id: 'harvest_mieu_cui_3', itemId: 'bo-cui', name: 'Gốc Củi', x: 150, y: 520, radius: 48, respawnSec: 60, count: 1 },
+    { id: 'harvest_mieu_cui_4', itemId: 'bo-cui', name: 'Gốc Củi', x: 620, y: 200, radius: 48, respawnSec: 60, count: 1 },
+    { id: 'harvest_mieu_cui_5', itemId: 'bo-cui', name: 'Gốc Củi', x: 880, y: 300, radius: 48, respawnSec: 60, count: 1 }
+  ];
+
+  // Đợt M2: 4 điểm sinh Gà Rừng trong rừng sau miếu, hồi 90s (SPECIES).
+  var MONSTER_PACKS_MIEU = [
+    { id: 'pack_ga_rung_1', speciesId: 'ga_rung', count: 1, anchor: { x: 220, y: 420 }, spread: 40 },
+    { id: 'pack_ga_rung_2', speciesId: 'ga_rung', count: 1, anchor: { x: 900, y: 180 }, spread: 40 },
+    { id: 'pack_ga_rung_3', speciesId: 'ga_rung', count: 1, anchor: { x: 1300, y: 300 }, spread: 40 },
+    { id: 'pack_ga_rung_4', speciesId: 'ga_rung', count: 1, anchor: { x: 350, y: 900 }, spread: 40 }
   ];
 
   var ZONES_MIEU = [
@@ -335,6 +407,14 @@
       forceWalkable(collisionGridMieu, 1260 + pfc * 90, 940 + pfr * 80);
     }
   }
+  // Đợt M2: cổng tây + điểm chặt + điểm sinh gà + điểm tương tác mới.
+  forceWalkable(collisionGridMieu, EXITS_MIEU[2].target.x, EXITS_MIEU[2].target.y);
+  for (var hm2 = 0; hm2 < HARVEST_NODES_MIEU.length; hm2++) {
+    forceWalkable(collisionGridMieu, HARVEST_NODES_MIEU[hm2].x, HARVEST_NODES_MIEU[hm2].y);
+  }
+  for (var pm2 = 0; pm2 < MONSTER_PACKS_MIEU.length; pm2++) {
+    forceWalkable(collisionGridMieu, MONSTER_PACKS_MIEU[pm2].anchor.x, MONSTER_PACKS_MIEU[pm2].anchor.y);
+  }
 
   var MAP_MIEU_HOANG = {
     id: 'mieu_hoang',
@@ -354,13 +434,228 @@
     ].concat(TREES_MIEU, STANDEES_MIEU_EXTRA),
     npcs: [LINH_NHI],
     interactables: INTERACTABLES_MIEU,
-    harvestNodes: HARVEST_NODES_MIEU_HOANG,
-    monsterPacks: [],
+    harvestNodes: HARVEST_NODES_MIEU_HOANG.concat(HARVEST_NODES_MIEU),
+    monsterPacks: MONSTER_PACKS_MIEU,
     zones: ZONES_MIEU,
     obstacles: SCENERY_OBSTACLES_MIEU,
     exits: EXITS_MIEU,
     collisionGrid: collisionGridMieu,
     isWalkable: isWalkableMieu
+  };
+
+  // ============================================================
+  // Đợt M2 — MAP: THÀNH TÂY LƯƠNG (1600 x 1000)
+  // Nền vẽ thủ tục trong engine theo map id (bgImage: null — xem nhánh
+  // nền tay-luong trong render() + cổng minimap naturalWidth > 0).
+  // Nợ tranh nền thật: ART-DEBT-M2-01.
+  // ============================================================
+
+  var SPAWN_TAY_LUONG = { x: 120, y: 500 };
+
+  var EXITS_TAY_LUONG = [
+    {
+      id: 'exit_west_to_mieu',
+      name: 'Miếu Hoang',
+      rect: { x: 0, y: 450, w: 40, h: 100 },
+      chipLabel: null,
+      target: { x: 20, y: 500 },
+      targetMap: 'mieu_hoang',
+      targetSpawn: { x: 60, y: 610 }
+    }
+  ];
+
+  var NPCS_TAY_LUONG = [
+    {
+      id: 'npc_cho_cui',
+      name: 'Thương Nhân Chợ',
+      asset: 'assets/art/npc-thuongnhan.png',
+      originalW: 259,
+      originalH: 560,
+      w: 55,
+      h: 120,
+      x: 673,
+      y: 300,
+      feetX: 700,
+      feetY: 420,
+      baseY: 420,
+      collisionRadius: 14,
+      standTile: { x: 700, y: 440 },
+      questGate: null,
+      dialogueDefault: [
+        'Chợ củi Tây Lương đây! Bó củi tốt thì giá tốt — trừ khi Mã Tam đã dặn trước...',
+        'Hôm nay giá củi bao nhiêu, bảng giá ở ngay sạp. Bán hay không tùy ngươi.'
+      ],
+      dialogueQuest: [
+        'Chợ củi Tây Lương đây! Bó củi tốt thì giá tốt — trừ khi Mã Tam đã dặn trước...',
+        'Hôm nay giá củi bao nhiêu, bảng giá ở ngay sạp. Bán hay không tùy ngươi.'
+      ]
+    },
+    {
+      id: 'npc_banh_bao',
+      name: 'Bà Bán Bánh',
+      asset: 'assets/art/npc-ansi.png',
+      originalW: 251,
+      originalH: 560,
+      w: 54,
+      h: 120,
+      x: 473,
+      y: 500,
+      feetX: 500,
+      feetY: 620,
+      baseY: 620,
+      collisionRadius: 14,
+      standTile: { x: 500, y: 640 },
+      questGate: null,
+      dialogueDefault: [
+        'Bánh bao nóng đây, hai đồng một cái! Tiểu ca mua cho muội muội ở miếu phải không?',
+        'Trời lạnh thế này, ăn cái bánh nóng mới có sức mà chặt củi.'
+      ],
+      dialogueQuest: [
+        'Bánh bao nóng đây, hai đồng một cái! Tiểu ca mua cho muội muội ở miếu phải không?',
+        'Trời lạnh thế này, ăn cái bánh nóng mới có sức mà chặt củi.'
+      ]
+    },
+    {
+      id: 'npc_hieu_thuoc',
+      name: 'Lão Dược',
+      asset: 'assets/art/npc-duocsu.png',
+      originalW: 260,
+      originalH: 560,
+      w: 56,
+      h: 120,
+      x: 972,
+      y: 500,
+      feetX: 1000,
+      feetY: 620,
+      baseY: 620,
+      collisionRadius: 14,
+      standTile: { x: 1000, y: 640 },
+      questGate: null,
+      dialogueDefault: [
+        'Hiệu thuốc nhà ta có thuốc cảm, củi sưởi, cả bẫy săn cho người đi rừng.',
+        'Tiểu ca trông khỏe mạnh, nhưng muội muội ở miếu thì cần chăm sóc đấy.'
+      ],
+      dialogueQuest: [
+        'Hiệu thuốc nhà ta có thuốc cảm, củi sưởi, cả bẫy săn cho người đi rừng.',
+        'Tiểu ca trông khỏe mạnh, nhưng muội muội ở miếu thì cần chăm sóc đấy.'
+      ]
+    }
+  ];
+
+  // Nhà Mã Tam: standee tái dùng (nợ hình riêng ART-DEBT-M2-02 cùng sprite
+  // Mã Tam); điểm đối đầu S1 đặt trước nhà, không chồng NPC/cổng/spawn.
+  var STAND_OBJECTS_TAY_LUONG = [
+    { id: 'matam_house', asset: 'assets/art/standee-temple.png', originalW: 760, originalH: 613, w: 260, h: 202, x: 1180, y: 240, baseY: 442, baseRect: { x: 1200, y: 400, w: 220, h: 42 } },
+    { id: 'pine_tl1', asset: 'assets/art/standee-pine.png', originalW: 299, originalH: 543, w: 130, h: 225, x: 150, y: 150, baseY: 375, ellipse: { cx: 205, cy: 355, rx: 30, ry: 9 } },
+    { id: 'bamboo_tl1', asset: 'assets/art/standee-bamboo-cluster.png', originalW: 258, originalH: 480, w: 150, h: 280, x: 1400, y: 150, baseY: 430, ellipse: { cx: 1470, cy: 408, rx: 23, ry: 7 } },
+    { id: 'rock_tl1', asset: 'assets/art/standee-rock-cluster.png', originalW: 417, originalH: 313, w: 140, h: 105, x: 700, y: 120, baseY: 225, ellipse: { cx: 765, cy: 205, rx: 57, ry: 17 } },
+    { id: 'bush_tl1', asset: 'assets/art/standee-bush.png', originalW: 309, originalH: 313, w: 120, h: 121, x: 300, y: 800, baseY: 921, ellipse: { cx: 361, cy: 901, rx: 45, ry: 13 } },
+    { id: 'bush_tl2', asset: 'assets/art/standee-bush.png', originalW: 309, originalH: 313, w: 130, h: 132, x: 1200, y: 800, baseY: 932, ellipse: { cx: 1266, cy: 911, rx: 49, ry: 14 } },
+    { id: 'pine_tl2', asset: 'assets/art/standee-pine.png', originalW: 299, originalH: 543, w: 140, h: 243, x: 1440, y: 700, baseY: 943, ellipse: { cx: 1500, cy: 923, rx: 32, ry: 9 } }
+  ];
+
+  var INTERACTABLES_TAY_LUONG = [
+    {
+      id: 'modau_matam_house',
+      label: 'Đối đầu',
+      x: 1290,
+      y: 480,
+      radius: 48,
+      action: 'modau_matam_house',
+      modauStep: 'matam1'
+    }
+  ];
+
+  var SCENERY_OBSTACLES_TAY_LUONG = [
+    { rect: { x: 0, y: 0, w: 1600, h: 40 } },
+    { rect: { x: 0, y: 970, w: 1600, h: 30 } },
+    { rect: { x: 0, y: 0, w: 40, h: 450 } },
+    { rect: { x: 0, y: 550, w: 40, h: 450 } },
+    { rect: { x: 1560, y: 0, w: 40, h: 1000 } }
+  ];
+
+  var ZONES_TAY_LUONG = [
+    {
+      id: 'tay-luong',
+      name: 'Thành Tây Lương',
+      desc: 'Thành trì phàm tục dưới chân núi tuyết, nơi huynh muội Hà Nhân bán củi mưu sinh.',
+      rect: { x: 0, y: 0, w: 1600, h: 1000 }
+    }
+  ];
+
+  function isWalkableTayLuong(x, y) {
+    if (x < 10 || x > 1600 - 10 || y < 10 || y > 1000 - 10) {
+      var inExit = false;
+      for (var e = 0; e < EXITS_TAY_LUONG.length; e++) {
+        var er = EXITS_TAY_LUONG[e].rect;
+        if (x >= er.x && x <= er.x + er.w && y >= er.y && y <= er.y + er.h) {
+          inExit = true;
+          break;
+        }
+      }
+      if (!inExit) return false;
+    }
+    for (var si = 0; si < STAND_OBJECTS_TAY_LUONG.length; si++) {
+      var so = STAND_OBJECTS_TAY_LUONG[si];
+      if (so.baseRect) {
+        if (x >= so.baseRect.x && x <= so.baseRect.x + so.baseRect.w && y >= so.baseRect.y && y <= so.baseRect.y + so.baseRect.h) return false;
+      } else if (so.ellipse) {
+        if (pointInEllipse(x, y, so.ellipse)) return false;
+      }
+    }
+    for (var n = 0; n < NPCS_TAY_LUONG.length; n++) {
+      var npc = NPCS_TAY_LUONG[n];
+      var ndx = x - npc.feetX, ndy = y - npc.feetY;
+      if (ndx * ndx + ndy * ndy <= npc.collisionRadius * npc.collisionRadius) return false;
+    }
+    for (var j = 0; j < SCENERY_OBSTACLES_TAY_LUONG.length; j++) {
+      var obs = SCENERY_OBSTACLES_TAY_LUONG[j];
+      if (obs.rect) {
+        var inExitZone = false;
+        for (var k = 0; k < EXITS_TAY_LUONG.length; k++) {
+          var exr = EXITS_TAY_LUONG[k].rect;
+          if (x >= exr.x && x <= exr.x + exr.w && y >= exr.y && y <= exr.y + exr.h) {
+            inExitZone = true;
+            break;
+          }
+        }
+        if (!inExitZone && x >= obs.rect.x && x <= obs.rect.x + obs.rect.w &&
+            y >= obs.rect.y && y <= obs.rect.y + obs.rect.h) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  var collisionGridTayLuong = buildGrid(1600, 1000, isWalkableTayLuong);
+  forceWalkable(collisionGridTayLuong, SPAWN_TAY_LUONG.x, SPAWN_TAY_LUONG.y);
+  forceWalkable(collisionGridTayLuong, EXITS_TAY_LUONG[0].target.x, EXITS_TAY_LUONG[0].target.y);
+  for (var ntl = 0; ntl < NPCS_TAY_LUONG.length; ntl++) {
+    forceWalkable(collisionGridTayLuong, NPCS_TAY_LUONG[ntl].standTile.x, NPCS_TAY_LUONG[ntl].standTile.y);
+  }
+  forceWalkable(collisionGridTayLuong, INTERACTABLES_TAY_LUONG[0].x, INTERACTABLES_TAY_LUONG[0].y);
+
+  var MAP_TAY_LUONG = {
+    id: 'tay-luong',
+    name: 'Thành Tây Lương',
+    width: 1600,
+    height: 1000,
+    gridSize: GRID_SIZE,
+    cols: Math.ceil(1600 / GRID_SIZE),
+    rows: Math.ceil(1000 / GRID_SIZE),
+    bgImage: null,
+    spawn: SPAWN_TAY_LUONG,
+    standees: STAND_OBJECTS_TAY_LUONG,
+    npcs: NPCS_TAY_LUONG,
+    interactables: INTERACTABLES_TAY_LUONG,
+    harvestNodes: [],
+    monsterPacks: [],
+    zones: ZONES_TAY_LUONG,
+    obstacles: SCENERY_OBSTACLES_TAY_LUONG,
+    exits: EXITS_TAY_LUONG,
+    collisionGrid: collisionGridTayLuong,
+    isWalkable: isWalkableTayLuong
   };
 
   // ============================================================
@@ -868,6 +1163,11 @@
 
   var NPCS_TONG_MON = [
     { id: 'npc_tuan_thu_su', name: 'Tuần Thú Sư', asset: 'assets/art/npc-tiepdan.png', originalW: 239, originalH: 560, w: 51, h: 120, x: 790, y: 945, feetX: 816, feetY: 1065, baseY: 1065, collisionRadius: 14, standTile: { x: 816, y: 1085 }, questGate: null, dialogueDefault: ['Tuần Thú Sư: xem thú, chuồng và đổi Đan Thú.'], dialogueQuest: ['Linh Thú Hoàn đầu tiên tặng một lần.'] },
+    // Đợt M2: Lão Già Bị Tố — tuyến giả mạo tông chủ kỳ 1–2 (§9.2). Tái dùng
+    // sprite trưởng lão (chân dung riêng ghi nợ ART-DEBT-M2-07). Vị trí đo
+    // thật: đi được, cách Chấp Sự 155px, không chồng NPC/cổng/luống dược.
+    // Thoại động theo trạng thái tuyến do engine chọn (GameMoDau).
+    { id: 'npc_lao_gia', name: 'Lão Già Bị Tố', asset: 'assets/art/npc-truonglao.png', originalW: 235, originalH: 560, w: 50, h: 120, x: 1025, y: 780, feetX: 1050, feetY: 900, baseY: 900, collisionRadius: 14, standTile: { x: 1050, y: 920 }, questGate: null, dialogueDefault: ['Lão phu... lão phu mới là tông chủ thật của Thanh Vân Tông này!'], dialogueQuest: ['Lão phu... lão phu mới là tông chủ thật của Thanh Vân Tông này!'] },
     {
       id: 'npc_tiepdan',
       name: 'Tiếp Dẫn Đệ Tử',
@@ -1511,6 +1811,18 @@
       action: 'door_enter',
       targetMap: 'tong-mon',
       targetSpawn: { x: 960, y: 640 }
+    },
+    // Đợt M2: điểm nhặt vật chứng kỳ 2 tuyến giả mạo (§9.2) — góc tối sau
+    // Đại Điện, tọa độ đo thật đi được + bấm trực tiếp được ở màn 390px
+    // (kiểm M2 2026-11-13: điểm cũ (110,120) bị khối HUD che kín).
+    {
+      id: 'modau_fake_evidence',
+      label: 'Vật Chứng',
+      x: 200,
+      y: 320,
+      radius: 44,
+      action: 'modau_fake_evidence',
+      modauGate: 'fakeK2'
     }
   ];
 
@@ -1591,6 +1903,8 @@
   forceWalkable(collisionGridDaiDien, EXITS_DAI_DIEN[0].target.x, EXITS_DAI_DIEN[0].target.y);
   forceWalkable(collisionGridDaiDien, NPCS_DAI_DIEN[0].standTile.x, NPCS_DAI_DIEN[0].standTile.y);
   forceWalkable(collisionGridDaiDien, INTERACTABLES_DAI_DIEN[0].x, INTERACTABLES_DAI_DIEN[0].y);
+  // Đợt M2: điểm nhặt vật chứng.
+  forceWalkable(collisionGridDaiDien, INTERACTABLES_DAI_DIEN[1].x, INTERACTABLES_DAI_DIEN[1].y);
 
   var MAP_DAI_DIEN = {
     id: 'dai-dien',
@@ -3146,7 +3460,8 @@
     'ho-bang': MAP_HO_BANG,
     'mo-lua': MAP_MO_LUA,
     'hoang-mac': MAP_HOANG_MAC,
-    'kiem-trung': MAP_KIEM_TRUNG
+    'kiem-trung': MAP_KIEM_TRUNG,
+    'tay-luong': MAP_TAY_LUONG
   };
 
   // Đợt N2: Tuần Thú Sư — quà gặp đầu (Linh Thú Hoàn) còn nhận được không?

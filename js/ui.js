@@ -191,6 +191,8 @@
     if (!mapData) return;
     if (currentMinimapMapId !== mapData.id) {
       currentMinimapMapId = mapData.id;
+      // Đợt M2: map chưa có tranh nền (Tây Lương) thì không đặt src rỗng —
+      // minimap vẽ nền phẳng, không bao giờ drawImage ảnh chưa nạp.
       if (mapData.bgImage) {
         minimapBgImg = new Image();
         minimapBgImg.src = mapData.bgImage;
@@ -527,6 +529,7 @@
     wireSettingsExtras();
     wireQuestToggle();
     wireBountyModals();
+    wireModauUI(); // Đợt M2: đóng modal dùng chung + chip Hộ Muội
     startClockAndIdleWatch();
 
     // Đợt LINHME: Canh tác Linh Mễ, Đổi thức ăn, Việc vụ Tông Môn
@@ -659,6 +662,13 @@
         if (!player) { showToast('Hãy vào game trước khi đổi quà.'); return; }
         player.usedGiftcodes = player.usedGiftcodes || {};
         if (player.usedGiftcodes[code]) { showToast('Mã này đã được đổi rồi.'); return; }
+        // Đợt M2: mã tặng Linh Thạch còn khóa thì từ chối, KHÔNG đánh dấu
+        // đã dùng — qua đêm oán linh mới nhận được.
+        if (gift.linhThach && typeof window !== 'undefined' && window.GameMoDau &&
+            window.GameMoDau.isLinhThachLocked(player)) {
+          showToast('Linh Thạch còn khóa — qua đêm oán linh mới nhận được');
+          return;
+        }
         player.usedGiftcodes[code] = true;
         if (gift.linhThach) player.linhThach = (player.linhThach || 0) + gift.linhThach;
         if (gift.itemId && stateAPI && stateAPI.addItemToBag) stateAPI.addItemToBag(player, gift.itemId, gift.count || 1);
@@ -1425,7 +1435,9 @@
     var gridEl = document.getElementById('bag-grid');
     var ltVal = document.getElementById('bag-linh-thach-val');
     if (ltVal && player) {
-      ltVal.textContent = player.linhThach || 0;
+      // Đợt M2: Linh Thạch còn khóa thì bảng túi hiện "Khóa", không hiện số.
+      var mdBag = (typeof window !== 'undefined') ? window.GameMoDau : null;
+      ltVal.textContent = (mdBag && mdBag.isLinhThachLocked(player)) ? 'Khóa' : (player.linhThach || 0);
     }
     if (!gridEl || !player) return;
     if (!tuiKhoAPI && typeof window !== 'undefined') tuiKhoAPI = window.GameTuiKho;
@@ -3201,6 +3213,42 @@
     if (llBar) llBar.style.width = llPct + '%';
     if (llVal) llVal.textContent = Math.round(player.linhLuc) + ' / ' + player.linhLucMax;
 
+    // Đợt M2: hàng tiền tệ — Linh Thạch hiện "Khóa" trước đêm oán linh;
+    // Tiền Đồng hiện khi có tiền hoặc còn khóa.
+    var mdHud = (typeof window !== 'undefined') ? window.GameMoDau : null;
+    var ltLocked = !!(mdHud && mdHud.isLinhThachLocked(player));
+    var ltChip = document.getElementById('hud-linhthach-chip');
+    var ltValHud = document.getElementById('hud-linhthach-val');
+    if (ltChip && ltValHud) {
+      ltValHud.textContent = ltLocked ? 'Khóa' : (player.linhThach || 0);
+      if (ltLocked) ltChip.classList.add('locked'); else ltChip.classList.remove('locked');
+    }
+    var tdChip = document.getElementById('hud-tiendong-chip');
+    var tdVal = document.getElementById('hud-tiendong-val');
+    if (tdChip && tdVal) {
+      tdVal.textContent = player.tienDong || 0;
+      if ((player.tienDong || 0) > 0 || ltLocked) tdChip.classList.remove('hidden');
+      else tdChip.classList.add('hidden');
+    }
+    // Đợt M2: chip Hộ Muội — chỉ ở miếu/Tây Lương, đã gặp Linh Nhi, trước cổng.
+    var hmChip = document.getElementById('hud-homuoi-chip');
+    if (hmChip) {
+      var stHud = mdHud ? mdHud.ensureState(player) : null;
+      var showHm = !!(stHud && player.quests && player.quests.talked_linhnhi && !stHud.gatePassed &&
+        mapData && (mapData.id === 'mieu_hoang' || mapData.id === 'tay-luong'));
+      if (showHm) {
+        hmChip.classList.remove('hidden');
+        var barAn = document.getElementById('homuoi-bar-an');
+        var barAm = document.getElementById('homuoi-bar-am');
+        var barKhoe = document.getElementById('homuoi-bar-khoe');
+        if (barAn) barAn.style.width = (stHud.hoMuoi.anNo || 0) + '%';
+        if (barAm) barAm.style.width = (stHud.hoMuoi.am || 0) + '%';
+        if (barKhoe) barKhoe.style.width = (stHud.hoMuoi.khoe || 0) + '%';
+      } else {
+        hmChip.classList.add('hidden');
+      }
+    }
+
     // Cập nhật trạng thái phím kỹ năng (linh lực)
     var s1 = document.getElementById('skill-slot-1');
     var s2 = document.getElementById('skill-slot-2');
@@ -3486,6 +3534,7 @@
 
     var mapNames = {
       mieu_hoang: 'Miếu Hoang',
+      'tay-luong': 'Thành Tây Lương',
       'rung-doc': 'Rừng Độc Thanh Tụy',
       'tong-mon': 'Tông Môn',
       'dai-dien': 'Đại Điện',
@@ -3503,6 +3552,13 @@
       if (titleEl) titleEl.textContent = 'Nói chuyện với Linh Nhi';
       if (descEl) {
         descEl.textContent = 'Linh Nhi đang đợi ở trước miếu hoang.';
+        descEl.classList.remove('greyed');
+      }
+    } else if (targetInfo && targetInfo.stepId && targetInfo.stepId.indexOf('modau_') === 0) {
+      // Đợt M2: bước mở đầu / tuyến giả mạo tông chủ — tên + mô tả từ module.
+      if (titleEl) titleEl.textContent = targetInfo.title || 'Nhiệm vụ mở đầu';
+      if (descEl) {
+        descEl.textContent = targetInfo.desc || '';
         descEl.classList.remove('greyed');
       }
     } else if (!q.huntCompleted) {
@@ -5442,6 +5498,358 @@
     }
   }
 
+  // ================= ĐỢT M2: MODAL DÙNG CHUNG PHẦN MỞ ĐẦU =================
+  // Một khung modal duy nhất (#modau-modal), nội dung dựng bằng DOM theo
+  // từng việc: cửa hàng phàm nhân, Hộ Muội, chọn người dùng vật phẩm,
+  // chuẩn bị trận, gia viên, hai lời kể. Không giao dịch âm thầm: nút
+  // không đủ điều kiện thì mờ + ghi rõ lý do.
+  function getModauAPI() {
+    return (typeof window !== 'undefined') ? window.GameMoDau : null;
+  }
+  function modauEngine() {
+    return (typeof window !== 'undefined') ? window.GameEngine : null;
+  }
+  function modauEl(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined && text !== null) e.textContent = text;
+    return e;
+  }
+  function modauCount(itemId) {
+    return (stateAPI && stateAPI.countItemInBag) ? stateAPI.countItemInBag(player, itemId) : 0;
+  }
+  function modauSaveAndRefresh() {
+    if (stateAPI && stateAPI.savePlayer) stateAPI.savePlayer(player);
+    refreshHUD();
+  }
+  function openModauModal(title) {
+    var modal = document.getElementById('modau-modal');
+    var titleEl = document.getElementById('modau-modal-title');
+    var body = document.getElementById('modau-modal-body');
+    if (!modal || !body) return null;
+    if (titleEl) titleEl.textContent = title;
+    while (body.firstChild) body.removeChild(body.firstChild);
+    modal.classList.remove('hidden');
+    return body;
+  }
+  function closeModauModal() {
+    var modal = document.getElementById('modau-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+  function modauActionBtn(label, disabled, reason, onClick) {
+    var wrap = modauEl('div', 'modau-row');
+    var lbl = modauEl('span', 'modau-row-label', label + (disabled && reason ? ' — ' + reason : ''));
+    var btn = modauEl('button', 'btn wood modau-btn', 'Chọn');
+    btn.type = 'button';
+    if (disabled) btn.disabled = true;
+    else btn.addEventListener('click', onClick);
+    wrap.appendChild(lbl);
+    wrap.appendChild(btn);
+    return wrap;
+  }
+
+  function openModauShop(kind) {
+    var api = getModauAPI();
+    if (!api || !player) return;
+    var st = api.ensureState(player);
+    var coins = player.tienDong || 0;
+    var body;
+    if (kind === 'cho') {
+      body = openModauModal('CHỢ CỦI TÂY LƯƠNG');
+      if (!body) return;
+      var price = api.getWoodPrice(player);
+      body.appendChild(modauEl('div', 'modau-line', 'Ngày ' + st.day + ' — giá củi hôm nay: ' + price + ' đồng/bó.'));
+      if (st.matam.stage < 1) {
+        body.appendChild(modauEl('div', 'modau-note', 'Mã Tam đang ép giá: giá củi bị khóa ở 3 đồng cho tới khi thắng trận với tay chân của hắn.'));
+      }
+      var wood = modauCount('bo-cui');
+      body.appendChild(modauEl('div', 'modau-line', 'Bó Củi trong túi: ' + wood + ' — Tiền đồng: ' + coins + '.'));
+      body.appendChild(modauActionBtn('Bán 1 Bó Củi (+' + price + ' đồng)', wood < 1, 'không có củi', function () {
+        var r = api.sellWood(player, 1, stateAPI);
+        if (r.ok) {
+          modauSaveAndRefresh();
+          showToast('Bán 1 Bó Củi, nhận ' + r.earned + ' đồng.');
+          if (r.advanced) showToast('Nhiệm vụ mới: Mua Bánh Bao');
+          openModauShop('cho');
+        }
+      }));
+      body.appendChild(modauActionBtn('Bán tất cả (' + wood + ' bó, +' + (wood * price) + ' đồng)', wood < 1, 'không có củi', function () {
+        var r = api.sellWood(player, wood, stateAPI);
+        if (r.ok) {
+          modauSaveAndRefresh();
+          showToast('Bán ' + r.count + ' Bó Củi, nhận ' + r.earned + ' đồng.');
+          if (r.advanced) showToast('Nhiệm vụ mới: Mua Bánh Bao');
+          openModauShop('cho');
+        }
+      }));
+    } else if (kind === 'banh') {
+      body = openModauModal('SẠP BÁNH BAO');
+      if (!body) return;
+      body.appendChild(modauEl('div', 'modau-line', 'Bánh bao nóng hổi, 2 đồng một cái. Tiền đồng: ' + coins + '.'));
+      body.appendChild(modauEl('div', 'modau-note', 'Ăn bánh hồi Khí Huyết; cho Linh Nhi ăn tăng Ăn No.'));
+      var pBanh = api.SHOP_ITEMS['banh-bao'].price;
+      body.appendChild(modauActionBtn('Mua 1 Bánh Bao (' + pBanh + ' đồng)', coins < pBanh, 'không đủ tiền đồng', function () {
+        var r = api.buyItem(player, 'banh-bao', 1, stateAPI);
+        if (r.ok) {
+          modauSaveAndRefresh();
+          showToast('Đã mua 1 Bánh Bao.');
+          if (r.advanced) showToast('Nhiệm vụ mới: Cho Linh Nhi Ăn');
+          openModauShop('banh');
+        } else {
+          showToast(r.reason === 'bag_full' ? 'Túi đồ đã đầy.' : 'Không đủ tiền đồng.');
+        }
+      }));
+    } else {
+      body = openModauModal('HIỆU THUỐC');
+      if (!body) return;
+      body.appendChild(modauEl('div', 'modau-line', 'Thuốc cảm, củi sưởi, bẫy săn. Tiền đồng: ' + coins + '.'));
+      var items = [
+        { id: 'thuoc-cam', note: 'Uống hồi Khí Huyết; cho Linh Nhi tăng Khỏe.' },
+        { id: 'cui-suoi', note: 'Chỉ đốt tại miếu để sưởi cho Linh Nhi (tăng Ấm).' },
+        { id: 'bay-san', note: 'Đặt trước miếu trong trận giữ miếu: nổ 30 sát thương + chậm 50% trong 2 giây.' }
+      ];
+      for (var i = 0; i < items.length; i++) {
+        (function (it) {
+          var shop = api.SHOP_ITEMS[it.id];
+          body.appendChild(modauEl('div', 'modau-note', shop.name + ' — ' + it.note));
+          body.appendChild(modauActionBtn('Mua 1 ' + shop.name + ' (' + shop.price + ' đồng)', coins < shop.price, 'không đủ tiền đồng', function () {
+            var r = api.buyItem(player, it.id, 1, stateAPI);
+            if (r.ok) {
+              modauSaveAndRefresh();
+              showToast('Đã mua 1 ' + shop.name + '.');
+              openModauShop('thuoc');
+            } else {
+              showToast(r.reason === 'bag_full' ? 'Túi đồ đã đầy.' : 'Không đủ tiền đồng.');
+            }
+          }));
+        })(items[i]);
+      }
+    }
+  }
+
+  function openModauHoMuoi() {
+    var api = getModauAPI();
+    if (!api || !player) return;
+    var st = api.ensureState(player);
+    var body = openModauModal('HỘ MUỘI — LINH NHI');
+    if (!body) return;
+    body.appendChild(modauEl('div', 'modau-note', 'Ba chỉ số giảm dần theo thời gian. Không gây chết hay chặn nhiệm vụ — chỉ đổi lời thoại của Linh Nhi và khóa/mở chuyện cô bé kể.'));
+    var rows = [
+      { key: 'anNo', label: 'Ăn No', color: '#ffb35c' },
+      { key: 'am', label: 'Ấm', color: '#ff7a6b' },
+      { key: 'khoe', label: 'Khỏe', color: '#55d882' }
+    ];
+    for (var i = 0; i < rows.length; i++) {
+      (function (row) {
+        var wrap = modauEl('div', 'modau-bar-row');
+        var lbl = modauEl('div', 'modau-bar-label');
+        lbl.appendChild(modauEl('span', null, row.label));
+        lbl.appendChild(modauEl('span', null, Math.round(st.hoMuoi[row.key]) + '/100'));
+        var track = modauEl('div', 'modau-bar-track');
+        var fill = modauEl('div', 'modau-bar-fill');
+        fill.style.width = (st.hoMuoi[row.key] || 0) + '%';
+        fill.style.background = row.color;
+        track.appendChild(fill);
+        wrap.appendChild(lbl);
+        wrap.appendChild(track);
+        body.appendChild(wrap);
+      })(rows[i]);
+    }
+    var hm = st.hoMuoi;
+    var mileLine;
+    if (hm.milestones.m2 && !hm.told.m2) mileLine = 'Linh Nhi muốn kể chuyện chiếc trâm — nói chuyện với cô bé nhé.';
+    else if (hm.milestones.m1 && !hm.told.m1) mileLine = 'Linh Nhi muốn kể chuyện nhà — nói chuyện với cô bé nhé.';
+    else if (!hm.milestones.m2) mileLine = 'Cột mốc gần nhất: cả ba chỉ số đạt 90 — Linh Nhi sẽ kể chuyện chiếc trâm.';
+    else if (!hm.milestones.m1) mileLine = 'Cột mốc gần nhất: cả ba chỉ số đạt 70 — Linh Nhi sẽ kể chuyện nhà.';
+    else mileLine = 'Linh Nhi đã kể hết những chuyện cô bé nhớ.';
+    body.appendChild(modauEl('div', 'modau-note', mileLine));
+    var eng = modauEngine();
+    var gives = [
+      { id: 'banh-bao', label: 'Cho Bánh Bao (+25 Ăn No)' },
+      { id: 'cui-suoi', label: 'Cho Củi Sưởi (+25 Ấm, chỉ tại miếu)' },
+      { id: 'thuoc-cam', label: 'Cho Thuốc (+25 Khỏe)' }
+    ];
+    for (var g = 0; g < gives.length; g++) {
+      (function (gv) {
+        var n = modauCount(gv.id);
+        body.appendChild(modauActionBtn(gv.label + ' (có ' + n + ')', n < 1, 'không có trong túi', function () {
+          if (eng && eng.applyModauUse) {
+            var r = eng.applyModauUse(gv.id, 'linhnhi');
+            if (r && r.msg) showToast(r.msg);
+            openModauHoMuoi();
+          }
+        }));
+      })(gives[g]);
+    }
+  }
+
+  function openModauUseChoice(itemId) {
+    var eng = modauEngine();
+    var defs = (monstersAPI && monstersAPI.ITEM_DEFS) ? monstersAPI.ITEM_DEFS : {};
+    var name = defs[itemId] ? defs[itemId].name : itemId;
+    var body = openModauModal('DÙNG ' + name.toUpperCase());
+    if (!body) return;
+    body.appendChild(modauEl('div', 'modau-line', 'Dùng ' + name + ' cho ai?'));
+    if (itemId === 'cui-suoi') {
+      body.appendChild(modauEl('div', 'modau-note', 'Củi Sưởi chỉ đốt tại miếu để sưởi cho Linh Nhi.'));
+    }
+    body.appendChild(modauActionBtn('Dùng cho mình', false, null, function () {
+      closeModauModal();
+      if (eng && eng.applyModauUse) {
+        var r = eng.applyModauUse(itemId, 'self');
+        if (r && r.msg) showToast(r.msg);
+      }
+      if (typeof renderBagGrid === 'function') renderBagGrid();
+    }));
+    body.appendChild(modauActionBtn('Cho Linh Nhi', false, null, function () {
+      closeModauModal();
+      if (eng && eng.applyModauUse) {
+        var r2 = eng.applyModauUse(itemId, 'linhnhi');
+        if (r2 && r2.msg) showToast(r2.msg);
+      }
+      if (typeof renderBagGrid === 'function') renderBagGrid();
+    }));
+  }
+
+  function openModauSiegeStart() {
+    var body = openModauModal('ĐÊM OÁN LINH VÂY MIẾU');
+    if (!body) return;
+    body.appendChild(modauEl('div', 'modau-line', 'Đêm nay oán linh kéo tới vây miếu. Thủ vững vòng trận qua 3 đợt — gục ngã thì đánh lại từ đợt đầu, không mất đồ, không mất tiền.'));
+    body.appendChild(modauActionBtn('Đêm nay thủ miếu', false, null, function () {
+      closeModauModal();
+      var eng = modauEngine();
+      if (eng && eng.modauStartSiege) eng.modauStartSiege();
+    }));
+    body.appendChild(modauActionBtn('Để sau', false, null, function () {
+      closeModauModal();
+    }));
+  }
+
+  function openModauBattlePrep(battleId, canGive) {
+    var eng = modauEngine();
+    var api = getModauAPI();
+    if (battleId === 'matam2' && canGive) {
+      var body = openModauModal('CHẶN ĐƯỜNG ĐÒI GÀ');
+      if (!body) return;
+      body.appendChild(modauEl('div', 'modau-line', 'Tay chân Mã Tam đòi 2 Gà Rừng. Trong túi có đủ gà — giao gà thì khỏi đánh, không giao thì đánh 2 tên.'));
+      body.appendChild(modauActionBtn('Giao 2 Gà Rừng', false, null, function () {
+        closeModauModal();
+        if (eng && eng.modauGiveChickens) {
+          var r = eng.modauGiveChickens();
+          if (r && !r.ok) showToast('Không giao được gà.');
+        }
+      }));
+      body.appendChild(modauActionBtn('Không giao — đánh!', false, null, function () {
+        closeModauModal();
+        if (eng && eng.modauShowBattleIntro) eng.modauShowBattleIntro('matam2');
+      }));
+      return;
+    }
+    var body4 = openModauModal('TRẬN GIỮ MIẾU');
+    if (!body4) return;
+    var st = api ? api.ensureState(player) : null;
+    var placed = st ? st.trapsPlaced.length : 0;
+    var traps = modauCount('bay-san');
+    body4.appendChild(modauEl('div', 'modau-line', 'Mã Tam đích thân kéo tới cùng 2 tay chân. Đặt Bẫy Săn trước khi bắt đầu — bẫy nổ khi quái giẫm phải.'));
+    body4.appendChild(modauEl('div', 'modau-line', 'Đã đặt: ' + placed + '/3 — Bẫy Săn trong túi: ' + traps + '.'));
+    body4.appendChild(modauActionBtn('Đặt 1 Bẫy Săn tại chỗ đứng', traps < 1 || placed >= 3, traps < 1 ? 'không có bẫy (mua ở hiệu thuốc)' : 'đã đặt tối đa 3 bẫy', function () {
+      if (eng && eng.modauPlaceTrap) {
+        var r = eng.modauPlaceTrap();
+        if (r && r.msg) showToast(r.msg);
+        openModauBattlePrep('matam4', false);
+      }
+    }));
+    body4.appendChild(modauActionBtn('Bắt đầu trận giữ miếu', false, null, function () {
+      closeModauModal();
+      if (eng && eng.modauShowBattleIntro) eng.modauShowBattleIntro('matam4');
+    }));
+  }
+
+  function modauUpgradeReason(reason, need, have) {
+    if (reason === 'gate_not_passed') return 'chưa qua đêm oán linh';
+    if (reason === 'wrong_tier') return 'chưa tới nấc này';
+    if (reason === 'missing_wood') return 'thiếu Bó Củi (' + have + '/' + need + ')';
+    if (reason === 'missing_stone') return 'thiếu Đá Nung (' + have + '/' + need + ')';
+    if (reason === 'not_enough_coins') return 'thiếu tiền đồng (' + have + '/' + need + ')';
+    if (reason === 'not_enough_lt') return 'thiếu Linh Thạch (' + have + '/' + need + ')';
+    if (reason === 'realm_too_low') return 'cần Trúc Cơ Sơ Kỳ trở lên';
+    return 'chưa đủ điều kiện';
+  }
+
+  function openModauGiaVien() {
+    var api = getModauAPI();
+    var eng = modauEngine();
+    if (!api || !player) return;
+    var status = api.giaVienStatus(player);
+    var body = openModauModal('GIA VIÊN — MIẾU HOANG');
+    if (!body) return;
+    var tierNames = ['Chưa sửa (miếu hoang)', 'Đã sửa miếu', 'Đã dựng sân thiền'];
+    body.appendChild(modauEl('div', 'modau-line', 'Hiện trạng: ' + tierNames[status.tier] + '.'));
+    var rank = (stateAPI && stateAPI.getRealmRank) ? stateAPI.getRealmRank(player) : 0;
+    var counts = { boCui: modauCount('bo-cui'), daNung: modauCount('da-nung') };
+    var c1 = api.canUpgradeGiaVien(player, 1, counts, rank);
+    var done1 = status.tier >= 1;
+    body.appendChild(modauActionBtn('Sửa miếu: Bó Củi x10 + 30 đồng (mở điểm nghỉ)' + (done1 ? ' — đã làm' : ''), done1 || !c1.ok, done1 ? 'đã sửa miếu' : modauUpgradeReason(c1.reason, c1.need, c1.have), function () {
+      if (eng && eng.modauUpgradeGiaVien) {
+        var r = eng.modauUpgradeGiaVien(1);
+        if (r && !r.ok) showToast('Chưa nâng cấp được: ' + modauUpgradeReason(r.reason, r.need, r.have));
+        openModauGiaVien();
+      }
+    }));
+    var c2 = api.canUpgradeGiaVien(player, 2, counts, rank);
+    var done2 = status.tier >= 2;
+    body.appendChild(modauActionBtn('Dựng sân thiền: Bó Củi x20 + Đá Nung x10 + 200 Linh Thạch (cần Trúc Cơ Sơ Kỳ+)' + (done2 ? ' — đã làm' : ''), done2 || !c2.ok, done2 ? 'đã dựng sân thiền' : modauUpgradeReason(c2.reason, c2.need, c2.have), function () {
+      if (eng && eng.modauUpgradeGiaVien) {
+        var r2 = eng.modauUpgradeGiaVien(2);
+        if (r2 && !r2.ok) showToast('Chưa nâng cấp được: ' + modauUpgradeReason(r2.reason, r2.need, r2.have));
+        openModauGiaVien();
+      }
+    }));
+    if (status.tier >= 1) {
+      body.appendChild(modauActionBtn('Nghỉ ngơi tại miếu (hồi đầy Khí Huyết + Linh Lực)', false, null, function () {
+        if (eng && eng.modauRestAtTemple) eng.modauRestAtTemple();
+        closeModauModal();
+      }));
+    }
+    if (status.tier >= 2) {
+      body.appendChild(modauEl('div', 'modau-note', 'Thiền định: tới điểm thiền ở sân thiền, thiền 60 giây tích tu vi mỗi đường bằng 5% trần mốc hiện tại, tối đa 30 phút mỗi phiên. Đứng dậy hoặc dính đòn thì dừng, giữ phần đã tích.'));
+    }
+  }
+
+  function openModauTwoTales(reward) {
+    var api = getModauAPI();
+    var body = openModauModal('HAI LỜI KỂ');
+    if (!body) return;
+    body.appendChild(modauEl('div', 'modau-line', 'Lão già bị tố nói:'));
+    var q1 = modauEl('div', 'modau-quote', api ? api.FAKE_LAO_GIA_LINES.meet[0] + ' ' + api.FAKE_LAO_GIA_LINES.meet[1] : '');
+    body.appendChild(q1);
+    body.appendChild(modauEl('div', 'modau-line', 'Chấp Sự nói:'));
+    var q2 = modauEl('div', 'modau-quote', api ? api.FAKE_CHAPSU_LINES.join(' ') : '');
+    body.appendChild(q2);
+    body.appendChild(modauEl('div', 'modau-note', 'Hai lời kể mâu thuẫn nhau. Thưởng giao thư: +' + (reward || 10) + ' Linh Thạch. Quay lại gặp lão già để nghe việc tiếp theo.'));
+  }
+
+  function wireModauUI() {
+    var closeX = document.getElementById('close-modau-modal');
+    if (closeX && !closeX.dataset.wired) {
+      closeX.dataset.wired = '1';
+      closeX.addEventListener('click', closeModauModal);
+    }
+    var closeBtn = document.getElementById('btn-close-modau-modal');
+    if (closeBtn && !closeBtn.dataset.wired) {
+      closeBtn.dataset.wired = '1';
+      closeBtn.addEventListener('click', closeModauModal);
+    }
+    var hmChip = document.getElementById('hud-homuoi-chip');
+    if (hmChip && !hmChip.dataset.wired) {
+      hmChip.dataset.wired = '1';
+      hmChip.addEventListener('click', function (e) {
+        e.stopPropagation();
+        openModauHoMuoi();
+      });
+    }
+  }
+
   var UIAPI = {
     init: initUI,
     update: update,
@@ -5483,6 +5891,15 @@
   UIAPI.closeBountyBoardModal = closeBountyBoardModal;
   UIAPI.openSectShopModal = openSectShopModal;
   UIAPI.closeSectShopModal = closeSectShopModal;
+  // Đợt M2: modal dùng chung phần mở đầu (engine gọi qua GameUI)
+  UIAPI.openModauShop = openModauShop;
+  UIAPI.openModauHoMuoi = openModauHoMuoi;
+  UIAPI.openModauUseChoice = openModauUseChoice;
+  UIAPI.openModauSiegeStart = openModauSiegeStart;
+  UIAPI.openModauBattlePrep = openModauBattlePrep;
+  UIAPI.openModauGiaVien = openModauGiaVien;
+  UIAPI.openModauTwoTales = openModauTwoTales;
+  UIAPI.closeModauModal = closeModauModal;
 
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = UIAPI;
