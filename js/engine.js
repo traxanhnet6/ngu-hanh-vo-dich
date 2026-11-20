@@ -9755,13 +9755,15 @@
               ctx.restore();
 
               var nImg = assets[npc.asset] || (npc.id === 'npc_linhnhi' ? assets.linhnhi : null);
-              // Đợt LINHNHI-MOVE: Linh Nhi vẽ bằng khung rig hướng nam
-              // (walk khi đang tuần tra, idle khi đứng); khung lỗi thì lùi
-              // về sprite tĩnh gốc. Áp cho cả LINH_NHI (miếu) lẫn
-              // npc_linhnhi_sect (cùng asset) — bản ở tông môn chỉ idle.
+              // Đợt LINHNHI-MOVE (nối 8 hướng): Linh Nhi vẽ bằng khung rig
+              // theo hướng đang quay mặt (walk khi đang tuần tra, idle khi
+              // đứng, giữ hướng vừa đi tới); khung lỗi/chưa nạp thì lùi về
+              // sprite tĩnh gốc. npc_linhnhi_sect (cùng asset) chỉ idle,
+              // giữ hướng nam như cũ.
               if (npc.asset === 'assets/art/npc-linhnhi.png') {
                 var lnMoving = (performance.now() / 1000 - linhnhiAnim.lastMoveT) < 0.25;
-                nImg = getLinhNhiFrame(lnMoving) || nImg;
+                var lnDir = (npc.id === 'npc_linhnhi_sect') ? 0 : linhnhiAnim.dir;
+                nImg = getLinhNhiFrame(npc.id === 'npc_linhnhi_sect' ? false : lnMoving, lnDir) || nImg;
               }
               if (nImg && nImg.complete) {
                 // NPCFIX 2026-11-09 "NPC đứng bị vỡ hình": bề rộng vẽ suy từ tỉ lệ của
@@ -10290,10 +10292,9 @@
   // comment "// Đợt M2:" tại chỗ móc.
   var modauFollower = { x: 0, y: 0, init: false, facingLeft: false };
 
-  // Đợt LINHNHI-MOVE: chuyển động rig xương Godot hướng nam cho Linh Nhi
-  // (CHƯA NGHIỆM THU). Chỉ có hướng nam vì art gốc chỉ có 1 hướng — 7
-  // hướng còn lại thiếu art nên rig không sinh được; khi tuần tra cô vẫn
-  // dùng dải nam (đi ngang sân miếu, không lật gương).
+  // Đợt LINHNHI-MOVE (nối 8 hướng): chuyển động rig xương Godot cho Linh Nhi
+  // (CHƯA NGHIỆM THU). Đủ 8 hướng: nam nạp tĩnh lúc khởi động, 7 hướng
+  // còn lại nạp lười theo hướng (xem ensureLinhNhiDirLoaded bên dưới).
   // Waypoint đã kiểm bằng mapdata.isWalkable: cả 4 điểm + 4 chặng đều
   // thông, ngoài baseRect miếu (y<=470), xa cây/đá/bụi; điểm đứng gốc
   // (700,560) là vùng chặn của chính vòng va chạm NPC nên không nằm trên
@@ -10304,19 +10305,72 @@
   };
   // Mốc thời gian (giây) lần cuối Linh Nhi dịch vị trí — dùng để phân biệt
   // walk/idle ở cả chỗ vẽ NPC đứng, chỗ vẽ follower và chỗ vẽ tuần tra.
-  var linhnhiAnim = { lastMoveT: -1000 };
+  // dir: hướng đang quay mặt (quy ước player.dir: 0 nam, 1 đông-nam,
+  // 2 đông, 3 đông-bắc, 4 bắc, 5 tây-bắc, 6 tây, 7 tây-nam) — khi đi thì
+  // bằng hướng di chuyển, khi đứng thì giữ hướng vừa đi tới.
+  var linhnhiAnim = { lastMoveT: -1000, dir: 0 };
+  // Hậu tố tên file theo dir: nam giữ tên cũ (walk-s, idle không hậu tố),
+  // 7 hướng mới theo đúng tên file trong assets/art/linhnhi/.
+  var LINHNHI_DIR_SUFFIX = ['s', 'se', 'e', 'ne', 'n', 'nw', 'w', 'sw'];
+  // Trạng thái nạp lười từng hướng (dir 1..7): 'loading' | 'loaded'.
+  // Hướng nam (dir 0) nạp tĩnh trong danh sách preload nên không có ở đây.
+  var linhnhiLazyState = {};
 
-  // Chọn khung rig theo trạng thái: đang đi → walk 8 khung @10fps
+  // Nạp lười 12 khung của một hướng (walk 8 + idle 4) khi lần đầu cần tới;
+  // cache trong assets theo đúng bí danh getLinhNhiFrame dùng. Khung nào
+  // nạp lỗi thì cứ vắng mặt — chỗ chọn khung sẽ lùi về dải nam từng khung.
+  function ensureLinhNhiDirLoaded(dir) {
+    if (!dir || dir === 0) return;
+    if (linhnhiLazyState[dir]) return;
+    if (typeof Image === 'undefined') return;
+    linhnhiLazyState[dir] = 'loading';
+    var suffix = LINHNHI_DIR_SUFFIX[dir];
+    var pending = 12;
+    var done = function () {
+      pending--;
+      if (pending <= 0) linhnhiLazyState[dir] = 'loaded';
+    };
+    var loadOne = function (url, alias) {
+      var img = new Image();
+      img.onload = function () { assets[alias] = img; done(); };
+      img.onerror = function () { done(); };
+      img.src = url;
+      assets[url] = img;
+    };
+    var i;
+    for (i = 0; i < 8; i++) {
+      loadOne('assets/art/linhnhi/linhnhi-walk-' + suffix + '-' + i + '.png',
+        'linhnhi_walk_' + suffix + '_' + i);
+    }
+    for (i = 0; i < 4; i++) {
+      loadOne('assets/art/linhnhi/linhnhi-idle-' + suffix + '-' + i + '.png',
+        'linhnhi_idle_' + suffix + '_' + i);
+    }
+  }
+
+  // Chọn khung rig theo trạng thái + hướng: đang đi → walk 8 khung @10fps
   // (frame = floor(t*10)%8); đứng yên → idle 4 khung, mỗi khung 0,6s
-  // (vòng 2,4s). Trả null khi khung chưa nạp/không có để chỗ vẽ lùi về
-  // sprite tĩnh gốc.
-  function getLinhNhiFrame(moving) {
+  // (vòng 2,4s), dải idle của hướng đang quay mặt. Hướng chưa nạp (đang
+  // nạp lười) thì lùi về dải nam để không đứng hình, không lỗi. Trả null
+  // khi cả khung hướng lẫn khung nam đều chưa nạp/không có để chỗ vẽ lùi
+  // về sprite tĩnh gốc.
+  function getLinhNhiFrame(moving, dir) {
     var t = (typeof performance !== 'undefined') ? performance.now() / 1000 : 0;
-    var key;
-    if (moving) key = 'linhnhi_walk_s_' + (Math.floor(t * 10) % 8);
-    else key = 'linhnhi_idle_' + (Math.floor(t / 0.6) % 4);
-    var img = assets[key];
+    var d = (typeof dir === 'number' && dir >= 0 && dir <= 7) ? dir : (linhnhiAnim.dir || 0);
+    var suffix = LINHNHI_DIR_SUFFIX[d];
+    var key, img;
+    if (moving) key = 'linhnhi_walk_' + suffix + '_' + (Math.floor(t * 10) % 8);
+    else if (d === 0) key = 'linhnhi_idle_' + (Math.floor(t / 0.6) % 4);
+    else key = 'linhnhi_idle_' + suffix + '_' + (Math.floor(t / 0.6) % 4);
+    img = assets[key];
     if (img && img.complete && img.naturalWidth > 0) return img;
+    if (d !== 0) {
+      ensureLinhNhiDirLoaded(d);
+      if (moving) key = 'linhnhi_walk_s_' + (Math.floor(t * 10) % 8);
+      else key = 'linhnhi_idle_' + (Math.floor(t / 0.6) % 4);
+      img = assets[key];
+      if (img && img.complete && img.naturalWidth > 0) return img;
+    }
     return null;
   }
   var modauSiegeRestTimer = 0;
@@ -10396,6 +10450,7 @@
       modauFollower.x += (dx / dist) * step;
       modauFollower.y += (dy / dist) * step;
       linhnhiAnim.lastMoveT = performance.now() / 1000; // Đợt LINHNHI-MOVE
+      linhnhiAnim.dir = getDirFromVelocity(dx, dy); // nối 8 hướng: mặt theo vận tốc
       if (dx < -2) modauFollower.facingLeft = true;
       else if (dx > 2) modauFollower.facingLeft = false;
     }
@@ -10432,6 +10487,9 @@
     var ny = ln.feetY + (dy / dist) * step;
     if (Math.abs(nx - ln.feetX) > 0.5 || Math.abs(ny - ln.feetY) > 0.5) {
       linhnhiAnim.lastMoveT = performance.now() / 1000;
+      // Nối 8 hướng: mặt theo vận tốc chặng đang đi; khi idle ở waypoint
+      // thì giữ nguyên linhnhiAnim.dir (quay mặt theo hướng vừa đi tới).
+      linhnhiAnim.dir = getDirFromVelocity(dx, dy);
     }
     ln.feetX = nx;
     ln.feetY = ny;
@@ -11075,9 +11133,10 @@
   }
 
   function drawLinhNhiFollower() {
-    // Đợt LINHNHI-MOVE: follower cũng dùng khung rig (walk/idle theo trạng thái).
+    // Đợt LINHNHI-MOVE (nối 8 hướng): follower dùng khung rig theo hướng
+    // vận tốc (walk/idle theo trạng thái, idle giữ hướng vừa đi tới).
     var lnMovingF = (performance.now() / 1000 - linhnhiAnim.lastMoveT) < 0.25;
-    var img = getLinhNhiFrame(lnMovingF) || assets.linhnhi || assets['assets/art/npc-linhnhi.png'];
+    var img = getLinhNhiFrame(lnMovingF, linhnhiAnim.dir) || assets.linhnhi || assets['assets/art/npc-linhnhi.png'];
     ctx.save();
     ctx.fillStyle = 'rgba(10, 15, 10, 0.4)';
     ctx.beginPath();
