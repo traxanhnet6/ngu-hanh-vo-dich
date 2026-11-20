@@ -1,0 +1,97 @@
+{
+ "hiddenInnerText": {
+  "hidden": true,
+  "innerTextLen": 123,
+  "innerTextHead": "\n        \n        \n          Linh Nhi\n          ...\n          \n          Bấm hoặ"
+ },
+ "tap1": {
+  "label": "tap1-touch",
+  "openedAt": -1,
+  "after": {
+   "player": {
+    "x": 651,
+    "y": 547
+   },
+   "dlgOpen": false,
+   "dlgText": "\n        \n        \n          Linh Nhi\n          ...\n          \n          Bấm hoặc nhấn Space để tiếp tục...\n        \n      "
+  }
+ },
+ "tap2": {
+  "label": "tap2-touch-retry",
+  "openedAt": 1,
+  "after": {
+   "player": {
+    "x": 756,
+    "y": 540
+   },
+   "dlgOpen": true,
+   "dlgText": "Linh Nhi\nCa ca... ca ca thực sự muốn bái nhập Thanh Vân Tông sao?\nBấm hoặc nhấn Space để tiếp tục..."
+  }
+ },
+ "dialogueClosed": true,
+ "feedSetup": {
+  "prevStep": "chop",
+  "nowStep": "feed"
+ },
+ "bangShots": [
+  {
+   "ln": {
+    "x": 579.5061626086532,
+    "y": 386.83967376460674
+   },
+   "sx": 245.13050437738423,
+   "sy": 453.4620620240668
+  },
+  {
+   "ln": {
+    "x": 719.0977904273024,
+    "y": 483.22497933820233
+   },
+   "sx": 153.41217255550234,
+   "sy": 356.65047158292214
+  },
+  {
+   "ln": {
+    "x": 721.1034690754277,
+    "y": 494.54405502133403
+   },
+   "sx": 154.0976824089507,
+   "sy": 368.2240007804354
+  }
+ ],
+ "buy": {
+  "buy": {
+   "ok": true,
+   "count": 1,
+   "cost": 2,
+   "advanced": false
+  },
+  "bunCount": 1,
+  "anNo": 60,
+  "step": "feed"
+ },
+ "hmOpened": true,
+ "feedBtn": {
+  "found": true,
+  "disabled": false,
+  "rect": {
+   "x": 269.78125,
+   "y": 453,
+   "w": 56.890625,
+   "h": 44
+  },
+  "rowText": "Cho Bánh Bao (+25 Ăn No) (có 1)Chọn"
+ },
+ "feedBefore": {
+  "anNo": 60,
+  "bun": 1,
+  "step": "feed"
+ },
+ "feedAfter": {
+  "anNo": 85,
+  "bun": 0,
+  "step": "matam1",
+  "toast": "Đã cho Linh Nhi Bánh Bao. Nhiệm vụ mới: Ép Giá Ở Chợ.",
+  "modalText": "HỘ MUỘI — LINH NHI\n×\nBa chỉ số giảm dần theo thời gian. Không gây chết hay chặn nhiệm vụ — chỉ đổi lời thoại của Linh Nhi và khóa/mở chuyện cô bé kể.\nĂn No\n85/100\nẤm\n60/100\nKhỏe\n60/100\nCột mốc gần nhất: cả ba chỉ số đạt 90 — Linh Nhi sẽ kể chuyện chiếc trâm.\nCho Bánh Bao (+25 Ăn No) (có 0) — không c"
+ }
+}

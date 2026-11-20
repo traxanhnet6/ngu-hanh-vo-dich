@@ -1,0 +1,2044 @@
+{
+ "generated_by": "linhnhi-rig-2x-lanczos",
+ "status": "CHUA NGHIEM THU",
+ "character": "Linh Nhi",
+ "frame": {
+  "w": 221,
+  "h": 560
+ },
+ "ground": {
+  "x": 110,
+  "y": 558
+ },
+ "render": "Godot 4.5.1 Skeleton2D rig, 2x supersample, Linear filter, Lanczos downsample",
+ "blink": "NOT POSSIBLE - eyes are painted on the face piece",
+ "frames": [
+  {
+   "name": "linhnhi-idle-0",
+   "strip": "linhnhi-idle",
+   "anim": "idle",
+   "index": 0,
+   "direction": "south",
+   "fps": 4,
+   "file": "export/linhnhi-idle-0.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 3,
+    "x_max": 217,
+    "y_min": 3,
+    "y_max": 559
+   }
+  },
+  {
+   "name": "linhnhi-idle-1",
+   "strip": "linhnhi-idle",
+   "anim": "idle",
+   "index": 1,
+   "direction": "south",
+   "fps": 4,
+   "file": "export/linhnhi-idle-1.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 3,
+    "x_max": 217,
+    "y_min": 1,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-idle-2",
+   "strip": "linhnhi-idle",
+   "anim": "idle",
+   "index": 2,
+   "direction": "south",
+   "fps": 4,
+   "file": "export/linhnhi-idle-2.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 3,
+    "x_max": 217,
+    "y_min": 3,
+    "y_max": 559
+   }
+  },
+  {
+   "name": "linhnhi-idle-3",
+   "strip": "linhnhi-idle",
+   "anim": "idle",
+   "index": 3,
+   "direction": "south",
+   "fps": 4,
+   "file": "export/linhnhi-idle-3.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 3,
+    "x_max": 217,
+    "y_min": 3,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-idle-n-0",
+   "strip": "linhnhi-idle-n",
+   "anim": "idle",
+   "index": 0,
+   "direction": "n",
+   "fps": 4,
+   "file": "export/linhnhi-idle-n-0.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 2,
+    "x_max": 218,
+    "y_min": 3,
+    "y_max": 559
+   }
+  },
+  {
+   "name": "linhnhi-idle-n-1",
+   "strip": "linhnhi-idle-n",
+   "anim": "idle",
+   "index": 1,
+   "direction": "n",
+   "fps": 4,
+   "file": "export/linhnhi-idle-n-1.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 2,
+    "x_max": 218,
+    "y_min": 1,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-idle-n-2",
+   "strip": "linhnhi-idle-n",
+   "anim": "idle",
+   "index": 2,
+   "direction": "n",
+   "fps": 4,
+   "file": "export/linhnhi-idle-n-2.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 2,
+    "x_max": 218,
+    "y_min": 3,
+    "y_max": 559
+   }
+  },
+  {
+   "name": "linhnhi-idle-n-3",
+   "strip": "linhnhi-idle-n",
+   "anim": "idle",
+   "index": 3,
+   "direction": "n",
+   "fps": 4,
+   "file": "export/linhnhi-idle-n-3.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 2,
+    "x_max": 218,
+    "y_min": 3,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-idle-ne-0",
+   "strip": "linhnhi-idle-ne",
+   "anim": "idle",
+   "index": 0,
+   "direction": "ne",
+   "fps": 4,
+   "file": "export/linhnhi-idle-ne-0.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 6,
+    "x_max": 214,
+    "y_min": 2,
+    "y_max": 559
+   }
+  },
+  {
+   "name": "linhnhi-idle-ne-1",
+   "strip": "linhnhi-idle-ne",
+   "anim": "idle",
+   "index": 1,
+   "direction": "ne",
+   "fps": 4,
+   "file": "export/linhnhi-idle-ne-1.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 6,
+    "x_max": 214,
+    "y_min": 0,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-idle-ne-2",
+   "strip": "linhnhi-idle-ne",
+   "anim": "idle",
+   "index": 2,
+   "direction": "ne",
+   "fps": 4,
+   "file": "export/linhnhi-idle-ne-2.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 6,
+    "x_max": 214,
+    "y_min": 2,
+    "y_max": 559
+   }
+  },
+  {
+   "name": "linhnhi-idle-ne-3",
+   "strip": "linhnhi-idle-ne",
+   "anim": "idle",
+   "index": 3,
+   "direction": "ne",
+   "fps": 4,
+   "file": "export/linhnhi-idle-ne-3.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 6,
+    "x_max": 214,
+    "y_min": 2,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-walk-n-0",
+   "strip": "linhnhi-walk-n",
+   "anim": "walk",
+   "index": 0,
+   "direction": "n",
+   "fps": 10,
+   "file": "export/linhnhi-walk-n-0.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 2,
+    "x_max": 218,
+    "y_min": 3,
+    "y_max": 559
+   }
+  },
+  {
+   "name": "linhnhi-walk-n-1",
+   "strip": "linhnhi-walk-n",
+   "anim": "walk",
+   "index": 1,
+   "direction": "n",
+   "fps": 10,
+   "file": "export/linhnhi-walk-n-1.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 3,
+    "x_max": 219,
+    "y_min": 2,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-walk-n-2",
+   "strip": "linhnhi-walk-n",
+   "anim": "walk",
+   "index": 2,
+   "direction": "n",
+   "fps": 10,
+   "file": "export/linhnhi-walk-n-2.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 4,
+    "x_max": 220,
+    "y_min": 1,
+    "y_max": 557
+   }
+  },
+  {
+   "name": "linhnhi-walk-n-3",
+   "strip": "linhnhi-walk-n",
+   "anim": "walk",
+   "index": 3,
+   "direction": "n",
+   "fps": 10,
+   "file": "export/linhnhi-walk-n-3.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 3,
+    "x_max": 219,
+    "y_min": 2,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-walk-n-4",
+   "strip": "linhnhi-walk-n",
+   "anim": "walk",
+   "index": 4,
+   "direction": "n",
+   "fps": 10,
+   "file": "export/linhnhi-walk-n-4.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 2,
+    "x_max": 218,
+    "y_min": 3,
+    "y_max": 559
+   }
+  },
+  {
+   "name": "linhnhi-walk-n-5",
+   "strip": "linhnhi-walk-n",
+   "anim": "walk",
+   "index": 5,
+   "direction": "n",
+   "fps": 10,
+   "file": "export/linhnhi-walk-n-5.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 1,
+    "x_max": 218,
+    "y_min": 2,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-walk-n-6",
+   "strip": "linhnhi-walk-n",
+   "anim": "walk",
+   "index": 6,
+   "direction": "n",
+   "fps": 10,
+   "file": "export/linhnhi-walk-n-6.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 0,
+    "x_max": 220,
+    "y_min": 1,
+    "y_max": 557
+   }
+  },
+  {
+   "name": "linhnhi-walk-n-7",
+   "strip": "linhnhi-walk-n",
+   "anim": "walk",
+   "index": 7,
+   "direction": "n",
+   "fps": 10,
+   "file": "export/linhnhi-walk-n-7.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 1,
+    "x_max": 218,
+    "y_min": 2,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-walk-ne-0",
+   "strip": "linhnhi-walk-ne",
+   "anim": "walk",
+   "index": 0,
+   "direction": "ne",
+   "fps": 10,
+   "file": "export/linhnhi-walk-ne-0.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 6,
+    "x_max": 214,
+    "y_min": 2,
+    "y_max": 559
+   }
+  },
+  {
+   "name": "linhnhi-walk-ne-1",
+   "strip": "linhnhi-walk-ne",
+   "anim": "walk",
+   "index": 1,
+   "direction": "ne",
+   "fps": 10,
+   "file": "export/linhnhi-walk-ne-1.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 7,
+    "x_max": 215,
+    "y_min": 1,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-walk-ne-2",
+   "strip": "linhnhi-walk-ne",
+   "anim": "walk",
+   "index": 2,
+   "direction": "ne",
+   "fps": 10,
+   "file": "export/linhnhi-walk-ne-2.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 8,
+    "x_max": 216,
+    "y_min": 0,
+    "y_max": 557
+   }
+  },
+  {
+   "name": "linhnhi-walk-ne-3",
+   "strip": "linhnhi-walk-ne",
+   "anim": "walk",
+   "index": 3,
+   "direction": "ne",
+   "fps": 10,
+   "file": "export/linhnhi-walk-ne-3.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 7,
+    "x_max": 215,
+    "y_min": 1,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-walk-ne-4",
+   "strip": "linhnhi-walk-ne",
+   "anim": "walk",
+   "index": 4,
+   "direction": "ne",
+   "fps": 10,
+   "file": "export/linhnhi-walk-ne-4.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 6,
+    "x_max": 214,
+    "y_min": 2,
+    "y_max": 559
+   }
+  },
+  {
+   "name": "linhnhi-walk-ne-5",
+   "strip": "linhnhi-walk-ne",
+   "anim": "walk",
+   "index": 5,
+   "direction": "ne",
+   "fps": 10,
+   "file": "export/linhnhi-walk-ne-5.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 5,
+    "x_max": 215,
+    "y_min": 1,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-walk-ne-6",
+   "strip": "linhnhi-walk-ne",
+   "anim": "walk",
+   "index": 6,
+   "direction": "ne",
+   "fps": 10,
+   "file": "export/linhnhi-walk-ne-6.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 4,
+    "x_max": 217,
+    "y_min": 0,
+    "y_max": 557
+   }
+  },
+  {
+   "name": "linhnhi-walk-ne-7",
+   "strip": "linhnhi-walk-ne",
+   "anim": "walk",
+   "index": 7,
+   "direction": "ne",
+   "fps": 10,
+   "file": "export/linhnhi-walk-ne-7.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 5,
+    "x_max": 215,
+    "y_min": 1,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-walk-s-0",
+   "strip": "linhnhi-walk-s",
+   "anim": "walk",
+   "index": 0,
+   "direction": "south",
+   "fps": 10,
+   "file": "export/linhnhi-walk-s-0.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 3,
+    "x_max": 217,
+    "y_min": 3,
+    "y_max": 559
+   }
+  },
+  {
+   "name": "linhnhi-walk-s-1",
+   "strip": "linhnhi-walk-s",
+   "anim": "walk",
+   "index": 1,
+   "direction": "south",
+   "fps": 10,
+   "file": "export/linhnhi-walk-s-1.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 4,
+    "x_max": 218,
+    "y_min": 2,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-walk-s-2",
+   "strip": "linhnhi-walk-s",
+   "anim": "walk",
+   "index": 2,
+   "direction": "south",
+   "fps": 10,
+   "file": "export/linhnhi-walk-s-2.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 5,
+    "x_max": 219,
+    "y_min": 1,
+    "y_max": 557
+   }
+  },
+  {
+   "name": "linhnhi-walk-s-3",
+   "strip": "linhnhi-walk-s",
+   "anim": "walk",
+   "index": 3,
+   "direction": "south",
+   "fps": 10,
+   "file": "export/linhnhi-walk-s-3.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 4,
+    "x_max": 218,
+    "y_min": 2,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-walk-s-4",
+   "strip": "linhnhi-walk-s",
+   "anim": "walk",
+   "index": 4,
+   "direction": "south",
+   "fps": 10,
+   "file": "export/linhnhi-walk-s-4.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 3,
+    "x_max": 217,
+    "y_min": 3,
+    "y_max": 559
+   }
+  },
+  {
+   "name": "linhnhi-walk-s-5",
+   "strip": "linhnhi-walk-s",
+   "anim": "walk",
+   "index": 5,
+   "direction": "south",
+   "fps": 10,
+   "file": "export/linhnhi-walk-s-5.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 2,
+    "x_max": 218,
+    "y_min": 2,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-walk-s-6",
+   "strip": "linhnhi-walk-s",
+   "anim": "walk",
+   "index": 6,
+   "direction": "south",
+   "fps": 10,
+   "file": "export/linhnhi-walk-s-6.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 0,
+    "x_max": 220,
+    "y_min": 1,
+    "y_max": 557
+   }
+  },
+  {
+   "name": "linhnhi-walk-s-7",
+   "strip": "linhnhi-walk-s",
+   "anim": "walk",
+   "index": 7,
+   "direction": "south",
+   "fps": 10,
+   "file": "export/linhnhi-walk-s-7.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 2,
+    "x_max": 218,
+    "y_min": 2,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-walk-e-0",
+   "strip": "linhnhi-walk-e",
+   "anim": "walk",
+   "index": 0,
+   "direction": "e",
+   "fps": 10,
+   "file": "export/linhnhi-walk-e-0.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 14,
+    "x_max": 208,
+    "y_min": 2,
+    "y_max": 559
+   }
+  },
+  {
+   "name": "linhnhi-walk-e-1",
+   "strip": "linhnhi-walk-e",
+   "anim": "walk",
+   "index": 1,
+   "direction": "e",
+   "fps": 10,
+   "file": "export/linhnhi-walk-e-1.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 15,
+    "x_max": 209,
+    "y_min": 2,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-walk-e-2",
+   "strip": "linhnhi-walk-e",
+   "anim": "walk",
+   "index": 2,
+   "direction": "e",
+   "fps": 10,
+   "file": "export/linhnhi-walk-e-2.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 16,
+    "x_max": 210,
+    "y_min": 1,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-walk-e-3",
+   "strip": "linhnhi-walk-e",
+   "anim": "walk",
+   "index": 3,
+   "direction": "e",
+   "fps": 10,
+   "file": "export/linhnhi-walk-e-3.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 15,
+    "x_max": 209,
+    "y_min": 2,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-walk-e-4",
+   "strip": "linhnhi-walk-e",
+   "anim": "walk",
+   "index": 4,
+   "direction": "e",
+   "fps": 10,
+   "file": "export/linhnhi-walk-e-4.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 14,
+    "x_max": 208,
+    "y_min": 2,
+    "y_max": 559
+   }
+  },
+  {
+   "name": "linhnhi-walk-e-5",
+   "strip": "linhnhi-walk-e",
+   "anim": "walk",
+   "index": 5,
+   "direction": "e",
+   "fps": 10,
+   "file": "export/linhnhi-walk-e-5.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 13,
+    "x_max": 207,
+    "y_min": 2,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-walk-e-6",
+   "strip": "linhnhi-walk-e",
+   "anim": "walk",
+   "index": 6,
+   "direction": "e",
+   "fps": 10,
+   "file": "export/linhnhi-walk-e-6.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 12,
+    "x_max": 206,
+    "y_min": 1,
+    "y_max": 557
+   }
+  },
+  {
+   "name": "linhnhi-walk-e-7",
+   "strip": "linhnhi-walk-e",
+   "anim": "walk",
+   "index": 7,
+   "direction": "e",
+   "fps": 10,
+   "file": "export/linhnhi-walk-e-7.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 13,
+    "x_max": 207,
+    "y_min": 2,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-idle-e-0",
+   "strip": "linhnhi-idle-e",
+   "anim": "idle",
+   "index": 0,
+   "direction": "e",
+   "fps": 4,
+   "file": "export/linhnhi-idle-e-0.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 14,
+    "x_max": 208,
+    "y_min": 2,
+    "y_max": 559
+   }
+  },
+  {
+   "name": "linhnhi-idle-e-1",
+   "strip": "linhnhi-idle-e",
+   "anim": "idle",
+   "index": 1,
+   "direction": "e",
+   "fps": 4,
+   "file": "export/linhnhi-idle-e-1.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 14,
+    "x_max": 208,
+    "y_min": 0,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-idle-e-2",
+   "strip": "linhnhi-idle-e",
+   "anim": "idle",
+   "index": 2,
+   "direction": "e",
+   "fps": 4,
+   "file": "export/linhnhi-idle-e-2.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 14,
+    "x_max": 208,
+    "y_min": 2,
+    "y_max": 559
+   }
+  },
+  {
+   "name": "linhnhi-idle-e-3",
+   "strip": "linhnhi-idle-e",
+   "anim": "idle",
+   "index": 3,
+   "direction": "e",
+   "fps": 4,
+   "file": "export/linhnhi-idle-e-3.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 14,
+    "x_max": 208,
+    "y_min": 2,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-walk-se-0",
+   "strip": "linhnhi-walk-se",
+   "anim": "walk",
+   "index": 0,
+   "direction": "se",
+   "fps": 10,
+   "file": "export/linhnhi-walk-se-0.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 9,
+    "x_max": 212,
+    "y_min": 3,
+    "y_max": 559
+   }
+  },
+  {
+   "name": "linhnhi-walk-se-1",
+   "strip": "linhnhi-walk-se",
+   "anim": "walk",
+   "index": 1,
+   "direction": "se",
+   "fps": 10,
+   "file": "export/linhnhi-walk-se-1.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 10,
+    "x_max": 213,
+    "y_min": 2,
+    "y_max": 557
+   }
+  },
+  {
+   "name": "linhnhi-walk-se-2",
+   "strip": "linhnhi-walk-se",
+   "anim": "walk",
+   "index": 2,
+   "direction": "se",
+   "fps": 10,
+   "file": "export/linhnhi-walk-se-2.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 11,
+    "x_max": 214,
+    "y_min": 2,
+    "y_max": 557
+   }
+  },
+  {
+   "name": "linhnhi-walk-se-3",
+   "strip": "linhnhi-walk-se",
+   "anim": "walk",
+   "index": 3,
+   "direction": "se",
+   "fps": 10,
+   "file": "export/linhnhi-walk-se-3.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 10,
+    "x_max": 213,
+    "y_min": 2,
+    "y_max": 557
+   }
+  },
+  {
+   "name": "linhnhi-walk-se-4",
+   "strip": "linhnhi-walk-se",
+   "anim": "walk",
+   "index": 4,
+   "direction": "se",
+   "fps": 10,
+   "file": "export/linhnhi-walk-se-4.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 9,
+    "x_max": 212,
+    "y_min": 3,
+    "y_max": 559
+   }
+  },
+  {
+   "name": "linhnhi-walk-se-5",
+   "strip": "linhnhi-walk-se",
+   "anim": "walk",
+   "index": 5,
+   "direction": "se",
+   "fps": 10,
+   "file": "export/linhnhi-walk-se-5.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 8,
+    "x_max": 214,
+    "y_min": 2,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-walk-se-6",
+   "strip": "linhnhi-walk-se",
+   "anim": "walk",
+   "index": 6,
+   "direction": "se",
+   "fps": 10,
+   "file": "export/linhnhi-walk-se-6.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 7,
+    "x_max": 216,
+    "y_min": 2,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-walk-se-7",
+   "strip": "linhnhi-walk-se",
+   "anim": "walk",
+   "index": 7,
+   "direction": "se",
+   "fps": 10,
+   "file": "export/linhnhi-walk-se-7.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 8,
+    "x_max": 214,
+    "y_min": 2,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-idle-se-0",
+   "strip": "linhnhi-idle-se",
+   "anim": "idle",
+   "index": 0,
+   "direction": "se",
+   "fps": 4,
+   "file": "export/linhnhi-idle-se-0.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 9,
+    "x_max": 212,
+    "y_min": 3,
+    "y_max": 559
+   }
+  },
+  {
+   "name": "linhnhi-idle-se-1",
+   "strip": "linhnhi-idle-se",
+   "anim": "idle",
+   "index": 1,
+   "direction": "se",
+   "fps": 4,
+   "file": "export/linhnhi-idle-se-1.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 9,
+    "x_max": 212,
+    "y_min": 1,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-idle-se-2",
+   "strip": "linhnhi-idle-se",
+   "anim": "idle",
+   "index": 2,
+   "direction": "se",
+   "fps": 4,
+   "file": "export/linhnhi-idle-se-2.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 9,
+    "x_max": 212,
+    "y_min": 3,
+    "y_max": 559
+   }
+  },
+  {
+   "name": "linhnhi-idle-se-3",
+   "strip": "linhnhi-idle-se",
+   "anim": "idle",
+   "index": 3,
+   "direction": "se",
+   "fps": 4,
+   "file": "export/linhnhi-idle-se-3.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 9,
+    "x_max": 212,
+    "y_min": 3,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-walk-sw-0",
+   "strip": "linhnhi-walk-sw",
+   "anim": "walk",
+   "index": 0,
+   "direction": "sw",
+   "fps": 10,
+   "file": "export/linhnhi-walk-sw-0.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 6,
+    "x_max": 213,
+    "y_min": 2,
+    "y_max": 559
+   }
+  },
+  {
+   "name": "linhnhi-walk-sw-1",
+   "strip": "linhnhi-walk-sw",
+   "anim": "walk",
+   "index": 1,
+   "direction": "sw",
+   "fps": 10,
+   "file": "export/linhnhi-walk-sw-1.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 7,
+    "x_max": 214,
+    "y_min": 2,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-walk-sw-2",
+   "strip": "linhnhi-walk-sw",
+   "anim": "walk",
+   "index": 2,
+   "direction": "sw",
+   "fps": 10,
+   "file": "export/linhnhi-walk-sw-2.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 8,
+    "x_max": 215,
+    "y_min": 1,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-walk-sw-3",
+   "strip": "linhnhi-walk-sw",
+   "anim": "walk",
+   "index": 3,
+   "direction": "sw",
+   "fps": 10,
+   "file": "export/linhnhi-walk-sw-3.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 7,
+    "x_max": 214,
+    "y_min": 2,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-walk-sw-4",
+   "strip": "linhnhi-walk-sw",
+   "anim": "walk",
+   "index": 4,
+   "direction": "sw",
+   "fps": 10,
+   "file": "export/linhnhi-walk-sw-4.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 6,
+    "x_max": 213,
+    "y_min": 2,
+    "y_max": 559
+   }
+  },
+  {
+   "name": "linhnhi-walk-sw-5",
+   "strip": "linhnhi-walk-sw",
+   "anim": "walk",
+   "index": 5,
+   "direction": "sw",
+   "fps": 10,
+   "file": "export/linhnhi-walk-sw-5.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 5,
+    "x_max": 212,
+    "y_min": 2,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-walk-sw-6",
+   "strip": "linhnhi-walk-sw",
+   "anim": "walk",
+   "index": 6,
+   "direction": "sw",
+   "fps": 10,
+   "file": "export/linhnhi-walk-sw-6.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 4,
+    "x_max": 211,
+    "y_min": 1,
+    "y_max": 557
+   }
+  },
+  {
+   "name": "linhnhi-walk-sw-7",
+   "strip": "linhnhi-walk-sw",
+   "anim": "walk",
+   "index": 7,
+   "direction": "sw",
+   "fps": 10,
+   "file": "export/linhnhi-walk-sw-7.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 5,
+    "x_max": 212,
+    "y_min": 2,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-idle-sw-0",
+   "strip": "linhnhi-idle-sw",
+   "anim": "idle",
+   "index": 0,
+   "direction": "sw",
+   "fps": 4,
+   "file": "export/linhnhi-idle-sw-0.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 6,
+    "x_max": 213,
+    "y_min": 2,
+    "y_max": 559
+   }
+  },
+  {
+   "name": "linhnhi-idle-sw-1",
+   "strip": "linhnhi-idle-sw",
+   "anim": "idle",
+   "index": 1,
+   "direction": "sw",
+   "fps": 4,
+   "file": "export/linhnhi-idle-sw-1.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 6,
+    "x_max": 213,
+    "y_min": 0,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-idle-sw-2",
+   "strip": "linhnhi-idle-sw",
+   "anim": "idle",
+   "index": 2,
+   "direction": "sw",
+   "fps": 4,
+   "file": "export/linhnhi-idle-sw-2.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 6,
+    "x_max": 213,
+    "y_min": 2,
+    "y_max": 559
+   }
+  },
+  {
+   "name": "linhnhi-idle-sw-3",
+   "strip": "linhnhi-idle-sw",
+   "anim": "idle",
+   "index": 3,
+   "direction": "sw",
+   "fps": 4,
+   "file": "export/linhnhi-idle-sw-3.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 6,
+    "x_max": 213,
+    "y_min": 2,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-walk-w-0",
+   "strip": "linhnhi-walk-w",
+   "anim": "walk",
+   "index": 0,
+   "direction": "w",
+   "fps": 10,
+   "file": "export/linhnhi-walk-w-0.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 6,
+    "x_max": 213,
+    "y_min": 2,
+    "y_max": 559
+   }
+  },
+  {
+   "name": "linhnhi-walk-w-1",
+   "strip": "linhnhi-walk-w",
+   "anim": "walk",
+   "index": 1,
+   "direction": "w",
+   "fps": 10,
+   "file": "export/linhnhi-walk-w-1.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 7,
+    "x_max": 214,
+    "y_min": 2,
+    "y_max": 557
+   }
+  },
+  {
+   "name": "linhnhi-walk-w-2",
+   "strip": "linhnhi-walk-w",
+   "anim": "walk",
+   "index": 2,
+   "direction": "w",
+   "fps": 10,
+   "file": "export/linhnhi-walk-w-2.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 8,
+    "x_max": 215,
+    "y_min": 1,
+    "y_max": 557
+   }
+  },
+  {
+   "name": "linhnhi-walk-w-3",
+   "strip": "linhnhi-walk-w",
+   "anim": "walk",
+   "index": 3,
+   "direction": "w",
+   "fps": 10,
+   "file": "export/linhnhi-walk-w-3.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 7,
+    "x_max": 214,
+    "y_min": 2,
+    "y_max": 557
+   }
+  },
+  {
+   "name": "linhnhi-walk-w-4",
+   "strip": "linhnhi-walk-w",
+   "anim": "walk",
+   "index": 4,
+   "direction": "w",
+   "fps": 10,
+   "file": "export/linhnhi-walk-w-4.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 6,
+    "x_max": 213,
+    "y_min": 2,
+    "y_max": 559
+   }
+  },
+  {
+   "name": "linhnhi-walk-w-5",
+   "strip": "linhnhi-walk-w",
+   "anim": "walk",
+   "index": 5,
+   "direction": "w",
+   "fps": 10,
+   "file": "export/linhnhi-walk-w-5.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 5,
+    "x_max": 212,
+    "y_min": 2,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-walk-w-6",
+   "strip": "linhnhi-walk-w",
+   "anim": "walk",
+   "index": 6,
+   "direction": "w",
+   "fps": 10,
+   "file": "export/linhnhi-walk-w-6.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 4,
+    "x_max": 211,
+    "y_min": 1,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-walk-w-7",
+   "strip": "linhnhi-walk-w",
+   "anim": "walk",
+   "index": 7,
+   "direction": "w",
+   "fps": 10,
+   "file": "export/linhnhi-walk-w-7.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 5,
+    "x_max": 212,
+    "y_min": 2,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-idle-w-0",
+   "strip": "linhnhi-idle-w",
+   "anim": "idle",
+   "index": 0,
+   "direction": "w",
+   "fps": 4,
+   "file": "export/linhnhi-idle-w-0.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 6,
+    "x_max": 213,
+    "y_min": 2,
+    "y_max": 559
+   }
+  },
+  {
+   "name": "linhnhi-idle-w-1",
+   "strip": "linhnhi-idle-w",
+   "anim": "idle",
+   "index": 1,
+   "direction": "w",
+   "fps": 4,
+   "file": "export/linhnhi-idle-w-1.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 6,
+    "x_max": 213,
+    "y_min": 0,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-idle-w-2",
+   "strip": "linhnhi-idle-w",
+   "anim": "idle",
+   "index": 2,
+   "direction": "w",
+   "fps": 4,
+   "file": "export/linhnhi-idle-w-2.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 6,
+    "x_max": 213,
+    "y_min": 2,
+    "y_max": 559
+   }
+  },
+  {
+   "name": "linhnhi-idle-w-3",
+   "strip": "linhnhi-idle-w",
+   "anim": "idle",
+   "index": 3,
+   "direction": "w",
+   "fps": 4,
+   "file": "export/linhnhi-idle-w-3.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 6,
+    "x_max": 213,
+    "y_min": 2,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-walk-nw-0",
+   "strip": "linhnhi-walk-nw",
+   "anim": "walk",
+   "index": 0,
+   "direction": "nw",
+   "fps": 10,
+   "file": "export/linhnhi-walk-nw-0.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 3,
+    "x_max": 216,
+    "y_min": 3,
+    "y_max": 559
+   }
+  },
+  {
+   "name": "linhnhi-walk-nw-1",
+   "strip": "linhnhi-walk-nw",
+   "anim": "walk",
+   "index": 1,
+   "direction": "nw",
+   "fps": 10,
+   "file": "export/linhnhi-walk-nw-1.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 4,
+    "x_max": 217,
+    "y_min": 2,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-walk-nw-2",
+   "strip": "linhnhi-walk-nw",
+   "anim": "walk",
+   "index": 2,
+   "direction": "nw",
+   "fps": 10,
+   "file": "export/linhnhi-walk-nw-2.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 5,
+    "x_max": 218,
+    "y_min": 2,
+    "y_max": 557
+   }
+  },
+  {
+   "name": "linhnhi-walk-nw-3",
+   "strip": "linhnhi-walk-nw",
+   "anim": "walk",
+   "index": 3,
+   "direction": "nw",
+   "fps": 10,
+   "file": "export/linhnhi-walk-nw-3.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 4,
+    "x_max": 217,
+    "y_min": 2,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-walk-nw-4",
+   "strip": "linhnhi-walk-nw",
+   "anim": "walk",
+   "index": 4,
+   "direction": "nw",
+   "fps": 10,
+   "file": "export/linhnhi-walk-nw-4.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 3,
+    "x_max": 216,
+    "y_min": 3,
+    "y_max": 559
+   }
+  },
+  {
+   "name": "linhnhi-walk-nw-5",
+   "strip": "linhnhi-walk-nw",
+   "anim": "walk",
+   "index": 5,
+   "direction": "nw",
+   "fps": 10,
+   "file": "export/linhnhi-walk-nw-5.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 2,
+    "x_max": 217,
+    "y_min": 2,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-walk-nw-6",
+   "strip": "linhnhi-walk-nw",
+   "anim": "walk",
+   "index": 6,
+   "direction": "nw",
+   "fps": 10,
+   "file": "export/linhnhi-walk-nw-6.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 1,
+    "x_max": 219,
+    "y_min": 2,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-walk-nw-7",
+   "strip": "linhnhi-walk-nw",
+   "anim": "walk",
+   "index": 7,
+   "direction": "nw",
+   "fps": 10,
+   "file": "export/linhnhi-walk-nw-7.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 2,
+    "x_max": 217,
+    "y_min": 2,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-idle-nw-0",
+   "strip": "linhnhi-idle-nw",
+   "anim": "idle",
+   "index": 0,
+   "direction": "nw",
+   "fps": 4,
+   "file": "export/linhnhi-idle-nw-0.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 3,
+    "x_max": 216,
+    "y_min": 3,
+    "y_max": 559
+   }
+  },
+  {
+   "name": "linhnhi-idle-nw-1",
+   "strip": "linhnhi-idle-nw",
+   "anim": "idle",
+   "index": 1,
+   "direction": "nw",
+   "fps": 4,
+   "file": "export/linhnhi-idle-nw-1.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 3,
+    "x_max": 216,
+    "y_min": 1,
+    "y_max": 558
+   }
+  },
+  {
+   "name": "linhnhi-idle-nw-2",
+   "strip": "linhnhi-idle-nw",
+   "anim": "idle",
+   "index": 2,
+   "direction": "nw",
+   "fps": 4,
+   "file": "export/linhnhi-idle-nw-2.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 3,
+    "x_max": 216,
+    "y_min": 3,
+    "y_max": 559
+   }
+  },
+  {
+   "name": "linhnhi-idle-nw-3",
+   "strip": "linhnhi-idle-nw",
+   "anim": "idle",
+   "index": 3,
+   "direction": "nw",
+   "fps": 4,
+   "file": "export/linhnhi-idle-nw-3.png",
+   "w": 221,
+   "h": 560,
+   "pivot": {
+    "x": 110,
+    "y": 558
+   },
+   "bbox": {
+    "x_min": 3,
+    "x_max": 216,
+    "y_min": 3,
+    "y_max": 558
+   }
+  }
+ ],
+ "direction": "south",
+ "directions": [
+  "e",
+  "n",
+  "ne",
+  "nw",
+  "se",
+  "south",
+  "sw",
+  "w"
+ ]
+}

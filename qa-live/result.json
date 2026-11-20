@@ -1,0 +1,67 @@
+{
+ "base": {
+  "player": {
+   "x": 560,
+   "y": 620
+  },
+  "modauStep": "chop",
+  "linhNhiFollows": false,
+  "lnPos": {
+   "x": 621.2904071920076,
+   "y": 599.3547964039963
+  },
+  "cam": {
+   "x": 393.6492890995261,
+   "y": 260,
+   "scale": 1.1722222222222223,
+   "viewportW": 332.70142180094786,
+   "viewportH": 720
+  },
+  "playSec": null
+ },
+ "afterTp": {
+  "player": {
+   "x": 700,
+   "y": 730
+  },
+  "lnPos": {
+   "x": 621.2904071920076,
+   "y": 599.3547964039963
+  },
+  "cam": {
+   "x": 533.6492890995261,
+   "y": 370,
+   "scale": 1.1722222222222223,
+   "viewportW": 332.70142180094786,
+   "viewportH": 720
+  }
+ },
+ "dlgOpened": false,
+ "dlgText": {
+  "text": "\n        \n        \n          Linh Nhi\n          ...\n          \n          Bấm hoặc nhấn Space để tiếp tục...\n        \n      ",
+  "buttons": []
+ },
+ "dlgClosed": true,
+ "feed": {
+  "buy": {
+   "ok": true,
+   "count": 1,
+   "cost": 2,
+   "advanced": false
+  },
+  "stepBefore": "chop",
+  "stepAfter": "chop",
+  "anNoBefore": 60,
+  "bunCount": null
+ },
+ "feedResult": {
+  "buttons": [
+   "×",
+   "Chọn",
+   "Chọn",
+   "Chọn",
+   "Đóng"
+  ]
+ },
+ "hmOpened": true
+}

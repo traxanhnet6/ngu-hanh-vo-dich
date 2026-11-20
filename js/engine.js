@@ -2451,7 +2451,21 @@
       'assets/art/fx-kiep-van4-gan-2.png',
       // Đợt DANMAP-WIDE: Đan Lô môn phái vòng 1 đã duyệt (532x706, 2 trạng thái nguội & cháy)
       'assets/art/danlo-cold.png',
-      'assets/art/danlo-burning.png'
+      'assets/art/danlo-burning.png',
+      // Đợt LINHNHI-MOVE: 12 khung rig xương Godot hướng nam cho Linh Nhi
+      // (walk 8 khung 10fps + idle 4 khung) — CHƯA NGHIỆM THU.
+      'assets/art/linhnhi/linhnhi-walk-s-0.png',
+      'assets/art/linhnhi/linhnhi-walk-s-1.png',
+      'assets/art/linhnhi/linhnhi-walk-s-2.png',
+      'assets/art/linhnhi/linhnhi-walk-s-3.png',
+      'assets/art/linhnhi/linhnhi-walk-s-4.png',
+      'assets/art/linhnhi/linhnhi-walk-s-5.png',
+      'assets/art/linhnhi/linhnhi-walk-s-6.png',
+      'assets/art/linhnhi/linhnhi-walk-s-7.png',
+      'assets/art/linhnhi/linhnhi-idle-0.png',
+      'assets/art/linhnhi/linhnhi-idle-1.png',
+      'assets/art/linhnhi/linhnhi-idle-2.png',
+      'assets/art/linhnhi/linhnhi-idle-3.png'
     ];
 
     var holder = (typeof window !== 'undefined' && window.GameMapData) ? window.GameMapData : (mapData && mapData.maps ? mapData : null);
@@ -2528,6 +2542,19 @@
         if (url === 'assets/art/obj-tree-broadleaf.png') assets['broadleaf_tree'] = img;
         if (url === 'assets/art/obj-fallen-log.png') assets['fallen_log'] = img;
         if (url === 'assets/art/npc-linhnhi.png') assets['linhnhi'] = img;
+        // Đợt LINHNHI-MOVE: bí danh 12 khung rig hướng nam (CHƯA NGHIỆM THU).
+        if (url === 'assets/art/linhnhi/linhnhi-walk-s-0.png') assets['linhnhi_walk_s_0'] = img;
+        if (url === 'assets/art/linhnhi/linhnhi-walk-s-1.png') assets['linhnhi_walk_s_1'] = img;
+        if (url === 'assets/art/linhnhi/linhnhi-walk-s-2.png') assets['linhnhi_walk_s_2'] = img;
+        if (url === 'assets/art/linhnhi/linhnhi-walk-s-3.png') assets['linhnhi_walk_s_3'] = img;
+        if (url === 'assets/art/linhnhi/linhnhi-walk-s-4.png') assets['linhnhi_walk_s_4'] = img;
+        if (url === 'assets/art/linhnhi/linhnhi-walk-s-5.png') assets['linhnhi_walk_s_5'] = img;
+        if (url === 'assets/art/linhnhi/linhnhi-walk-s-6.png') assets['linhnhi_walk_s_6'] = img;
+        if (url === 'assets/art/linhnhi/linhnhi-walk-s-7.png') assets['linhnhi_walk_s_7'] = img;
+        if (url === 'assets/art/linhnhi/linhnhi-idle-0.png') assets['linhnhi_idle_0'] = img;
+        if (url === 'assets/art/linhnhi/linhnhi-idle-1.png') assets['linhnhi_idle_1'] = img;
+        if (url === 'assets/art/linhnhi/linhnhi-idle-2.png') assets['linhnhi_idle_2'] = img;
+        if (url === 'assets/art/linhnhi/linhnhi-idle-3.png') assets['linhnhi_idle_3'] = img;
         if (url === 'assets/chars/hanhan-idle.png') assets['hanhan_idle'] = img;
         if (url === 'assets/chars/hanhan-walk.png') assets['hanhan_walk'] = img;
         if (url === 'assets/chars/hanhan-face.png') assets['hanhan_face'] = img;
@@ -7245,6 +7272,8 @@
     modauTick(dt);
     // Đợt M2: Linh Nhi đi theo sau người chơi (miếu/Tây Lương, trước cổng).
     updateLinhNhiFollower(dt);
+    // Đợt LINHNHI-MOVE: Linh Nhi tuần tra quanh sân miếu khi không đi theo.
+    updateLinhNhiPatrol(dt);
 
     // Đợt V1 chặng 0: đồng hồ nhịp vùng chạy theo dt (đồng bộ mọi cơ chế vùng
     // chặng 1–5 + nhịp chiêu boss Hỏa ở chặng 3).
@@ -9726,6 +9755,14 @@
               ctx.restore();
 
               var nImg = assets[npc.asset] || (npc.id === 'npc_linhnhi' ? assets.linhnhi : null);
+              // Đợt LINHNHI-MOVE: Linh Nhi vẽ bằng khung rig hướng nam
+              // (walk khi đang tuần tra, idle khi đứng); khung lỗi thì lùi
+              // về sprite tĩnh gốc. Áp cho cả LINH_NHI (miếu) lẫn
+              // npc_linhnhi_sect (cùng asset) — bản ở tông môn chỉ idle.
+              if (npc.asset === 'assets/art/npc-linhnhi.png') {
+                var lnMoving = (performance.now() / 1000 - linhnhiAnim.lastMoveT) < 0.25;
+                nImg = getLinhNhiFrame(lnMoving) || nImg;
+              }
               if (nImg && nImg.complete) {
                 // NPCFIX 2026-11-09 "NPC đứng bị vỡ hình": bề rộng vẽ suy từ tỉ lệ của
                 // chính bitmap ĐÃ NẠP (naturalWidth/naturalHeight), neo tâm tại feetX,
@@ -10252,6 +10289,36 @@
   // định, nền Tây Lương + vòng trận vẽ thủ tục. Mọi móc vào hàm cũ đều có
   // comment "// Đợt M2:" tại chỗ móc.
   var modauFollower = { x: 0, y: 0, init: false, facingLeft: false };
+
+  // Đợt LINHNHI-MOVE: chuyển động rig xương Godot hướng nam cho Linh Nhi
+  // (CHƯA NGHIỆM THU). Chỉ có hướng nam vì art gốc chỉ có 1 hướng — 7
+  // hướng còn lại thiếu art nên rig không sinh được; khi tuần tra cô vẫn
+  // dùng dải nam (đi ngang sân miếu, không lật gương).
+  // Waypoint đã kiểm bằng mapdata.isWalkable: cả 4 điểm + 4 chặng đều
+  // thông, ngoài baseRect miếu (y<=470), xa cây/đá/bụi; điểm đứng gốc
+  // (700,560) là vùng chặn của chính vòng va chạm NPC nên không nằm trên
+  // đường tuần tra.
+  var LINHNHI_PATROL = {
+    waypoints: [[620, 600], [780, 600], [780, 540], [620, 540]],
+    index: 0, idleT: 0, speed: 55
+  };
+  // Mốc thời gian (giây) lần cuối Linh Nhi dịch vị trí — dùng để phân biệt
+  // walk/idle ở cả chỗ vẽ NPC đứng, chỗ vẽ follower và chỗ vẽ tuần tra.
+  var linhnhiAnim = { lastMoveT: -1000 };
+
+  // Chọn khung rig theo trạng thái: đang đi → walk 8 khung @10fps
+  // (frame = floor(t*10)%8); đứng yên → idle 4 khung, mỗi khung 0,6s
+  // (vòng 2,4s). Trả null khi khung chưa nạp/không có để chỗ vẽ lùi về
+  // sprite tĩnh gốc.
+  function getLinhNhiFrame(moving) {
+    var t = (typeof performance !== 'undefined') ? performance.now() / 1000 : 0;
+    var key;
+    if (moving) key = 'linhnhi_walk_s_' + (Math.floor(t * 10) % 8);
+    else key = 'linhnhi_idle_' + (Math.floor(t / 0.6) % 4);
+    var img = assets[key];
+    if (img && img.complete && img.naturalWidth > 0) return img;
+    return null;
+  }
   var modauSiegeRestTimer = 0;
   var modauCycle = null;
   var modauControlLock = 0;
@@ -10328,8 +10395,52 @@
       var step = Math.min(dist, SPEED * dt);
       modauFollower.x += (dx / dist) * step;
       modauFollower.y += (dy / dist) * step;
+      linhnhiAnim.lastMoveT = performance.now() / 1000; // Đợt LINHNHI-MOVE
       if (dx < -2) modauFollower.facingLeft = true;
       else if (dx > 2) modauFollower.facingLeft = false;
+    }
+  }
+
+  // Đợt LINHNHI-MOVE: Linh Nhi tuần tra quanh sân miếu khi không đi theo
+  // người chơi. Chỉ chạy ở map Miếu Hoang, tôn trọng questGate (isNpcActive)
+  // và dừng hẳn khi thoại mở. Cập nhật feetX/feetY (+ x/y/baseY/standTile)
+  // của LINH_NHI — npcs[0] và mapData.linhnhi là CÙNG object nên neo tương
+  // tác, dấu "!" và điểm cho ăn bánh bao (getLinhNhiPosition) tự bám theo
+  // vị trí thật. Khi follower bật thì patrol dừng; khi tắt thì tiếp tục từ
+  // vị trí hiện tại, không nhảy về nhà.
+  function updateLinhNhiPatrol(dt) {
+    if (!mapData || !mapData.linhnhi) return;
+    if (currentMapId !== 'mieu_hoang') return;
+    if (modauFollower.init) return;
+    if (!isNpcActive(mapData.linhnhi)) return;
+    if (modauIsDialogueOpen()) return;
+    var ln = mapData.linhnhi;
+    if (LINHNHI_PATROL.idleT > 0) {
+      LINHNHI_PATROL.idleT -= dt;
+      return;
+    }
+    var wp = LINHNHI_PATROL.waypoints[LINHNHI_PATROL.index];
+    var dx = wp[0] - ln.feetX, dy = wp[1] - ln.feetY;
+    var dist = Math.hypot(dx, dy);
+    if (dist <= 4) {
+      LINHNHI_PATROL.index = (LINHNHI_PATROL.index + 1) % LINHNHI_PATROL.waypoints.length;
+      LINHNHI_PATROL.idleT = 2.5 + Math.random() * 1.5;
+      return;
+    }
+    var step = Math.min(dist, LINHNHI_PATROL.speed * dt);
+    var nx = ln.feetX + (dx / dist) * step;
+    var ny = ln.feetY + (dy / dist) * step;
+    if (Math.abs(nx - ln.feetX) > 0.5 || Math.abs(ny - ln.feetY) > 0.5) {
+      linhnhiAnim.lastMoveT = performance.now() / 1000;
+    }
+    ln.feetX = nx;
+    ln.feetY = ny;
+    ln.x = ln.feetX - ln.w / 2;
+    ln.y = ln.feetY - ln.h;
+    ln.baseY = ln.feetY;
+    if (ln.standTile) {
+      ln.standTile.x = ln.feetX - 24;
+      ln.standTile.y = ln.feetY;
     }
   }
 
@@ -10964,7 +11075,9 @@
   }
 
   function drawLinhNhiFollower() {
-    var img = assets.linhnhi || assets['assets/art/npc-linhnhi.png'];
+    // Đợt LINHNHI-MOVE: follower cũng dùng khung rig (walk/idle theo trạng thái).
+    var lnMovingF = (performance.now() / 1000 - linhnhiAnim.lastMoveT) < 0.25;
+    var img = getLinhNhiFrame(lnMovingF) || assets.linhnhi || assets['assets/art/npc-linhnhi.png'];
     ctx.save();
     ctx.fillStyle = 'rgba(10, 15, 10, 0.4)';
     ctx.beginPath();
