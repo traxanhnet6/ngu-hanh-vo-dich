@@ -1,0 +1,181 @@
+{
+ "updated": "2026-11-20 14:32:28",
+ "done": {
+  "linh-nhi-m1-01": {
+   "synth": true,
+   "mp3": true
+  },
+  "linh-nhi-m1-02": {
+   "synth": true,
+   "mp3": true
+  },
+  "linh-nhi-m2-01": {
+   "synth": true,
+   "mp3": true
+  },
+  "linh-nhi-m2-02": {
+   "synth": true,
+   "mp3": true
+  },
+  "linh-nhi-low-01": {
+   "synth": true,
+   "mp3": true
+  },
+  "linh-nhi-low-02": {
+   "synth": true,
+   "mp3": true
+  },
+  "linh-nhi-low-03": {
+   "synth": true,
+   "mp3": true
+  },
+  "linh-nhi-low-04": {
+   "synth": true,
+   "mp3": true
+  },
+  "linh-nhi-low-05": {
+   "synth": true,
+   "mp3": true
+  },
+  "linh-nhi-low-06": {
+   "synth": true,
+   "mp3": true
+  },
+  "linh-nhi-p2g-01": {
+   "synth": true,
+   "mp3": true
+  },
+  "linh-nhi-p2g-02": {
+   "synth": true,
+   "mp3": true
+  },
+  "banh-bao-01": {
+   "synth": true,
+   "mp3": true
+  },
+  "banh-bao-02": {
+   "synth": true,
+   "mp3": true
+  },
+  "cho-cui-01": {
+   "synth": true,
+   "mp3": true
+  },
+  "cho-cui-02": {
+   "synth": true,
+   "mp3": true
+  },
+  "lao-duoc-01": {
+   "synth": true,
+   "mp3": true
+  },
+  "lao-duoc-02": {
+   "synth": true,
+   "mp3": true
+  },
+  "tuan-thu-su-01": {
+   "synth": true,
+   "mp3": true
+  },
+  "tuan-thu-su-02": {
+   "synth": true,
+   "mp3": true
+  },
+  "lao-gia-01": {
+   "synth": true,
+   "mp3": true
+  },
+  "lao-gia-fake-01": {
+   "synth": true,
+   "mp3": true
+  },
+  "lao-gia-fake-02": {
+   "synth": true,
+   "mp3": true
+  },
+  "lao-gia-fake-03": {
+   "synth": true,
+   "mp3": true
+  },
+  "lao-gia-fake-04": {
+   "synth": true,
+   "mp3": true
+  },
+  "lao-gia-fake-05": {
+   "synth": true,
+   "mp3": true
+  },
+  "lao-gia-fake-06": {
+   "synth": true,
+   "mp3": true
+  },
+  "lao-gia-fake-07": {
+   "synth": true,
+   "mp3": true
+  },
+  "lao-gia-fake-08": {
+   "synth": true,
+   "mp3": true
+  },
+  "lao-gia-fake-09": {
+   "synth": true,
+   "mp3": true
+  },
+  "chap-su-fake-01": {
+   "synth": true,
+   "mp3": true
+  },
+  "chap-su-fake-02": {
+   "synth": true,
+   "mp3": true
+  },
+  "chap-su-fake-03": {
+   "synth": true,
+   "mp3": true
+  },
+  "tiep-dan-p2g-01": {
+   "synth": true,
+   "mp3": true
+  },
+  "tiep-dan-p2g-02": {
+   "synth": true,
+   "mp3": true
+  },
+  "chuong-mon-p2g-01": {
+   "synth": true,
+   "mp3": true
+  },
+  "chuong-mon-p2g-02": {
+   "synth": true,
+   "mp3": true
+  },
+  "chap-su-p2g-01": {
+   "synth": true,
+   "mp3": true
+  },
+  "chap-su-p2g-02": {
+   "synth": true,
+   "mp3": true
+  },
+  "ha-nhan-01": {
+   "synth": true,
+   "mp3": true
+  },
+  "ha-nhan-02": {
+   "synth": true,
+   "mp3": true
+  },
+  "dan-dong-01": {
+   "synth": true,
+   "mp3": true
+  },
+  "dan-dong-02": {
+   "synth": true,
+   "mp3": true
+  },
+  "dan-dong-03": {
+   "synth": true,
+   "mp3": true
+  }
+ }
+}
