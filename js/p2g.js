@@ -51,7 +51,7 @@
       ],
       lines: {
         1: ['Ca ca tới rồi! Muội để dành phần cơm Linh Mễ cho ca ca đấy — ăn no rồi mới luyện công được.'],
-        3: ['Ca ca... muội nghe người trong tông đồn ở Miếu Hoang còn giữ một mẩu sổ tay của cha. Muội không dám nhắc, nhưng nếu có dịp về đó, ca xem giúp muội với.']
+        3: ['Ca ca... muội nghe người trong tông đồn ở Miếu Hoang còn giữ một mẩu sổ tay của cha. Muội không dám nhắc, nhưng nếu có dịp về đó, ca ca xem giúp muội với.']
       },
       secretQuests: ['q_secret_linhnhi_1', 'q_secret_linhnhi_2'],
       hasStall: false

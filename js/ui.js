@@ -4194,6 +4194,7 @@
       var textEl = document.getElementById('dialogue-text');
       if (textEl) {
         textEl.textContent = 'Trưởng Lão Dược Điền: Ruộng Linh Mễ này là căn cơ nông nghiệp của Thanh Vân Tông ta. Ngươi chưa chính thức nhập môn, chớ nên nóng vội.';
+        if (typeof window !== 'undefined' && window.GameVoice && window.GameVoice.playFor) window.GameVoice.playFor('Trưởng Lão Dược Điền', 'Ruộng Linh Mễ này là căn cơ nông nghiệp của Thanh Vân Tông ta. Ngươi chưa chính thức nhập môn, chớ nên nóng vội.');
       }
       mkBtn('Rời đi', function () { closeDialogue(); });
       return;
@@ -4257,6 +4258,7 @@
         ld.simulateElderDemo(player, true);
         if (textEl) {
           textEl.textContent = 'Trưởng Lão Dược Điền: Ngươi quả là kỳ tài thông tuệ, vừa nhìn đã thấu suốt bí quyết!';
+          if (typeof window !== 'undefined' && window.GameVoice && window.GameVoice.playFor) window.GameVoice.playFor('Trưởng Lão Dược Điền', 'Ngươi quả là kỳ tài thông tuệ, vừa nhìn đã thấu suốt bí quyết!');
         }
         showTruongLaoChoices();
       });
@@ -4272,6 +4274,7 @@
         if (stateAPI) stateAPI.savePlayer(player);
         if (textEl) {
           textEl.textContent = 'Trưởng Lão Dược Điền: Đó là 4 đại pháp quyết linh điền của tông môn ở các cấp độ. Ngươi đã sẵn sàng tiếp nhận truyền thừa chưa?';
+          if (typeof window !== 'undefined' && window.GameVoice && window.GameVoice.playFor) window.GameVoice.playFor('Trưởng Lão Dược Điền', 'Đó là 4 đại pháp quyết linh điền của tông môn ở các cấp độ. Ngươi đã sẵn sàng tiếp nhận truyền thừa chưa?');
         }
         showTruongLaoChoices();
         return;

@@ -1,0 +1,1793 @@
+[23:08:25] OMNI BATCH: 44 cau
+[23:11:34] SYNTH-OK linh-nhi-m1-01 189s bytes=330490
+[23:11:35] PROC-OK linh-nhi-m1-01 bytes=83565
+[23:14:58] SYNTH-OK linh-nhi-m1-02 203s bytes=379066
+[23:14:58] PROC-OK linh-nhi-m1-02 bytes=95949
+[23:17:57] SYNTH-OK linh-nhi-m2-01 179s bytes=313450
+[23:17:58] PROC-OK linh-nhi-m2-01 bytes=79533
+[23:21:23] SYNTH-OK linh-nhi-m2-02 205s bytes=390150
+[23:21:24] PROC-OK linh-nhi-m2-02 bytes=98541
+[23:23:37] SYNTH-OK linh-nhi-low-01 133s bytes=176736
+[23:23:38] PROC-OK linh-nhi-low-01 bytes=45261
+[23:26:03] SYNTH-OK linh-nhi-low-02 145s bytes=190346
+[23:26:04] PROC-OK linh-nhi-low-02 bytes=48717
+[23:28:40] SYNTH-OK linh-nhi-low-03 156s bytes=152994
+[23:28:40] PROC-OK linh-nhi-low-03 bytes=39213
+[23:31:35] SYNTH-OK linh-nhi-low-04 174s bytes=153634
+[23:31:35] PROC-OK linh-nhi-low-04 bytes=39501
+[23:33:46] SYNTH-OK linh-nhi-low-05 130s bytes=155996
+[23:33:46] PROC-OK linh-nhi-low-05 bytes=40077
+[23:35:53] SYNTH-OK linh-nhi-low-06 127s bytes=158372
+[23:35:54] PROC-OK linh-nhi-low-06 bytes=40653
+[23:38:31] SYNTH-OK linh-nhi-p2g-01 157s bytes=239322
+[23:38:31] PROC-OK linh-nhi-p2g-01 bytes=60813
+[23:42:58] SYNTH-OK linh-nhi-p2g-02 266s bytes=413302
+[23:43:01] PROC-OK linh-nhi-p2g-02 bytes=104301
+[00:21:11] OMNI BATCH: 44 cau
+[00:21:11] SKIP linh-nhi-m1-01 (mp3 da co)
+[00:21:11] SKIP linh-nhi-m1-02 (mp3 da co)
+[00:21:11] SKIP linh-nhi-m2-01 (mp3 da co)
+[00:21:11] SKIP linh-nhi-m2-02 (mp3 da co)
+[00:21:11] SKIP linh-nhi-low-01 (mp3 da co)
+[00:21:11] SKIP linh-nhi-low-02 (mp3 da co)
+[00:21:11] SKIP linh-nhi-low-03 (mp3 da co)
+[00:21:11] SKIP linh-nhi-low-04 (mp3 da co)
+[00:21:11] SKIP linh-nhi-low-05 (mp3 da co)
+[00:21:11] SKIP linh-nhi-low-06 (mp3 da co)
+[00:21:11] SKIP linh-nhi-p2g-01 (mp3 da co)
+[00:21:11] SKIP linh-nhi-p2g-02 (mp3 da co)
+[01:21:13] OMNI BATCH: 44 cau
+[01:21:13] SKIP linh-nhi-m1-01 (mp3 da co)
+[01:21:13] SKIP linh-nhi-m1-02 (mp3 da co)
+[01:21:13] SKIP linh-nhi-m2-01 (mp3 da co)
+[01:21:13] SKIP linh-nhi-m2-02 (mp3 da co)
+[01:21:13] SKIP linh-nhi-low-01 (mp3 da co)
+[01:21:13] SKIP linh-nhi-low-02 (mp3 da co)
+[01:21:13] SKIP linh-nhi-low-03 (mp3 da co)
+[01:21:13] SKIP linh-nhi-low-04 (mp3 da co)
+[01:21:13] SKIP linh-nhi-low-05 (mp3 da co)
+[01:21:13] SKIP linh-nhi-low-06 (mp3 da co)
+[01:21:13] SKIP linh-nhi-p2g-01 (mp3 da co)
+[01:21:13] SKIP linh-nhi-p2g-02 (mp3 da co)
+[01:22:23] SYNTH-FAIL banh-bao-01 rc=1 out=us, reason = self._read_status()
+                              ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/http/client.py", line 305, in _read_status
+    raise RemoteDisconnected("Remote end closed connection without"
+http.client.RemoteDisconnected: Remote end closed connection without response
+
+[01:22:23] SYNTH-FAIL banh-bao-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[01:22:23] SYNTH-FAIL cho-cui-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[01:22:23] SYNTH-FAIL cho-cui-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[01:22:23] SYNTH-FAIL lao-duoc-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[01:22:23] SYNTH-FAIL lao-duoc-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[01:22:23] SYNTH-FAIL tuan-thu-su-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[01:22:23] SKIP-SYNTH tuan-thu-su-02 (raw da co)
+[01:22:24] PROC-OK tuan-thu-su-02 bytes=25389
+[01:22:24] SYNTH-FAIL lao-gia-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[01:22:24] SYNTH-FAIL lao-gia-fake-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[01:22:24] SYNTH-FAIL lao-gia-fake-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[01:22:24] SYNTH-FAIL lao-gia-fake-03 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[01:22:24] SYNTH-FAIL lao-gia-fake-04 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[01:22:24] SYNTH-FAIL lao-gia-fake-05 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[01:22:25] SYNTH-FAIL lao-gia-fake-06 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[01:22:25] SYNTH-FAIL lao-gia-fake-07 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[01:22:25] SYNTH-FAIL lao-gia-fake-08 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[02:22:08] OMNI BATCH: 44 cau
+[02:22:08] SKIP linh-nhi-m1-01 (mp3 da co)
+[02:22:08] SKIP linh-nhi-m1-02 (mp3 da co)
+[02:22:08] SKIP linh-nhi-m2-01 (mp3 da co)
+[02:22:08] SKIP linh-nhi-m2-02 (mp3 da co)
+[02:22:08] SKIP linh-nhi-low-01 (mp3 da co)
+[02:22:08] SKIP linh-nhi-low-02 (mp3 da co)
+[02:22:08] SKIP linh-nhi-low-03 (mp3 da co)
+[02:22:08] SKIP linh-nhi-low-04 (mp3 da co)
+[02:22:08] SKIP linh-nhi-low-05 (mp3 da co)
+[02:22:08] SKIP linh-nhi-low-06 (mp3 da co)
+[02:22:08] SKIP linh-nhi-p2g-01 (mp3 da co)
+[02:22:08] SKIP linh-nhi-p2g-02 (mp3 da co)
+[02:26:10] SYNTH-OK banh-bao-01 241s bytes=215508
+[02:26:10] PROC-OK banh-bao-01 bytes=55053
+[03:20:16] OMNI BATCH: 44 cau
+[03:20:16] SKIP linh-nhi-m1-01 (mp3 da co)
+[03:20:16] SKIP linh-nhi-m1-02 (mp3 da co)
+[03:20:16] SKIP linh-nhi-m2-01 (mp3 da co)
+[03:20:16] SKIP linh-nhi-m2-02 (mp3 da co)
+[03:20:16] SKIP linh-nhi-low-01 (mp3 da co)
+[03:20:16] SKIP linh-nhi-low-02 (mp3 da co)
+[03:20:16] SKIP linh-nhi-low-03 (mp3 da co)
+[03:20:16] SKIP linh-nhi-low-04 (mp3 da co)
+[03:20:16] SKIP linh-nhi-low-05 (mp3 da co)
+[03:20:16] SKIP linh-nhi-low-06 (mp3 da co)
+[03:20:16] SKIP linh-nhi-p2g-01 (mp3 da co)
+[03:20:16] SKIP linh-nhi-p2g-02 (mp3 da co)
+[03:20:16] SKIP banh-bao-01 (mp3 da co)
+[03:20:18] SYNTH-FAIL banh-bao-02 rc=1 out=sr/lib/python3.12/urllib/request.py", line 492, in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 639, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 400: Bad Request
+
+[03:25:49] SYNTH-FAIL cho-cui-01 rc=1 out=us, reason = self._read_status()
+                              ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/http/client.py", line 305, in _read_status
+    raise RemoteDisconnected("Remote end closed connection without"
+http.client.RemoteDisconnected: Remote end closed connection without response
+
+[03:25:49] SYNTH-FAIL cho-cui-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[03:25:49] SYNTH-FAIL lao-duoc-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[03:25:49] SYNTH-FAIL lao-duoc-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[03:25:50] SYNTH-FAIL tuan-thu-su-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[03:25:50] SKIP tuan-thu-su-02 (mp3 da co)
+[03:25:50] SYNTH-FAIL lao-gia-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[03:25:50] SYNTH-FAIL lao-gia-fake-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[03:25:50] SYNTH-FAIL lao-gia-fake-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[03:25:50] SYNTH-FAIL lao-gia-fake-03 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[03:25:50] SYNTH-FAIL lao-gia-fake-04 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[03:25:50] SYNTH-FAIL lao-gia-fake-05 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[03:25:50] SYNTH-FAIL lao-gia-fake-06 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[03:25:51] SYNTH-FAIL lao-gia-fake-07 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[03:25:51] SYNTH-FAIL lao-gia-fake-08 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[03:25:51] SYNTH-FAIL lao-gia-fake-09 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[03:25:51] SYNTH-FAIL chap-su-fake-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[03:25:51] SYNTH-FAIL chap-su-fake-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[04:20:22] OMNI BATCH: 44 cau
+[04:20:22] SKIP linh-nhi-m1-01 (mp3 da co)
+[04:20:22] SKIP linh-nhi-m1-02 (mp3 da co)
+[04:20:22] SKIP linh-nhi-m2-01 (mp3 da co)
+[04:20:22] SKIP linh-nhi-m2-02 (mp3 da co)
+[04:20:22] SKIP linh-nhi-low-01 (mp3 da co)
+[04:20:22] SKIP linh-nhi-low-02 (mp3 da co)
+[04:20:22] SKIP linh-nhi-low-03 (mp3 da co)
+[04:20:22] SKIP linh-nhi-low-04 (mp3 da co)
+[04:20:22] SKIP linh-nhi-low-05 (mp3 da co)
+[04:20:22] SKIP linh-nhi-low-06 (mp3 da co)
+[04:20:22] SKIP linh-nhi-p2g-01 (mp3 da co)
+[04:20:22] SKIP linh-nhi-p2g-02 (mp3 da co)
+[04:20:22] SKIP banh-bao-01 (mp3 da co)
+[04:21:22] SYNTH-FAIL banh-bao-02 rc=1 out=us, reason = self._read_status()
+                              ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/http/client.py", line 305, in _read_status
+    raise RemoteDisconnected("Remote end closed connection without"
+http.client.RemoteDisconnected: Remote end closed connection without response
+
+[04:21:22] SYNTH-FAIL cho-cui-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[04:21:22] SYNTH-FAIL cho-cui-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[04:21:22] SYNTH-FAIL lao-duoc-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[04:21:22] SYNTH-FAIL lao-duoc-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[04:21:22] SYNTH-FAIL tuan-thu-su-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[04:21:22] SKIP tuan-thu-su-02 (mp3 da co)
+[04:21:22] SYNTH-FAIL lao-gia-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[04:21:22] SYNTH-FAIL lao-gia-fake-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[04:21:23] SYNTH-FAIL lao-gia-fake-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[04:21:23] SYNTH-FAIL lao-gia-fake-03 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[04:21:23] SYNTH-FAIL lao-gia-fake-04 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[04:21:23] SYNTH-FAIL lao-gia-fake-05 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[04:21:23] SYNTH-FAIL lao-gia-fake-06 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[04:21:23] SYNTH-FAIL lao-gia-fake-07 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[04:21:23] SYNTH-FAIL lao-gia-fake-08 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[04:21:23] SYNTH-FAIL lao-gia-fake-09 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[04:21:23] SYNTH-FAIL chap-su-fake-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[05:20:20] OMNI BATCH: 44 cau
+[05:20:20] SKIP linh-nhi-m1-01 (mp3 da co)
+[05:20:20] SKIP linh-nhi-m1-02 (mp3 da co)
+[05:20:20] SKIP linh-nhi-m2-01 (mp3 da co)
+[05:20:20] SKIP linh-nhi-m2-02 (mp3 da co)
+[05:20:20] SKIP linh-nhi-low-01 (mp3 da co)
+[05:20:20] SKIP linh-nhi-low-02 (mp3 da co)
+[05:20:20] SKIP linh-nhi-low-03 (mp3 da co)
+[05:20:20] SKIP linh-nhi-low-04 (mp3 da co)
+[05:20:20] SKIP linh-nhi-low-05 (mp3 da co)
+[05:20:20] SKIP linh-nhi-low-06 (mp3 da co)
+[05:20:20] SKIP linh-nhi-p2g-01 (mp3 da co)
+[05:20:20] SKIP linh-nhi-p2g-02 (mp3 da co)
+[05:20:20] SKIP banh-bao-01 (mp3 da co)
+[06:20:31] OMNI BATCH: 44 cau
+[06:20:31] SKIP linh-nhi-m1-01 (mp3 da co)
+[06:20:31] SKIP linh-nhi-m1-02 (mp3 da co)
+[06:20:31] SKIP linh-nhi-m2-01 (mp3 da co)
+[06:20:31] SKIP linh-nhi-m2-02 (mp3 da co)
+[06:20:31] SKIP linh-nhi-low-01 (mp3 da co)
+[06:20:31] SKIP linh-nhi-low-02 (mp3 da co)
+[06:20:31] SKIP linh-nhi-low-03 (mp3 da co)
+[06:20:31] SKIP linh-nhi-low-04 (mp3 da co)
+[06:20:31] SKIP linh-nhi-low-05 (mp3 da co)
+[06:20:31] SKIP linh-nhi-low-06 (mp3 da co)
+[06:20:31] SKIP linh-nhi-p2g-01 (mp3 da co)
+[06:20:31] SKIP linh-nhi-p2g-02 (mp3 da co)
+[06:20:31] SKIP banh-bao-01 (mp3 da co)
+[06:52:41] OMNI BATCH: 44 cau
+[06:52:41] SKIP linh-nhi-m1-01 (mp3 da co)
+[06:52:41] SKIP linh-nhi-m1-02 (mp3 da co)
+[06:52:41] SKIP linh-nhi-m2-01 (mp3 da co)
+[06:52:41] SKIP linh-nhi-m2-02 (mp3 da co)
+[06:52:41] SKIP linh-nhi-low-01 (mp3 da co)
+[06:52:41] SKIP linh-nhi-low-02 (mp3 da co)
+[06:52:41] SKIP linh-nhi-low-03 (mp3 da co)
+[06:52:41] SKIP linh-nhi-low-04 (mp3 da co)
+[06:52:41] SKIP linh-nhi-low-05 (mp3 da co)
+[06:52:41] SKIP linh-nhi-low-06 (mp3 da co)
+[06:52:41] SKIP linh-nhi-p2g-01 (mp3 da co)
+[06:52:41] SKIP linh-nhi-p2g-02 (mp3 da co)
+[06:52:41] SKIP banh-bao-01 (mp3 da co)
+[06:53:58] SYNTH-FAIL banh-bao-02 rc=1 out=us, reason = self._read_status()
+                              ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/http/client.py", line 305, in _read_status
+    raise RemoteDisconnected("Remote end closed connection without"
+http.client.RemoteDisconnected: Remote end closed connection without response
+
+[06:53:58] SYNTH-FAIL cho-cui-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[06:53:58] SYNTH-FAIL cho-cui-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[06:53:58] SYNTH-FAIL lao-duoc-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[06:53:59] SYNTH-FAIL lao-duoc-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[06:53:59] SYNTH-FAIL tuan-thu-su-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[06:53:59] SKIP tuan-thu-su-02 (mp3 da co)
+[06:53:59] SYNTH-FAIL lao-gia-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[06:53:59] SYNTH-FAIL lao-gia-fake-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[06:53:59] SYNTH-FAIL lao-gia-fake-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[06:53:59] SYNTH-FAIL lao-gia-fake-03 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[06:53:59] SYNTH-FAIL lao-gia-fake-04 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[06:53:59] SYNTH-FAIL lao-gia-fake-05 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[06:53:59] SYNTH-FAIL lao-gia-fake-06 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[06:54:00] SYNTH-FAIL lao-gia-fake-07 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[06:54:00] SYNTH-FAIL lao-gia-fake-08 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[06:54:00] SYNTH-FAIL lao-gia-fake-09 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[06:54:00] SYNTH-FAIL chap-su-fake-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[06:54:00] SYNTH-FAIL chap-su-fake-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[06:54:00] SYNTH-FAIL chap-su-fake-03 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[07:21:34] OMNI BATCH: 44 cau
+[07:21:34] SKIP linh-nhi-m1-01 (mp3 da co)
+[07:21:34] SKIP linh-nhi-m1-02 (mp3 da co)
+[07:21:34] SKIP linh-nhi-m2-01 (mp3 da co)
+[07:21:34] SKIP linh-nhi-m2-02 (mp3 da co)
+[07:21:34] SKIP linh-nhi-low-01 (mp3 da co)
+[07:21:34] SKIP linh-nhi-low-02 (mp3 da co)
+[07:21:34] SKIP linh-nhi-low-03 (mp3 da co)
+[07:21:34] SKIP linh-nhi-low-04 (mp3 da co)
+[07:21:34] SKIP linh-nhi-low-05 (mp3 da co)
+[07:21:34] SKIP linh-nhi-low-06 (mp3 da co)
+[07:21:34] SKIP linh-nhi-p2g-01 (mp3 da co)
+[07:21:34] SKIP linh-nhi-p2g-02 (mp3 da co)
+[07:21:34] SKIP banh-bao-01 (mp3 da co)
+[07:24:14] OMNI BATCH: 44 cau
+[07:24:14] SKIP linh-nhi-m1-01 (mp3 da co)
+[07:24:14] SKIP linh-nhi-m1-02 (mp3 da co)
+[07:24:14] SKIP linh-nhi-m2-01 (mp3 da co)
+[07:24:14] SKIP linh-nhi-m2-02 (mp3 da co)
+[07:24:14] SKIP linh-nhi-low-01 (mp3 da co)
+[07:24:14] SKIP linh-nhi-low-02 (mp3 da co)
+[07:24:14] SKIP linh-nhi-low-03 (mp3 da co)
+[07:24:14] SKIP linh-nhi-low-04 (mp3 da co)
+[07:24:14] SKIP linh-nhi-low-05 (mp3 da co)
+[07:24:14] SKIP linh-nhi-low-06 (mp3 da co)
+[07:24:14] SKIP linh-nhi-p2g-01 (mp3 da co)
+[07:24:14] SKIP linh-nhi-p2g-02 (mp3 da co)
+[07:24:14] SKIP banh-bao-01 (mp3 da co)
+[07:27:34] SYNTH-OK banh-bao-02 200s bytes=163626
+[07:27:34] PROC-OK banh-bao-02 bytes=41805
+[07:29:29] SYNTH-FAIL cho-cui-01 rc=1 out=us, reason = self._read_status()
+                              ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/http/client.py", line 305, in _read_status
+    raise RemoteDisconnected("Remote end closed connection without"
+http.client.RemoteDisconnected: Remote end closed connection without response
+
+[07:29:29] SYNTH-FAIL cho-cui-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[07:29:29] SYNTH-FAIL lao-duoc-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[07:29:30] SYNTH-FAIL lao-duoc-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[07:29:30] SYNTH-FAIL tuan-thu-su-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[07:29:30] SKIP tuan-thu-su-02 (mp3 da co)
+[07:29:30] SYNTH-FAIL lao-gia-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[07:29:30] SYNTH-FAIL lao-gia-fake-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[07:29:30] SYNTH-FAIL lao-gia-fake-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[07:29:30] SYNTH-FAIL lao-gia-fake-03 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[07:29:30] SYNTH-FAIL lao-gia-fake-04 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[07:29:30] SYNTH-FAIL lao-gia-fake-05 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[07:29:30] SYNTH-FAIL lao-gia-fake-06 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[07:29:31] SYNTH-FAIL lao-gia-fake-07 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[07:29:31] SYNTH-FAIL lao-gia-fake-08 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[07:29:31] SYNTH-FAIL lao-gia-fake-09 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[07:29:31] SYNTH-FAIL chap-su-fake-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[07:29:31] SYNTH-FAIL chap-su-fake-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[07:29:31] SYNTH-FAIL chap-su-fake-03 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[07:52:46] OMNI BATCH: 44 cau
+[07:52:46] SKIP linh-nhi-m1-01 (mp3 da co)
+[07:52:46] SKIP linh-nhi-m1-02 (mp3 da co)
+[07:52:46] SKIP linh-nhi-m2-01 (mp3 da co)
+[07:52:46] SKIP linh-nhi-m2-02 (mp3 da co)
+[07:52:46] SKIP linh-nhi-low-01 (mp3 da co)
+[07:52:46] SKIP linh-nhi-low-02 (mp3 da co)
+[07:52:46] SKIP linh-nhi-low-03 (mp3 da co)
+[07:52:46] SKIP linh-nhi-low-04 (mp3 da co)
+[07:52:46] SKIP linh-nhi-low-05 (mp3 da co)
+[07:52:46] SKIP linh-nhi-low-06 (mp3 da co)
+[07:52:46] SKIP linh-nhi-p2g-01 (mp3 da co)
+[07:52:46] SKIP linh-nhi-p2g-02 (mp3 da co)
+[07:52:46] SKIP banh-bao-01 (mp3 da co)
+[07:52:46] SKIP banh-bao-02 (mp3 da co)
+[08:21:03] OMNI BATCH: 44 cau
+[08:21:03] SKIP linh-nhi-m1-01 (mp3 da co)
+[08:21:03] SKIP linh-nhi-m1-02 (mp3 da co)
+[08:21:03] SKIP linh-nhi-m2-01 (mp3 da co)
+[08:21:03] SKIP linh-nhi-m2-02 (mp3 da co)
+[08:21:03] SKIP linh-nhi-low-01 (mp3 da co)
+[08:21:03] SKIP linh-nhi-low-02 (mp3 da co)
+[08:21:03] SKIP linh-nhi-low-03 (mp3 da co)
+[08:21:03] SKIP linh-nhi-low-04 (mp3 da co)
+[08:21:03] SKIP linh-nhi-low-05 (mp3 da co)
+[08:21:03] SKIP linh-nhi-low-06 (mp3 da co)
+[08:21:03] SKIP linh-nhi-p2g-01 (mp3 da co)
+[08:21:03] SKIP linh-nhi-p2g-02 (mp3 da co)
+[08:21:03] SKIP banh-bao-01 (mp3 da co)
+[08:21:03] SKIP banh-bao-02 (mp3 da co)
+[08:23:32] SYNTH-FAIL cho-cui-01 rc=1 out=us, reason = self._read_status()
+                              ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/http/client.py", line 305, in _read_status
+    raise RemoteDisconnected("Remote end closed connection without"
+http.client.RemoteDisconnected: Remote end closed connection without response
+
+[08:23:32] SYNTH-FAIL cho-cui-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[08:23:33] SYNTH-FAIL lao-duoc-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[08:23:33] SYNTH-FAIL lao-duoc-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[08:23:33] SYNTH-FAIL tuan-thu-su-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[08:23:33] SKIP tuan-thu-su-02 (mp3 da co)
+[08:23:33] SYNTH-FAIL lao-gia-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[08:23:33] SYNTH-FAIL lao-gia-fake-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[08:23:33] SYNTH-FAIL lao-gia-fake-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[08:23:33] SYNTH-FAIL lao-gia-fake-03 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[08:23:33] SYNTH-FAIL lao-gia-fake-04 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[08:23:33] SYNTH-FAIL lao-gia-fake-05 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[08:23:34] SYNTH-FAIL lao-gia-fake-06 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[08:23:34] SYNTH-FAIL lao-gia-fake-07 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[08:23:34] SYNTH-FAIL lao-gia-fake-08 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[08:23:34] SYNTH-FAIL lao-gia-fake-09 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[08:23:34] SYNTH-FAIL chap-su-fake-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[08:23:34] SYNTH-FAIL chap-su-fake-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[08:51:46] OMNI BATCH: 44 cau
+[08:51:46] SKIP linh-nhi-m1-01 (mp3 da co)
+[08:51:46] SKIP linh-nhi-m1-02 (mp3 da co)
+[08:51:46] SKIP linh-nhi-m2-01 (mp3 da co)
+[08:51:46] SKIP linh-nhi-m2-02 (mp3 da co)
+[08:51:46] SKIP linh-nhi-low-01 (mp3 da co)
+[08:51:46] SKIP linh-nhi-low-02 (mp3 da co)
+[08:51:46] SKIP linh-nhi-low-03 (mp3 da co)
+[08:51:46] SKIP linh-nhi-low-04 (mp3 da co)
+[08:51:46] SKIP linh-nhi-low-05 (mp3 da co)
+[08:51:46] SKIP linh-nhi-low-06 (mp3 da co)
+[08:51:46] SKIP linh-nhi-p2g-01 (mp3 da co)
+[08:51:46] SKIP linh-nhi-p2g-02 (mp3 da co)
+[08:51:46] SKIP banh-bao-01 (mp3 da co)
+[08:51:46] SKIP banh-bao-02 (mp3 da co)
+[08:52:35] SYNTH-FAIL cho-cui-01 rc=1 out=us, reason = self._read_status()
+                              ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/http/client.py", line 305, in _read_status
+    raise RemoteDisconnected("Remote end closed connection without"
+http.client.RemoteDisconnected: Remote end closed connection without response
+
+[08:52:35] SYNTH-FAIL cho-cui-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[08:52:35] SYNTH-FAIL lao-duoc-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[08:52:35] SYNTH-FAIL lao-duoc-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[08:52:36] SYNTH-FAIL tuan-thu-su-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[08:52:36] SKIP tuan-thu-su-02 (mp3 da co)
+[08:52:36] SYNTH-FAIL lao-gia-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[08:52:36] SYNTH-FAIL lao-gia-fake-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[08:52:36] SYNTH-FAIL lao-gia-fake-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[08:52:36] SYNTH-FAIL lao-gia-fake-03 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[08:52:36] SYNTH-FAIL lao-gia-fake-04 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[08:52:36] SYNTH-FAIL lao-gia-fake-05 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[08:52:36] SYNTH-FAIL lao-gia-fake-06 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[08:52:36] SYNTH-FAIL lao-gia-fake-07 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[08:52:37] SYNTH-FAIL lao-gia-fake-08 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[08:52:37] SYNTH-FAIL lao-gia-fake-09 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[08:52:37] SYNTH-FAIL chap-su-fake-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[08:52:37] SYNTH-FAIL chap-su-fake-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[08:52:37] SYNTH-FAIL chap-su-fake-03 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[09:19:46] OMNI BATCH: 44 cau
+[09:19:46] SKIP linh-nhi-m1-01 (mp3 da co)
+[09:19:46] SKIP linh-nhi-m1-02 (mp3 da co)
+[09:19:46] SKIP linh-nhi-m2-01 (mp3 da co)
+[09:19:46] SKIP linh-nhi-m2-02 (mp3 da co)
+[09:19:46] SKIP linh-nhi-low-01 (mp3 da co)
+[09:19:46] SKIP linh-nhi-low-02 (mp3 da co)
+[09:19:46] SKIP linh-nhi-low-03 (mp3 da co)
+[09:19:46] SKIP linh-nhi-low-04 (mp3 da co)
+[09:19:46] SKIP linh-nhi-low-05 (mp3 da co)
+[09:19:46] SKIP linh-nhi-low-06 (mp3 da co)
+[09:19:46] SKIP linh-nhi-p2g-01 (mp3 da co)
+[09:19:46] SKIP linh-nhi-p2g-02 (mp3 da co)
+[09:19:46] SKIP banh-bao-01 (mp3 da co)
+[09:19:46] SKIP banh-bao-02 (mp3 da co)
+[09:19:49] SYNTH-FAIL cho-cui-01 rc=1 out=sr/lib/python3.12/urllib/request.py", line 492, in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 639, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 400: Bad Request
+
+[09:23:55] SYNTH-FAIL cho-cui-02 rc=1 out=us, reason = self._read_status()
+                              ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/http/client.py", line 305, in _read_status
+    raise RemoteDisconnected("Remote end closed connection without"
+http.client.RemoteDisconnected: Remote end closed connection without response
+
+[09:23:55] SYNTH-FAIL lao-duoc-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[09:23:55] SYNTH-FAIL lao-duoc-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[09:23:55] SYNTH-FAIL tuan-thu-su-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[09:23:55] SKIP tuan-thu-su-02 (mp3 da co)
+[09:23:55] SYNTH-FAIL lao-gia-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[09:23:55] SYNTH-FAIL lao-gia-fake-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[09:23:55] SYNTH-FAIL lao-gia-fake-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[09:23:55] SYNTH-FAIL lao-gia-fake-03 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[09:23:56] SYNTH-FAIL lao-gia-fake-04 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[09:23:56] SYNTH-FAIL lao-gia-fake-05 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[09:23:56] SYNTH-FAIL lao-gia-fake-06 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[09:23:56] SYNTH-FAIL lao-gia-fake-07 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[09:23:56] SYNTH-FAIL lao-gia-fake-08 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[09:23:56] SYNTH-FAIL lao-gia-fake-09 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[09:23:56] SYNTH-FAIL chap-su-fake-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[09:23:56] SYNTH-FAIL chap-su-fake-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[09:23:56] SYNTH-FAIL chap-su-fake-03 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[09:23:57] SYNTH-FAIL tiep-dan-p2g-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[09:25:43] OMNI BATCH: 44 cau
+[09:25:43] SKIP linh-nhi-m1-01 (mp3 da co)
+[09:25:43] SKIP linh-nhi-m1-02 (mp3 da co)
+[09:25:43] SKIP linh-nhi-m2-01 (mp3 da co)
+[09:25:43] SKIP linh-nhi-m2-02 (mp3 da co)
+[09:25:43] SKIP linh-nhi-low-01 (mp3 da co)
+[09:25:43] SKIP linh-nhi-low-02 (mp3 da co)
+[09:25:43] SKIP linh-nhi-low-03 (mp3 da co)
+[09:25:43] SKIP linh-nhi-low-04 (mp3 da co)
+[09:25:43] SKIP linh-nhi-low-05 (mp3 da co)
+[09:25:43] SKIP linh-nhi-low-06 (mp3 da co)
+[09:25:43] SKIP linh-nhi-p2g-01 (mp3 da co)
+[09:25:43] SKIP linh-nhi-p2g-02 (mp3 da co)
+[09:25:43] SKIP banh-bao-01 (mp3 da co)
+[09:25:43] SKIP banh-bao-02 (mp3 da co)
+[09:31:32] SYNTH-FAIL cho-cui-01 rc=1 out=us, reason = self._read_status()
+                              ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/http/client.py", line 305, in _read_status
+    raise RemoteDisconnected("Remote end closed connection without"
+http.client.RemoteDisconnected: Remote end closed connection without response
+
+[09:31:32] SYNTH-FAIL cho-cui-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[09:31:32] SYNTH-FAIL lao-duoc-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[09:31:32] SYNTH-FAIL lao-duoc-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[09:31:32] SYNTH-FAIL tuan-thu-su-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[09:31:32] SKIP tuan-thu-su-02 (mp3 da co)
+[09:31:32] SYNTH-FAIL lao-gia-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[09:31:32] SYNTH-FAIL lao-gia-fake-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[09:31:33] SYNTH-FAIL lao-gia-fake-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[09:31:33] SYNTH-FAIL lao-gia-fake-03 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[09:31:33] SYNTH-FAIL lao-gia-fake-04 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[09:31:33] SYNTH-FAIL lao-gia-fake-05 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[09:31:33] SYNTH-FAIL lao-gia-fake-06 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[09:31:33] SYNTH-FAIL lao-gia-fake-07 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[09:31:33] SYNTH-FAIL lao-gia-fake-08 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[09:31:33] SYNTH-FAIL lao-gia-fake-09 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[09:31:34] SYNTH-FAIL chap-su-fake-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[09:31:34] SYNTH-FAIL chap-su-fake-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[09:52:18] OMNI BATCH: 44 cau
+[09:52:18] SKIP linh-nhi-m1-01 (mp3 da co)
+[09:52:18] SKIP linh-nhi-m1-02 (mp3 da co)
+[09:52:18] SKIP linh-nhi-m2-01 (mp3 da co)
+[09:52:18] SKIP linh-nhi-m2-02 (mp3 da co)
+[09:52:18] SKIP linh-nhi-low-01 (mp3 da co)
+[09:52:18] SKIP linh-nhi-low-02 (mp3 da co)
+[09:52:18] SKIP linh-nhi-low-03 (mp3 da co)
+[09:52:18] SKIP linh-nhi-low-04 (mp3 da co)
+[09:52:18] SKIP linh-nhi-low-05 (mp3 da co)
+[09:52:18] SKIP linh-nhi-low-06 (mp3 da co)
+[09:52:18] SKIP linh-nhi-p2g-01 (mp3 da co)
+[09:52:18] SKIP linh-nhi-p2g-02 (mp3 da co)
+[09:52:18] SKIP banh-bao-01 (mp3 da co)
+[09:52:18] SKIP banh-bao-02 (mp3 da co)
+[10:21:28] OMNI BATCH: 44 cau
+[10:21:28] SKIP linh-nhi-m1-01 (mp3 da co)
+[10:21:28] SKIP linh-nhi-m1-02 (mp3 da co)
+[10:21:28] SKIP linh-nhi-m2-01 (mp3 da co)
+[10:21:28] SKIP linh-nhi-m2-02 (mp3 da co)
+[10:21:28] SKIP linh-nhi-low-01 (mp3 da co)
+[10:21:28] SKIP linh-nhi-low-02 (mp3 da co)
+[10:21:28] SKIP linh-nhi-low-03 (mp3 da co)
+[10:21:28] SKIP linh-nhi-low-04 (mp3 da co)
+[10:21:28] SKIP linh-nhi-low-05 (mp3 da co)
+[10:21:28] SKIP linh-nhi-low-06 (mp3 da co)
+[10:21:28] SKIP linh-nhi-p2g-01 (mp3 da co)
+[10:21:28] SKIP linh-nhi-p2g-02 (mp3 da co)
+[10:21:28] SKIP banh-bao-01 (mp3 da co)
+[10:21:28] SKIP banh-bao-02 (mp3 da co)
+[11:20:24] OMNI BATCH: 44 cau
+[11:20:24] SKIP linh-nhi-m1-01 (mp3 da co)
+[11:20:24] SKIP linh-nhi-m1-02 (mp3 da co)
+[11:20:24] SKIP linh-nhi-m2-01 (mp3 da co)
+[11:20:24] SKIP linh-nhi-m2-02 (mp3 da co)
+[11:20:24] SKIP linh-nhi-low-01 (mp3 da co)
+[11:20:24] SKIP linh-nhi-low-02 (mp3 da co)
+[11:20:24] SKIP linh-nhi-low-03 (mp3 da co)
+[11:20:24] SKIP linh-nhi-low-04 (mp3 da co)
+[11:20:24] SKIP linh-nhi-low-05 (mp3 da co)
+[11:20:24] SKIP linh-nhi-low-06 (mp3 da co)
+[11:20:24] SKIP linh-nhi-p2g-01 (mp3 da co)
+[11:20:24] SKIP linh-nhi-p2g-02 (mp3 da co)
+[11:20:24] SKIP banh-bao-01 (mp3 da co)
+[11:20:24] SKIP banh-bao-02 (mp3 da co)
+[11:21:12] SYNTH-FAIL cho-cui-01 rc=1 out=us, reason = self._read_status()
+                              ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/http/client.py", line 305, in _read_status
+    raise RemoteDisconnected("Remote end closed connection without"
+http.client.RemoteDisconnected: Remote end closed connection without response
+
+[11:21:12] SYNTH-FAIL cho-cui-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[11:21:12] SYNTH-FAIL lao-duoc-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[11:21:13] SYNTH-FAIL lao-duoc-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[11:21:13] SYNTH-FAIL tuan-thu-su-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[11:21:13] SKIP tuan-thu-su-02 (mp3 da co)
+[11:21:13] SYNTH-FAIL lao-gia-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[11:21:13] SYNTH-FAIL lao-gia-fake-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[11:21:13] SYNTH-FAIL lao-gia-fake-02 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[11:21:13] SYNTH-FAIL lao-gia-fake-03 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[11:21:13] SYNTH-FAIL lao-gia-fake-04 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[11:21:13] SYNTH-FAIL lao-gia-fake-05 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[11:21:14] SYNTH-FAIL lao-gia-fake-06 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[11:21:14] SYNTH-FAIL lao-gia-fake-07 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[11:21:14] SYNTH-FAIL lao-gia-fake-08 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[11:21:14] SYNTH-FAIL lao-gia-fake-09 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[11:21:14] SYNTH-FAIL chap-su-fake-01 rc=1 out=ne 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1347, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 111] Connection refused>
+
+[18:34:28] OMNI BATCH: 44 cau
+[18:34:28] OMNI BATCH: 44 cau
+[18:34:28] SKIP linh-nhi-m1-01 (mp3 da co)
+[18:34:28] SKIP linh-nhi-m1-01 (mp3 da co)
+[18:34:28] SKIP linh-nhi-m1-02 (mp3 da co)
+[18:34:28] SKIP linh-nhi-m1-02 (mp3 da co)
+[18:34:28] SKIP linh-nhi-m2-01 (mp3 da co)
+[18:34:28] SKIP linh-nhi-m2-01 (mp3 da co)
+[18:34:28] SKIP linh-nhi-m2-02 (mp3 da co)
+[18:34:28] SKIP linh-nhi-m2-02 (mp3 da co)
+[18:34:28] SKIP linh-nhi-low-01 (mp3 da co)
+[18:34:28] SKIP linh-nhi-low-01 (mp3 da co)
+[18:34:28] SKIP linh-nhi-low-02 (mp3 da co)
+[18:34:28] SKIP linh-nhi-low-02 (mp3 da co)
+[18:34:28] SKIP linh-nhi-low-03 (mp3 da co)
+[18:34:28] SKIP linh-nhi-low-03 (mp3 da co)
+[18:34:28] SKIP linh-nhi-low-04 (mp3 da co)
+[18:34:28] SKIP linh-nhi-low-04 (mp3 da co)
+[18:34:28] SKIP linh-nhi-low-05 (mp3 da co)
+[18:34:28] SKIP linh-nhi-low-05 (mp3 da co)
+[18:34:28] SKIP linh-nhi-low-06 (mp3 da co)
+[18:34:28] SKIP linh-nhi-low-06 (mp3 da co)
+[18:34:28] SKIP linh-nhi-p2g-01 (mp3 da co)
+[18:34:28] SKIP linh-nhi-p2g-01 (mp3 da co)
+[18:34:28] SKIP linh-nhi-p2g-02 (mp3 da co)
+[18:34:28] SKIP linh-nhi-p2g-02 (mp3 da co)
+[18:34:28] SKIP banh-bao-01 (mp3 da co)
+[18:34:28] SKIP banh-bao-01 (mp3 da co)
+[18:34:28] SKIP banh-bao-02 (mp3 da co)
+[18:34:28] SKIP banh-bao-02 (mp3 da co)
+[18:40:33] SYNTH-OK cho-cui-01 366s bytes=206340
+[18:40:33] SYNTH-OK cho-cui-01 366s bytes=206340
+[18:40:34] PROC-OK cho-cui-01 bytes=52749
+[18:40:34] PROC-OK cho-cui-01 bytes=52749
+[18:44:50] SYNTH-OK cho-cui-02 256s bytes=198574
+[18:44:50] SYNTH-OK cho-cui-02 256s bytes=198574
+[18:44:50] PROC-OK cho-cui-02 bytes=50733
+[18:44:50] PROC-OK cho-cui-02 bytes=50733
+[18:49:10] SYNTH-OK lao-duoc-01 260s bytes=222948
+[18:49:10] SYNTH-OK lao-duoc-01 260s bytes=222948
+[18:49:11] PROC-OK lao-duoc-01 bytes=56781
+[18:49:11] PROC-OK lao-duoc-01 bytes=56781
+[18:53:32] SYNTH-OK lao-duoc-02 261s bytes=216970
+[18:53:32] SYNTH-OK lao-duoc-02 261s bytes=216970
+[18:53:32] PROC-OK lao-duoc-02 bytes=55341
+[18:53:32] PROC-OK lao-duoc-02 bytes=55341
+[18:57:05] SYNTH-OK tuan-thu-su-01 213s bytes=87466
+[18:57:05] SYNTH-OK tuan-thu-su-01 213s bytes=87466
+[18:57:06] PROC-OK tuan-thu-su-01 bytes=22797
+[18:57:06] PROC-OK tuan-thu-su-01 bytes=22797
+[18:57:06] SKIP tuan-thu-su-02 (mp3 da co)
+[18:57:06] SKIP tuan-thu-su-02 (mp3 da co)
+[19:01:26] SYNTH-OK lao-gia-01 260s bytes=206916
+[19:01:26] SYNTH-OK lao-gia-01 260s bytes=206916
+[19:01:27] PROC-OK lao-gia-01 bytes=52749
+[19:01:27] PROC-OK lao-gia-01 bytes=52749
+[19:07:10] SYNTH-OK lao-gia-fake-01 343s bytes=425754
+[19:07:10] SYNTH-OK lao-gia-fake-01 343s bytes=425754
+[19:07:11] PROC-OK lao-gia-fake-01 bytes=107469
+[19:07:11] PROC-OK lao-gia-fake-01 bytes=107469
+[19:13:36] SYNTH-OK lao-gia-fake-02 385s bytes=515090
+[19:13:36] SYNTH-OK lao-gia-fake-02 385s bytes=515090
+[19:13:37] PROC-OK lao-gia-fake-02 bytes=129933
+[19:13:37] PROC-OK lao-gia-fake-02 bytes=129933
+[19:19:16] SYNTH-OK lao-gia-fake-03 339s bytes=411406
+[19:19:16] SYNTH-OK lao-gia-fake-03 339s bytes=411406
+[19:19:16] PROC-OK lao-gia-fake-03 bytes=104013
+[19:19:16] PROC-OK lao-gia-fake-03 bytes=104013
+[19:23:45] SYNTH-OK lao-gia-fake-04 268s bytes=230652
+[19:23:45] SYNTH-OK lao-gia-fake-04 268s bytes=230652
+[19:23:45] PROC-OK lao-gia-fake-04 bytes=58797
+[19:23:45] PROC-OK lao-gia-fake-04 bytes=58797
+[19:28:59] SYNTH-OK lao-gia-fake-05 314s bytes=351096
+[19:28:59] SYNTH-OK lao-gia-fake-05 314s bytes=351096
+[19:28:59] PROC-OK lao-gia-fake-05 bytes=88749
+[19:28:59] PROC-OK lao-gia-fake-05 bytes=88749
+[19:34:46] SYNTH-OK lao-gia-fake-06 347s bytes=432102
+[19:34:46] SYNTH-OK lao-gia-fake-06 347s bytes=432102
+[19:34:47] PROC-OK lao-gia-fake-06 bytes=109197
+[19:34:47] PROC-OK lao-gia-fake-06 bytes=109197
+[19:39:25] SYNTH-OK lao-gia-fake-07 277s bytes=273064
+[19:39:25] SYNTH-OK lao-gia-fake-07 277s bytes=273064
+[19:39:25] PROC-OK lao-gia-fake-07 bytes=69165
+[19:39:25] PROC-OK lao-gia-fake-07 bytes=69165
+[19:44:12] SYNTH-OK lao-gia-fake-08 287s bytes=285222
+[19:44:12] SYNTH-OK lao-gia-fake-08 287s bytes=285222
+[19:44:12] PROC-OK lao-gia-fake-08 bytes=72333
+[19:44:12] PROC-OK lao-gia-fake-08 bytes=72333
+[19:50:05] SYNTH-OK lao-gia-fake-09 353s bytes=447148
+[19:50:05] SYNTH-OK lao-gia-fake-09 353s bytes=447148
+[19:50:06] PROC-OK lao-gia-fake-09 bytes=112941
+[19:50:06] PROC-OK lao-gia-fake-09 bytes=112941
+[19:54:30] SYNTH-OK chap-su-fake-01 265s bytes=205114
+[19:54:30] SYNTH-OK chap-su-fake-01 265s bytes=205114
+[19:54:31] PROC-OK chap-su-fake-01 bytes=52461
+[19:54:31] PROC-OK chap-su-fake-01 bytes=52461
+[20:00:04] SYNTH-OK chap-su-fake-02 333s bytes=411920
+[20:00:04] SYNTH-OK chap-su-fake-02 333s bytes=411920
+[20:00:04] PROC-OK chap-su-fake-02 bytes=104013
+[20:00:04] PROC-OK chap-su-fake-02 bytes=104013
+[20:04:58] SYNTH-OK chap-su-fake-03 294s bytes=312676
+[20:04:58] SYNTH-OK chap-su-fake-03 294s bytes=312676
+[20:04:59] PROC-OK chap-su-fake-03 bytes=79245
+[20:04:59] PROC-OK chap-su-fake-03 bytes=79245
+[20:09:19] SYNTH-OK tiep-dan-p2g-01 260s bytes=221078
+[20:09:19] SYNTH-OK tiep-dan-p2g-01 260s bytes=221078
+[20:09:20] PROC-OK tiep-dan-p2g-01 bytes=56205
+[20:09:20] PROC-OK tiep-dan-p2g-01 bytes=56205
+[20:15:20] SYNTH-OK tiep-dan-p2g-02 361s bytes=490120
+[20:15:20] SYNTH-OK tiep-dan-p2g-02 361s bytes=490120
+[20:15:21] PROC-OK tiep-dan-p2g-02 bytes=123597
+[20:15:21] PROC-OK tiep-dan-p2g-02 bytes=123597
+[20:19:50] SYNTH-OK chuong-mon-p2g-01 269s bytes=242134
+[20:19:50] SYNTH-OK chuong-mon-p2g-01 269s bytes=242134
+[20:19:51] PROC-OK chuong-mon-p2g-01 bytes=61677
+[20:19:51] PROC-OK chuong-mon-p2g-01 bytes=61677
+[20:32:52] OMNI BATCH: 44 cau
+[20:32:52] OMNI BATCH: 44 cau
+[20:32:52] SKIP linh-nhi-m1-01 (mp3 da co)
+[20:32:52] SKIP linh-nhi-m1-01 (mp3 da co)
+[20:32:52] SKIP linh-nhi-m1-02 (mp3 da co)
+[20:32:52] SKIP linh-nhi-m1-02 (mp3 da co)
+[20:32:52] SKIP linh-nhi-m2-01 (mp3 da co)
+[20:32:52] SKIP linh-nhi-m2-01 (mp3 da co)
+[20:32:52] SKIP linh-nhi-m2-02 (mp3 da co)
+[20:32:52] SKIP linh-nhi-m2-02 (mp3 da co)
+[20:32:52] SKIP linh-nhi-low-01 (mp3 da co)
+[20:32:52] SKIP linh-nhi-low-01 (mp3 da co)
+[20:32:52] SKIP linh-nhi-low-02 (mp3 da co)
+[20:32:52] SKIP linh-nhi-low-02 (mp3 da co)
+[20:32:52] SKIP linh-nhi-low-03 (mp3 da co)
+[20:32:52] SKIP linh-nhi-low-03 (mp3 da co)
+[20:32:52] SKIP linh-nhi-low-04 (mp3 da co)
+[20:32:52] SKIP linh-nhi-low-04 (mp3 da co)
+[20:32:52] SKIP linh-nhi-low-05 (mp3 da co)
+[20:32:52] SKIP linh-nhi-low-05 (mp3 da co)
+[20:32:52] SKIP linh-nhi-low-06 (mp3 da co)
+[20:32:52] SKIP linh-nhi-low-06 (mp3 da co)
+[20:32:52] SKIP linh-nhi-p2g-01 (mp3 da co)
+[20:32:52] SKIP linh-nhi-p2g-01 (mp3 da co)
+[20:32:52] SKIP linh-nhi-p2g-02 (mp3 da co)
+[20:32:52] SKIP linh-nhi-p2g-02 (mp3 da co)
+[20:32:52] SKIP banh-bao-01 (mp3 da co)
+[20:32:52] SKIP banh-bao-01 (mp3 da co)
+[20:32:52] SKIP banh-bao-02 (mp3 da co)
+[20:32:52] SKIP banh-bao-02 (mp3 da co)
+[20:32:52] SKIP cho-cui-01 (mp3 da co)
+[20:32:52] SKIP cho-cui-01 (mp3 da co)
+[20:32:52] SKIP cho-cui-02 (mp3 da co)
+[20:32:52] SKIP cho-cui-02 (mp3 da co)
+[20:32:52] SKIP lao-duoc-01 (mp3 da co)
+[20:32:52] SKIP lao-duoc-01 (mp3 da co)
+[20:32:52] SKIP lao-duoc-02 (mp3 da co)
+[20:32:52] SKIP lao-duoc-02 (mp3 da co)
+[20:32:52] SKIP tuan-thu-su-01 (mp3 da co)
+[20:32:52] SKIP tuan-thu-su-01 (mp3 da co)
+[20:32:52] SKIP tuan-thu-su-02 (mp3 da co)
+[20:32:52] SKIP tuan-thu-su-02 (mp3 da co)
+[20:32:52] SKIP lao-gia-01 (mp3 da co)
+[20:32:52] SKIP lao-gia-01 (mp3 da co)
+[20:32:52] SKIP lao-gia-fake-01 (mp3 da co)
+[20:32:52] SKIP lao-gia-fake-01 (mp3 da co)
+[20:32:52] SKIP lao-gia-fake-02 (mp3 da co)
+[20:32:52] SKIP lao-gia-fake-02 (mp3 da co)
+[20:32:52] SKIP lao-gia-fake-03 (mp3 da co)
+[20:32:52] SKIP lao-gia-fake-03 (mp3 da co)
+[20:32:52] SKIP lao-gia-fake-04 (mp3 da co)
+[20:32:52] SKIP lao-gia-fake-04 (mp3 da co)
+[20:32:52] SKIP lao-gia-fake-05 (mp3 da co)
+[20:32:52] SKIP lao-gia-fake-05 (mp3 da co)
+[20:32:52] SKIP lao-gia-fake-06 (mp3 da co)
+[20:32:52] SKIP lao-gia-fake-06 (mp3 da co)
+[20:32:52] SKIP lao-gia-fake-07 (mp3 da co)
+[20:32:52] SKIP lao-gia-fake-07 (mp3 da co)
+[20:32:52] SKIP lao-gia-fake-08 (mp3 da co)
+[20:32:52] SKIP lao-gia-fake-08 (mp3 da co)
+[20:32:52] SKIP lao-gia-fake-09 (mp3 da co)
+[20:32:52] SKIP lao-gia-fake-09 (mp3 da co)
+[20:32:52] SKIP chap-su-fake-01 (mp3 da co)
+[20:32:52] SKIP chap-su-fake-01 (mp3 da co)
+[20:32:52] SKIP chap-su-fake-02 (mp3 da co)
+[20:32:52] SKIP chap-su-fake-02 (mp3 da co)
+[20:32:52] SKIP chap-su-fake-03 (mp3 da co)
+[20:32:52] SKIP chap-su-fake-03 (mp3 da co)
+[20:32:52] SKIP tiep-dan-p2g-01 (mp3 da co)
+[20:32:52] SKIP tiep-dan-p2g-01 (mp3 da co)
+[20:32:52] SKIP tiep-dan-p2g-02 (mp3 da co)
+[20:32:52] SKIP tiep-dan-p2g-02 (mp3 da co)
+[20:32:52] SKIP chuong-mon-p2g-01 (mp3 da co)
+[20:32:52] SKIP chuong-mon-p2g-01 (mp3 da co)
+[20:32:53] SYNTH-FAIL chuong-mon-p2g-02 rc=1 out=sr/lib/python3.12/urllib/request.py", line 492, in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 639, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 400: Bad Request
+
+[20:32:53] SYNTH-FAIL chuong-mon-p2g-02 rc=1 out=sr/lib/python3.12/urllib/request.py", line 492, in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 639, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 400: Bad Request
+
+[20:39:18] SYNTH-OK chap-su-p2g-01 385s bytes=244532
+[20:39:18] SYNTH-OK chap-su-p2g-01 385s bytes=244532
+[20:39:18] PROC-OK chap-su-p2g-01 bytes=62253
+[20:39:18] PROC-OK chap-su-p2g-01 bytes=62253
+[20:44:19] SYNTH-OK chap-su-p2g-02 301s bytes=301902
+[20:44:19] SYNTH-OK chap-su-p2g-02 301s bytes=301902
+[20:44:20] PROC-OK chap-su-p2g-02 bytes=76653
+[20:44:20] PROC-OK chap-su-p2g-02 bytes=76653
+[20:49:53] SYNTH-OK ha-nhan-01 333s bytes=352724
+[20:49:53] SYNTH-OK ha-nhan-01 333s bytes=352724
+[20:49:54] PROC-OK ha-nhan-01 bytes=89325
+[20:49:54] PROC-OK ha-nhan-01 bytes=89325
+[20:54:17] SYNTH-OK ha-nhan-02 263s bytes=203068
+[20:54:17] SYNTH-OK ha-nhan-02 263s bytes=203068
+[20:54:18] PROC-OK ha-nhan-02 bytes=51885
+[20:54:18] PROC-OK ha-nhan-02 bytes=51885
+[20:59:11] SYNTH-OK dan-dong-01 293s bytes=278312
+[20:59:11] SYNTH-OK dan-dong-01 293s bytes=278312
+[20:59:11] PROC-OK dan-dong-01 bytes=70605
+[20:59:11] PROC-OK dan-dong-01 bytes=70605
+[21:04:10] SYNTH-OK dan-dong-02 299s bytes=303520
+[21:04:10] SYNTH-OK dan-dong-02 299s bytes=303520
+[21:04:11] PROC-OK dan-dong-02 bytes=76941
+[21:04:11] PROC-OK dan-dong-02 bytes=76941
+[21:09:41] SYNTH-OK dan-dong-03 331s bytes=393864
+[21:09:41] SYNTH-OK dan-dong-03 331s bytes=393864
+[21:09:42] PROC-OK dan-dong-03 bytes=99405
+[21:09:42] PROC-OK dan-dong-03 bytes=99405
+[21:09:42] === OMNI BATCH DONE ok=7 fail=1 skip=36 ===
+[21:09:42] === OMNI BATCH DONE ok=7 fail=1 skip=36 ===
+[14:23:18] OMNI BATCH: 44 cau
+[14:23:18] SKIP linh-nhi-m1-01 (mp3 da co)
+[14:23:18] SKIP linh-nhi-m1-02 (mp3 da co)
+[14:23:18] SKIP linh-nhi-m2-01 (mp3 da co)
+[14:23:18] SKIP linh-nhi-m2-02 (mp3 da co)
+[14:23:18] SKIP linh-nhi-low-01 (mp3 da co)
+[14:23:18] SKIP linh-nhi-low-02 (mp3 da co)
+[14:23:18] SKIP linh-nhi-low-03 (mp3 da co)
+[14:23:18] SKIP linh-nhi-low-04 (mp3 da co)
+[14:23:18] SKIP linh-nhi-low-05 (mp3 da co)
+[14:23:18] SKIP linh-nhi-low-06 (mp3 da co)
+[14:23:18] SKIP linh-nhi-p2g-01 (mp3 da co)
+[14:23:18] SKIP linh-nhi-p2g-02 (mp3 da co)
+[14:23:18] SKIP banh-bao-01 (mp3 da co)
+[14:23:18] SKIP banh-bao-02 (mp3 da co)
+[14:23:18] SKIP cho-cui-01 (mp3 da co)
+[14:23:18] SKIP cho-cui-02 (mp3 da co)
+[14:23:18] SKIP lao-duoc-01 (mp3 da co)
+[14:23:18] SKIP lao-duoc-02 (mp3 da co)
+[14:23:18] SKIP tuan-thu-su-01 (mp3 da co)
+[14:23:18] SKIP tuan-thu-su-02 (mp3 da co)
+[14:23:18] SKIP lao-gia-01 (mp3 da co)
+[14:23:18] SKIP lao-gia-fake-01 (mp3 da co)
+[14:23:18] SKIP lao-gia-fake-02 (mp3 da co)
+[14:23:18] SKIP lao-gia-fake-03 (mp3 da co)
+[14:23:18] SKIP lao-gia-fake-04 (mp3 da co)
+[14:23:18] SKIP lao-gia-fake-05 (mp3 da co)
+[14:23:18] SKIP lao-gia-fake-06 (mp3 da co)
+[14:23:18] SKIP lao-gia-fake-07 (mp3 da co)
+[14:23:18] SKIP lao-gia-fake-08 (mp3 da co)
+[14:23:18] SKIP lao-gia-fake-09 (mp3 da co)
+[14:23:18] SKIP chap-su-fake-01 (mp3 da co)
+[14:23:18] SKIP chap-su-fake-02 (mp3 da co)
+[14:23:18] SKIP chap-su-fake-03 (mp3 da co)
+[14:23:18] SKIP tiep-dan-p2g-01 (mp3 da co)
+[14:23:18] SKIP tiep-dan-p2g-02 (mp3 da co)
+[14:23:18] SKIP chuong-mon-p2g-01 (mp3 da co)
+[14:32:27] SYNTH-OK chuong-mon-p2g-02 549s bytes=462380
+[14:32:28] PROC-OK chuong-mon-p2g-02 bytes=116685
+[14:32:28] SKIP chap-su-p2g-01 (mp3 da co)
+[14:32:28] SKIP chap-su-p2g-02 (mp3 da co)
+[14:32:28] SKIP ha-nhan-01 (mp3 da co)
+[14:32:28] SKIP ha-nhan-02 (mp3 da co)
+[14:32:28] SKIP dan-dong-01 (mp3 da co)
+[14:32:28] SKIP dan-dong-02 (mp3 da co)
+[14:32:28] SKIP dan-dong-03 (mp3 da co)
+[14:32:28] === OMNI BATCH DONE ok=1 fail=0 skip=43 ===
