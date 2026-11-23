@@ -522,6 +522,8 @@
 
       <div class="skill-book-wrap">
         <h3 class="section-title">Sổ Chiêu — Năm Họ Bí Pháp, Hợp Kích & Võ Học</h3>
+        <!-- Đợt SKILL-EQUIP-UI: nút vào tấm Trang Bị Skill (gắn chiêu vào 8 ô). -->
+        <button id="btn-open-skill-equip" class="btn wood skill-equip-open-btn" type="button" title="Mở bảng trang bị skill: gắn chiêu vào 8 ô">⚙ Trang Bị Skill</button>
         <div id="skill-book"></div>
       </div>
 
@@ -530,6 +532,32 @@
         <button id="btn-p2f-open" class="btn wood wide" type="button">Sổ Thành Tựu & Sổ Tử</button>
         <div class="detail-row" style="margin-top:6px;"><span>Danh hiệu:</span> <b id="char-panel-title">Chưa chọn</b></div>
       </div>
+    </div>
+  </div>
+
+  <!-- Đợt SKILL-EQUIP-UI: tấm Trang Bị Skill — bên phải trên PC, tấm dưới
+       trên điện thoại; map + nhân vật vẫn thấy được phía sau. -->
+  <div id="skill-equip-panel" class="skill-equip-sheet hidden" role="dialog" aria-label="Trang Bị Skill">
+    <div class="seq-head">
+      <h2 class="modal-title">TRANG BỊ SKILL</h2>
+      <button id="close-skill-equip" class="btn-close" type="button">×</button>
+    </div>
+    <div class="seq-body">
+      <div class="seq-portrait-block">
+        <div id="seq-portrait" class="seq-portrait"></div>
+        <div class="seq-who">
+          <b id="seq-name">Hà Nhân</b>
+          <span id="seq-realm">Phàm Nhân</span>
+          <span id="seq-path">Chưa chọn đường</span>
+        </div>
+      </div>
+      <div id="seq-grid" class="seq-grid"></div>
+      <div class="seq-actions">
+        <button id="seq-btn-remove" class="btn wood seq-action-btn" type="button">Tháo</button>
+        <button id="seq-btn-reset" class="btn wood seq-action-btn" type="button">Đặt lại</button>
+      </div>
+      <div id="seq-detail" class="seq-detail"></div>
+      <div id="seq-list" class="seq-list"></div>
     </div>
   </div>
 

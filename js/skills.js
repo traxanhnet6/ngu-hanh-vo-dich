@@ -921,13 +921,14 @@
   }
 
   /**
-   * Đợt ƯU TIÊN — đội hình 8 ô theo đường tu đã chọn (player có thể null /
-   * không truyền = hành vi cũ y hệt). Khi có đường: ô 1–4 = 4 chiêu đường
-   * tu, ô 5–8 = 4 chiêu chung đầu tiên của LOADOUT hiện tại; 4 chiêu chung
-   * còn lại vẫn đã học, hiện ở Bảng Chiêu (đổi ô bằng tay để đợt sau).
-   * Khi chưa có đường: loadout giữ nguyên như hiện tại (không hồi quy).
+   * Đợt ƯU TIÊN — đội hình mặc định 8 ô theo đường tu đã chọn (player có
+   * thể null / không truyền = hành vi cũ y hệt). Khi có đường: ô 1–4 = 4
+   * chiêu đường tu, ô 5–8 = 4 chiêu chung đầu tiên của LOADOUT hiện tại;
+   * 4 chiêu chung còn lại vẫn đã học, hiện ở Bảng Chiêu (đổi ô bằng tay
+   * để đợt sau). Khi chưa có đường: loadout giữ nguyên như hiện tại
+   * (không hồi quy).
    */
-  function effectiveLoadoutIds(player) {
+  function defaultLoadoutIds(player) {
     var path = player && player.cultivationPath;
     if (path && PATH_SKILL_IDS[path]) {
       return PATH_SKILL_IDS[path].concat(COMMON_LOADOUT_FIRST4);
@@ -935,12 +936,92 @@
     return LOADOUT.slice();
   }
 
+  /**
+   * Đợt SKILL-EQUIP-UI — chiêu có gắn được vào ô không. Trả
+   * { ok:true } hoặc { ok:false, reason } (reason là câu hiển thị).
+   * Không gắn được: Đánh thường (luôn có sẵn), chiêu bị động (luôn hiệu
+   * lực), chiêu chưa mở khóa (khóa theo đường / Hài Hòa / tu vi đường).
+   */
+  function isEquipable(def, player) {
+    if (!def) return { ok: false, reason: 'Không có chiêu này.' };
+    if (def.id === 'basic') return { ok: false, reason: 'Đánh thường — luôn có sẵn, không cần trang bị.' };
+    if (def.passive) return { ok: false, reason: 'Chiêu bị động — luôn hiệu lực, không cần trang bị.' };
+    if (!isUnlocked(def, player)) {
+      var u = def.unlock || {};
+      if (u.type === 'cultivationPath') {
+        return { ok: false, reason: 'Khóa — cần chọn đường tu này (sau Trúc Cơ, qua Nghi Lễ Chọn Đường).' };
+      }
+      if (u.type === 'harmony') {
+        var hhCur = player ? harmonyRatioOf(player.paths) : 0;
+        return { ok: false, reason: 'Khóa — cần Hài Hòa ≥ ' + u.min + ' (hiện tại ' + Math.round(hhCur * 100) / 100 + ').' };
+      }
+      if (u.type === 'pathTuVi') {
+        var cur = (player && player.paths && player.paths[u.path]) ? (player.paths[u.path].tuVi || 0) : 0;
+        return { ok: false, reason: 'Khóa — cần tu vi đường ≥ ' + u.min + ' (hiện tại ' + cur + ').' };
+      }
+      return { ok: false, reason: 'Chiêu chưa mở khóa.' };
+    }
+    return { ok: true };
+  }
+
+  /**
+   * Đợt SKILL-EQUIP-UI — làm sạch đội hình tự chọn, GIỮ ĐÚNG VỊ TRÍ Ô:
+   * duyệt từng ô 1–8, ô nào có id hợp lệ (trong registry, gắn được cho
+   * người chơi, chưa xuất hiện ở ô trước) thì giữ nguyên ô đó, ô không
+   * hợp lệ thành null. Chiêu bị khóa sau này (vd đổi đường tu) tự rơi
+   * khỏi đội hình thành ô trống khi đọc lại.
+   */
+  function sanitizeCustomLoadout(ids, player) {
+    var out = [null, null, null, null, null, null, null, null];
+    if (!Array.isArray(ids)) return out;
+    var seen = {};
+    for (var i = 0; i < 8 && i < ids.length; i++) {
+      var id = ids[i];
+      if (!id || typeof id !== 'string' || seen[id]) continue;
+      var def = INDEX[id];
+      if (!def) continue;
+      if (!isEquipable(def, player).ok) continue;
+      seen[id] = true;
+      out[i] = id;
+    }
+    return out;
+  }
+
+  /**
+   * Đợt SKILL-EQUIP-UI — đội hình 8 ô hiệu lực: có đội hình tự chọn
+   * (player.customLoadout) thì dùng nó (đã làm sạch); không có thì dùng
+   * đội hình mặc định theo đường tu. Luôn trả đúng 8 phần tử (id hoặc null
+   * cho ô trống) để vị trí ô 1–8 không bao giờ dồn.
+   */
+  function effectiveLoadoutIds(player) {
+    if (player && Array.isArray(player.customLoadout)) {
+      return sanitizeCustomLoadout(player.customLoadout, player);
+    }
+    return defaultLoadoutIds(player);
+  }
+
+  /** Ghi đội hình tự chọn (đã làm sạch) vào player, trả mảng 8 ô đã ghi. */
+  function setCustomLoadout(player, ids) {
+    if (!player) return defaultLoadoutIds(player);
+    player.customLoadout = sanitizeCustomLoadout(ids, player);
+    return player.customLoadout.slice();
+  }
+
+  /** Xóa đội hình tự chọn — về đội hình mặc định theo đường tu hiện tại. */
+  function resetCustomLoadout(player) {
+    if (player) player.customLoadout = null;
+    return defaultLoadoutIds(player);
+  }
+
+  /**
+   * Đội hình 8 ô dưới dạng định nghĩa chiêu — GIỮ ĐÚNG VỊ TRÍ Ô: ô trống
+   * trả null, không dồn (đợt SKILL-EQUIP-UI). Người gọi phải chống null.
+   */
   function getLoadout(player) {
     var ids = effectiveLoadoutIds(player);
     var out = [];
     for (var i = 0; i < ids.length; i++) {
-      var def = INDEX[ids[i]];
-      if (def) out.push(def);
+      out.push(ids[i] ? (INDEX[ids[i]] || null) : null);
     }
     return out;
   }
@@ -1237,6 +1318,11 @@
   exports.CULTIVATION_PATHS = CULTIVATION_PATHS;
   exports.PATH_SKILL_IDS = PATH_SKILL_IDS;
   exports.effectiveLoadoutIds = effectiveLoadoutIds;
+  exports.defaultLoadoutIds = defaultLoadoutIds;
+  exports.isEquipable = isEquipable;
+  exports.sanitizeCustomLoadout = sanitizeCustomLoadout;
+  exports.setCustomLoadout = setCustomLoadout;
+  exports.resetCustomLoadout = resetCustomLoadout;
   exports.SINH_MAP = SINH_MAP;
   exports.KHAC_MAP = KHAC_MAP;
   exports.COST_TYPES = COST_TYPES;

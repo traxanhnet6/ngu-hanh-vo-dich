@@ -138,6 +138,10 @@
     if (player.cultivationPath) return { ok: false, reason: 'already_chosen', msg: 'Đã chọn đường ' + pathName(player.cultivationPath) + ' — muốn đổi đường hãy dùng chức năng đổi đường.' };
     if (getRealmRank(player) < 10) return { ok: false, reason: 'realm', msg: 'Chọn đường tu mở sau khi đột phá Trúc Cơ (hiện tại: ' + (player.realm || 'Phàm Nhân') + ').' };
     player.cultivationPath = pathId;
+    // Đợt SKILL-EQUIP-UI: chọn đường mới thì đội hình tự chọn cũ (chứa
+    // chiêu đường chưa có) về mặc định đường mới.
+    var skPick = skillsAPI();
+    if (skPick && typeof skPick.resetCustomLoadout === 'function') skPick.resetCustomLoadout(player);
     savePlayer(player);
     refreshSkillUI();
     return { ok: true, path: pathId, msg: 'Đã chọn đường ' + pathName(pathId) + '! 4 chiêu đường tu đã mở — xem ở Sổ Chiêu, 4 chiêu lên ô 1–4 trên thanh kỹ năng.' };
@@ -164,6 +168,10 @@
     player.cultivationPath = pathId;
     player.pathChangeFreeUsed = true;
     player.pathBuffs = null;
+    // Đợt SKILL-EQUIP-UI: đổi đường thì đội hình tự chọn cũ (chứa chiêu
+    // đường cũ đã khóa) về mặc định đường mới.
+    var skChg = skillsAPI();
+    if (skChg && typeof skChg.resetCustomLoadout === 'function') skChg.resetCustomLoadout(player);
     savePlayer(player);
     refreshSkillUI();
     return { ok: true, path: pathId, cost: cost, msg: 'Đã đổi từ đường ' + pathName(oldPath) + ' sang đường ' + pathName(pathId) + (cost > 0 ? ' (tốn ' + cost + ' Linh Thạch).' : ' (lần đổi miễn phí).') + ' Đội hình 8 ô đã đổi theo đường mới.' };

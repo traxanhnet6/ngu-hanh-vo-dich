@@ -242,6 +242,19 @@
       });
     }
 
+    // Đợt SKILL-EQUIP-UI: nút vào tấm Trang Bị Skill trong mục Sổ Chiêu
+    // của Bảng Nhân Vật + nút đóng tấm.
+    var btnSkillEquip = document.getElementById('btn-open-skill-equip');
+    if (btnSkillEquip) btnSkillEquip.addEventListener('click', function () {
+      if (audioAPI) audioAPI.playClick();
+      openSkillEquip();
+    });
+    var btnCloseSkillEquip = document.getElementById('close-skill-equip');
+    if (btnCloseSkillEquip) btnCloseSkillEquip.addEventListener('click', function () {
+      if (audioAPI) audioAPI.playClick();
+      closeSkillEquip();
+    });
+
     // 2. Thu gọn / bung bảng nhiệm vụ
     var questHeader = document.getElementById('quest-panel-header');
     var questPanel = document.getElementById('quest-panel');
@@ -3588,7 +3601,7 @@
         var lang = SK.elementLang(SK.elementOf(d));
         var unlocked = SK.isUnlocked(d, player);
         var slotIdx = -1;
-        for (var l = 0; l < loadout.length; l++) if (loadout[l].id === d.id) slotIdx = l;
+        for (var l = 0; l < loadout.length; l++) if (loadout[l] && loadout[l].id === d.id) slotIdx = l;
         var meta = [];
         if (d.thuc) meta.push('Thức ' + d.thuc);
         if (d.cost && d.cost.amount) meta.push('Tốn ' + d.cost.amount + ' linh lực');
@@ -3635,6 +3648,252 @@
         if (panel) panel.classList.add('hidden');
         if (window.GameEngine && window.GameEngine.castSkill) window.GameEngine.castSkill(id);
       });
+    }
+  }
+
+  /* ==================================================================
+   * Đợt SKILL-EQUIP-UI — tấm Trang Bị Skill (bám ảnh mẫu tutienpixel).
+   * Mở từ nút "Trang Bị Skill" trong mục Sổ Chiêu của Bảng Nhân Vật.
+   * Tấm bên phải trên PC / tấm dưới trên điện thoại — map + nhân vật vẫn
+   * thấy được, không phải modal toàn màn hình. Tương tác 2 bước (bấm chiêu
+   * trong danh sách → bấm ô để gắn) vì điện thoại không kéo-thả tin cậy.
+   * Mọi thay đổi lưu save ngay + refreshSkillSlots() để 8 ô ngoài map
+   * đổi theo ngay (vòng cung điện thoại + dải ngang PC).
+   * ================================================================== */
+  var equipSel = { skillId: null, slotIdx: -1 };
+
+  function skillEquipIds() {
+    var SK = window.GameSkills;
+    if (!SK || !player) return [null, null, null, null, null, null, null, null];
+    return SK.effectiveLoadoutIds(player);
+  }
+
+  function openSkillEquip() {
+    var panel = document.getElementById('char-panel');
+    if (panel) panel.classList.add('hidden');
+    equipSel = { skillId: null, slotIdx: -1 };
+    renderSkillEquip();
+    var sheet = document.getElementById('skill-equip-panel');
+    if (sheet) sheet.classList.remove('hidden');
+  }
+
+  function closeSkillEquip() {
+    var sheet = document.getElementById('skill-equip-panel');
+    if (sheet) sheet.classList.add('hidden');
+    equipSel = { skillId: null, slotIdx: -1 };
+  }
+
+  function skillEquipSaveAndRefresh() {
+    if (stateAPI && stateAPI.savePlayer && player) stateAPI.savePlayer(player);
+    refreshSkillSlots();
+  }
+
+  function skillEquipPlace(skillId, slotIdx) {
+    var SK = window.GameSkills;
+    if (!SK || !player) return;
+    var ids = SK.effectiveLoadoutIds(player).slice();
+    var oldIdx = ids.indexOf(skillId);
+    if (oldIdx >= 0) ids[oldIdx] = null;
+    ids[slotIdx] = skillId;
+    SK.setCustomLoadout(player, ids);
+    skillEquipSaveAndRefresh();
+  }
+
+  function skillEquipRemove(slotIdx) {
+    var SK = window.GameSkills;
+    if (!SK || !player) return;
+    var ids = SK.effectiveLoadoutIds(player).slice();
+    ids[slotIdx] = null;
+    SK.setCustomLoadout(player, ids);
+    skillEquipSaveAndRefresh();
+  }
+
+  function skillEquipReset() {
+    var SK = window.GameSkills;
+    if (!SK || !player) return;
+    SK.resetCustomLoadout(player);
+    skillEquipSaveAndRefresh();
+  }
+
+  function skillEquipDetailHtml(def, note) {
+    if (!def) return '<div class="seq-detail-empty">Chọn một chiêu trong danh sách, rồi bấm vào ô 1–8 để trang bị. Bấm ô đã gắn để xem chiêu trong ô và tháo ra.</div>';
+    var meta = [];
+    if (def.cost && def.cost.amount) meta.push('Tốn ' + def.cost.amount + ' linh lực');
+    if (typeof def.cooldown === 'number') meta.push('Hồi ' + String(def.cooldown).replace('.', ',') + ' giây');
+    if (def.range) meta.push('Tầm ' + def.range);
+    if (def.passive) meta.push('Bị động — luôn hiệu lực');
+    return '<div class="seq-detail-name">' + def.name + '</div>' +
+      '<div class="seq-detail-meta">' + meta.join(' · ') + '</div>' +
+      '<div class="seq-detail-desc">' + (def.desc || '') + '</div>' +
+      (note ? '<div class="seq-detail-note">' + note + '</div>' : '');
+  }
+
+  function renderSkillEquip() {
+    var host = document.getElementById('skill-equip-panel');
+    if (!host) return;
+    var SK = window.GameSkills;
+    if (!SK || !player) return;
+    var ids = skillEquipIds();
+    var all = SK.listSkills();
+    var pathNames = { kim: 'Kim', moc: 'Mộc', thuy: 'Thủy', hoa: 'Hỏa', tho: 'Thổ' };
+
+    // Đầu tấm: chân dung đã chọn lúc tạo nhân vật (đợt này hiện chân dung
+    // đã chọn; chưa chọn/mã lạ thì mặt Hà Nhân mặc định).
+    var portraitEl = document.getElementById('seq-portrait');
+    if (portraitEl) {
+      var pUrl = portraitUrlForPlayer(player);
+      portraitEl.style.backgroundImage = "url('" + (pUrl || 'assets/chars/hanhan-face.png') + "')";
+    }
+    var nameEl = document.getElementById('seq-name');
+    if (nameEl) nameEl.textContent = player.name || 'Hà Nhân';
+    var realmEl = document.getElementById('seq-realm');
+    if (realmEl) realmEl.textContent = player.realm || 'Phàm Nhân';
+    var pathEl = document.getElementById('seq-path');
+    if (pathEl) {
+      var dt = window.GameDuongTu;
+      pathEl.textContent = player.cultivationPath
+        ? ('Đường ' + ((dt && dt.pathName) ? dt.pathName(player.cultivationPath) : player.cultivationPath))
+        : 'Chưa chọn đường';
+    }
+
+    // Lưới 8 ô đánh số 1–8, 2 cột × 4 hàng như ảnh mẫu.
+    var grid = document.getElementById('seq-grid');
+    if (grid) {
+      var gh = '';
+      for (var i = 0; i < 8; i++) {
+        var def = ids[i] ? SK.getSkill(ids[i]) : null;
+        var selCls = (equipSel.slotIdx === i) ? ' seq-slot-sel' : '';
+        gh += '<button type="button" class="seq-slot' + (def ? '' : ' seq-slot-empty') + selCls + '" data-slot="' + i + '">' +
+          '<span class="seq-slot-num">' + (i + 1) + '</span>' +
+          (def ? '<span class="seq-slot-icon skill-icon ' + def.icon + '"></span>' : '<span class="seq-slot-icon seq-slot-icon-empty"></span>') +
+          '<span class="seq-slot-name">' + (def ? (def.shortName || def.name) : 'Trống') + '</span></button>';
+      }
+      grid.innerHTML = gh;
+      var slots = grid.querySelectorAll('.seq-slot');
+      for (var s = 0; s < slots.length; s++) {
+        slots[s].addEventListener('click', function () {
+          var idx = parseInt(this.getAttribute('data-slot'), 10);
+          var curIds = skillEquipIds();
+          var curDef = curIds[idx] ? SK.getSkill(curIds[idx]) : null;
+          if (equipSel.skillId) {
+            var pick = SK.getSkill(equipSel.skillId);
+            if (!pick) { equipSel.skillId = null; renderSkillEquip(); return; }
+            skillEquipPlace(equipSel.skillId, idx);
+            showToast('Đã gắn ' + pick.name + ' vào ô ' + (idx + 1) + '.');
+            equipSel = { skillId: null, slotIdx: -1 };
+            renderSkillEquip();
+          } else if (curDef) {
+            equipSel.slotIdx = idx;
+            equipSel.skillId = null;
+            renderSkillEquip();
+          } else {
+            showToast('Ô ' + (idx + 1) + ' đang trống — chọn một chiêu trong danh sách rồi bấm vào ô để trang bị.');
+          }
+        });
+      }
+    }
+
+    // Nút Tháo / Đặt lại.
+    var rmBtn = document.getElementById('seq-btn-remove');
+    if (rmBtn) {
+      var canRemove = equipSel.slotIdx >= 0 && ids[equipSel.slotIdx];
+      rmBtn.disabled = !canRemove;
+      rmBtn.onclick = function () {
+        if (equipSel.slotIdx < 0 || !ids[equipSel.slotIdx]) return;
+        var gone = SK.getSkill(ids[equipSel.slotIdx]);
+        skillEquipRemove(equipSel.slotIdx);
+        showToast('Đã tháo ' + (gone ? gone.name : 'chiêu') + ' khỏi ô ' + (equipSel.slotIdx + 1) + '.');
+        equipSel = { skillId: null, slotIdx: -1 };
+        renderSkillEquip();
+      };
+    }
+    var rsBtn = document.getElementById('seq-btn-reset');
+    if (rsBtn) {
+      rsBtn.onclick = function () {
+        skillEquipReset();
+        equipSel = { skillId: null, slotIdx: -1 };
+        showToast('Đã về đội hình mặc định.');
+        renderSkillEquip();
+      };
+    }
+
+    // Vùng chi tiết.
+    var detail = document.getElementById('seq-detail');
+    if (detail) {
+      if (equipSel.skillId) {
+        var pickDef = SK.getSkill(equipSel.skillId);
+        var eq = pickDef ? SK.isEquipable(pickDef, player) : { ok: false, reason: '' };
+        detail.innerHTML = skillEquipDetailHtml(pickDef, eq.ok
+          ? 'Đã chọn chiêu này — bấm vào một ô 1–8 để gắn.'
+          : (eq.reason || 'Chiêu này chưa gắn được.'));
+      } else if (equipSel.slotIdx >= 0 && ids[equipSel.slotIdx]) {
+        var slotDef = SK.getSkill(ids[equipSel.slotIdx]);
+        detail.innerHTML = skillEquipDetailHtml(slotDef, 'Đang chọn ô ' + (equipSel.slotIdx + 1) + ' — bấm "Tháo" để gỡ chiêu khỏi ô.');
+      } else {
+        detail.innerHTML = skillEquipDetailHtml(null, null);
+      }
+    }
+
+    // Danh sách chiêu theo họ (như Sổ Chiêu): icon thật + tên + phí/hồi
+    // chiêu; chưa mở mờ + ghi điều kiện; bị động/Đánh thường không gắn được.
+    var groups = [
+      { fam: 'kim', title: 'Họ Kim' },
+      { fam: 'moc', title: 'Họ Mộc' },
+      { fam: 'thuy', title: 'Họ Thủy' },
+      { fam: 'hoa', title: 'Họ Hỏa' },
+      { fam: 'tho', title: 'Họ Thổ' },
+      { fam: 'hop-kich', title: 'Họ Hợp Kích' },
+      { fam: 'vo-hoc', title: 'Võ Học Tay Không' },
+      { fam: 'kiem-tu', title: 'Đường Kiếm Tu' },
+      { fam: 'phap-tu', title: 'Đường Pháp Tu' },
+      { fam: 'the-tu', title: 'Đường Thể Tu' },
+      { fam: 'co-ban', title: 'Cơ Bản' }
+    ];
+    var list = document.getElementById('seq-list');
+    if (list) {
+      var lh = '';
+      for (var g = 0; g < groups.length; g++) {
+        var inFam = [];
+        for (var a = 0; a < all.length; a++) if (all[a].family === groups[g].fam) inFam.push(all[a]);
+        if (!inFam.length) continue;
+        lh += '<div class="seq-group"><div class="seq-group-title">' + groups[g].title + '</div>';
+        for (var s2 = 0; s2 < inFam.length; s2++) {
+          var d = inFam[s2];
+          var eq2 = SK.isEquipable(d, player);
+          var slotOfD = ids.indexOf(d.id);
+          var meta2 = [];
+          if (d.cost && d.cost.amount) meta2.push(d.cost.amount + ' LL');
+          if (typeof d.cooldown === 'number') meta2.push('Hồi ' + String(d.cooldown).replace('.', ',') + 's');
+          if (d.range) meta2.push('Tầm ' + d.range);
+          var stateTxt;
+          if (d.id === 'basic') stateTxt = 'Đánh thường — luôn có sẵn';
+          else if (d.passive) stateTxt = 'Bị động — luôn hiệu lực';
+          else if (!eq2.ok) stateTxt = eq2.reason;
+          else stateTxt = 'Đã mở' + (slotOfD >= 0 ? ' · Ô ' + (slotOfD + 1) : '');
+          lh += '<div class="seq-item' + (eq2.ok ? '' : ' seq-item-locked') +
+            (equipSel.skillId === d.id ? ' seq-item-sel' : '') +
+            (slotOfD >= 0 ? ' seq-item-equipped' : '') + '" data-skill="' + d.id + '">' +
+            '<span class="seq-item-icon skill-icon ' + d.icon + '"></span>' +
+            '<div class="seq-item-main"><div class="seq-item-name">' + d.name + '</div>' +
+            '<div class="seq-item-meta">' + meta2.join(' · ') + '</div></div>' +
+            '<div class="seq-item-state">' + stateTxt + '</div></div>';
+        }
+        lh += '</div>';
+      }
+      list.innerHTML = lh;
+      var items = list.querySelectorAll('.seq-item');
+      for (var it = 0; it < items.length; it++) {
+        items[it].addEventListener('click', function () {
+          var id = this.getAttribute('data-skill');
+          var d2 = SK.getSkill(id);
+          if (!d2) return;
+          var eq3 = SK.isEquipable(d2, player);
+          equipSel.skillId = id;
+          equipSel.slotIdx = -1;
+          if (!eq3.ok) showToast(eq3.reason);
+          renderSkillEquip();
+        });
+      }
     }
   }
 
@@ -4005,6 +4264,8 @@
     if (extras.skillsCd && window.GameSkills) {
       var loadoutCd = window.GameSkills.getLoadout(player);
       for (var si = 0; si < loadoutCd.length; si++) {
+        // Đợt SKILL-EQUIP-UI: ô trống (null) không có hồi chiêu để cập nhật.
+        if (!loadoutCd[si]) continue;
         updateSkillSlotUI(si + 1, extras.skillsCd[loadoutCd[si].id] || 0, loadoutCd[si].cooldown);
       }
     }
@@ -4046,26 +4307,45 @@
   function bindSkillSlots() {
     if (!window.GameSkills) return;
     // Đợt ƯU TIÊN: đội hình 8 ô đổi theo đường tu đã chọn.
+    // Đợt SKILL-EQUIP-UI: đội hình có thể có ô trống (null) — giữ đúng vị
+    // trí ô 1–8, ô trống vẽ mờ + nhãn "Trống", bấm báo mở Trang Bị Skill.
     var loadout = window.GameSkills.getLoadout(player);
-    for (var i = 0; i < loadout.length; i++) {
+    for (var i = 0; i < 8; i++) {
       (function (def, idx) {
         var slot = document.getElementById('skill-slot-' + (idx + 1));
         if (!slot) return;
+        if (slot._skillClickHandler) slot.removeEventListener('click', slot._skillClickHandler);
+        slot._skillClickHandler = null;
+        var icon = slot.querySelector('.skill-icon');
+        var tag = slot.querySelector('.skill-name-tag');
+        var hk = slot.querySelector('.skill-hotkey');
+        if (hk) hk.textContent = String(idx + 1);
+        if (!def) {
+          slot.classList.add('skill-slot-empty');
+          slot.title = '[' + (idx + 1) + '] Ô trống — mở Trang Bị Skill trong Sổ Chiêu để gắn chiêu';
+          slot.setAttribute('aria-label', 'Ô trống ' + (idx + 1));
+          if (icon) icon.className = 'skill-icon';
+          if (tag) tag.textContent = 'Trống';
+          updateSkillSlotUI(idx + 1, 0, 0);
+          slot._skillClickHandler = function () {
+            if (window.GameUI && window.GameUI.showToast) {
+              window.GameUI.showToast('Ô ' + (idx + 1) + ' đang trống — mở Bảng Nhân Vật → Sổ Chiêu → Trang Bị Skill để gắn chiêu.');
+            }
+          };
+          slot.addEventListener('click', slot._skillClickHandler);
+          return;
+        }
+        slot.classList.remove('skill-slot-empty');
         var lang = window.GameSkills.elementLang(window.GameSkills.elementOf(def));
         var title = '[' + (idx + 1) + '] ' + def.name + ' (' + lang.name + ')';
         if (def.cost && def.cost.amount > 0) title += ' - Tốn ' + def.cost.amount + ' Linh lực';
         if (def.desc) title += ' — ' + def.desc;
         slot.title = title;
         slot.setAttribute('aria-label', def.name);
-        var icon = slot.querySelector('.skill-icon');
         if (icon) icon.className = 'skill-icon ' + def.icon;
-        var tag = slot.querySelector('.skill-name-tag');
         if (tag) tag.textContent = def.shortName || def.name;
-        var hk = slot.querySelector('.skill-hotkey');
-        if (hk) hk.textContent = String(idx + 1);
         // Đợt ƯU TIÊN: dựng lại thanh kỹ năng khi đổi đường tu — gỡ
         // listener cũ trước khi gắn mới để không tung chiêu 2 lần.
-        if (slot._skillClickHandler) slot.removeEventListener('click', slot._skillClickHandler);
         slot._skillClickHandler = function () {
           if (window.GameEngine && window.GameEngine.castSkill) {
             window.GameEngine.castSkill(def.id);
