@@ -1943,6 +1943,14 @@
   var hanhanCombatData = {}; // move -> buildCombatIndex (.dirs/.scaleFromMaster/.charH)
   var combatAnim = null; // {move, dir, timer, duration, reverse}
   var swordDrawn = false;
+  // Đợt CHOPWOOD (2026-11-20, lệnh Bui "hình ảnh chặt cây phải làm rõ ràng"):
+  // chặt củi KHÔNG phải hái thuốc — một nhát vung dải chop (8 khung @10fps)
+  // rồi mới nhận Bó Củi đúng khoảnh khắc lưỡi chạm thân (khung 4, ~0,4s).
+  var CHOP_SWING_DUR = 0.8;   // 8 khung @10fps của dải chop
+  var CHOP_IMPACT_AT = 0.4;   // khung 4/8: lưỡi chạm thân cây
+  var CHOP_SHAKE_MS = 550;    // cây rung sau khi trúng
+  var pendingChop = null;     // {node, impactAt} — chờ tới khoảnh khắc trúng
+  var chopShakeUntil = {};    // nodeId -> performance.now ms (hết rung)
   var combatMoveIdx = 0;
   var combatLastStripEnd = 0;
 
@@ -2028,6 +2036,114 @@
       combatAnim = { move: 'draw', dir: player.dir || 0,
         timer: HH_COMBAT_STRIP_DUR, duration: HH_COMBAT_STRIP_DUR, reverse: true };
     }
+  }
+
+  // Nhiệm vụ chặt củi đang mở không? (bước 'chop' của Mở Đầu, sau khi đã
+  // nói chuyện Linh Nhi — getQuestTargetInfo đã gộp đủ điều kiện đó.)
+  function isChopQuestActive() {
+    try {
+      var qt = getQuestTargetInfo();
+      return !!(qt && qt.stepId === 'modau_chop');
+    } catch (e) { return false; }
+  }
+
+  // Tiến độ bó củi: {chopped, target} — target đọc từ mo-dau (CHOP_TARGET),
+  // lùi về 3 khi API chưa sẵn (không bịa số khác).
+  function chopProgress() {
+    var target = 3;
+    try {
+      var md = getMoDauAPI();
+      if (md && md.CONSTANTS && typeof md.CONSTANTS.CHOP_TARGET === 'number') target = md.CONSTANTS.CHOP_TARGET;
+    } catch (e) {}
+    var chopped = 0;
+    try {
+      if (player && player.moDau && player.moDau.progress && typeof player.moDau.progress.chopped === 'number') chopped = player.moDau.progress.chopped;
+    } catch (e) {}
+    return { chopped: chopped, target: target };
+  }
+
+  function chopDataReady() {
+    return !!(hanhanCombatData['chop'] && assets['hanhan_combat_chop']);
+  }
+
+  // Bắt đầu một nhát chặt vào node củi: quay mặt về cây, phát dải chop,
+  // đặt sẵn hồi chiêu của điểm (chặn bấm đúp trong lúc vung). Dải chop vốn
+  // chỉ chạy trong vòng đòn đánh thường và đòi kiếm trang bị; tân thủ
+  // weapon:null nên nó không bao giờ phát khi chặt — đường này phát trực
+  // tiếp combatAnim, không qua startCombatStrip, không đòi vũ khí.
+  // Trả false khi chưa phát được (dải chop chưa nạp / đang vung nhát khác)
+  // để nơi gọi lùi về hái tức thời cũ.
+  function startChopSwing(node, nowSec) {
+    if (!node || pendingChop || !chopDataReady()) return false;
+    player.dir = getDirFromVelocity(node.x - player.x, node.y - player.y);
+    harvestReadyTimes[node.id] = nowSec + (node.respawnSec || 90);
+    if (!player.stats) player.stats = { playSec: 0, kills: 0, bossKills: 0, harvests: 0, refines: 0 };
+    player.stats.harvests = (player.stats.harvests || 0) + 1;
+    combatAnim = { move: 'chop', dir: player.dir || 0,
+      timer: CHOP_SWING_DUR, duration: CHOP_SWING_DUR, reverse: false };
+    pendingChop = { node: node, impactAt: performance.now() + CHOP_IMPACT_AT * 1000 };
+    return true;
+  }
+
+  // Vụn gỗ bay + vòng chấn động tại thân cây, đúng khoảnh khắc trúng.
+  // Tái dùng visualEffects 'burst'/'ring' sẵn có, màu hệ Thổ (vàng nâu gỗ).
+  function spawnWoodChips(node) {
+    var hx = node.x, hy = node.y - 60; // điểm lưỡi chạm thân (giữa thân cây)
+    var lang = fxLang('tho');
+    var parts = [];
+    for (var i = 0; i < 12; i++) {
+      var a = (i / 12) * Math.PI * 2 + (i % 4) * 0.21;
+      var sp = 50 + (i % 3) * 24;
+      parts.push({ x: hx, y: hy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 22,
+        size: 1.8 + (i % 3) * 0.8, drag: 3.4 });
+    }
+    visualEffects.push({ kind: 'burst', elem: 'tho', lang: lang, x: hx, y: hy,
+      timer: 0.34, duration: 0.34, particles: parts });
+    visualEffects.push({ kind: 'ring', elem: 'tho', lang: lang, x: node.x, y: node.y,
+      timer: 0.32, duration: 0.32, maxR: 34, ground: true });
+  }
+
+  // Thu hoạch Bó Củi đúng khoảnh khắc trúng — sao y nhánh bo-cui của
+  // executeHarvestNode (cộng túi, chữ nổi, việc ngày, đẩy bước Mở Đầu, âm
+  // thanh, HUD), chỉ khác là chạy trễ 0,4s sau khi vung thay vì nhận ngay.
+  function finishChopHarvest(node) {
+    if (stateAPI) stateAPI.addItemToBag(player, 'bo-cui', 1);
+    spawnFloatingText('+1 Bó Củi', player.x, player.y - 35, '#7ce898');
+    if (typeof window !== 'undefined' && window.GameHoatDong) window.GameHoatDong.note(player, 'herb');
+    if (audioAPI) audioAPI.playPickup();
+    if (typeof window !== 'undefined' && window.GameUI) window.GameUI.refreshHUD();
+    var mdChop = getMoDauAPI();
+    if (mdChop) {
+      var chopEv = mdChop.onEvent(player, 'chop');
+      if (chopEv && chopEv.advanced) {
+        var chopTarget = getQuestTargetInfo();
+        modauChime();
+        modauToast('Nhiệm vụ mới: ' + (chopTarget && chopTarget.title ? chopTarget.title : 'Bán Củi Ở Chợ'));
+        if (stateAPI) stateAPI.savePlayer(player);
+        modauRefreshHUD();
+      }
+    }
+  }
+
+  // Mỗi khung (gọi cạnh updateCombatAnim): tới giờ trúng thì rung cây,
+  // bắn vụn gỗ, rồi mới thu hoạch. Chết/gục hoặc đổi map giữa chừng thì
+  // hủy nhát (không nhận củi khống).
+  function updateChopSwing() {
+    if (!pendingChop) return;
+    if (!player || player.hp <= 0) { pendingChop = null; return; }
+    if (performance.now() < pendingChop.impactAt) return;
+    var node = pendingChop.node;
+    pendingChop = null;
+    var stillHere = false;
+    if (mapData && mapData.harvestNodes) {
+      for (var i = 0; i < mapData.harvestNodes.length; i++) {
+        if (mapData.harvestNodes[i].id === node.id) { stillHere = true; break; }
+      }
+    }
+    if (!stillHere) return;
+    chopShakeUntil[node.id] = performance.now() + CHOP_SHAKE_MS;
+    spawnWoodChips(node);
+    finishChopHarvest(node);
   }
   var genFrameDest = null; // hộp đích của khung sinh hình vừa vẽ xong (lớp kiếm trang bị bám theo)
   var hanhanGenHat = null; // Đợt HATLAYER: dữ liệu lớp nón cho bộ sinh hình
@@ -3310,6 +3426,11 @@
       if (window.GameP2I.onNpcTalked(npcId)) return;
     }
     if (!player || !player.quests) return;
+    // Đợt chopwood: chụp cờ talked_linhnhi TRƯỚC hook onNpcTalked — hook
+    // (syncLegacy trong quests.js:1030) đặt cờ này ngay khi quest nói chuyện
+    // hoàn thành, nên kiểm sau hook thì nhánh Linh Nhi dưới kia không bao
+    // giờ vào, toast "Chặt 3 Bó Củi" không hiện.
+    var talkedLinhnhiBefore = !!player.quests.talked_linhnhi;
     // Đợt E4: Kích hoạt hook nhiệm vụ dạng dữ liệu (quests.js)
     var qAPI = (typeof window !== 'undefined' && window.GameQuests)
       ? window.GameQuests
@@ -3354,7 +3475,7 @@
         var lnLines = mdTalk.getLinhNhiLines(player);
         if (lnLines && lnLines.pendingMilestone) mdTalk.acknowledgeMilestone(player, lnLines.pendingMilestone);
       }
-      if (!q.talked_linhnhi) {
+      if (!talkedLinhnhiBefore) {
         q.talked_linhnhi = true;
         q.current = 'hunt';
         q.thaotinhKills = 0;
@@ -3772,9 +3893,14 @@
     var nowSec = performance.now() / 1000;
     var readyAt = harvestReadyTimes[node.id] || 0;
     if (nowSec < readyAt) {
+      // Đợt CHOPWOOD: đang vung nhát vào chính cây này thì im lặng — cây
+      // đang bị chặt, không phải đang mọc lại.
+      if (pendingChop && pendingChop.node.id === node.id) return;
       var remSec = Math.ceil(readyAt - nowSec);
       if (typeof window !== 'undefined' && window.GameUI) {
-        window.GameUI.showToast('Linh dược đang lớn (' + remSec + 's)');
+        window.GameUI.showToast(node.itemId === 'bo-cui'
+          ? 'Gốc củi đang mọc lại (' + remSec + 's)'
+          : 'Linh dược đang lớn (' + remSec + 's)');
       }
       return;
     }
@@ -3787,6 +3913,13 @@
         modauToast('Linh Thạch còn khóa — qua đêm oán linh mới nhận được');
         return;
       }
+    }
+    // Đợt CHOPWOOD: chặt củi thì vung dải chop rồi mới nhận củi ở khoảnh
+    // khắc trúng (updateChopSwing); đang vung nhát khác thì chờ, dải chop
+    // chưa nạp thì lùi về hái tức thời cũ.
+    if (node.itemId === 'bo-cui') {
+      if (pendingChop) return;
+      if (startChopSwing(node, nowSec)) return;
     }
     harvestReadyTimes[node.id] = nowSec + (node.respawnSec || 90);
     if (!player.stats) player.stats = { playSec: 0, kills: 0, bossKills: 0, harvests: 0, refines: 0 };
@@ -3945,7 +4078,8 @@
         var hn = mapData.harvestNodes[h];
         var isReady = nowSec >= (harvestReadyTimes[hn.id] || 0);
         if (isReady && Math.hypot(player.x - hn.x, player.y - hn.y) <= (hn.radius || 48)) {
-          return { mode: 'harvest', label: 'Hái', harvestNode: hn };
+          // Đợt CHOPWOOD: điểm củi thì nút hành động ghi "Chặt Củi", không ghi "Hái".
+          return { mode: 'harvest', label: hn.itemId === 'bo-cui' ? 'Chặt Củi' : 'Hái', harvestNode: hn };
         }
       }
     }
@@ -7353,6 +7487,8 @@
     updateBasicSwing(dt);
     // Đợt COMBAT-RIG: cập nhật dải combat + thu kiếm khi yên quá lâu
     updateCombatAnim(dt);
+    // Đợt CHOPWOOD: nhát chặt tới khoảnh khắc trúng -> rung cây + vụn gỗ + nhận củi
+    updateChopSwing();
 
     // Cập nhật hiệu ứng khống chế lên người chơi (Trói chân / Làm chậm)
     var canMove = true;
@@ -9572,9 +9708,13 @@
         var isGardenPlot = (currentMapId === 'tong-mon');
         // HERB-CODE: điểm hái dại Miếu Hoang vẽ cụm dại trên mặt đất (không icon bay, không luống)
         var isWildPlot = (currentMapId === 'mieu_hoang');
+        // Đợt CHOPWOOD: điểm củi vẽ cây thật (drawChopTree), KHÔNG vẽ chung
+        // cụm thảo dược + quầng xanh như điểm hái thuốc nữa.
+        var isChopTree = (node.itemId === 'bo-cui');
         if (isGardenPlot) drawGardenPlot(node, isReady, nowSecH, h);
-        if (isWildPlot) drawWildHerb(node, isReady, nowSecH, h);
-        if (isReady) {
+        if (isWildPlot && !isChopTree) drawWildHerb(node, isReady, nowSecH, h);
+        if (isChopTree) drawChopTree(node, isReady, nowSecH, h);
+        if (isReady && !isChopTree) {
           var bobH = Math.sin(nowSecH * 3 + h) * 3;
           // Quầng linh quang: tâm suy từ sprite (giữa cụm) cho tông môn/miếu.
           var haloH = isGardenPlot
@@ -10104,6 +10244,10 @@
     // 8c. Đợt P2H (15§6): điểm đào kho báu trên map — dấu đất xới + chip tên
     // khi lại gần (tới vùng rồi tự tìm; chỉ hiện chữ khi đã ở sát bên).
     drawP2HDigPoint();
+
+    // 8d. Đợt CHOPWOOD: dấu hiệu cây chặt củi (vòng vàng + "!" + nhãn + vạch
+    // tiến độ) — vẽ sau thực thể để không bị che.
+    drawChopHighlights(performance.now() / 1000);
 
     // 9. Chip thông báo lối thoát
     if (exitChip.timer > 0) {
@@ -12648,6 +12792,91 @@
       drawHerbReadyGem(cx, herbMarkerY(key, baseY, 68), nowSec, idx);
     } else {
       drawHerbProgressRing(cx, herbMarkerY('herb-wild-s3', baseY, 68), prog, 2.4);
+    }
+  }
+
+  // Đợt CHOPWOOD: cây chặt củi vẽ bằng ảnh thông thật (standee-pine — cùng
+  // ảnh cây cảnh Miếu Hoang, đã nạp sẵn theo standee của map), KHÔNG vẽ
+  // chung cụm thảo dược nữa. Gốc cây = đúng tọa độ điểm chặt (khớp bán
+  // kính bấm 48px). Khi trúng: rung ngang + nghiêng nhẹ rồi tắt dần.
+  // Hồi chiêu: cây mờ đi + vòng tiến độ mọc lại trên ngọn.
+  function drawChopTree(node, isReady, nowSec, idx) {
+    var img = assets['assets/art/standee-pine.png'];
+    if (!img || !img.complete || !img.naturalWidth) {
+      drawWildHerb(node, isReady, nowSec, idx); // ảnh chưa về: lùi về cụm dại cũ
+      return;
+    }
+    var w = 104, h = Math.round(w * img.naturalHeight / img.naturalWidth);
+    var nowMs = performance.now();
+    var shakeLeft = (chopShakeUntil[node.id] || 0) - nowMs;
+    drawHerbGroundShadow(node.x, node.y + 2, 30, 8);
+    ctx.save();
+    if (!isReady) ctx.globalAlpha = 0.55;
+    if (shakeLeft > 0) {
+      var k = shakeLeft / CHOP_SHAKE_MS;
+      ctx.translate(node.x, node.y);
+      ctx.rotate(Math.sin(nowMs / 28) * 0.025 * k);
+      ctx.drawImage(img, -w / 2 + Math.sin(nowMs / 28) * 5 * k, -h, w, h);
+    } else {
+      ctx.drawImage(img, node.x - w / 2, node.y - h, w, h);
+    }
+    ctx.restore();
+    if (!isReady) {
+      drawHerbProgressRing(node.x, node.y - h - 12, herbProgressOf(node, nowSec), 2.4);
+    }
+  }
+
+  // Đợt CHOPWOOD: vòng vàng + "!" + nhãn "Chặt Củi n/3" + vạch tiến độ trên
+  // đầu cây chặt — vẽ SAU lớp thực thể (cùng tầng với mũi tên dẫn đường)
+  // để cây cảnh/người chơi không che mất dấu hiệu nhiệm vụ. Chỉ hiện khi
+  // bước chặt củi đang mở và cây đã sẵn sàng chặt.
+  function drawChopHighlights(nowSec) {
+    if (!mapData || !mapData.harvestNodes || currentMapId !== 'mieu_hoang') return;
+    if (!isChopQuestActive()) return;
+    var prog = chopProgress();
+    var nowMs = performance.now();
+    for (var i = 0; i < mapData.harvestNodes.length; i++) {
+      var node = mapData.harvestNodes[i];
+      if (node.itemId !== 'bo-cui') continue;
+      if (nowSec < (harvestReadyTimes[node.id] || 0)) continue;
+      var pulse = 0.75 + Math.sin(nowMs / 280) * 0.25;
+      var bob = Math.sin(nowMs / 250 + i) * 4;
+      // Vòng vàng nhấp nháy dưới gốc
+      ctx.save();
+      ctx.globalAlpha = pulse;
+      ctx.strokeStyle = '#ffd94d';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.ellipse(node.x, node.y + 2, 36, 12, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255, 217, 77, 0.10)';
+      ctx.beginPath();
+      ctx.ellipse(node.x, node.y + 2, 36, 12, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      // "!" nhiệm vụ (cùng dấu với NPC mục tiêu) trên ngọn cây
+      drawQuestExclamation(node.x, node.y - 205 + bob);
+      // Nhãn + vạch tiến độ bó củi
+      var label = 'Chặt Củi ' + prog.chopped + '/' + prog.target;
+      ctx.save();
+      ctx.font = 'bold 13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      var ly = node.y - 232 + bob;
+      var lw = ctx.measureText(label).width + 12;
+      ctx.fillStyle = 'rgba(20, 16, 8, 0.78)';
+      ctx.beginPath();
+      ctx.roundRect(node.x - lw / 2, ly - 10, lw, 20, 9);
+      ctx.fill();
+      ctx.fillStyle = '#ffe9a8';
+      ctx.fillText(label, node.x, ly);
+      // Vạch tiến độ: nền tối + phần vàng theo số bó đã chặt
+      var bw = 46, bx = node.x - bw / 2, by = ly + 13;
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+      ctx.fillRect(bx - 1, by - 1, bw + 2, 7);
+      ctx.fillStyle = '#ffd94d';
+      ctx.fillRect(bx, by, Math.round(bw * prog.chopped / Math.max(1, prog.target)), 5);
+      ctx.restore();
     }
   }
 
