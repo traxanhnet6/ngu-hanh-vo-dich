@@ -1817,6 +1817,10 @@
     tt.ensureState(player);
     var atLinhNhan = !!(it && it.linhNhan);
     var rate = tt.tuRatePerMin(player, currentMapId, atLinhNhan);
+    // Đợt ƯU TIÊN (sửa buff 2026-11-23): thiền trong khu phong của mình thì
+    // tu vi thổ nạp ×(1 + PEAK_MEDITATE_BUFF) — số tạm, chờ Bui chốt.
+    var peakMult = peakMeditateMult();
+    var effPerMin = rate.perMin * peakMult;
     meditation = {
       mapId: currentMapId,
       landName: rate.landName,
@@ -1824,7 +1828,8 @@
       startedAt: performance.now(),
       lastHp: player.hp,
       tuAccum: 0,
-      risky: tt.thoaHoaRisk(player, currentMapId)
+      risky: tt.thoaHoaRisk(player, currentMapId),
+      peakBuff: peakMult > 1
     };
     currentPath = [];
     pendingInteraction = null;
@@ -1834,7 +1839,8 @@
     var msg = 'Ngồi thiền tại ' + (rate.landName || 'đây') + ' — hồi linh lực ×' +
       tt.P2A_CONST.MEDITATE_REGEN_MULT;
     if (rate.perMin > 0) {
-      msg += ' · thổ nạp ' + tt.ELEM_NAMES[rate.elem] + ' ' + Math.round(rate.perMin) + ' tu vi/phút';
+      msg += ' · thổ nạp ' + tt.ELEM_NAMES[rate.elem] + ' ' + (Math.round(effPerMin * 10) / 10) + ' tu vi/phút';
+      if (peakMult > 1) msg += ' (Thiền trong khu phong: +25% tu vi — số tạm)';
     } else if (rate.elem) {
       msg += ' · đất ' + (tt.ELEM_NAMES[rate.elem] || '?') + ' khác hệ: chỉ hồi linh lực';
     }
@@ -3998,6 +4004,101 @@
         }
       }
     }
+
+    // Đợt ƯU TIÊN: hái Linh Chi Sau Núi ở mainStage 8 thì toán phục kích
+    // Huyết Bạc Cung ập tới (xem maybeTriggerTrucCoAmbush ngay dưới).
+    maybeTriggerTrucCoAmbush(node);
+  }
+
+  // ==========================================================================
+  // Đợt ƯU TIÊN (2026-11-23) — TOÁN PHỤC KÍCH HUYẾT BẠC CUNG (chương 8)
+  // Hái Linh Chi Sau Núi ở Sơn Cốc trong giai đoạn mainStage 8 thì 3 thích
+  // khách ập tới. Mẫu quái: tay_chan_matam (hình người sẵn có, đổi tên tối
+  // thiểu) — không tạo species mới. Diệt cả toán → rơi CHẮC CHẮN 1 Yêu Đan
+  // cấp 1 (cộng thẳng vào túi trong handleMonsterDeath, không qua rollDrops
+  // — CẤM sửa rollDrops). Chết/chạy trước khi lấy được đan thì hái lại
+  // Linh Chi Sau Núi (điểm hồi 300s) để gọi toán mới.
+  // ==========================================================================
+  function liveAmbushCount() {
+    var n = 0;
+    for (var i = 0; i < fieldMonsters.length; i++) {
+      var fm = fieldMonsters[i];
+      if (fm && fm.ambushTag === 'huyet-bac-cung' && fm.hp > 0 && fm.state !== 'dead') n++;
+    }
+    return n;
+  }
+
+  function spawnTrucCoAmbush() {
+    if (!monstersAPI || !monstersAPI.createMonster || !player) return null;
+    var spawned = [];
+    var spots = [
+      { x: 980, y: 300 },
+      { x: 900, y: 400 },
+      { x: 1060, y: 420 }
+    ];
+    for (var i = 0; i < spots.length; i++) {
+      var m = monstersAPI.createMonster('tay_chan_matam', spots[i].x, spots[i].y, 980, 380, {
+        state: 'aggro',
+        spawnGraceTimer: 0.5
+      });
+      m.mapId = currentMapId;
+      m.name = 'Thích Khách Huyết Bạc Cung';
+      m.ambushTag = 'huyet-bac-cung';
+      // Đợt ƯU TIÊN: toán phục kích là sự kiện một lần — không hồi sinh
+      // (tái dùng cờ không-hồi-sinh sẵn có của trận kịch bản, tránh biến
+      // toán phục kích thành điểm farm tu vi lặp lại mỗi 60s).
+      m._modauNoRespawn = true;
+      fieldMonsters.push(m);
+      spawned.push(m);
+    }
+    return spawned;
+  }
+
+  function maybeTriggerTrucCoAmbush(node) {
+    if (!node || node.itemId !== 'linh-chi-sau-nui') return false;
+    if (!player || currentMapId !== 'son-coc') return false;
+    if (!player.quests || player.quests.mainStage !== 8) return false;
+    if (stateAPI && stateAPI.hasItemInBag && stateAPI.hasItemInBag(player, 'yeu-dan-cap-1', 1)) return false;
+    if (liveAmbushCount() > 0) return false;
+    var spawned = spawnTrucCoAmbush();
+    if (!spawned || !spawned.length) return false;
+    if (typeof window !== 'undefined' && window.GameUI) {
+      window.GameUI.showToast('Phục kích! Toán thích khách Huyết Bạc Cung ập tới — diệt cả toán để lấy Yêu Đan cấp 1!');
+    }
+    spawnFloatingText('PHỤC KÍCH HUYẾT BẠC CUNG!', player.x, player.y - 60, '#ff6b5c');
+    return true;
+  }
+
+  // Đợt ƯU TIÊN (sửa buff 2026-11-23, Bui duyệt): người chơi có đang đứng
+  // trong khu vực phong của mình trên Đỉnh Tiên Môn không — điều kiện duy
+  // nhất của buff thiền +25% tu vi thổ nạp (số tạm). Buff săn quái cũ đã
+  // gỡ (Đỉnh Tiên Môn không có quái nên không kích hoạt được).
+  // Hệ số lấy từ js/phong.js PEAK_MEDITATE_BUFF qua peakMeditateMult().
+  function isInOwnPeakZone() {
+    if (!player || !player.peak || currentMapId !== 'dinh-tien-mon') return false;
+    if (!mapData || !mapData.zones) return false;
+    for (var i = 0; i < mapData.zones.length; i++) {
+      var z = mapData.zones[i];
+      if (z.id === player.peak.zoneId && z.rect) {
+        return player.x >= z.rect.x && player.x <= z.rect.x + z.rect.w &&
+          player.y >= z.rect.y && player.y <= z.rect.y + z.rect.h;
+      }
+    }
+    return false;
+  }
+
+  // Đợt ƯU TIÊN (sửa buff 2026-11-23): hệ số tu vi thiền trong khu phong.
+  // Trong khu phong ĐÃ LẬP của chính mình: 1 + PEAK_MEDITATE_BUFF (+25%,
+  // số tạm, chờ Bui chốt — hằng số nằm ở js/phong.js, engine chỉ đọc).
+  // Ngoài khu phong: 1 — tỉ lệ/luật thiền P2A giữ nguyên.
+  function peakMeditateMult() {
+    if (!isInOwnPeakZone()) return 1;
+    var b = 0.25;
+    if (typeof window !== 'undefined' && window.GamePhong &&
+        typeof window.GamePhong.PEAK_MEDITATE_BUFF === 'number') {
+      b = window.GamePhong.PEAK_MEDITATE_BUFF;
+    }
+    return 1 + b;
   }
 
   // ============================================================
@@ -4483,32 +4584,49 @@
           desc: 'Tu luyện cả 5 đường đạt 600 tu vi (Luyện Khí tầng 7) để mở cổng Mỏ Lửa Xích Diệm.'
         };
       case 8:
+        // Đợt ƯU TIÊN (2026-11-23): dẫn đường theo công thức chuẩn đã duyệt —
+        // hái Linh Chi Sau Núi (Sơn Cốc) → đánh toán phục kích lấy Yêu Đan
+        // → hái Thanh Tâm Thảo ×3 → về Đan Phòng/Chấp Sự luyện với 30 LT.
         var countItem = function (id) {
           return stateAPI ? stateAPI.countItemInBag(player, id) : 0;
         };
-        if (countItem('linh-chi-rung') < 3) {
+        if (countItem('linh-chi-sau-nui') < 1) {
           return {
-            stepId: 'main_8_linhchi',
+            stepId: 'main_8_linhchi_sn',
             mainStage: 8,
             stage: 4,
             mapId: 'son-coc',
             kind: 'point',
-            x: 460,
-            y: 320,
+            x: 980,
+            y: 380,
             title: 'Luyện Trúc Cơ Đan',
-            desc: 'Thu thập 3 Linh Chi Rừng tại Sơn Cốc để luyện đan.'
+            desc: 'Hái Linh Chi Sau Núi tại Sơn Cốc (sau núi Thanh Vân) để luyện đan.'
           };
         }
-        if (countItem('hoa-tinh-tho') < 2) {
+        if (countItem('yeu-dan-cap-1') < 1) {
           return {
-            stepId: 'main_8_hoatinh',
+            stepId: 'main_8_yeudan',
             mainStage: 8,
             stage: 4,
-            mapId: 'mo-lua',
-            kind: 'monster',
-            speciesId: 'diem_ma',
+            mapId: 'son-coc',
+            kind: 'point',
+            x: 980,
+            y: 380,
             title: 'Luyện Trúc Cơ Đan',
-            desc: 'Thu thập 2 Hỏa Tinh Thổ từ quái Mỏ Lửa Xích Diệm để luyện đan.'
+            desc: 'Diệt toán phục kích Huyết Bạc Cung ở Sơn Cốc để lấy Yêu Đan cấp 1 (rơi chắc chắn).'
+          };
+        }
+        if (countItem('thanh-tam-thao') < 3) {
+          return {
+            stepId: 'main_8_thanhtam',
+            mainStage: 8,
+            stage: 4,
+            mapId: 'son-coc',
+            kind: 'point',
+            x: 700,
+            y: 660,
+            title: 'Luyện Trúc Cơ Đan',
+            desc: 'Hái Thanh Tâm Thảo tại Sơn Cốc (còn thiếu ' + (3 - countItem('thanh-tam-thao')) + ' cây) để luyện đan.'
           };
         }
         return {
@@ -4519,7 +4637,7 @@
           kind: 'npc',
           npcId: 'npc_chapsu',
           title: 'Luyện Trúc Cơ Đan',
-          desc: 'Đem đủ nguyên liệu và 200 Linh Thạch tới gặp Chấp Sự Đường để luyện Trúc Cơ Đan.'
+          desc: 'Đem đủ nguyên liệu và 30 Linh Thạch tới gặp Chấp Sự Đường để luyện Trúc Cơ Đan.'
         };
       case 9:
         return {
@@ -6497,6 +6615,15 @@
     } catch (e) {}
     stateAPI.savePlayer(player);
 
+    // Đợt ƯU TIÊN: đột phá Trúc Cơ thành công mà chưa chọn đường tu thì mở
+    // nghi lễ chọn đường 1 lần (setTimeout để bảng Đột Phá đóng trước;
+    // GameDuongTu tự ghi cờ đã mời để không mở lại).
+    if (typeof window !== 'undefined' && window.GameDuongTu && typeof window.GameDuongTu.maybeOfferRitual === 'function') {
+      setTimeout(function () {
+        try { window.GameDuongTu.maybeOfferRitual(player); } catch (e) {}
+      }, 800);
+    }
+
     if (audioAPI) audioAPI.playChime();
     spawnFloatingText('ĐỘT PHÁ TRÚC CƠ ĐẠI THÀNH!', player.x, player.y - 45, '#ffe9a8');
     var successMsg = 'Thiên địa rung chuyển! Đã đột phá thành công Trúc Cơ Sơ Kỳ!';
@@ -6656,32 +6783,37 @@
     return { ok: true, itemId: itemId, msg: msgSuccess };
   }
 
+  // Đợt ƯU TIÊN (2026-11-23) — CÔNG THỨC Trúc Cơ Đan VỀ CHUẨN ĐÃ DUYỆT
+  // (Bui duyệt 19:05 ngày 2026-11-01): Linh Chi Sau Núi ×1 + Yêu Đan cấp 1
+  // ×1 + Thanh Tâm Thảo ×3 + 30 Linh Thạch, trưởng lão luyện tại tông,
+  // thành công 100%. Công thức cũ (3 Linh Chi Rừng + 1 Băng Tủy + 2 Hỏa
+  // Tinh Thổ + 1 Nguyên Tinh Mộc + 1 Nguyên Tinh Thủy + 200 Linh Thạch)
+  // nặng hơn cả hai bản hồ sơ — đã thay bằng chuẩn duyệt. CHỈ phần công
+  // thức trong hàm này được đụng (ngoại lệ theo lệnh trực tiếp); phần còn
+  // lại (trừ đồ/cấp đan, thống kê refines, mainStage = 9, lưu game, âm
+  // thanh, chữ nổi) giữ nguyên.
   function refineTrucCoDan() {
     if (!player) return { ok: false, reason: 'no_player' };
     var countItem = function (id) {
       return stateAPI ? stateAPI.countItemInBag(player, id) : 0;
     };
-    var c1 = countItem('linh-chi-rung');
-    var c2 = countItem('bang-tuy');
-    var c3 = countItem('hoa-tinh-tho');
-    var c4 = countItem('nguyen-tinh-moc');
-    var c5 = countItem('nguyen-tinh-thuy');
+    var c1 = countItem('linh-chi-sau-nui');
+    var c2 = countItem('yeu-dan-cap-1');
+    var c3 = countItem('thanh-tam-thao');
     var lt = player.linhThach || 0;
 
-    if (c1 < 3 || c2 < 1 || c3 < 2 || c4 < 1 || c5 < 1 || lt < 200) {
-      var msg = 'Chưa đủ nguyên liệu luyện Trúc Cơ Đan (cần 3 Linh Chi Rừng, 1 Băng Tủy, 2 Hỏa Tinh Thổ, 1 Nguyên Tinh Mộc, 1 Nguyên Tinh Thủy và 200 Linh Thạch).';
+    if (c1 < 1 || c2 < 1 || c3 < 3 || lt < 30) {
+      var msg = 'Chưa đủ nguyên liệu luyện Trúc Cơ Đan (cần 1 Linh Chi Sau Núi, 1 Yêu Đan cấp 1, 3 Thanh Tâm Thảo và 30 Linh Thạch).';
       if (typeof window !== 'undefined' && window.GameUI) {
         window.GameUI.showToast(msg);
       }
       return { ok: false, reason: 'missing_materials', msg: msg };
     }
 
-    stateAPI.removeItemFromBag(player, 'linh-chi-rung', 3);
-    stateAPI.removeItemFromBag(player, 'bang-tuy', 1);
-    stateAPI.removeItemFromBag(player, 'hoa-tinh-tho', 2);
-    stateAPI.removeItemFromBag(player, 'nguyen-tinh-moc', 1);
-    stateAPI.removeItemFromBag(player, 'nguyen-tinh-thuy', 1);
-    player.linhThach -= 200;
+    stateAPI.removeItemFromBag(player, 'linh-chi-sau-nui', 1);
+    stateAPI.removeItemFromBag(player, 'yeu-dan-cap-1', 1);
+    stateAPI.removeItemFromBag(player, 'thanh-tam-thao', 3);
+    player.linhThach -= 30;
     stateAPI.addItemToBag(player, 'truc-co-dan', 1);
     if (!player.stats) player.stats = { playSec: 0, kills: 0, bossKills: 0, harvests: 0, refines: 0 };
     player.stats.refines = (player.stats.refines || 0) + 1;
@@ -6741,7 +6873,8 @@
   /** Số ô (1-based) của chiêu trên thanh kỹ năng, 0 nếu không nằm trên thanh. */
   function getSkillSlotNumber(skillId) {
     if (!skillsAPI) return 0;
-    var idx = skillsAPI.slotOf(skillId);
+    // Đợt ƯU TIÊN: đội hình đổi theo đường tu đã chọn nên slotOf cần player.
+    var idx = skillsAPI.slotOf(skillId, player);
     return idx >= 0 ? idx + 1 : 0;
   }
 
@@ -6754,11 +6887,81 @@
    * Số học giữ nguyên bản live: phí và hồi chiêu tính từ lúc bắt đầu vận,
    * raw = nền công × damage.ratio của chiêu, bạo kích chiêu 5% như cũ.
    */
+  // ==========================================================================
+  // Đợt ƯU TIÊN (2026-11-23) — BUFF THEO GIỜ CỦA CHIÊU ĐƯỜNG TU (delivery
+  // 'self'). Ghi vào player.pathBuffs theo Date.now; deriveStats (state.js)
+  // đọc atkUntil cho Huyết Khí Bùng Nổ; sát thương nhận vào đọc
+  // shieldUntil/invulnUntil qua hai hàm dưới (móc ở handleMonsterAttackPlayer
+  // + nổ telegraph Rễ Trói). Số tạm, chờ Bui chốt.
+  // ==========================================================================
+  function applyPathBuff(buff, def) {
+    if (!player || !buff) return;
+    if (!player.pathBuffs) player.pathBuffs = {};
+    var now = Date.now();
+    var durMs = (buff.durationSec || 0) * 1000;
+    if (buff.kind === 'shield') {
+      player.pathBuffs.shieldUntil = now + durMs;
+      player.pathBuffs.shieldPct = buff.pct || 0;
+      spawnFloatingText('Hộ Thể Linh Quang!', player.x, player.y - 45, '#7fd4ff');
+    } else if (buff.kind === 'attack') {
+      player.pathBuffs.atkUntil = now + durMs;
+      player.pathBuffs.atkPct = buff.pct || 0;
+      spawnFloatingText('Huyết Khí Bùng Nổ!', player.x, player.y - 45, '#ff9a5c');
+    } else if (buff.kind === 'invuln') {
+      player.pathBuffs.invulnUntil = now + durMs;
+      spawnFloatingText('Bất Diệt Kim Thân!', player.x, player.y - 45, '#ffe9a8');
+    }
+    if (typeof window !== 'undefined' && window.GameUI) {
+      window.GameUI.showToast(def.name + ' đã kích hoạt (' + (buff.durationSec || 0) + ' giây).');
+    }
+  }
+
+  function pathBlocksDamage() {
+    return !!(player && player.pathBuffs && player.pathBuffs.invulnUntil && Date.now() < player.pathBuffs.invulnUntil);
+  }
+
+  function applyPathDamageReduction(dealt) {
+    if (!player || !player.pathBuffs) return dealt;
+    if (pathBlocksDamage()) return 0;
+    if (player.pathBuffs.shieldUntil && Date.now() < player.pathBuffs.shieldUntil) {
+      return Math.round(dealt * (1 - (player.pathBuffs.shieldPct || 0)));
+    }
+    return dealt;
+  }
+
+  // Đợt ƯU TIÊN: thử chiêu đặc trưng ở nghi lễ chọn đường — chỉ xem hiệu
+  // ứng tại chỗ (bùng sáng + chữ nổi + âm thanh), không tốn linh lực,
+  // không cần mục tiêu/trận thật, không tính hồi chiêu.
+  function trialPathSkill(pathId) {
+    if (!player || !skillsAPI) return { ok: false, reason: 'no_player' };
+    var sigMap = { 'kiem-tu': 'kiem-khi-tram', 'phap-tu': 'ngu-hanh-phap-an', 'the-tu': 'ba-vuong-quyen' };
+    var skillId = sigMap[pathId];
+    if (!skillId) return { ok: false, reason: 'invalid_path' };
+    var def = skillsAPI.getSkill(skillId);
+    if (!def) return { ok: false, reason: 'unknown_skill' };
+    var elem = skillsAPI.elementOf(def);
+    spawnReleaseBurst(player.x, player.y - 30, elem, def.tier);
+    spawnFloatingText(def.name + '!', player.x, player.y - 60, '#ffe9a8');
+    if (audioAPI) {
+      if (def.sfx === 'leafCast' && audioAPI.playLeafCast) audioAPI.playLeafCast();
+      else if (def.sfx === 'slash' && audioAPI.playSlash) audioAPI.playSlash();
+    }
+    return { ok: true, path: pathId, skillId: skillId, msg: 'Đã thử chiêu ' + def.name + ' — ' + (def.desc || '') };
+  }
+
   function castSkill(skillId) {
     if (!player || player.hp <= 0) return;
     if (!skillsAPI) return;
     var def = skillsAPI.getSkill(skillId);
     if (!def) return;
+    // Đợt ƯU TIÊN: chiêu bị động (Kiếm Tâm, Kim Cang Thể) luôn hiệu lực,
+    // không tung được — chặn tại đây, không trừ phí/hồi chiêu.
+    if (def.passive) {
+      if (typeof window !== 'undefined' && window.GameUI) {
+        window.GameUI.showToast(def.name + ' là chiêu bị động — luôn có hiệu lực khi đã chọn đường.');
+      }
+      return;
+    }
     // P2D: chặn chiêu sai hệ trong Sảnh/kỳ luận võ.
     if (typeof window !== 'undefined' && window.GameLuanVo && window.GameLuanVo.checkSkill) {
       var _lv = window.GameLuanVo.checkSkill(def);
@@ -7017,9 +7220,13 @@
         if (victims[vj] === target) dealtMain = dealtV;
       }
       if (cycleBonus) applyLienHoanCycleBonus(def, target, dealtMain);
+    } else if (def.delivery === 'self') {
+      // Đợt ƯU TIÊN: chiêu tự buff của đường tu (Hộ Thể Linh Quang, Huyết
+      // Khí Bùng Nổ, Bất Diệt Kim Thân) — ghi vào player.pathBuffs.
+      if (def.buff) applyPathBuff(def.buff, def);
     }
     // delivery 'melee' đi qua kênh đánh tự động (executePlayerBasicAttack);
-    // 'rain' / 'self' vẫn để ngỏ cho các đợt nội dung sau trên cùng khung này.
+    // 'rain' vẫn để ngỏ cho các đợt nội dung sau trên cùng khung này.
   }
 
   /**
@@ -7570,14 +7777,23 @@
         } else {
           meditation.lastHp = player.hp;
           var medRate = ttTickApi.tuRatePerMin(player, currentMapId, meditation.atLinhNhan);
-          if (medRate.perMin > 0) {
-            meditation.tuAccum += (medRate.perMin / 60) * dt;
+          // Đợt ƯU TIÊN (sửa buff 2026-11-23): thiền trong khu phong của
+          // mình thì tốc độ thổ nạp ×(1 + PEAK_MEDITATE_BUFF) (+25%, số tạm,
+          // chờ Bui chốt). Ngoài khu phong hệ số 1 — luật P2A giữ nguyên.
+          // Tính lại mỗi khung (vị trí không đổi khi thiền, nhưng phong có
+          // thể lập/giải tán giữa chừng); tu vi vẫn cộng từng điểm 1 qua
+          // grantThoNap như cũ (chịu trần mốc T1, không chịu bể ngày 65).
+          var medPeakMult = peakMeditateMult();
+          meditation.peakBuff = medPeakMult > 1;
+          var medPerMin = medRate.perMin * medPeakMult;
+          if (medPerMin > 0) {
+            meditation.tuAccum += (medPerMin / 60) * dt;
             while (meditation.tuAccum >= 1) {
               meditation.tuAccum -= 1;
               var gainedMed = ttTickApi.grantThoNap(player, medRate.elem, 1);
               if (gainedMed > 0) {
                 spawnFloatingText('+' + gainedMed + ' tu vi ' + ttTickApi.ELEM_NAMES[medRate.elem] +
-                  ' — thổ nạp tại ' + (meditation.landName || 'đây'),
+                  ' — thổ nạp tại ' + (meditation.landName || 'đây') + (meditation.peakBuff ? ' (+25% khu phong)' : ''),
                   player.x, player.y - 45, MEDITATE_ELEM_COLORS[medRate.elem] || '#55d882');
                 if (stateAPI) stateAPI.savePlayer(player);
               } else {
@@ -8279,6 +8495,9 @@
   function handleMonsterAttackPlayer(m) {
     // P2B: bùa vỡ cho vài giây vô địch — quái đánh trúng cũng không mất máu.
     if (p2bBlocksDamage()) return;
+    // Đợt ƯU TIÊN: Bất Diệt Kim Thân (Thể Tu) — bất tử 3s, quái đánh trúng
+    // cũng không mất máu.
+    if (pathBlocksDamage()) return;
     lastCombatTime = performance.now();
     // Đợt P2A: trúng đòn = tự đứng dậy khỏi thiền ngay (không chờ khung sau)
     if (meditation) stopMeditation('damage');
@@ -8288,6 +8507,9 @@
     var elemFac = combatAPI ? combatAPI.getElementFactor(m.element, 'moc') : 1.0;
     var rawDmg = m.damage;
     var dealt = combatAPI ? combatAPI.calcDamage(rawDmg, elemFac, stats.defense) : rawDmg;
+    // Đợt ƯU TIÊN: Hộ Thể Linh Quang (Pháp Tu) giảm 30% sát thương nhận
+    // vào trong 6s (số tạm).
+    dealt = applyPathDamageReduction(dealt);
 
     // Bảo hộ 1 đòn (Brief §5 & Hồ sơ 49 §6): quái thường không gây quá 25% max HP người chơi
     if (!m.isElite && combatAPI) {
@@ -8318,6 +8540,20 @@
     if (m && m.luanVoBot) {
       if (targetMonster === m) targetMonster = null;
       return;
+    }
+
+    // Đợt ƯU TIÊN: diệt thích khách cuối cùng của toán phục kích Huyết Bạc
+    // Cung → rơi CHẮC CHẮN 1 Yêu Đan cấp 1 vào túi trực tiếp (không qua
+    // rollDrops, không để hụt). Chỉ khi người chơi chưa có đan.
+    if (m && m.ambushTag === 'huyet-bac-cung') {
+      var ambushLeft = liveAmbushCount();
+      if (ambushLeft <= 0 && !(stateAPI && stateAPI.hasItemInBag && stateAPI.hasItemInBag(player, 'yeu-dan-cap-1', 1))) {
+        if (stateAPI) stateAPI.addItemToBag(player, 'yeu-dan-cap-1', 1);
+        spawnFloatingText('+1 Yêu Đan cấp 1', player.x, player.y - 55, '#ffe9a8');
+        if (typeof window !== 'undefined' && window.GameUI) {
+          window.GameUI.showToast('Đã diệt cả toán phục kích — nhận được 1 Yêu Đan cấp 1!');
+        }
+      }
     }
     // 1. Tăng Chuỗi Săn (+1/kill, thời gian 20s)
     if (stateAPI) {
@@ -8771,16 +9007,18 @@
       // Xử lý nổ kỹ năng Rễ Trói khi hết 1.2s telegraph
       if (vfx.type === 'telegraph_re_troi' && vfx.timer <= 0) {
         var distToPlayer = Math.hypot(player.x - vfx.x, player.y - vfx.y);
-        if (distToPlayer <= vfx.radius && !p2bBlocksDamage()) {
-          player.hp = Math.max(0, player.hp - vfx.damage);
+        if (distToPlayer <= vfx.radius && !p2bBlocksDamage() && !pathBlocksDamage()) {
+          // Đợt ƯU TIÊN: Hộ Thể Linh Quang cũng giảm sát thương nổ telegraph.
+          var _tdDealt = applyPathDamageReduction(vfx.damage);
+          player.hp = Math.max(0, player.hp - _tdDealt);
           // Đợt K2: nổ trấn vùng của boss cũng là đòn nặng — ngắt vận chiêu
-          if (player.hp > 0) tryInterruptCast(vfx.damage);
+          if (player.hp > 0) tryInterruptCast(_tdDealt);
           playerSnareTimer = vfx.snareDuration;
           if (vfx.slowRatio && vfx.slowDuration) {
             playerSlowTimer = Math.max(playerSlowTimer, vfx.slowDuration);
             playerSlowRatio = vfx.slowRatio;
           }
-          spawnDamageNumber(player.x, player.y - 45, vfx.damage, 'player_damage', false);
+          spawnDamageNumber(player.x, player.y - 45, _tdDealt, 'player_damage', false);
           if (audioAPI) audioAPI.playHit();
           if (player.hp <= 0) handlePlayerDeath({ cause: 'boss_skill', killerName: 'Rễ Trói' });
         }
@@ -13908,19 +14146,38 @@
       isMeditating: isMeditating,
       getMeditation: function () {
         if (!meditation) return null;
+        var ttMed = getThienTuAPI();
+        var medRate = (ttMed && player) ? ttMed.tuRatePerMin(player, meditation.mapId, meditation.atLinhNhan) : null;
+        var medMult = peakMeditateMult();
         return {
           mapId: meditation.mapId,
           landName: meditation.landName,
           atLinhNhan: meditation.atLinhNhan,
           risky: meditation.risky,
-          seconds: (performance.now() - meditation.startedAt) / 1000
+          seconds: (performance.now() - meditation.startedAt) / 1000,
+          // Đợt ƯU TIÊN (sửa buff 2026-11-23): buff thiền khu phong có đang
+          // áp không + tốc độ thổ nạp HIỆU DỤNG (đã nhân +25% nếu trong khu).
+          peakBuff: medMult > 1,
+          perMinEff: medRate ? medRate.perMin * medMult : 0,
+          // Đợt ƯU TIÊN (sửa buff 2026-11-23): phần lẻ tu vi đang tích dở
+          // (chưa đủ 1 điểm) — để kiểm thử đo tốc độ thật chính xác hơn.
+          tuAccum: meditation.tuAccum || 0
         };
       },
       start: function () { return startMeditation(null); },
       stop: function (reason) { return stopMeditation(reason || 'manual'); },
-      landRate: function () {
+      landRate: function (atLinhNhan) {
         var tt = getThienTuAPI();
-        return (tt && player) ? tt.tuRatePerMin(player, currentMapId, !!(meditation && meditation.atLinhNhan)) : null;
+        if (!tt || !player) return null;
+        var atLN = (typeof atLinhNhan === 'boolean') ? atLinhNhan : !!(meditation && meditation.atLinhNhan);
+        var r = tt.tuRatePerMin(player, currentMapId, atLN);
+        // Đợt ƯU TIÊN (sửa buff 2026-11-23): tốc độ HIỆU DỤNG — đã nhân
+        // +25% khi đang đứng trong khu phong của mình (số tạm, chờ Bui chốt).
+        var mult = peakMeditateMult();
+        r.perMin = r.perMin * mult;
+        r.peakBuff = mult > 1;
+        r.peakMult = mult;
+        return r;
       },
       meridianList: function () {
         var tt = getThienTuAPI();
@@ -13971,6 +14228,12 @@
     getMainPetAlive: getMainPetAlive,
     tryBreakthrough: tryBreakthrough,
     tryKimDanBreakthrough: tryKimDanBreakthrough,
+    // Đợt ƯU TIÊN: thử chiêu nghi lễ chọn đường + móc kiểm thử phục kích.
+    trialPathSkill: trialPathSkill,
+    spawnTrucCoAmbush: spawnTrucCoAmbush,
+    liveAmbushCount: liveAmbushCount,
+    isInOwnPeakZone: isInOwnPeakZone,
+    pathBlocksDamage: pathBlocksDamage,
     startTribulation: startTribulation,
     getTribulationState: getTribulationState,
     exchangePill: exchangePill,

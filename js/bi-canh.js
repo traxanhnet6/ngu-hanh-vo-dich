@@ -471,6 +471,71 @@
   }
 
   // ==========================================================================
+  // LỆNH MỞ PHONG — RƠI Ở BÍ CẢNH (Đợt ƯU TIÊN 2026-11-23, số tạm)
+  // Tỉ lệ: Trời Mở (boss cuối) 10%, Thủ Hộ (thắng đợt waves) 5%,
+  // Thường Trực (boss tầng 5) 2%. Nguồn sự thật tỉ lệ nằm ở js/phong.js
+  // (ORDER_DROP_RATES) — ở đây chỉ gọi lại để khỏi lệch hai nơi.
+  // LƯU Ý KIẾN TRÚC: bí cảnh hiện chưa có luồng chơi thật trong game (không
+  // có lối vào UI, chỉ có bảng sự kiện + máy trạng thái lượt chạy); ba hàm
+  // hoàn thành dưới đây là ĐIỂM MÓC để luồng bí cảnh tương lai gọi khi
+  // thắng boss/thắng đợt — hiện kiểm chứng bằng cách gọi trực tiếp (xem
+  // báo cáo đợt). CẤM sửa rollDrops (js/monsters.js) cho việc này.
+  // ==========================================================================
+  var PEAK_ORDER_RATES_FALLBACK = { troi_mo: 0.10, thu_ho: 0.05, thuong_truc: 0.02 };
+  function getPeakOrderRate(dungeonId) {
+    if (typeof window !== 'undefined' && window.GamePhong && window.GamePhong.ORDER_DROP_RATES) {
+      var r = window.GamePhong.ORDER_DROP_RATES[dungeonId];
+      if (typeof r === 'number') return r;
+    }
+    return PEAK_ORDER_RATES_FALLBACK[dungeonId];
+  }
+  function rollPeakOrderDrop(dungeonId, rand) {
+    var rate = getPeakOrderRate(dungeonId);
+    if (typeof rate !== 'number') return { ok: false, reason: 'unknown_dungeon' };
+    var r = (typeof rand === 'number') ? rand : Math.random();
+    return { ok: true, dropped: r < rate, rate: rate, roll: r };
+  }
+  // Gọi khi thắng boss/thắng đợt ở bí cảnh: xúc xắc rơi Lệnh, rơi thì cộng
+  // thẳng vào túi. Trả { dropped, rate, roll } để UI/báo cáo hiển thị.
+  function grantPeakOrderDrop(player, dungeonId, rand) {
+    ensureState(player);
+    var roll = rollPeakOrderDrop(dungeonId, rand);
+    if (!roll.ok) return roll;
+    if (!roll.dropped) return { ok: true, dropped: false, rate: roll.rate, roll: roll.roll };
+    var st = getStateAPI();
+    var mAPI = getMonstersAPI();
+    if (st && typeof st.addItemToBag === 'function') {
+      st.addItemToBag(player, 'lenh-mo-phong', 1, mAPI ? mAPI.ITEM_DEFS : undefined);
+    } else {
+      player.bag = player.bag || { slots: [] };
+      var slots = player.bag.slots || [];
+      var placed = false;
+      for (var i = 0; i < slots.length; i++) {
+        if (slots[i] && slots[i].itemId === 'lenh-mo-phong') { slots[i].count = (slots[i].count || 0) + 1; placed = true; break; }
+      }
+      if (!placed) slots.push({ itemId: 'lenh-mo-phong', count: 1 });
+      player.bag.slots = slots;
+    }
+    return { ok: true, dropped: true, rate: roll.rate, roll: roll.roll };
+  }
+  // Thắng đợt waves ở Bí Cảnh Thủ Hộ: kết thúc lượt + xúc xắc Lệnh 5%.
+  function winWaveRun(player, rand) {
+    ensureState(player);
+    var run = player.biCanh.currentRun;
+    var res = exitDungeon(player, 'completed');
+    var drop = grantPeakOrderDrop(player, 'thu_ho', rand);
+    return { ok: true, run: res.run || run, drop: drop };
+  }
+  // Hạ boss tầng 5 Bí Cảnh Thường Trực: kết thúc lượt + xúc xắc Lệnh 2%.
+  function completeThuongTrucBossFloor(player, rand) {
+    ensureState(player);
+    var run = player.biCanh.currentRun;
+    var res = exitDungeon(player, 'completed');
+    var drop = grantPeakOrderDrop(player, 'thuong_truc', rand);
+    return { ok: true, run: res.run || run, drop: drop };
+  }
+
+  // ==========================================================================
   // TRỜI MỞ (3 tầng + boss)
   // ==========================================================================
   function enterTroiMo(player, opts) {
@@ -496,7 +561,7 @@
     return { ok: true, floor: run.floor };
   }
 
-  function completeTroiMo(player) {
+  function completeTroiMo(player, rand) {
     ensureState(player);
     var run = player.biCanh.currentRun;
     if (run) {
@@ -508,7 +573,9 @@
     // reward claim weekly
     var ev = getEventById('troi_mo');
     var ck = claimReward(player, ev || 'troi_mo', Date.now());
-    return { ok: true, completed: true, reward: ck };
+    // Đợt ƯU TIÊN: hạ boss cuối Trời Mở — xúc xắc Lệnh Mở Phong 10% (số tạm).
+    var drop = grantPeakOrderDrop(player, 'troi_mo', rand);
+    return { ok: true, completed: true, reward: ck, drop: drop };
   }
 
   function getTroiMoProgress(player) {
@@ -766,6 +833,12 @@
     advanceTroiMoFloor: advanceTroiMoFloor,
     completeTroiMo: completeTroiMo,
     getTroiMoProgress: getTroiMoProgress,
+
+    // Đợt ƯU TIÊN: rơi Lệnh Mở Phong ở bí cảnh (số tạm, xem khối trên).
+    rollPeakOrderDrop: rollPeakOrderDrop,
+    grantPeakOrderDrop: grantPeakOrderDrop,
+    winWaveRun: winWaveRun,
+    completeThuongTrucBossFloor: completeThuongTrucBossFloor,
 
     // ngu hanh luan
     featuredElementForDay: featuredElementForDay,

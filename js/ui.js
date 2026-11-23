@@ -175,6 +175,13 @@
     if (typeof window !== 'undefined' && window.GameKimDan && window.GameKimDan.attach) {
       window.GameKimDan.attach(playerObj);
     }
+    // Đợt ƯU TIÊN: Bảng Phong + Nghi Lễ Chọn Đường.
+    if (typeof window !== 'undefined' && window.GamePhong && window.GamePhong.attach) {
+      window.GamePhong.attach(playerObj);
+    }
+    if (typeof window !== 'undefined' && window.GameDuongTu && window.GameDuongTu.attach) {
+      window.GameDuongTu.attach(playerObj);
+    }
     if (typeof window !== 'undefined' && window.GameN1UI && window.GameN1UI.attach) {
       window.GameN1UI.attach(playerObj);
     }
@@ -375,7 +382,8 @@
       if (e.key === 'b' || e.key === 'B') {
         toggleBag();
       } else if (/^[1-9]$/.test(e.key)) {
-        var loadoutKey = window.GameSkills ? window.GameSkills.getLoadout() : [];
+        // Đợt ƯU TIÊN: đội hình 8 ô đổi theo đường tu đã chọn.
+        var loadoutKey = window.GameSkills ? window.GameSkills.getLoadout(player) : [];
         var keyDef = loadoutKey[parseInt(e.key, 10) - 1];
         if (keyDef && window.GameEngine && window.GameEngine.castSkill) {
           window.GameEngine.castSkill(keyDef.id);
@@ -823,6 +831,12 @@
     }
 
     var rate = tt.tuRatePerMin(player, mapId, atLinhNhan);
+    // Đợt ƯU TIÊN (sửa buff 2026-11-23): tốc độ HIỆU DỤNG — engine landRate
+    // đã nhân +25% khi đang đứng trong khu phong của mình (số tạm). Dùng
+    // landRate khi có để số hiển thị khớp số cộng thật; không có thì giữ
+    // tốc độ nền P2A như cũ.
+    var engRate = (eng && eng.thienTu && eng.thienTu.landRate) ? eng.thienTu.landRate(atLinhNhan) : null;
+    if (engRate) rate = engRate;
     var med = (eng && eng.thienTu && eng.thienTu.getMeditation) ? eng.thienTu.getMeditation() : null;
     var set = function (id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
 
@@ -831,16 +845,18 @@
         (atLinhNhan ? ' · linh nhãn ×' + tt.P2A_CONST.LINH_NHAN_MULT : '') + ')')
       : 'Chưa gán linh khí cho map này');
     set('stats-tu-speed', rate.perMin > 0
-      ? (Math.round(rate.perMin) + ' tu vi ' + rate.elemName + '/phút')
+      ? ((Math.round(rate.perMin * 10) / 10) + ' tu vi ' + rate.elemName + '/phút' + (rate.peakBuff ? ' (thiền trong khu phong +25% — số tạm)' : ''))
       : ('0 (đất khác hệ ' + tt.ELEM_NAMES[tt.playerElement(player)] + ')'));
 
     var note;
     if (med) {
       note = 'Đang thiền ' + Math.round(med.seconds) + 's — hồi linh lực ×' +
         tt.P2A_CONST.MEDITATE_REGEN_MULT + ' (bấm di chuyển/đánh để đứng dậy).';
+      if (med.peakBuff) note += ' Thiền trong khu phong: +25% tu vi (số tạm, chờ Bui chốt).';
     } else {
       note = 'Chưa thiền — bấm Đả Tọa hoặc Linh Nhãn để hồi linh lực ×' +
         tt.P2A_CONST.MEDITATE_REGEN_MULT + (rate.perMin > 0 ? ' và thổ nạp tu vi.' : '.');
+      if (rate.peakBuff) note += ' Đang đứng trong khu phong của mình: thiền ở đây +25% tu vi (số tạm).';
     }
     if (tt.isFatigued(player)) {
       note += ' Đang mệt sau tẩu hỏa: hồi linh lực ×' + tt.P2A_CONST.FATIGUE_REGEN_MULT + '.';
@@ -3222,7 +3238,8 @@
     var llVal = document.getElementById('hud-linhluc-val');
 
     if (nameEl) nameEl.textContent = player.name;
-    if (realmEl) realmEl.textContent = player.realm || 'Phàm Nhân';
+    // Đợt ƯU TIÊN: nhãn trên đầu (HUD) thêm tên đường tu đã chọn.
+    if (realmEl) realmEl.textContent = (player.realm || 'Phàm Nhân') + cultivationPathSuffix();
 
     // Đợt T3: hàng PHẨM KIM ĐAN — chỉ hiện khi đã kết đan (phẩm là thưởng
     // vĩnh viễn của hồ sơ 05C: linh lực tối đa + tu vi nhận theo phẩm).
@@ -3416,7 +3433,8 @@
     var harmonyEl = document.getElementById('char-panel-harmony');
 
     if (nameEl) nameEl.textContent = player.name;
-    if (realmEl) realmEl.textContent = player.realm || 'Phàm Nhân';
+    // Đợt ƯU TIÊN: Bảng Nhân Vật thêm tên đường tu đã chọn.
+    if (realmEl) realmEl.textContent = (player.realm || 'Phàm Nhân') + cultivationPathSuffix();
 
     // Đợt AVATAR: chân dung Bảng Nhân Vật luôn là mặt Hà Nhân
     // (hanhan-face.png), khớp sprite trong game; ẩn nhãn mã chân dung
@@ -3547,9 +3565,14 @@
       { fam: 'tho', title: 'Họ Thổ' },
       { fam: 'hop-kich', title: 'Họ Hợp Kích' },
       { fam: 'vo-hoc', title: 'Võ Học Tay Không' },
+      // Đợt ƯU TIÊN: 3 đường tu (chọn sau Trúc Cơ).
+      { fam: 'kiem-tu', title: 'Đường Kiếm Tu' },
+      { fam: 'phap-tu', title: 'Đường Pháp Tu' },
+      { fam: 'the-tu', title: 'Đường Thể Tu' },
       { fam: 'co-ban', title: 'Cơ Bản' }
     ];
-    var loadout = SK.getLoadout();
+    // Đợt ƯU TIÊN: đội hình 8 ô đổi theo đường tu đã chọn.
+    var loadout = SK.getLoadout(player);
     var all = SK.listSkills();
     var html = '';
     for (var g = 0; g < groups.length; g++) {
@@ -3571,9 +3594,15 @@
         if (d.range) meta.push('Tầm ' + d.range);
         var stateHtml;
         if (unlocked) {
+          // Đợt ƯU TIÊN: chiêu bị động không có nút tung — luôn hiệu lực.
           stateHtml = '<span class="sb-open">Đã mở</span>' +
             (slotIdx >= 0 ? ' <span class="sb-key">Phím ' + (slotIdx + 1) + '</span>' : '') +
-            (d.delivery !== 'melee' ? ' <button type="button" class="sb-cast" data-skill="' + d.id + '">Tung chiêu</button>' : '');
+            (d.passive ? ' <span class="sb-open">Bị động — luôn hiệu lực</span>' :
+              (d.delivery !== 'melee' ? ' <button type="button" class="sb-cast" data-skill="' + d.id + '">Tung chiêu</button>' : ''));
+        } else if (d.unlock && d.unlock.type === 'cultivationPath') {
+          // Đợt ƯU TIÊN: chiêu đường tu — mở khi chọn (hoặc kiêm tu) đường đó.
+          var dtName = (window.GameDuongTu && window.GameDuongTu.pathName) ? window.GameDuongTu.pathName(d.unlock.path) : d.unlock.path;
+          stateHtml = '<span class="sb-lock">Khóa — cần chọn đường ' + dtName + ' (sau Trúc Cơ, qua Nghi Lễ Chọn Đường)</span>';
         } else if (d.unlock && d.unlock.type === 'harmony') {
           var hhCur = SK.harmonyRatioOf(player.paths);
           stateHtml = '<span class="sb-lock">Khóa — cần Hài Hòa ≥ ' + String(d.unlock.min).replace('.', ',') +
@@ -3972,7 +4001,7 @@
     // Cập nhật Cooldown kỹ năng trên thanh skill (theo registry, Đợt K1):
     // tổng hồi chiêu lấy từ định nghĩa chiêu, phần còn lại từ engine.
     if (extras.skillsCd && window.GameSkills) {
-      var loadoutCd = window.GameSkills.getLoadout();
+      var loadoutCd = window.GameSkills.getLoadout(player);
       for (var si = 0; si < loadoutCd.length; si++) {
         updateSkillSlotUI(si + 1, extras.skillsCd[loadoutCd[si].id] || 0, loadoutCd[si].cooldown);
       }
@@ -3997,9 +4026,25 @@
    * chiêu theo LOADOUT của js/skills.js — tooltip gồm tên + hệ + hao phí,
    * icon theo def.icon, nhãn theo def.shortName, bấm để castSkill(id).
    */
+  // Đợt ƯU TIÊN: hậu tố tên đường tu cho nhãn cảnh giới (HUD + Bảng Nhân
+  // Vật). Viền áo nhuộm theo đường tu chưa làm đợt này — thay bằng chấm
+  // màu đường cạnh tên đường (xem js/duong-tu.js).
+  function cultivationPathSuffix() {
+    if (!player || !player.cultivationPath) return '';
+    var dt = (typeof window !== 'undefined') ? window.GameDuongTu : null;
+    var name = (dt && dt.pathName) ? dt.pathName(player.cultivationPath) : player.cultivationPath;
+    var dual = '';
+    if (player.dualPath) {
+      var dName = (dt && dt.pathName) ? dt.pathName(player.dualPath) : player.dualPath;
+      dual = ' + kiêm tu ' + dName;
+    }
+    return ' · ' + name + dual;
+  }
+
   function bindSkillSlots() {
     if (!window.GameSkills) return;
-    var loadout = window.GameSkills.getLoadout();
+    // Đợt ƯU TIÊN: đội hình 8 ô đổi theo đường tu đã chọn.
+    var loadout = window.GameSkills.getLoadout(player);
     for (var i = 0; i < loadout.length; i++) {
       (function (def, idx) {
         var slot = document.getElementById('skill-slot-' + (idx + 1));
@@ -4016,13 +4061,23 @@
         if (tag) tag.textContent = def.shortName || def.name;
         var hk = slot.querySelector('.skill-hotkey');
         if (hk) hk.textContent = String(idx + 1);
-        slot.addEventListener('click', function () {
+        // Đợt ƯU TIÊN: dựng lại thanh kỹ năng khi đổi đường tu — gỡ
+        // listener cũ trước khi gắn mới để không tung chiêu 2 lần.
+        if (slot._skillClickHandler) slot.removeEventListener('click', slot._skillClickHandler);
+        slot._skillClickHandler = function () {
           if (window.GameEngine && window.GameEngine.castSkill) {
             window.GameEngine.castSkill(def.id);
           }
-        });
+        };
+        slot.addEventListener('click', slot._skillClickHandler);
       })(loadout[i], i);
     }
+  }
+
+  // Đợt ƯU TIÊN: dựng lại thanh kỹ năng sau khi chọn/đổi/kiêm tu đường
+  // (GameDuongTu gọi sau khi ghi đường mới).
+  function refreshSkillSlots() {
+    bindSkillSlots();
   }
 
   function updateSkillSlotUI(slotNum, remainingCd, totalCd) {
@@ -6002,6 +6057,9 @@
     openTeleportModal: openTeleportModal,
     closeTeleportModal: closeTeleportModal,
     triggerSkillShake: triggerSkillShake,
+    // Đợt ƯU TIÊN: dựng lại thanh kỹ năng sau khi chọn/đổi đường tu.
+    refreshSkillSlots: refreshSkillSlots,
+    updateCharPanelContent: updateCharPanelContent,
     showDeathModal: showDeathModal,
     hideDeathModal: hideDeathModal,
     setDeathSoulStatus: setDeathSoulStatus,

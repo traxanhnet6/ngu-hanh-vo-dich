@@ -103,6 +103,47 @@
       iconRow: 1,
       desc: 'Nấm linh chi đỏ tía mọc ở gốc cổ thụ, bồi bổ khí huyết và tăng tu vi.'
     },
+    // Đợt ƯU TIÊN (2026-11-23) — 4 vật phẩm mới, TÊN TẠM chờ Bui chốt.
+    // Bảng icon 6×8 của icons-sheet.png đã kín 47/48 ô (chỉ còn trống ô
+    // (5,7)) nên 3 vật phẩm dưới DÙNG CHUNG ô icon với vật phẩm cùng loại
+    // đã có (thông lệ sẵn của bảng này: 87 vật phẩm dùng 48 ô); chỉ Lệnh
+    // Mở Phong giữ ô trống duy nhất. Khi nào có icon riêng thì đổi ô.
+    'linh-chi-sau-nui': {
+      id: 'linh-chi-sau-nui',
+      name: 'Linh Chi Sau Núi',
+      type: 'material',
+      stackable: true,
+      iconCol: 0,
+      iconRow: 1,
+      desc: 'Linh chi mọc ở Sơn Cốc sau núi Thanh Vân — nguyên liệu chính luyện Trúc Cơ Đan (chuẩn đã duyệt 2026-11-01). Dùng chung icon với Linh Chi Rừng (ô icon còn trống duy nhất đã dành cho Lệnh Mở Phong).'
+    },
+    'yeu-dan-cap-1': {
+      id: 'yeu-dan-cap-1',
+      name: 'Yêu Đan cấp 1',
+      type: 'material',
+      stackable: true,
+      iconCol: 1,
+      iconRow: 2,
+      desc: 'Yêu đan của yêu thú cấp 1 — nguyên liệu luyện Trúc Cơ Đan (chuẩn đã duyệt 2026-11-01). Rơi chắc chắn từ toán phục kích Huyết Bạc Cung ở Sơn Cốc (chương 8). Dùng chung icon với Tu Luyện Đan (Mộc).'
+    },
+    'thanh-tam-thao': {
+      id: 'thanh-tam-thao',
+      name: 'Thanh Tâm Thảo',
+      type: 'material',
+      stackable: true,
+      iconCol: 1,
+      iconRow: 5,
+      desc: 'Cỏ thanh tâm mọc ở Sơn Cốc — nguyên liệu luyện Trúc Cơ Đan (chuẩn đã duyệt 2026-11-01). Dùng chung icon với Lá Thanh Tụy.'
+    },
+    'lenh-mo-phong': {
+      id: 'lenh-mo-phong',
+      name: 'Lệnh Mở Phong',
+      type: 'material',
+      stackable: true,
+      iconCol: 5,
+      iconRow: 7,
+      desc: 'Lệnh Mở Phong — vật phẩm đặc biệt, không giao dịch, không bán (số tạm, chờ Bui chốt). Dùng để lập một đỉnh phong trên Đỉnh Tiên Môn (cần cảnh giới Trúc Cơ trở lên). Rơi ở bí cảnh hoặc thưởng nhiệm vụ tông môn lớn "Lập Phong Đại Điển".'
+    },
     // Đợt V1 chặng 1: Hoa Giải Độc — mọc ở mép trũng sương độc Rừng Độc
     // (hồ sơ 01 §1). Dùng trực tiếp qua túi đồ: giải độc tức thì + kháng độc.
     'hoa-giai-doc': {

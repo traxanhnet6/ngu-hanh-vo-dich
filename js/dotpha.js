@@ -20,9 +20,12 @@
  *   3. Dẫn đường đột phá: engine.getQuestTargetInfo hỏi module này khi
  *      người chơi đã chọn một mục tiêu trong bảng (player.dotPha.focus).
  *
- * CÔNG THỨC Trúc Cơ Đan GIỮ NGUYÊN như bản live (engine.refineTrucCoDan
- * không đổi): 3 Linh Chi Rừng + 1 Băng Tủy + 2 Hỏa Tinh Thổ + 1 Nguyên
- * Tinh Mộc + 1 Nguyên Tinh Thủy + 200 Linh Thạch (phí tính ở bước luyện).
+ * CÔNG THỨC Trúc Cơ Đan — Đợt ƯU TIÊN (2026-11-23) VỀ CHUẨN ĐÃ DUYỆT
+ * (Bui duyệt 19:05 ngày 2026-11-01): 1 Linh Chi Sau Núi + 1 Yêu Đan cấp 1
+ * + 3 Thanh Tâm Thảo + 30 Linh Thạch (phí tính ở bước luyện). "Sau Núi" =
+ * Sơn Cốc (ánh xạ TẠM, chờ Bui chốt). Công thức cũ (3 Linh Chi Rừng +
+ * 1 Băng Tủy + 2 Hỏa Tinh Thổ + 1 Nguyên Tinh Mộc + 1 Nguyên Tinh Thủy +
+ * 200 Linh Thạch) đã bỏ.
  */
 (function () {
   'use strict';
@@ -43,22 +46,19 @@
   var PILL_ID = 'truc-co-dan';
   var PILL_NAME = 'Trúc Cơ Đan';
   // Nguyên liệu gốc của công thức Trúc Cơ Đan (khớp refineTrucCoDan).
+  // Đợt ƯU TIÊN: về chuẩn đã duyệt (Bui 2026-11-01).
   var RECIPE = [
-    { itemId: 'linh-chi-rung', count: 3 },
-    { itemId: 'bang-tuy', count: 1 },
-    { itemId: 'hoa-tinh-tho', count: 2 },
-    { itemId: 'nguyen-tinh-moc', count: 1 },
-    { itemId: 'nguyen-tinh-thuy', count: 1 }
+    { itemId: 'linh-chi-sau-nui', count: 1 },
+    { itemId: 'yeu-dan-cap-1', count: 1 },
+    { itemId: 'thanh-tam-thao', count: 3 }
   ];
-  var RECIPE_LT_FEE = 200;
+  var RECIPE_LT_FEE = 30;
 
   var SOURCE_TEXT = {
-    'truc-co-dan': 'Luyện tại Đan Phòng Tông Môn hoặc nhờ Chấp Sự Đường: 3 Linh Chi Rừng + 1 Băng Tủy + 2 Hỏa Tinh Thổ + 1 Nguyên Tinh Mộc + 1 Nguyên Tinh Thủy + 200 Linh Thạch.',
-    'linh-chi-rung': 'Điểm hái Linh Chi ở Sơn Cốc (giữa Mỏ Lửa và Hồ Băng) — hoặc hạ Cổ Thụ Yêu tinh anh ở Rừng Độc (rơi 50%).',
-    'bang-tuy': 'Hạ Hàn Kính Giao Vương (boss) ở Hồ Băng Hàn Kính (rơi 30%).',
-    'hoa-tinh-tho': 'Hạ Xích Diệm Viêm Quân (boss) ở Mỏ Lửa (rơi 35%).',
-    'nguyen-tinh-moc': 'Chế từ 5 Lá Thanh Tụy tại Đan Phòng (nút Chế Nguyên Tinh), hoặc hạ Linh Cổ Vương (boss) ở Rừng Độc (rơi 30%).',
-    'nguyen-tinh-thuy': 'Chế từ 5 Băng Tinh tại Đan Phòng (nút Chế Nguyên Tinh), hoặc hạ Hàn Kính Giao Vương (boss) ở Hồ Băng (rơi 25%).'
+    'truc-co-dan': 'Luyện tại Đan Phòng Tông Môn hoặc nhờ Chấp Sự Đường: 1 Linh Chi Sau Núi + 1 Yêu Đan cấp 1 + 3 Thanh Tâm Thảo + 30 Linh Thạch.',
+    'linh-chi-sau-nui': 'Điểm hái Linh Chi Sau Núi ở Sơn Cốc (sau núi Thanh Vân — ánh xạ tạm, chờ Bui chốt). Hái nó ở giai đoạn chương 8 sẽ gặp toán phục kích Huyết Bạc Cung.',
+    'yeu-dan-cap-1': 'Diệt cả toán phục kích Huyết Bạc Cung (3 thích khách) ở Sơn Cốc trong chương 8 — rơi CHẮC CHẮN 1 viên. Chết/chạy trước khi lấy được thì hái lại Linh Chi Sau Núi để gọi toán phục kích mới.',
+    'thanh-tam-thao': '4 điểm hái Thanh Tâm Thảo ở Sơn Cốc (hồi 120s như Lá Thanh Tụy).'
   };
 
   var FOCUS_PILL = 'pill';
@@ -224,30 +224,26 @@
   }
 
   function matSourceTarget(player, itemId) {
+    // Đợt ƯU TIÊN: dẫn đường theo công thức chuẩn đã duyệt — cả ba nguyên
+    // liệu đều ở Sơn Cốc ("Sau Núi", ánh xạ tạm).
     switch (itemId) {
-      case 'linh-chi-rung':
+      case 'linh-chi-sau-nui':
         return {
-          stepId: 'dotpha_src_linh_chi', stage: 4, mapId: 'son-coc', kind: 'point',
-          x: 600, y: 400, title: 'Đột Phá Trúc Cơ — Linh Chi Rừng',
-          desc: 'Tới điểm hái Linh Chi ở Sơn Cốc để thu thập Linh Chi Rừng.'
+          stepId: 'dotpha_src_linh_chi_sn', stage: 4, mapId: 'son-coc', kind: 'point',
+          x: 980, y: 380, title: 'Đột Phá Trúc Cơ — Linh Chi Sau Núi',
+          desc: 'Tới điểm hái Linh Chi Sau Núi ở Sơn Cốc để thu thập. Hái nó ở giai đoạn chương 8 sẽ gặp toán phục kích Huyết Bạc Cung.'
         };
-      case 'bang-tuy':
-        return bossSourceTarget(player, 'boss_han_kinh_giao_vuong', 'Đột Phá Trúc Cơ — Băng Tủy',
-          'Hạ Hàn Kính Giao Vương ở Hồ Băng Hàn Kính để lấy Băng Tủy (rơi 30%).');
-      case 'hoa-tinh-tho':
-        return bossSourceTarget(player, 'boss_xich_diem_viem_quan', 'Đột Phá Trúc Cơ — Hỏa Tinh Thổ',
-          'Hạ Xích Diệm Viêm Quân ở Mỏ Lửa để lấy Hỏa Tinh Thổ (rơi 35%).');
-      case 'nguyen-tinh-moc':
+      case 'yeu-dan-cap-1':
         return {
-          stepId: 'dotpha_src_nt_moc', stage: 4, mapId: 'tong-mon', kind: 'point',
-          x: 850, y: 560, title: 'Đột Phá Trúc Cơ — Nguyên Tinh Mộc',
-          desc: 'Tới Đan Phòng ở Tông Môn: chế Nguyên Tinh Mộc từ 5 Lá Thanh Tụy (hoặc hạ Linh Cổ Vương ở Rừng Độc, rơi 30%).'
+          stepId: 'dotpha_src_yeu_dan', stage: 4, mapId: 'son-coc', kind: 'point',
+          x: 980, y: 380, title: 'Đột Phá Trúc Cơ — Yêu Đan cấp 1',
+          desc: 'Hái Linh Chi Sau Núi ở Sơn Cốc rồi diệt cả toán phục kích Huyết Bạc Cung (3 thích khách) — rơi CHẮC CHẮN 1 Yêu Đan cấp 1.'
         };
-      case 'nguyen-tinh-thuy':
+      case 'thanh-tam-thao':
         return {
-          stepId: 'dotpha_src_nt_thuy', stage: 4, mapId: 'tong-mon', kind: 'point',
-          x: 850, y: 560, title: 'Đột Phá Trúc Cơ — Nguyên Tinh Thủy',
-          desc: 'Tới Đan Phòng ở Tông Môn: chế Nguyên Tinh Thủy từ 5 Băng Tinh (hoặc hạ Hàn Kính Giao Vương ở Hồ Băng, rơi 25%).'
+          stepId: 'dotpha_src_thanh_tam', stage: 4, mapId: 'son-coc', kind: 'point',
+          x: 700, y: 660, title: 'Đột Phá Trúc Cơ — Thanh Tâm Thảo',
+          desc: 'Tới các điểm hái Thanh Tâm Thảo ở Sơn Cốc để thu thập đủ 3 cây.'
         };
       default:
         return null;
@@ -416,7 +412,7 @@
     }
     bodyEl.appendChild(pillRow);
     bodyEl.appendChild(el('p', 'tieumoc-note',
-      'Luyện Trúc Cơ Đan tại Đan Phòng hoặc chỗ Chấp Sự Đường: 3 Linh Chi Rừng + 1 Băng Tủy + 2 Hỏa Tinh Thổ + 1 Nguyên Tinh Mộc + 1 Nguyên Tinh Thủy + ' + RECIPE_LT_FEE + ' Linh Thạch (phí tính ở bước luyện).'));
+      'Luyện Trúc Cơ Đan tại Đan Phòng hoặc chỗ Chấp Sự Đường: 1 Linh Chi Sau Núi + 1 Yêu Đan cấp 1 + 3 Thanh Tâm Thảo + ' + RECIPE_LT_FEE + ' Linh Thạch (phí tính ở bước luyện). Công thức theo chuẩn đã duyệt (Bui 2026-11-01).'));
 
     bodyEl.appendChild(el('h4', 'tieumoc-subtitle', 'Nguyên liệu gốc của viên đan (đủ/thiếu từng món)'));
     for (var j = 0; j < info.recipe.length; j++) {

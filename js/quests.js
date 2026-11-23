@@ -375,7 +375,7 @@
       type: 'danphong',
       category: 'Thu Thập',
       title: 'Hái Linh Chi Rừng',
-      desc: 'Lên Sơn Cốc hái Linh Chi Rừng — nguyên liệu chính luyện Mộc Linh Đan và Trúc Cơ Đan.',
+      desc: 'Lên Sơn Cốc hái Linh Chi Rừng — nguyên liệu chính luyện Mộc Linh Đan.',
       prereq: { minRank: 0 },
       giver: { mapId: 'tong-mon', kind: 'board', boardId: 'board_danphong' },
       turnIn: { mapId: 'tong-mon', kind: 'npc', npcId: 'npc_chapsu' },
@@ -431,7 +431,7 @@
       type: 'danphong',
       category: 'Thu Thập',
       title: 'Hỏa Tinh Thổ',
-      desc: 'Hạ Xích Diệm Ma tinh anh ở Mỏ Lửa, thu Hỏa Tinh Thổ — nguyên liệu của Hỏa Linh Đan và Trúc Cơ Đan.',
+      desc: 'Hạ Xích Diệm Ma tinh anh ở Mỏ Lửa, thu Hỏa Tinh Thổ — nguyên liệu của Hỏa Linh Đan.',
       prereq: { minRank: 7 },
       giver: { mapId: 'tong-mon', kind: 'board', boardId: 'board_danphong' },
       turnIn: { mapId: 'tong-mon', kind: 'npc', npcId: 'npc_chapsu' },
@@ -599,6 +599,28 @@
       rewards: { linhThach: 100, sectContribution: 50, items: [{ itemId: 'bua-ho-menh', count: 1 }] },
       repeatable: true,
       cooldownSec: 120
+    },
+
+    // --- NHIỆM VỤ TÔNG MÔN LỚN "LẬP PHONG ĐẠI ĐIỂN" (Đợt ƯU TIÊN 2026-11-23) ---
+    // Mở ở Trúc Cơ (minRank 10), yêu cầu 500 điểm cống hiến tông môn TÍCH
+    // LŨY (lifetimeContribution — cống hiến là tiền tệ tiêu được ở tiệm
+    // tông môn nên đo theo tích lũy, không đo số dư hiện tại; số tạm, chờ
+    // Bui chốt). Hoàn thành thưởng 1 Lệnh Mở Phong. Nhận/trả trên Bảng
+    // Treo Thưởng Tông Môn (board_sect) như các việc tông môn khác.
+    'q_sect_lap_phong_dai_dien': {
+      id: 'q_sect_lap_phong_dai_dien',
+      boardId: 'board_sect',
+      type: 'sect',
+      category: 'Việc Tông Môn',
+      title: 'Lập Phong Đại Điển',
+      desc: 'Đại điển lập phong của tông môn: tích lũy đủ 500 điểm cống hiến tông môn để chứng minh công lao, tông môn ban 1 Lệnh Mở Phong. (Số tạm — chờ Bui chốt.)',
+      prereq: { minRank: 10, sectStage: 4 },
+      giver: { mapId: 'tong-mon', kind: 'board', boardId: 'board_sect' },
+      turnIn: { mapId: 'tong-mon', kind: 'npc', npcId: 'npc_chapsu' },
+      target: { mapId: 'tong-mon', kind: 'npc', npcId: 'npc_chapsu', title: 'Chấp Sự Đường' },
+      objectives: [{ id: 'cong_hien_500', kind: 'sect_contribution', needed: 500 }],
+      rewards: { items: [{ itemId: 'lenh-mo-phong', count: 1 }] },
+      repeatable: false
     },
 
     // --- TUYẾN ẨN NPC (Đợt P2G, P2-DESIGN §8 / hồ sơ 16§8) ---
@@ -1410,6 +1432,13 @@
           var neededRank = (objDef.realm === 'Trúc Cơ Sơ Kỳ') ? 10 : 0;
           oProg.current = rank;
           oProg.done = rank >= neededRank;
+        } else if (objDef.kind === 'sect_contribution') {
+          // Đợt ƯU TIÊN: mục tiêu điểm cống hiến tông môn TÍCH LŨY
+          // (lifetimeContribution — cống hiến tiêu được ở tiệm tông môn nên
+          // không đo số dư hiện tại; xem q_sect_lap_phong_dai_dien).
+          var life = (player.questState && player.questState.sect && player.questState.sect.lifetimeContribution) || 0;
+          oProg.current = life;
+          oProg.done = life >= objDef.needed;
         }
 
         if (!oProg.done) allDone = false;
@@ -1951,7 +1980,7 @@
       minSectRank: 2,
       baseContribution: 50,
       baseLinhThach: 20,
-      desc: 'Nguyên liệu luyện Trúc Cơ Đan (Hồ sơ 02§3.1). Cần chức vụ Nội Môn trở lên.'
+      desc: 'Nguyên tán theo hồ sơ 02§3.1 (bản ĐỀ XUẤT — không thuộc công thức Trúc Cơ Đan chuẩn đã duyệt). Cần chức vụ Nội Môn trở lên.'
     },
     {
       itemId: 'kim-nguyen-tan',
@@ -1959,7 +1988,7 @@
       minSectRank: 2,
       baseContribution: 50,
       baseLinhThach: 20,
-      desc: 'Nguyên liệu luyện Trúc Cơ Đan (Hồ sơ 02§3.1). Cần chức vụ Nội Môn trở lên.'
+      desc: 'Nguyên tán theo hồ sơ 02§3.1 (bản ĐỀ XUẤT — không thuộc công thức Trúc Cơ Đan chuẩn đã duyệt). Cần chức vụ Nội Môn trở lên.'
     },
     {
       itemId: 'tui-tru-vat',

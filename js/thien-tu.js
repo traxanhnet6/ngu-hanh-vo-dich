@@ -66,7 +66,13 @@
     'mo-lua':     { elem: 'hoa',  tier: 'day',    name: 'Mỏ Lửa Xích Diệm',   shortName: 'Mỏ Lửa' },
     'hoang-mac':  { elem: 'tho',  tier: 'day',    name: 'Hoang Mạc Hoàng Sa', shortName: 'Hoang Mạc' },
     'kiem-trung': { elem: 'kim',  tier: 'day',    name: 'Kiếm Trủng Huyền Thiết', shortName: 'Kiếm Trủng' },
-    'tong-mon':   { elem: 'moc',  tier: 'thuong', name: 'Tông Môn — Núi Chính', shortName: 'Tông Môn' }
+    'tong-mon':   { elem: 'moc',  tier: 'thuong', name: 'Tông Môn — Núi Chính', shortName: 'Tông Môn' },
+    // Đợt ƯU TIÊN (sửa buff 2026-11-23): Đỉnh Tiên Môn PHẢI có dòng thì thiền
+    // trong khu phong mới có tu vi nền để nhân +25% (trước đây landProfile
+    // trả null → perMin 0, buff ×1,25 của 0 vẫn là 0). Gán Mộc/thường như
+    // Tông Môn (cùng núi tông). PROVISIONAL, chờ Bui phán. Buff +25% chỉ
+    // áp trong khu phong của chính mình — engine nhân riêng, không nằm ở đây.
+    'dinh-tien-mon': { elem: 'moc', tier: 'thuong', name: 'Đỉnh Tiên Môn', shortName: 'Đỉnh Tiên Môn' }
   };
 
   var TIER_NAMES = { thua: 'thưa', thuong: 'thường', day: 'dày' };
@@ -374,7 +380,7 @@
   // ---------------------------------------------------------------------------
   var PATH_SOURCE_TEXT = {
     kim: 'Hạ quái hệ Kim (chịu bể ngày 65) · Đan Kim (Kim Linh Đan) · Thổ nạp tại đất Kim (Kiếm Trủng)',
-    moc: 'Hạ quái hệ Mộc (chịu bể ngày 65) · Thu hoạch Linh Điền +5 · Thôi Sinh Quyết (+3×cấp) / Trừ Uế Quyết (+2×cấp) · Đan Mộc · Thổ nạp tại đất Mộc (Rừng Độc, Tông Môn)',
+    moc: 'Hạ quái hệ Mộc (chịu bể ngày 65) · Thu hoạch Linh Điền +5 · Thôi Sinh Quyết (+3×cấp) / Trừ Uế Quyết (+2×cấp) · Đan Mộc · Thổ nạp tại đất Mộc (Rừng Độc, Tông Môn, Đỉnh Tiên Môn — thiền trong khu phong của mình +25%, số tạm)',
     thuy: 'Hạ quái hệ Thủy (chịu bể ngày 65) · Linh Vũ Quyết (+2×cấp) · Đan Thủy · Thổ nạp tại đất Thủy (Hồ Băng)',
     hoa: 'Hạ quái hệ Hỏa (chịu bể ngày 65) · Đan Hỏa · Thổ nạp tại đất Hỏa (Mỏ Lửa)',
     tho: 'Hạ quái hệ Thổ (chịu bể ngày 65) · Đan Thổ · Thổ nạp tại đất Thổ (Hoang Mạc)'

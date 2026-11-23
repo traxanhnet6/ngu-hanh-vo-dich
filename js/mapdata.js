@@ -1872,6 +1872,27 @@
   forceWalkable(collisionGridDinhTienMon, SPAWN_DINH_TIEN_MON.x, SPAWN_DINH_TIEN_MON.y);
   forceWalkable(collisionGridDinhTienMon, EXITS_DINH_TIEN_MON[0].target.x, EXITS_DINH_TIEN_MON[0].target.y);
 
+  // Đợt ƯU TIÊN (sửa buff 2026-11-23): 6 điểm Đả Tọa trên Đỉnh Tiên Môn, mỗi
+  // điểm nằm đúng TÂM một khu phong (cùng cx,cy với PEAK_ZONES trong
+  // js/phong.js) — phong lập ở khu nào cũng có chỗ thiền NGAY trong khu
+  // của mình (phong đầu tiên luôn rơi vào Sàn Luận Võ nên một điểm lẻ ở
+  // Nơi Tĩnh Tọa là không đủ). Điểm dùng chung case 'meditate' của engine
+  // (chế độ thiền P2A thật); buff +25% chỉ áp khi điểm đang ngồi nằm trong
+  // khu phong ĐÃ LẬP của chính mình — engine kiểm bằng isInOwnPeakZone().
+  // Tâm các khu đã kiểm walkable theo isWalkableDinhTienMon (không đè
+  // baseRect/ellipse vật đứng); forceWalkable dưới đây là bảo hiểm lưới.
+  var INTERACTABLES_DINH_TIEN_MON = [
+    { id: 'interact_meditate_peak_1', label: 'Đả Tọa', x: 960, y: 375, radius: 48, action: 'meditate' },
+    { id: 'interact_meditate_peak_2', label: 'Đả Tọa', x: 312, y: 352, radius: 48, action: 'meditate' },
+    { id: 'interact_meditate_peak_3', label: 'Đả Tọa', x: 1372, y: 360, radius: 48, action: 'meditate' },
+    { id: 'interact_meditate_peak_4', label: 'Đả Tọa', x: 625, y: 750, radius: 48, action: 'meditate' },
+    { id: 'interact_meditate_peak_5', label: 'Đả Tọa', x: 1242, y: 757, radius: 48, action: 'meditate' },
+    { id: 'interact_meditate_peak_6', label: 'Đả Tọa', x: 962, y: 1090, radius: 48, action: 'meditate' }
+  ];
+  for (var dpi = 0; dpi < INTERACTABLES_DINH_TIEN_MON.length; dpi++) {
+    forceWalkable(collisionGridDinhTienMon, INTERACTABLES_DINH_TIEN_MON[dpi].x, INTERACTABLES_DINH_TIEN_MON[dpi].y);
+  }
+
   var MAP_DINH_TIEN_MON = {
     id: 'dinh-tien-mon',
     name: 'Đỉnh Tiên Môn',
@@ -1884,7 +1905,7 @@
     spawn: SPAWN_DINH_TIEN_MON,
     standees: STAND_OBJECTS_DINH_TIEN_MON,
     npcs: [],
-    interactables: [],
+    interactables: INTERACTABLES_DINH_TIEN_MON,
     harvestNodes: [],
     monsterPacks: [],
     zones: ZONES_DINH_TIEN_MON,
@@ -2357,7 +2378,19 @@
     { id: 'harvest_sc_1', itemId: 'linh-chi-rung', name: 'Linh Chi Rừng', x: 200, y: 600, radius: 48, respawnSec: 120, count: 1 },
     { id: 'harvest_sc_2', itemId: 'linh-chi-rung', name: 'Linh Chi Rừng', x: 950, y: 620, radius: 48, respawnSec: 120, count: 1 },
     { id: 'harvest_sc_3', itemId: 'linh-chi-rung', name: 'Linh Chi Rừng', x: 576, y: 180, radius: 48, respawnSec: 120, count: 1 },
-    { id: 'harvest_sc_lt', itemId: 'linh-thach', name: 'Mỏ Linh Thạch', x: 790, y: 462, radius: 48, respawnSec: 300, countMin: 3, countMax: 5 }
+    { id: 'harvest_sc_lt', itemId: 'linh-thach', name: 'Mỏ Linh Thạch', x: 790, y: 462, radius: 48, respawnSec: 300, countMin: 3, countMax: 5 },
+    // Đợt ƯU TIÊN (2026-11-23) — công thức Trúc Cơ Đan chuẩn đã duyệt:
+    // "Sau Núi" = Sơn Cốc (ánh xạ TẠM, chờ Bui chốt). Điểm hái Linh Chi
+    // Sau Núi (1 điểm, hồi 300s) kích hoạt toán phục kích Huyết Bạc Cung
+    // ở mainStage 8 (móc trong js/engine.js executeHarvestNode); 4 điểm
+    // Thanh Tâm Thảo hồi 120s như Lá Thanh Tụy. Tọa độ tránh hồ/vách/đá
+    // đã kê trong SCENERY_OBSTACLES_SON_COC; forceWalkable phía dưới áp
+    // chung cho cả mảng này nên các điểm mới đều đi tới được.
+    { id: 'harvest_sc_linhchi_sn', itemId: 'linh-chi-sau-nui', name: 'Linh Chi Sau Núi', x: 980, y: 380, radius: 48, respawnSec: 300, count: 1 },
+    { id: 'harvest_sc_ttt_1', itemId: 'thanh-tam-thao', name: 'Thanh Tâm Thảo', x: 250, y: 680, radius: 48, respawnSec: 120, count: 1 },
+    { id: 'harvest_sc_ttt_2', itemId: 'thanh-tam-thao', name: 'Thanh Tâm Thảo', x: 700, y: 660, radius: 48, respawnSec: 120, count: 1 },
+    { id: 'harvest_sc_ttt_3', itemId: 'thanh-tam-thao', name: 'Thanh Tâm Thảo', x: 1020, y: 700, radius: 48, respawnSec: 120, count: 1 },
+    { id: 'harvest_sc_ttt_4', itemId: 'thanh-tam-thao', name: 'Thanh Tâm Thảo', x: 620, y: 300, radius: 48, respawnSec: 120, count: 1 }
   ];
 
   var SCENERY_OBSTACLES_SON_COC = [

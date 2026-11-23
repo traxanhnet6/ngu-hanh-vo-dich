@@ -452,6 +452,8 @@
           <div class="detail-row"><span>Lượt hồi sinh:</span> <b id="char-panel-revival-pool" class="gold-text">5 / 5</b></div>
           <div class="detail-row"><span>Đột phá:</span></div>
           <div class="dotpha-btn-grid"><button id="btn-tieumoc-open" class="btn wood tieumoc-open-btn" type="button">Đột Phá<br>Tiểu Mốc</button> <button id="btn-dotpha-open" class="btn wood tieumoc-open-btn" type="button">Đột Phá<br>Trúc Cơ</button> <button id="btn-kimdan-open" class="btn wood tieumoc-open-btn" type="button">Đột Phá<br>Kim Đan</button></div>
+          <!-- Đợt ƯU TIÊN (2026-11-23): lối vào Bảng Phong + Nghi Lễ Chọn Đường -->
+          <div class="dotpha-btn-grid"><button id="btn-phong-open" class="btn wood tieumoc-open-btn" type="button">Bảng<br>Phong</button> <button id="btn-duongtu-open" class="btn wood tieumoc-open-btn" type="button">Nghi Lễ<br>Chọn Đường</button></div>
           
           <h3 class="section-title">Năm Trụ Ngũ Hành (Hồ sơ 49)</h3>
           <div class="pillar-item">
@@ -1382,6 +1384,38 @@
     </div>
   </div>
 
+  <!-- Modal Bảng Phong — Đợt ƯU TIÊN (2026-11-23) -->
+  <div id="phong-modal" class="modal-overlay hidden">
+    <div class="panel modal-box tieumoc-box">
+      <div class="modal-header">
+        <div class="danphong-header-title-wrap">
+          <h2 class="modal-title">BẢNG PHONG — LẬP PHONG TRÊN ĐỈNH TIÊN MÔN</h2>
+          <span class="danphong-sub-badge">Cần Trúc Cơ trở lên + 1 Lệnh Mở Phong — mọi số là số tạm, chờ Bui chốt</span>
+        </div>
+        <button id="close-phong-modal" class="btn-close" type="button" aria-label="Đóng">×</button>
+      </div>
+      <div id="phong-body" class="tieumoc-body">
+        <!-- Nội dung render bởi GamePhong -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Nghi Lễ Chọn Đường — Đợt ƯU TIÊN (2026-11-23) -->
+  <div id="duong-tu-modal" class="modal-overlay hidden">
+    <div class="panel modal-box tieumoc-box">
+      <div class="modal-header">
+        <div class="danphong-header-title-wrap">
+          <h2 class="modal-title">NGHI LỄ CHỌN ĐƯỜNG — KIẾM / PHÁP / THỂ</h2>
+          <span class="danphong-sub-badge">Chọn sau Trúc Cơ — thử chiêu đặc trưng từng đường trước khi chốt, tên và số đều tạm chờ Bui chốt</span>
+        </div>
+        <button id="close-duong-tu-modal" class="btn-close" type="button" aria-label="Đóng">×</button>
+      </div>
+      <div id="duong-tu-body" class="tieumoc-body">
+        <!-- Nội dung render bởi GameDuongTu -->
+      </div>
+    </div>
+  </div>
+
   <!-- Modal Đột Phá Kim Đan — Tâm Ma + Độ Kiếp 5 Tia (Đợt T3) -->
   <div id="kimdan-modal" class="modal-overlay hidden">
     <div class="panel modal-box tieumoc-box">
@@ -1626,6 +1660,9 @@
   <script src="js/tieumoc.js"></script>
   <script src="js/dotpha.js"></script>
   <script src="js/kimdan.js"></script>
+  <!-- Đợt ƯU TIÊN (2026-11-23): Bảng Phong + Nghi Lễ Chọn Đường -->
+  <script src="js/phong.js"></script>
+  <script src="js/duong-tu.js"></script>
   <script src="js/trangbi.js"></script>
   <script src="js/tui-kho.js"></script>
   <script src="js/bi-canh.js"></script>

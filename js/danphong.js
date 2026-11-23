@@ -127,14 +127,13 @@
   // Việc trừ đồ/cấp đan do engine.refineTrucCoDan đảm nhiệm (nguồn sự thật
   // duy nhất); danh sách này phải khớp engine.js — refineTrucCoDan tự báo
   // thiếu nguyên liệu theo đúng các mục này.
+  // Đợt ƯU TIÊN (2026-11-23): về chuẩn đã duyệt (Bui 2026-11-01).
   var TRUC_CO_DISPLAY = [
-    { itemId: 'linh-chi-rung', count: 3 },
-    { itemId: 'bang-tuy', count: 1 },
-    { itemId: 'hoa-tinh-tho', count: 2 },
-    { itemId: 'nguyen-tinh-moc', count: 1 },
-    { itemId: 'nguyen-tinh-thuy', count: 1 }
+    { itemId: 'linh-chi-sau-nui', count: 1 },
+    { itemId: 'yeu-dan-cap-1', count: 1 },
+    { itemId: 'thanh-tam-thao', count: 3 }
   ];
-  var TRUC_CO_LINH_THACH = 200;
+  var TRUC_CO_LINH_THACH = 30;
 
   // ---------------------------------------------------------------------------
   // BẢNG NHIỆM VỤ THU THẬP (số đội soạn đợt DANPHONG)
@@ -165,7 +164,7 @@
       itemId: 'linh-chi-rung', need: 3, minRank: 0,
       mapId: 'son-coc', zoneName: 'Sơn Cốc', kind: 'point', x: 200, y: 600,
       rewardLT: 45, rewardDanElem: 'moc',
-      desc: 'Lên Sơn Cốc hái Linh Chi Rừng — nguyên liệu chính luyện Mộc Linh Đan và Trúc Cơ Đan.'
+      desc: 'Lên Sơn Cốc hái Linh Chi Rừng — nguyên liệu chính luyện Mộc Linh Đan.'
     },
     {
       id: 'q_thuy_tinh', name: 'Thu Băng Tinh', elem: 'thuy',
@@ -193,7 +192,7 @@
       itemId: 'hoa-tinh-tho', need: 2, minRank: 7,
       mapId: 'mo-lua', zoneName: 'Mỏ Lửa Xích Diệm', kind: 'monster', speciesId: 'diem_ma',
       rewardLT: 90, rewardDanElem: null,
-      desc: 'Hạ Xích Diệm Ma tinh anh ở Mỏ Lửa, thu Hỏa Tinh Thổ — nguyên liệu của Hỏa Linh Đan và Trúc Cơ Đan.'
+      desc: 'Hạ Xích Diệm Ma tinh anh ở Mỏ Lửa, thu Hỏa Tinh Thổ — nguyên liệu của Hỏa Linh Đan.'
     },
     {
       id: 'q_tho_cat', name: 'Cát Tinh Hoàng Sa', elem: 'tho',
@@ -881,7 +880,8 @@
       body.appendChild(tdCard);
     }
 
-    // Thẻ Trúc Cơ Đan — luyện qua đúng hàm của engine (giữ nguyên công thức cũ)
+    // Thẻ Trúc Cơ Đan — luyện qua đúng hàm của engine (công thức chuẩn đã
+    // duyệt, đợt ƯU TIÊN 2026-11-23)
     var tcCard = el('div', 'danphong-card danphong-card-trucco');
     var tcHead = el('div', 'danphong-card-head');
     var tcIcon = el('div', 'danphong-card-icon');

@@ -569,8 +569,335 @@
         displayH: 192
       },
       desc: 'Võ học tay không hệ Âm Dương: chưởng lực thái cực xoay tròn đánh gần, diễn bằng bộ khung Thái Cực Chưởng 64 khung (8 hướng × 8 giai đoạn).'
+    },
+    /* ==================================================================
+     * ĐỢT ƯU TIÊN (2026-11-23) — KỸ NĂNG 3 ĐƯỜNG TU (Kiếm/Pháp/Thể).
+     * Chọn đường SAU Trúc Cơ (nghi lễ ở js/duong-tu.js). Mọi tên + số đều
+     * PROVISIONAL ("tên tạm/số tạm, chờ Bui chốt"), lấy theo thang chiêu
+     * chứng sẵn có (Phi Diệp: tốn 4, hồi 3,0s, tỉ lệ 1,6). Khóa mở mới
+     * unlock { type:'cultivationPath', path } — mở khi người chơi đã chọn
+     * đường đó (chính hoặc kiêm tu). Hiệu ứng DÙNG LẠI khóa VFX sẵn có
+     * theo hệ, không vẽ VFX mới đợt này.
+     * Hai chiêu bị động (Kiếm Tâm, Kim Cang Thể) không tung được: chúng
+     * cộng thẳng chỉ số trong state.js deriveStats khi đã chọn đường;
+     * castSkill chặn lại bằng toast (engine.js). Hai chiêu tự buff
+     * (Hộ Thể Linh Quang, Huyết Khí Bùng Nổ, Bất Diệt Kim Thân) đi qua
+     * delivery 'self' + trường buff, engine.js áp theo player.pathBuffs.
+     * Ngự Kiếm Phi Hành là chiêu di chuyển — engine chưa có cơ chế lướt
+     * nên đợt này làm dạng đạn kiếm khí xuyên (delivery projectile, tỉ lệ
+     * tạm 1,2); lướt thật để đợt cơ chế di chuyển sau, ghi rõ ở báo cáo.
+     * ================================================================== */
+    {
+      id: 'kiem-khi-tram',
+      name: 'Kiếm Khí Trảm',
+      shortName: 'Kiếm Khí',
+      family: 'kiem-tu',
+      path: 'kim',
+      cultivationPath: 'kiem-tu',
+      tier: 1,
+      thuc: 1,
+      provisional: true,
+      unlock: { type: 'cultivationPath', path: 'kiem-tu' },
+      cost: { type: 'linhLuc', amount: 5 },
+      cooldown: 4.0,
+      castTime: 0.22,
+      range: 280,
+      targetMode: 'single',
+      delivery: 'projectile',
+      projectileSpeed: 520,
+      damage: { stat: 'attack', ratio: 1.8, flat: 0 },
+      status: null,
+      effect: 'kim_blade_projectile',
+      icon: 'skill-elem-kim',
+      sfx: 'slash',
+      desc: 'Chiêu đặc trưng Kiếm Tu: một lưỡi kiếm khí sắc lạnh chém thẳng mục tiêu, gây 180% sát thương đòn thường. (Tên tạm, số tạm — chờ Bui chốt.)'
+    },
+    {
+      id: 'ngu-kiem-phi-hanh',
+      name: 'Ngự Kiếm Phi Hành',
+      shortName: 'Ngự Kiếm',
+      family: 'kiem-tu',
+      path: 'kim',
+      cultivationPath: 'kiem-tu',
+      tier: 1,
+      thuc: 2,
+      provisional: true,
+      unlock: { type: 'cultivationPath', path: 'kiem-tu' },
+      cost: { type: 'linhLuc', amount: 6 },
+      cooldown: 8.0,
+      castTime: 0.22,
+      range: 280,
+      targetMode: 'single',
+      delivery: 'projectile',
+      projectileSpeed: 640,
+      damage: { stat: 'attack', ratio: 1.2, flat: 0 },
+      status: null,
+      effect: 'kim_blade_projectile',
+      icon: 'skill-elem-kim',
+      sfx: 'slash',
+      desc: 'Lướt tới trước trên kiếm, kiếm khí chém xuyên mục tiêu, gây 120% sát thương đòn thường. (Tên tạm, số tạm — chờ Bui chốt. TẠM làm dạng đạn kiếm khí vì engine chưa có cơ chế lướt; lướt thật để đợt sau.)'
+    },
+    {
+      id: 'van-kiem-quy-tong',
+      name: 'Vạn Kiếm Quy Tông',
+      shortName: 'Vạn Kiếm',
+      family: 'kiem-tu',
+      path: 'kim',
+      cultivationPath: 'kiem-tu',
+      tier: 1,
+      thuc: 3,
+      provisional: true,
+      unlock: { type: 'cultivationPath', path: 'kiem-tu' },
+      cost: { type: 'linhLuc', amount: 12 },
+      cooldown: 20.0,
+      castTime: 0.5,
+      range: 260,
+      targetMode: 'single',
+      delivery: 'area',
+      radius: 120,
+      damage: { stat: 'attack', ratio: 3.0, flat: 0 },
+      status: null,
+      effect: 'kim_blade_burst',
+      icon: 'skill-elem-kim',
+      sfx: 'slash',
+      desc: 'Tuyệt kỹ Kiếm Tu: vạn lưỡi kiếm khí quy tụ nổ tung quanh mục tiêu, gây 300% sát thương đòn thường cho mọi địch trong vùng. (Tên tạm, số tạm — chờ Bui chốt.)'
+    },
+    {
+      id: 'kiem-tam',
+      name: 'Kiếm Tâm',
+      shortName: 'Kiếm Tâm',
+      family: 'kiem-tu',
+      path: 'kim',
+      cultivationPath: 'kiem-tu',
+      tier: 1,
+      thuc: 4,
+      provisional: true,
+      unlock: { type: 'cultivationPath', path: 'kiem-tu' },
+      cost: { type: 'linhLuc', amount: 0 },
+      cooldown: 0,
+      castTime: 0,
+      range: 55,
+      targetMode: 'self',
+      delivery: 'self',
+      damage: { stat: 'attack', ratio: 1.0, flat: 0 },
+      status: null,
+      effect: 'kim_blade_burst',
+      icon: 'skill-elem-kim',
+      sfx: 'slash',
+      passive: { stat: 'crit', pct: 10 },
+      desc: 'BỊ ĐỘNG Kiếm Tu: +10% tỉ lệ bạo kích (tương đối — số tạm, chờ Bui chốt). Luôn hiệu lực khi đã chọn đường Kiếm Tu, không cần tung. (Tên tạm — chờ Bui chốt.)'
+    },
+    {
+      id: 'ngu-hanh-phap-an',
+      name: 'Ngũ Hành Pháp Ấn',
+      shortName: 'Pháp Ấn',
+      family: 'phap-tu',
+      path: null,
+      element: 'nguhanh',
+      cultivationPath: 'phap-tu',
+      tier: 1,
+      thuc: 1,
+      provisional: true,
+      unlock: { type: 'cultivationPath', path: 'phap-tu' },
+      cost: { type: 'linhLuc', amount: 6 },
+      cooldown: 5.0,
+      castTime: 0.3,
+      range: 260,
+      targetMode: 'single',
+      delivery: 'area',
+      radius: 100,
+      damage: { stat: 'attack', ratio: 2.0, flat: 0 },
+      status: null,
+      effect: 'nguhanh_burst',
+      icon: 'skill-elem-nguhanh',
+      sfx: 'leafCast',
+      desc: 'Chiêu đặc trưng Pháp Tu: ấn pháp ngũ hành nổ tung quanh mục tiêu, gây 200% sát thương đòn thường cho mọi địch trong vùng. (Tên tạm, số tạm — chờ Bui chốt.)'
+    },
+    {
+      id: 'loi-phap-dan',
+      name: 'Lôi Pháp Dẫn',
+      shortName: 'Lôi Pháp',
+      family: 'phap-tu',
+      path: 'kim',
+      cultivationPath: 'phap-tu',
+      tier: 1,
+      thuc: 2,
+      provisional: true,
+      unlock: { type: 'cultivationPath', path: 'phap-tu' },
+      cost: { type: 'linhLuc', amount: 5 },
+      cooldown: 4.0,
+      castTime: 0.22,
+      range: 280,
+      targetMode: 'single',
+      delivery: 'projectile',
+      projectileSpeed: 620,
+      damage: { stat: 'attack', ratio: 1.8, flat: 0 },
+      status: null,
+      effect: 'kim_blade_burst',
+      icon: 'skill-elem-kim',
+      sfx: 'slash',
+      desc: 'Dẫn sét đánh thẳng mục tiêu, gây 180% sát thương đòn thường. (Tên tạm, số tạm — chờ Bui chốt. Dùng lại VFX kim_blade_burst vì chưa có hiệu ứng sét riêng.)'
+    },
+    {
+      id: 'ho-the-linh-quang',
+      name: 'Hộ Thể Linh Quang',
+      shortName: 'Hộ Thể',
+      family: 'phap-tu',
+      path: 'thuy',
+      cultivationPath: 'phap-tu',
+      tier: 1,
+      thuc: 3,
+      provisional: true,
+      unlock: { type: 'cultivationPath', path: 'phap-tu' },
+      cost: { type: 'linhLuc', amount: 6 },
+      cooldown: 12.0,
+      castTime: 0.3,
+      range: 55,
+      targetMode: 'self',
+      delivery: 'self',
+      damage: { stat: 'attack', ratio: 1.0, flat: 0 },
+      status: null,
+      effect: 'thuy_frost_lock',
+      icon: 'skill-elem-thuy',
+      sfx: 'leafCast',
+      buff: { kind: 'shield', pct: 0.3, durationSec: 6 },
+      desc: 'Khiên linh quang: giảm 30% sát thương nhận vào trong 6 giây. (Tên tạm, số tạm — chờ Bui chốt. Engine chưa có cơ chế khiên đỡ theo máu nên đợt này làm dạng giảm sát thương nhận vào.)'
+    },
+    {
+      id: 'thien-loi-dan',
+      name: 'Thiên Lôi Dẫn',
+      shortName: 'Thiên Lôi',
+      family: 'phap-tu',
+      path: 'kim',
+      cultivationPath: 'phap-tu',
+      tier: 1,
+      thuc: 4,
+      provisional: true,
+      unlock: { type: 'cultivationPath', path: 'phap-tu' },
+      cost: { type: 'linhLuc', amount: 14 },
+      cooldown: 25.0,
+      castTime: 0.5,
+      range: 260,
+      targetMode: 'single',
+      delivery: 'area',
+      radius: 120,
+      damage: { stat: 'attack', ratio: 3.2, flat: 0 },
+      status: null,
+      effect: 'kim_blade_burst',
+      icon: 'skill-elem-kim',
+      sfx: 'slash',
+      desc: 'Tuyệt kỹ Pháp Tu: thiên lôi giáng xuống quanh mục tiêu, gây 320% sát thương đòn thường cho mọi địch trong vùng. (Tên tạm, số tạm — chờ Bui chốt. Dùng lại VFX kim_blade_burst vì chưa có hiệu ứng sét riêng.)'
+    },
+    {
+      id: 'ba-vuong-quyen',
+      name: 'Bá Vương Quyền',
+      shortName: 'Bá Vương',
+      family: 'the-tu',
+      path: 'tho',
+      cultivationPath: 'the-tu',
+      tier: 1,
+      thuc: 1,
+      provisional: true,
+      unlock: { type: 'cultivationPath', path: 'the-tu' },
+      cost: { type: 'linhLuc', amount: 5 },
+      cooldown: 4.0,
+      castTime: 0.3,
+      range: 75,
+      targetMode: 'single',
+      delivery: 'instant',
+      damage: { stat: 'attack', ratio: 2.0, flat: 0 },
+      status: null,
+      effect: 'thaicuc_swirl',
+      icon: 'skill-elem-tho',
+      sfx: 'slash',
+      desc: 'Chiêu đặc trưng Thể Tu: quyền nặng cận chiến, gây 200% sát thương đòn thường. (Tên tạm, số tạm — chờ Bui chốt.)'
+    },
+    {
+      id: 'kim-cang-the',
+      name: 'Kim Cang Thể',
+      shortName: 'Kim Cang',
+      family: 'the-tu',
+      path: 'tho',
+      cultivationPath: 'the-tu',
+      tier: 1,
+      thuc: 2,
+      provisional: true,
+      unlock: { type: 'cultivationPath', path: 'the-tu' },
+      cost: { type: 'linhLuc', amount: 0 },
+      cooldown: 0,
+      castTime: 0,
+      range: 55,
+      targetMode: 'self',
+      delivery: 'self',
+      damage: { stat: 'attack', ratio: 1.0, flat: 0 },
+      status: null,
+      effect: 'tho_rock_collapse',
+      icon: 'skill-elem-tho',
+      sfx: 'slash',
+      passive: { stat: 'defense', pct: 15 },
+      desc: 'BỊ ĐỘNG Thể Tu: +15% phòng thủ (tương đối — số tạm, chờ Bui chốt). Luôn hiệu lực khi đã chọn đường Thể Tu, không cần tung. (Tên tạm — chờ Bui chốt.)'
+    },
+    {
+      id: 'huyet-khi-bung-no',
+      name: 'Huyết Khí Bùng Nổ',
+      shortName: 'Huyết Khí',
+      family: 'the-tu',
+      path: 'hoa',
+      cultivationPath: 'the-tu',
+      tier: 1,
+      thuc: 3,
+      provisional: true,
+      unlock: { type: 'cultivationPath', path: 'the-tu' },
+      cost: { type: 'linhLuc', amount: 8 },
+      cooldown: 15.0,
+      castTime: 0.3,
+      range: 55,
+      targetMode: 'self',
+      delivery: 'self',
+      damage: { stat: 'attack', ratio: 1.0, flat: 0 },
+      status: null,
+      effect: 'hoa_lava_burst',
+      icon: 'skill-elem-hoa',
+      sfx: 'slash',
+      buff: { kind: 'attack', pct: 0.25, durationSec: 8 },
+      desc: 'Tự buff: +25% công kích trong 8 giây. (Tên tạm, số tạm — chờ Bui chốt.)'
+    },
+    {
+      id: 'bat-diet-kim-than',
+      name: 'Bất Diệt Kim Thân',
+      shortName: 'Kim Thân',
+      family: 'the-tu',
+      path: 'kim',
+      cultivationPath: 'the-tu',
+      tier: 1,
+      thuc: 4,
+      provisional: true,
+      unlock: { type: 'cultivationPath', path: 'the-tu' },
+      cost: { type: 'linhLuc', amount: 12 },
+      cooldown: 30.0,
+      castTime: 0.3,
+      range: 55,
+      targetMode: 'self',
+      delivery: 'self',
+      damage: { stat: 'attack', ratio: 1.0, flat: 0 },
+      status: null,
+      effect: 'kim_blade_burst',
+      icon: 'skill-elem-kim',
+      sfx: 'slash',
+      buff: { kind: 'invuln', durationSec: 3 },
+      desc: 'Tuyệt kỹ Thể Tu: bất tử 3 giây — không nhận sát thương. (Tên tạm, số tạm — chờ Bui chốt.)'
     }
   ];
+
+  /* Đợt ƯU TIÊN — 3 đường tu (tên tạm, chờ Bui chốt) + 4 chiêu mỗi đường,
+   * theo đúng thứ tự ô 1–4 trên thanh kỹ năng khi đã chọn đường. */
+  var CULTIVATION_PATHS = ['kiem-tu', 'phap-tu', 'the-tu'];
+  var PATH_SKILL_IDS = {
+    'kiem-tu': ['kiem-khi-tram', 'ngu-kiem-phi-hanh', 'van-kiem-quy-tong', 'kiem-tam'],
+    'phap-tu': ['ngu-hanh-phap-an', 'loi-phap-dan', 'ho-the-linh-quang', 'thien-loi-dan'],
+    'the-tu': ['ba-vuong-quyen', 'kim-cang-the', 'huyet-khi-bung-no', 'bat-diet-kim-than']
+  };
+  var COMMON_LOADOUT_FIRST4 = ['phi_diep', 'day_leo', 'kim_mang', 'bang_tien'];
 
   /**
    * Thứ tự chiêu trên thanh kỹ năng (phím 1..9). Đánh thường đi kênh riêng.
@@ -593,18 +920,34 @@
     return SKILL_REGISTRY.slice();
   }
 
-  function getLoadout() {
+  /**
+   * Đợt ƯU TIÊN — đội hình 8 ô theo đường tu đã chọn (player có thể null /
+   * không truyền = hành vi cũ y hệt). Khi có đường: ô 1–4 = 4 chiêu đường
+   * tu, ô 5–8 = 4 chiêu chung đầu tiên của LOADOUT hiện tại; 4 chiêu chung
+   * còn lại vẫn đã học, hiện ở Bảng Chiêu (đổi ô bằng tay để đợt sau).
+   * Khi chưa có đường: loadout giữ nguyên như hiện tại (không hồi quy).
+   */
+  function effectiveLoadoutIds(player) {
+    var path = player && player.cultivationPath;
+    if (path && PATH_SKILL_IDS[path]) {
+      return PATH_SKILL_IDS[path].concat(COMMON_LOADOUT_FIRST4);
+    }
+    return LOADOUT.slice();
+  }
+
+  function getLoadout(player) {
+    var ids = effectiveLoadoutIds(player);
     var out = [];
-    for (var i = 0; i < LOADOUT.length; i++) {
-      var def = INDEX[LOADOUT[i]];
+    for (var i = 0; i < ids.length; i++) {
+      var def = INDEX[ids[i]];
       if (def) out.push(def);
     }
     return out;
   }
 
   /** Vị trí 0-based của chiêu trên thanh kỹ năng (-1 nếu không có). */
-  function slotOf(id) {
-    return LOADOUT.indexOf(id);
+  function slotOf(id, player) {
+    return effectiveLoadoutIds(player).indexOf(id);
   }
 
   /**
@@ -666,6 +1009,8 @@
    * - 'harmony': Hài Hòa hiện tại đạt ngưỡng (họ hợp kích, hồ sơ 02 §5 —
    *   điều kiện "giữ mốc HH đủ số ngày tích lũy" thuộc đợt tiến trình,
    *   ở đây mới khóa theo HH hiện tại).
+   * - 'cultivationPath' (đợt ƯU TIÊN): mở khi đường chính hoặc đường kiêm
+   *   tu của người chơi là đường này.
    */
   function isUnlocked(def, player) {
     if (!def) return false;
@@ -679,6 +1024,11 @@
     if (def.unlock.type === 'harmony') {
       if (!player || !player.paths) return false;
       return harmonyRatioOf(player.paths) >= (def.unlock.min || 0);
+    }
+    if (def.unlock.type === 'cultivationPath') {
+      // Đợt ƯU TIÊN: mở khi đường chính hoặc đường kiêm tu là đường này.
+      if (!player) return false;
+      return player.cultivationPath === def.unlock.path || player.dualPath === def.unlock.path;
     }
     return false;
   }
@@ -795,6 +1145,10 @@
           if (!(typeof u.min === 'number' && u.min >= 0)) problems.push(tag + 'unlock.min phải là số >= 0');
         } else if (u.type === 'harmony') {
           if (!(typeof u.min === 'number' && u.min > 0 && u.min <= 1)) problems.push(tag + 'unlock.min của harmony phải trong (0, 1]');
+        } else if (u.type === 'cultivationPath') {
+          // Đợt ƯU TIÊN: khóa mở theo đường tu đã chọn (Kiếm/Pháp/Thể).
+          if (CULTIVATION_PATHS.indexOf(u.path) < 0) problems.push(tag + 'unlock.path (đường tu) không hợp lệ: ' + u.path);
+          if (def.cultivationPath !== u.path) problems.push(tag + 'cultivationPath khác unlock.path của chiêu');
         } else {
           problems.push(tag + 'unlock.type chưa hỗ trợ: ' + u.type);
         }
@@ -835,6 +1189,18 @@
       }
       if (!def.effect || typeof def.effect !== 'string') problems.push(tag + 'thiếu effect id');
       if (!def.icon || typeof def.icon !== 'string') problems.push(tag + 'thiếu icon class');
+      // Đợt ƯU TIÊN: chiêu bị động phải có passive {stat, pct}; chiêu tự
+      // buff phải có buff {kind, durationSec}.
+      if (def.passive) {
+        if (['crit', 'defense'].indexOf(def.passive.stat) < 0) problems.push(tag + 'passive.stat không hỗ trợ: ' + def.passive.stat);
+        if (!(typeof def.passive.pct === 'number' && def.passive.pct > 0)) problems.push(tag + 'passive.pct phải là số > 0');
+        if (def.delivery !== 'self' || def.targetMode !== 'self') problems.push(tag + 'chiêu bị động phải là delivery/targetMode self');
+      }
+      if (def.buff) {
+        if (['shield', 'attack', 'invuln'].indexOf(def.buff.kind) < 0) problems.push(tag + 'buff.kind không hỗ trợ: ' + def.buff.kind);
+        if (!(typeof def.buff.durationSec === 'number' && def.buff.durationSec > 0)) problems.push(tag + 'buff.durationSec phải là số > 0');
+        if (def.delivery !== 'self' || def.targetMode !== 'self') problems.push(tag + 'chiêu tự buff phải là delivery/targetMode self');
+      }
       if (!ELEMENTS[elementOf(def)]) problems.push(tag + 'thiếu ngôn ngữ hình cho hệ ' + elementOf(def));
     }
 
@@ -868,6 +1234,9 @@
 
   exports.ELEMENTS = ELEMENTS;
   exports.PATHS = PATHS;
+  exports.CULTIVATION_PATHS = CULTIVATION_PATHS;
+  exports.PATH_SKILL_IDS = PATH_SKILL_IDS;
+  exports.effectiveLoadoutIds = effectiveLoadoutIds;
   exports.SINH_MAP = SINH_MAP;
   exports.KHAC_MAP = KHAC_MAP;
   exports.COST_TYPES = COST_TYPES;

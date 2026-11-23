@@ -75,10 +75,14 @@
       heatDifficulty: 0.4, danVanMax: 1 }
   ];
 
-  // Đan đột phá theo mốc (17-A) — công thức live hiện tại cho Trúc Cơ Đan giữ nguyên
+  // Đan đột phá theo mốc (17-A) — Đợt ƯU TIÊN (2026-11-23): công thức
+  // Trúc Cơ Đan về chuẩn đã duyệt (Bui 2026-11-01). Ván luyện 4 bước chỉ
+  // kiểm nguyên liệu theo danh sách này; phí 30 Linh Thạch nằm ở
+  // engine.refineTrucCoDan (lò Đan Phòng/Chấp Sự), ván này trước nay
+  // không thu phí riêng nên không thêm phí ở đây.
   var BREAKTHROUGH_PILLS = [
     { id: 'truc-co-dan', name: 'Trúc Cơ Đan', realm: 'Trúc Cơ', minRank: 0, minFurnace: 1, minRealmRank: 9,
-      materials: ['linh-chi-rung', 'linh-chi-rung', 'linh-chi-rung', 'bang-tuy', 'hoa-tinh-tho', 'hoa-tinh-tho', 'nguyen-tinh-moc', 'nguyen-tinh-thuy'],
+      materials: ['linh-chi-sau-nui', 'yeu-dan-cap-1', 'thanh-tam-thao', 'thanh-tam-thao', 'thanh-tam-thao'],
       heatDifficulty: 0.5, danVanMax: 3, kyTran: 'linh-chi-ngan-nam' },
     { id: 'ho-mach-dan', name: 'Hộ Mạch Đan', realm: 'Trúc Cơ', minRank: 1, minFurnace: 1, minRealmRank: 9,
       materials: ['bang-tuy', 'la-thanh-tuy', 'la-thanh-tuy'],

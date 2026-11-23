@@ -339,6 +339,25 @@
       }
     }
 
+    // Đợt ƯU TIÊN — chiêu BỊ ĐỘNG + BUFF THEO GIỜ của 3 đường tu (số tạm,
+    // chờ Bui chốt; chỉ áp khi lời gọi có player, mọi lời gọi cũ không
+    // truyền player -> hành vi y như trước đợt):
+    // - Kiếm Tâm (Kiếm Tu): +10% tỉ lệ bạo kích (tương đối).
+    // - Kim Cang Thể (Thể Tu): +15% phòng thủ (tương đối).
+    // - Huyết Khí Bùng Nổ (Thể Tu): +25% công kích trong 8s (player.pathBuffs
+    //   do engine.js đặt khi tung chiêu; hết giờ thì tự hết hiệu lực).
+    // Chỉ đường CHÍNH hưởng bị động; đường kiêm tu chỉ mở chiêu ở Sổ Chiêu.
+    if (player && player.cultivationPath) {
+      if (player.cultivationPath === 'kiem-tu') {
+        critRate = +(critRate * 1.10).toFixed(1);
+      } else if (player.cultivationPath === 'the-tu') {
+        defense = Math.round(defense * 1.15);
+      }
+      if (player.pathBuffs && player.pathBuffs.atkUntil && Date.now() < player.pathBuffs.atkUntil) {
+        attack = Math.max(1, Math.round(attack * (1 + (player.pathBuffs.atkPct || 0))));
+      }
+    }
+
     return {
       hpMax: hpMax,
       linhLucMax: linhLucMax,
@@ -385,6 +404,24 @@
       linhLucMax: stats.linhLucMax,
       paths: starterPaths,
       path: [],
+      // Đợt ƯU TIÊN — đường tu (chọn SAU Trúc Cơ qua nghi lễ, js/duong-tu.js):
+      // cultivationPath: null | 'kiem-tu' | 'phap-tu' | 'the-tu' (đường chính);
+      // dualPath: đường kiêm tu ở Kim Đan (null nếu chưa kiêm tu);
+      // pathChangeFreeUsed: đã dùng lần đổi đường miễn phí chưa;
+      // pathRitualOffered: đã tự mở nghi lễ 1 lần ngay sau đột phá chưa;
+      // pathBuffs: buff theo giờ của chiêu đường tu (engine.js đặt/xóa theo
+      // Date.now; save cũ không có các trường này -> null, mọi chỗ đọc đều
+      // kiểm tra tồn tại trước). Tên/số đều tạm, chờ Bui chốt.
+      cultivationPath: null,
+      dualPath: null,
+      pathChangeFreeUsed: false,
+      pathRitualOffered: false,
+      pathBuffs: null,
+      // Đợt ƯU TIÊN — phong (js/phong.js): peak = phong của mình (null nếu
+      // chưa lập/chưa gia nhập); peaks = sổ phong bản đơn (mảng phong).
+      // Save cũ không có -> null/[], mọi chỗ đọc đều kiểm tra tồn tại.
+      peak: null,
+      peaks: [],
       realm: 'Phàm Nhân',
       equipment: {
         weapon: null,
