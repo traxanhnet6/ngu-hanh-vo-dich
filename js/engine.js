@@ -1941,12 +1941,13 @@
   var HH_COMBAT_STRIP_DUR = 0.45; // khớp hồi chiêu đòn thường 0,45s
   var HH_COMBAT_SHEATHE_DELAY = 2.5; // giây yên sau đòn cuối thì thu kiếm
   var hanhanCombatData = {}; // move -> buildCombatIndex (.dirs/.scaleFromMaster/.charH)
-  var combatAnim = null; // {move, dir, timer, duration, reverse}
+  var hanhanAxeChopData = null; // Đợt AXE: chỉ mục dải rìu chặt củi riêng (axe_<dir>)
+  var combatAnim = null; // {move, dir, timer, duration, reverse, axe?}
   var swordDrawn = false;
   // Đợt CHOPWOOD (2026-11-20, lệnh Bui "hình ảnh chặt cây phải làm rõ ràng"):
-  // chặt củi KHÔNG phải hái thuốc — một nhát vung dải chop (8 khung @10fps)
+  // chặt củi KHÔNG phải hái thuốc — một nhát vung dải RÌU (8 khung @10fps)
   // rồi mới nhận Bó Củi đúng khoảnh khắc lưỡi chạm thân (khung 4, ~0,4s).
-  var CHOP_SWING_DUR = 0.8;   // 8 khung @10fps của dải chop
+  var CHOP_SWING_DUR = 0.8;   // 8 khung @10fps của dải rìu
   var CHOP_IMPACT_AT = 0.4;   // khung 4/8: lưỡi chạm thân cây
   var CHOP_SHAKE_MS = 550;    // cây rung sau khi trúng
   var pendingChop = null;     // {node, impactAt} — chờ tới khoảnh khắc trúng
@@ -2063,15 +2064,18 @@
   }
 
   function chopDataReady() {
-    return !!(hanhanCombatData['chop'] && assets['hanhan_combat_chop']);
+    // Đợt AXE: chặt củi dùng atlas rìu riêng (hanhan-chop-axe-v1), KHÔNG
+    // dùng dải chop combat nữa — dải đó giữ nguyên cho vòng đòn đánh quái.
+    // Rìu chưa nạp thì nơi gọi lùi về hái tức thời cũ.
+    var aImg = assets['hanhan_chop_axe'];
+    return !!(hanhanAxeChopData && aImg && aImg.complete &&
+      aImg.naturalWidth === 2048 && aImg.naturalHeight === 2048);
   }
 
-  // Bắt đầu một nhát chặt vào node củi: quay mặt về cây, phát dải chop,
-  // đặt sẵn hồi chiêu của điểm (chặn bấm đúp trong lúc vung). Dải chop vốn
-  // chỉ chạy trong vòng đòn đánh thường và đòi kiếm trang bị; tân thủ
-  // weapon:null nên nó không bao giờ phát khi chặt — đường này phát trực
-  // tiếp combatAnim, không qua startCombatStrip, không đòi vũ khí.
-  // Trả false khi chưa phát được (dải chop chưa nạp / đang vung nhát khác)
+  // Bắt đầu một nhát chặt vào node củi: quay mặt về cây, phát dải RÌU
+  // (combatAnim với cờ axe — đường vẽ dùng atlas rìu riêng, không qua
+  // startCombatStrip, không đòi vũ khí, không chạm dải chop combat).
+  // Trả false khi chưa phát được (atlas rìu chưa nạp / đang vung nhát khác)
   // để nơi gọi lùi về hái tức thời cũ.
   function startChopSwing(node, nowSec) {
     if (!node || pendingChop || !chopDataReady()) return false;
@@ -2080,7 +2084,7 @@
     if (!player.stats) player.stats = { playSec: 0, kills: 0, bossKills: 0, harvests: 0, refines: 0 };
     player.stats.harvests = (player.stats.harvests || 0) + 1;
     combatAnim = { move: 'chop', dir: player.dir || 0,
-      timer: CHOP_SWING_DUR, duration: CHOP_SWING_DUR, reverse: false };
+      timer: CHOP_SWING_DUR, duration: CHOP_SWING_DUR, reverse: false, axe: true };
     pendingChop = { node: node, impactAt: performance.now() + CHOP_IMPACT_AT * 1000 };
     return true;
   }
@@ -2753,6 +2757,20 @@
             }).catch(function () {});
           } catch (e) {}
         });
+        // Đợt AXE: nạp lười atlas rìu chặt củi riêng (không chặn màn hình
+        // nạp; lỗi thì chặt củi lùi về hái tức thời cũ, combat giữ nguyên).
+        try {
+          var axImg = new Image();
+          axImg.onload = function () { assets['hanhan_chop_axe'] = axImg; };
+          axImg.onerror = function () {};
+          axImg.src = 'assets/chars/hanhan-chop-axe-v1.png';
+          fetch('assets/chars/hanhan-chop-axe-v1.json').then(function (r) {
+            return r && r.ok ? r.json() : null;
+          }).then(function (j) {
+            var idx = buildCombatIndex(j, 'axe');
+            if (idx) hanhanAxeChopData = idx;
+          }).catch(function () {});
+        } catch (e) {}
       } catch (e) {}
     }
   }
@@ -3914,8 +3932,8 @@
         return;
       }
     }
-    // Đợt CHOPWOOD: chặt củi thì vung dải chop rồi mới nhận củi ở khoảnh
-    // khắc trúng (updateChopSwing); đang vung nhát khác thì chờ, dải chop
+    // Đợt CHOPWOOD/AXE: chặt củi thì vung dải RÌU rồi mới nhận củi ở khoảnh
+    // khắc trúng (updateChopSwing); đang vung nhát khác thì chờ, atlas rìu
     // chưa nạp thì lùi về hái tức thời cũ.
     if (node.itemId === 'bo-cui') {
       if (pendingChop) return;
@@ -10046,7 +10064,28 @@
           var cProg = 1 - (combatAnim.timer / combatAnim.duration);
           var cIdx = Math.min(7, Math.max(0, Math.floor(cProg * 8)));
           if (combatAnim.reverse) cIdx = 7 - cIdx;
-          if (useCostumeCombat) {
+          if (combatAnim.axe) {
+            // Đợt AXE: nhát chặt củi vẽ dải RÌU riêng (hanhan-chop-axe-v1),
+            // trước cả nhánh đồng phục — chặt củi luôn hiện rìu, đánh quái
+            // (không có cờ axe) vẫn đi nhánh combat kiếm bên dưới.
+            var aData = hanhanAxeChopData;
+            var aImg = assets['hanhan_chop_axe'];
+            if (aData && aImg) {
+              var aFrameObj = drawGenFrame(aImg, aData, cDirName, cIdx);
+              if (aFrameObj) {
+                combatDrawn = true;
+                genDrawn = true;
+                if (aFrameObj.gx > 0) {
+                  var ak = HH_GEN_DISPLAY_H / (aData.charH * aData.scaleFromMaster);
+                  lastGripWorld = {
+                    x: player.x + (aFrameObj.gx - aFrameObj.px) * ak,
+                    y: player.y - playerLiftY + (aFrameObj.gy - aFrameObj.py) * ak,
+                    dirName: cDirName
+                  };
+                }
+              }
+            }
+          } else if (useCostumeCombat) {
             // Ánh xạ combat đồng phục (PROVISIONAL, cần Bui phán): draw -> bao
             // (bao ngược = rút kiếm, bao xuôi = tra kiếm — engine đã đảo
             // chiều dải draw khi thu kiếm), 4 đòn chém/đâm/bổ -> attack chung.
