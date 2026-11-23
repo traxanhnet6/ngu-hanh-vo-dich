@@ -220,7 +220,7 @@
       damage: { stat: 'attack', ratio: 1.6, flat: 0 },
       status: null,
       effect: 'kim_blade_projectile',
-      icon: 'skill-elem-kim',
+      icon: 'skill-kim-mang',
       sfx: 'slash',
       desc: 'Một tia kim mang sắc lạnh xuyên thẳng mục tiêu, gây 160% sát thương đòn thường.'
     },
@@ -315,7 +315,7 @@
       damage: { stat: 'attack', ratio: 1.6, flat: 0 },
       status: null,
       effect: 'thuy_ice_projectile',
-      icon: 'skill-elem-thuy',
+      icon: 'skill-bang-tien',
       sfx: 'leafCast',
       desc: 'Một mũi băng tiễn lạnh buốt truy đuổi mục tiêu, gây 160% sát thương đòn thường.'
     },
@@ -386,7 +386,7 @@
       damage: { stat: 'attack', ratio: 1.6, flat: 0 },
       status: null,
       effect: 'hoa_fire_projectile',
-      icon: 'skill-elem-hoa',
+      icon: 'skill-hoa-cau',
       sfx: 'leafCast',
       desc: 'Một quả hỏa cầu rực lửa truy đuổi mục tiêu, gây 160% sát thương đòn thường.'
     },
@@ -457,7 +457,7 @@
       damage: { stat: 'attack', ratio: 1.6, flat: 0 },
       status: null,
       effect: 'tho_shard_projectile',
-      icon: 'skill-elem-tho',
+      icon: 'skill-thach-nhan',
       sfx: 'slash',
       desc: 'Một mảnh thạch nhận nặng trịch lao thẳng mục tiêu, gây 160% sát thương đòn thường.'
     },
@@ -529,7 +529,7 @@
       damage: { stat: 'attack', ratio: 2.0, flat: 0 },
       status: null,
       effect: 'nguhanh_burst',
-      icon: 'skill-elem-nguhanh',
+      icon: 'skill-hop-kich',
       sfx: 'leafCast',
       desc: 'Hợp kích bậc 1 của vòng tương sinh: năm sắc quyện một, gây 200% sát thương cho mọi địch quanh mục tiêu. Mở khi Hài Hòa đạt 0,6 trở lên.'
     },
@@ -553,7 +553,7 @@
       damage: { stat: 'attack', ratio: 1.3, flat: 0 },
       status: null,
       effect: 'thaicuc_swirl',
-      icon: 'skill-elem-amduong',
+      icon: 'skill-thai-cuc-chuong',
       sfx: 'slash',
       // Khung tung chiêu THẬT: bộ 64 khung Bui gửi đã tách sạch, bản
       // TĂNG NÉT HD (atlas 4096×4096, 8 hướng × 8 pha, pivot
@@ -608,7 +608,7 @@
       damage: { stat: 'attack', ratio: 1.8, flat: 0 },
       status: null,
       effect: 'kim_blade_projectile',
-      icon: 'skill-elem-kim',
+      icon: 'skill-kiem-khi-tram',
       sfx: 'slash',
       desc: 'Chiêu đặc trưng Kiếm Tu: một lưỡi kiếm khí sắc lạnh chém thẳng mục tiêu, gây 180% sát thương đòn thường. (Tên tạm, số tạm — chờ Bui chốt.)'
     },
@@ -633,7 +633,7 @@
       damage: { stat: 'attack', ratio: 1.2, flat: 0 },
       status: null,
       effect: 'kim_blade_projectile',
-      icon: 'skill-elem-kim',
+      icon: 'skill-ngu-kiem-phi-hanh',
       sfx: 'slash',
       desc: 'Lướt tới trước trên kiếm, kiếm khí chém xuyên mục tiêu, gây 120% sát thương đòn thường. (Tên tạm, số tạm — chờ Bui chốt. TẠM làm dạng đạn kiếm khí vì engine chưa có cơ chế lướt; lướt thật để đợt sau.)'
     },
@@ -658,7 +658,7 @@
       damage: { stat: 'attack', ratio: 3.0, flat: 0 },
       status: null,
       effect: 'kim_blade_burst',
-      icon: 'skill-elem-kim',
+      icon: 'skill-van-kiem-quy-tong',
       sfx: 'slash',
       desc: 'Tuyệt kỹ Kiếm Tu: vạn lưỡi kiếm khí quy tụ nổ tung quanh mục tiêu, gây 300% sát thương đòn thường cho mọi địch trong vùng. (Tên tạm, số tạm — chờ Bui chốt.)'
     },
@@ -682,7 +682,7 @@
       damage: { stat: 'attack', ratio: 1.0, flat: 0 },
       status: null,
       effect: 'kim_blade_burst',
-      icon: 'skill-elem-kim',
+      icon: 'skill-kiem-tam',
       sfx: 'slash',
       passive: { stat: 'crit', pct: 10 },
       desc: 'BỊ ĐỘNG Kiếm Tu: +10% tỉ lệ bạo kích (tương đối — số tạm, chờ Bui chốt). Luôn hiệu lực khi đã chọn đường Kiếm Tu, không cần tung. (Tên tạm — chờ Bui chốt.)'
@@ -709,7 +709,7 @@
       damage: { stat: 'attack', ratio: 2.0, flat: 0 },
       status: null,
       effect: 'nguhanh_burst',
-      icon: 'skill-elem-nguhanh',
+      icon: 'skill-ngu-hanh-phap-an',
       sfx: 'leafCast',
       desc: 'Chiêu đặc trưng Pháp Tu: ấn pháp ngũ hành nổ tung quanh mục tiêu, gây 200% sát thương đòn thường cho mọi địch trong vùng. (Tên tạm, số tạm — chờ Bui chốt.)'
     },
@@ -734,7 +734,7 @@
       damage: { stat: 'attack', ratio: 1.8, flat: 0 },
       status: null,
       effect: 'kim_blade_burst',
-      icon: 'skill-elem-kim',
+      icon: 'skill-loi-phap-dan',
       sfx: 'slash',
       desc: 'Dẫn sét đánh thẳng mục tiêu, gây 180% sát thương đòn thường. (Tên tạm, số tạm — chờ Bui chốt. Dùng lại VFX kim_blade_burst vì chưa có hiệu ứng sét riêng.)'
     },
@@ -758,7 +758,7 @@
       damage: { stat: 'attack', ratio: 1.0, flat: 0 },
       status: null,
       effect: 'thuy_frost_lock',
-      icon: 'skill-elem-thuy',
+      icon: 'skill-ho-the-linh-quang',
       sfx: 'leafCast',
       buff: { kind: 'shield', pct: 0.3, durationSec: 6 },
       desc: 'Khiên linh quang: giảm 30% sát thương nhận vào trong 6 giây. (Tên tạm, số tạm — chờ Bui chốt. Engine chưa có cơ chế khiên đỡ theo máu nên đợt này làm dạng giảm sát thương nhận vào.)'
@@ -784,7 +784,7 @@
       damage: { stat: 'attack', ratio: 3.2, flat: 0 },
       status: null,
       effect: 'kim_blade_burst',
-      icon: 'skill-elem-kim',
+      icon: 'skill-thien-loi-dan',
       sfx: 'slash',
       desc: 'Tuyệt kỹ Pháp Tu: thiên lôi giáng xuống quanh mục tiêu, gây 320% sát thương đòn thường cho mọi địch trong vùng. (Tên tạm, số tạm — chờ Bui chốt. Dùng lại VFX kim_blade_burst vì chưa có hiệu ứng sét riêng.)'
     },
@@ -808,7 +808,7 @@
       damage: { stat: 'attack', ratio: 2.0, flat: 0 },
       status: null,
       effect: 'thaicuc_swirl',
-      icon: 'skill-elem-tho',
+      icon: 'skill-ba-vuong-quyen',
       sfx: 'slash',
       desc: 'Chiêu đặc trưng Thể Tu: quyền nặng cận chiến, gây 200% sát thương đòn thường. (Tên tạm, số tạm — chờ Bui chốt.)'
     },
@@ -832,7 +832,7 @@
       damage: { stat: 'attack', ratio: 1.0, flat: 0 },
       status: null,
       effect: 'tho_rock_collapse',
-      icon: 'skill-elem-tho',
+      icon: 'skill-kim-cang-the',
       sfx: 'slash',
       passive: { stat: 'defense', pct: 15 },
       desc: 'BỊ ĐỘNG Thể Tu: +15% phòng thủ (tương đối — số tạm, chờ Bui chốt). Luôn hiệu lực khi đã chọn đường Thể Tu, không cần tung. (Tên tạm — chờ Bui chốt.)'
@@ -857,7 +857,7 @@
       damage: { stat: 'attack', ratio: 1.0, flat: 0 },
       status: null,
       effect: 'hoa_lava_burst',
-      icon: 'skill-elem-hoa',
+      icon: 'skill-huyet-khi-bung-no',
       sfx: 'slash',
       buff: { kind: 'attack', pct: 0.25, durationSec: 8 },
       desc: 'Tự buff: +25% công kích trong 8 giây. (Tên tạm, số tạm — chờ Bui chốt.)'
@@ -882,7 +882,7 @@
       damage: { stat: 'attack', ratio: 1.0, flat: 0 },
       status: null,
       effect: 'kim_blade_burst',
-      icon: 'skill-elem-kim',
+      icon: 'skill-bat-diet-kim-than',
       sfx: 'slash',
       buff: { kind: 'invuln', durationSec: 3 },
       desc: 'Tuyệt kỹ Thể Tu: bất tử 3 giây — không nhận sát thương. (Tên tạm, số tạm — chờ Bui chốt.)'

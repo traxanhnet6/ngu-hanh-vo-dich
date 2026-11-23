@@ -2452,8 +2452,10 @@
       btn.title = sp.name + ': ' + sp.desc;
 
       var iconEl = document.createElement('div');
-      iconEl.className = 'farm-skill-icon';
-      iconEl.textContent = sp.icon;
+      // ĐợT SKILL-ICON: icon hình thật theo id pháp quyết (thay chữ Hán
+      // 'Thủy'/'Mộc'/'Thổ' trước đây); class farm-icon-<id> ở css/style.css.
+      iconEl.className = 'farm-skill-icon farm-icon-' + sp.id;
+      iconEl.textContent = '';
       btn.appendChild(iconEl);
 
       var costEl = document.createElement('div');

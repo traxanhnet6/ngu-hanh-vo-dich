@@ -1206,6 +1206,30 @@ input:checked + .slider:before {
   border-radius: 4px;
 }
 
+/* ĐợT SKILL-ICON (2026-11-23): icon thật vẽ riêng cho từng chiêu — thay ô
+ * màu phẳng skill-elem-* (CHƯA NGHIỆM THU cho tới khi Bui phán). Mỗi class
+ * trỏ tới 1 PNG 128×128 nền trong suốt trong assets/ui/. 6 chiêu loadout
+ * live + 12 chiêu 3 đường tu của đợt ƯU TIÊN (registry của chúng chưa có
+ * trong cây này — class CSS có sẵn để đợt gộp ƯU TIÊN dùng ngay). */
+.skill-kim-mang { background-image: url('../assets/ui/icon-skill-kim-mang.png'); background-size: contain; background-repeat: no-repeat; background-position: center; border-radius: 4px; }
+.skill-bang-tien { background-image: url('../assets/ui/icon-skill-bang-tien.png'); background-size: contain; background-repeat: no-repeat; background-position: center; border-radius: 4px; }
+.skill-hoa-cau { background-image: url('../assets/ui/icon-skill-hoa-cau.png'); background-size: contain; background-repeat: no-repeat; background-position: center; border-radius: 4px; }
+.skill-thach-nhan { background-image: url('../assets/ui/icon-skill-thach-nhan.png'); background-size: contain; background-repeat: no-repeat; background-position: center; border-radius: 4px; }
+.skill-thai-cuc-chuong { background-image: url('../assets/ui/icon-skill-thai-cuc-chuong.png'); background-size: contain; background-repeat: no-repeat; background-position: center; border-radius: 4px; }
+.skill-hop-kich { background-image: url('../assets/ui/icon-skill-hop-kich.png'); background-size: contain; background-repeat: no-repeat; background-position: center; border-radius: 4px; }
+.skill-kiem-khi-tram { background-image: url('../assets/ui/icon-skill-kiem-khi-tram.png'); background-size: contain; background-repeat: no-repeat; background-position: center; border-radius: 4px; }
+.skill-ngu-kiem-phi-hanh { background-image: url('../assets/ui/icon-skill-ngu-kiem-phi-hanh.png'); background-size: contain; background-repeat: no-repeat; background-position: center; border-radius: 4px; }
+.skill-van-kiem-quy-tong { background-image: url('../assets/ui/icon-skill-van-kiem-quy-tong.png'); background-size: contain; background-repeat: no-repeat; background-position: center; border-radius: 4px; }
+.skill-kiem-tam { background-image: url('../assets/ui/icon-skill-kiem-tam.png'); background-size: contain; background-repeat: no-repeat; background-position: center; border-radius: 4px; }
+.skill-ngu-hanh-phap-an { background-image: url('../assets/ui/icon-skill-ngu-hanh-phap-an.png'); background-size: contain; background-repeat: no-repeat; background-position: center; border-radius: 4px; }
+.skill-loi-phap-dan { background-image: url('../assets/ui/icon-skill-loi-phap-dan.png'); background-size: contain; background-repeat: no-repeat; background-position: center; border-radius: 4px; }
+.skill-ho-the-linh-quang { background-image: url('../assets/ui/icon-skill-ho-the-linh-quang.png'); background-size: contain; background-repeat: no-repeat; background-position: center; border-radius: 4px; }
+.skill-thien-loi-dan { background-image: url('../assets/ui/icon-skill-thien-loi-dan.png'); background-size: contain; background-repeat: no-repeat; background-position: center; border-radius: 4px; }
+.skill-ba-vuong-quyen { background-image: url('../assets/ui/icon-skill-ba-vuong-quyen.png'); background-size: contain; background-repeat: no-repeat; background-position: center; border-radius: 4px; }
+.skill-kim-cang-the { background-image: url('../assets/ui/icon-skill-kim-cang-the.png'); background-size: contain; background-repeat: no-repeat; background-position: center; border-radius: 4px; }
+.skill-huyet-khi-bung-no { background-image: url('../assets/ui/icon-skill-huyet-khi-bung-no.png'); background-size: contain; background-repeat: no-repeat; background-position: center; border-radius: 4px; }
+.skill-bat-diet-kim-than { background-image: url('../assets/ui/icon-skill-bat-diet-kim-than.png'); background-size: contain; background-repeat: no-repeat; background-position: center; border-radius: 4px; }
+
 .skill-name-tag {
   font-size: 10px;
   color: #d8eedb;
@@ -4584,9 +4608,19 @@ body.photo-mode #toast-container { visibility: hidden; }
   border-color: #475569;
 }
 .farm-skill-icon {
-  font-size: 14px;
-  line-height: 1;
+  width: 26px;
+  height: 26px;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  flex: none;
 }
+/* ĐợT SKILL-ICON (2026-11-23): 4 pháp quyết canh tác đổi từ chữ Hán
+ * ('Thủy'/'Mộc'/'Thổ') sang icon hình thật (CHƯA NGHIỆM THU). */
+.farm-icon-linh-vu { background-image: url('../assets/ui/icon-farm-linh-vu.png'); }
+.farm-icon-thoi-sinh { background-image: url('../assets/ui/icon-farm-thoi-sinh.png'); }
+.farm-icon-dan-linh { background-image: url('../assets/ui/icon-farm-dan-linh.png'); }
+.farm-icon-tru-ue { background-image: url('../assets/ui/icon-farm-tru-ue.png'); }
 .farm-skill-cost {
   font-size: 7px;
   font-weight: 700;
