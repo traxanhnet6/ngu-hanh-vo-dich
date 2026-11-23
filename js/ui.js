@@ -2522,6 +2522,187 @@
     }
   }
 
+  // ---------- ĐỢT DANSKILL-MAP: THANH KỸ NĂNG LUYỆN ĐAN NGOÀI MAP ----------
+  // Bui lệnh 06:10 2026-11-24: "Nhấn skill ngoài map chứ không phải hiện
+  // trong bảng" — 4 kỹ năng luyện đan thi triển bằng thanh #danskill-bar
+  // trên HUD, chỉ hiện khi ở map Đan Phòng (phong-luyen-dan). Cùng hình học
+  // neo với #farm-skill-bar (cùng tâm nút Đánh, cùng 4 góc 75/110/145/180°,
+  // r=80, nút 44px — xem css/style.css); hai thanh không bao giờ hiện cùng
+  // lúc nên dùng chung vị trí neo là hợp lý. Luật trạng thái 6 trạng thái
+  // dùng lại GameDanPhong.danskillBtnState (js/danphong.js) — không nhân
+  // bản logic; chỉ đổi nơi render từ modal sang HUD + cách mở thẻ Kỹ Năng.
+  var danskillBarVisible = false;
+  var danskillBarTimerId = null;
+
+  // Áp trạng thái lên một nút đã vẽ (cập nhật tại chỗ, không vẽ lại thanh).
+  function danskillBarApplyState(btn, st, dp) {
+    btn.classList.remove('is-locked', 'is-cooldown', 'is-low-mana', 'is-pending', 'is-no-toxin');
+    if (st.status === 'locked') btn.classList.add('is-locked');
+    else if (st.status === 'cooldown') btn.classList.add('is-cooldown');
+    else if (st.status === 'low-mana') btn.classList.add('is-low-mana');
+    else if (st.status === 'no-toxin') btn.classList.add('is-no-toxin');
+    if (st.buffLeftMs > 0) btn.classList.add('is-pending');
+
+    var overlay = btn.querySelector('.danskill-bar-cd-overlay');
+    if (overlay) {
+      overlay.style.transform = 'scaleY(' + (st.cdLeftMs > 0 ? Math.min(1, st.cdLeftMs / st.cdTotalMs).toFixed(3) : '0') + ')';
+    }
+    var cdText = btn.querySelector('.danskill-bar-cd-text');
+    if (cdText) cdText.textContent = st.cdLeftMs > 0 ? (Math.ceil(st.cdLeftMs / 1000) + 's') : '';
+    var lvl = btn.querySelector('.danskill-bar-level');
+    if (lvl) lvl.textContent = st.learned ? String(st.level) : '?';
+    var costEl = btn.querySelector('.danskill-bar-cost');
+    if (costEl) {
+      costEl.classList.remove('is-low', 'is-note');
+      if (st.status === 'locked') { costEl.textContent = 'Chưa học'; costEl.classList.add('is-note'); }
+      else if (st.status === 'no-toxin') { costEl.textContent = 'Hết độc'; costEl.classList.add('is-note'); }
+      else if (st.buffLeftMs > 0) { costEl.textContent = 'Còn ' + dp.danskillFmtBuffCountdown(st.buffLeftMs); }
+      else if (st.status === 'low-mana') { costEl.textContent = st.cost + ' LL'; costEl.classList.add('is-low'); }
+      else { costEl.textContent = st.cost + ' LL'; }
+    }
+  }
+
+  // Bấm nút trên thanh HUD: trạng thái quyết định hành vi; chỉ trạng thái
+  // sẵn sàng mới gọi castSkill. Không dùng disabled — mọi nút đều bấm được
+  // và giải thích bằng toast (quy ước cũ của hàng modal).
+  function danskillBarHandleClick(skillId) {
+    if (!player) return;
+    var dk = (typeof window !== 'undefined' && window.GameDanKyNang) ? window.GameDanKyNang : null;
+    var dp = (typeof window !== 'undefined' && window.GameDanPhong) ? window.GameDanPhong : null;
+    if (!dk || !dp || !dp.danskillBtnState) return;
+    dk.ensureState(player);
+    var def = dk.getSkillDef(skillId);
+    if (!def) return;
+    var st = dp.danskillBtnState(player, dk, skillId);
+    if (st.status === 'locked') {
+      var cond = dk.canLearnSkill(player, skillId);
+      if (cond.ok) {
+        if (showToast) showToast('Đủ điều kiện học — sang thẻ Kỹ Năng bấm Học (' + def.learnFeeLT + ' Linh Thạch).');
+      } else {
+        if (showToast) showToast('Chưa học ' + def.name + '. Cần: ' + (cond.missing || []).join(' · ') + ' — sang thẻ Kỹ Năng để học.');
+      }
+      // Mở bảng Đan Phòng đúng thẻ Kỹ Năng + cuộn đúng thẻ skill.
+      if (dp.openPanel) dp.openPanel('skills');
+      if (typeof document !== 'undefined') {
+        var card = document.getElementById('danskill-card-' + skillId);
+        if (card && card.scrollIntoView) card.scrollIntoView({ block: 'start' });
+      }
+      return;
+    }
+    if (st.status === 'cooldown') {
+      if (showToast) showToast(def.name + ' đang hồi chiêu (còn ' + Math.ceil(st.cdLeftMs / 1000) + ' giây).');
+      return;
+    }
+    if (st.status === 'pending') {
+      // Đợt DANSKILL-MAP: GIỮ hành vi chặn thi triển lại khi buff đang chờ
+      // như thiết kế cũ (câu hỏi ghi đè buff của Bui tạm gác).
+      if (showToast) showToast('Đã thi triển ' + def.name + ' — đang chờ mẻ luyện kế tiếp (còn ' + dp.danskillFmtBuffCountdown(st.buffLeftMs) + ').');
+      return;
+    }
+    if (st.status === 'low-mana') {
+      if (showToast) showToast('Linh lực không đủ (cần ' + st.cost + ', đang có ' + (player.linhLuc || 0) + ').');
+      return;
+    }
+    if (st.status === 'no-toxin') {
+      if (showToast) showToast('Không có đan độc để giải.');
+      return;
+    }
+    var res = dk.castSkill(player, skillId);
+    if (res && res.msg && showToast) showToast(res.msg);
+    if (res && res.ok) {
+      if (audioAPI && audioAPI.playChime) audioAPI.playChime();
+      if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.spawnFloatingText) {
+        window.GameEngine.spawnFloatingText(def.name + '!', player.x, player.y - 40, '#7ce898');
+      }
+    }
+    updateDanskillBar(true);
+    refreshHUD();
+  }
+
+  // Vẽ lại toàn bộ thanh (khi hiện thanh / sau khi cast). Đếm ngược chạy
+  // bằng updateDanskillBarInPlace + timer 500ms (không vẽ lại thanh).
+  function updateDanskillBar(visible) {
+    var bar = document.getElementById('danskill-bar');
+    if (!bar) return;
+    danskillBarVisible = !!visible;
+    if (!visible) {
+      bar.classList.add('hidden');
+      stopDanskillBarTimer();
+      return;
+    }
+    var dk = (typeof window !== 'undefined' && window.GameDanKyNang) ? window.GameDanKyNang : null;
+    var dp = (typeof window !== 'undefined' && window.GameDanPhong) ? window.GameDanPhong : null;
+    if (!dk || !dp || !dp.danskillBtnState || !player) { danskillBarVisible = false; bar.classList.add('hidden'); return; }
+    dk.ensureState(player);
+    bar.classList.remove('hidden');
+
+    var slotsEl = document.getElementById('danskill-bar-slots');
+    if (!slotsEl) return;
+    slotsEl.innerHTML = '';
+    dk.listSkills().forEach(function (def) {
+      var st = dp.danskillBtnState(player, dk, def.id);
+      var tip = def.name + ' — ' + dk.skillEffectText(def.id, st.level) +
+        ' Phí ' + st.cost + ' linh lực, hồi chiêu ' + def.baseCooldownSec + ' giây.';
+      var btn = document.createElement('button');
+      btn.className = 'danskill-bar-btn danskill-elem-' + def.element;
+      btn.type = 'button';
+      btn.setAttribute('data-skill-id', def.id);
+      btn.setAttribute('aria-label', tip);
+      btn.title = tip;
+      var icon = document.createElement('div');
+      icon.className = 'danskill-bar-icon';
+      if (def.icon) icon.style.backgroundImage = "url('" + def.icon + "')";
+      btn.appendChild(icon);
+      var lvl = document.createElement('span');
+      lvl.className = 'danskill-bar-level';
+      btn.appendChild(lvl);
+      var overlay = document.createElement('div');
+      overlay.className = 'danskill-bar-cd-overlay';
+      btn.appendChild(overlay);
+      var cdText = document.createElement('span');
+      cdText.className = 'danskill-bar-cd-text';
+      btn.appendChild(cdText);
+      var badge = document.createElement('span');
+      badge.className = 'danskill-bar-pending-badge';
+      badge.textContent = 'Chờ';
+      btn.appendChild(badge);
+      var cost = document.createElement('div');
+      cost.className = 'danskill-bar-cost';
+      btn.appendChild(cost);
+      danskillBarApplyState(btn, st, dp);
+      btn.addEventListener('click', function () { danskillBarHandleClick(def.id); });
+      slotsEl.appendChild(btn);
+    });
+    startDanskillBarTimer();
+  }
+
+  // Cập nhật tại chỗ mọi nút trên thanh (hồi chiêu + đếm ngược buff + đổi
+  // trạng thái) mà không vẽ lại thanh. Chỉ chạy khi thanh đang hiện.
+  function updateDanskillBarInPlace() {
+    if (!danskillBarVisible) return;
+    if (typeof document === 'undefined') return;
+    var dk = (typeof window !== 'undefined' && window.GameDanKyNang) ? window.GameDanKyNang : null;
+    var dp = (typeof window !== 'undefined' && window.GameDanPhong) ? window.GameDanPhong : null;
+    if (!dk || !dp || !dp.danskillBtnState || !player) return;
+    var btns = document.querySelectorAll('#danskill-bar .danskill-bar-btn');
+    for (var i = 0; i < btns.length; i++) {
+      var id = btns[i].getAttribute('data-skill-id');
+      if (!id || !dk.getSkillDef(id)) continue;
+      danskillBarApplyState(btns[i], dp.danskillBtnState(player, dk, id), dp);
+    }
+  }
+
+  // Timer đếm ngược thanh HUD: chạy 500ms chỉ khi thanh đang hiện (map Đan
+  // Phòng); dừng ngay khi rời map để khỏi tốn công vô ích.
+  function startDanskillBarTimer() {
+    if (typeof setInterval === 'undefined') return;
+    stopDanskillBarTimer();
+    danskillBarTimerId = setInterval(updateDanskillBarInPlace, 500);
+  }
+  function stopDanskillBarTimer() {
+    if (danskillBarTimerId) { clearInterval(danskillBarTimerId); danskillBarTimerId = null; }
+  }
+
   function openFarmSpellLearnModal() {
     var modal = document.getElementById('farm-spell-learn-modal');
     if (!modal) return;
@@ -4281,6 +4462,14 @@
         lastFarmBarRefresh = nowMs;
         updateFarmSkillBar(true);
       }
+    }
+
+    // Đợt DANSKILL-MAP: lưới an toàn cho thanh luyện đan — nếu đang ở map
+    // Đan Phòng mà thanh chưa hiện (load thẳng vào map từ save, hoặc một
+    // đường đổi map không qua switchMap), hiện thanh lên; đếm ngược chạy
+    // bằng timer 500ms riêng của thanh, không cần làm mới ở đây.
+    if (mapData && mapData.id === 'phong-luyen-dan' && !danskillBarVisible) {
+      updateDanskillBar(true);
     }
   }
 
@@ -6364,6 +6553,8 @@
   UIAPI.closeSectQuestModal = closeSectQuestModal;
   // Đợt LINHME-MAP: Kỹ năng ruộng & thỉnh giáo
   UIAPI.updateFarmSkillBar = updateFarmSkillBar;
+  // Đợt DANSKILL-MAP: thanh kỹ năng luyện đan ngoài map (engine gọi khi đổi map)
+  UIAPI.updateDanskillBar = updateDanskillBar;
   UIAPI.openFarmSpellLearnModal = openFarmSpellLearnModal;
   UIAPI.closeFarmSpellLearnModal = closeFarmSpellLearnModal;
   UIAPI.openBountyBoardModal = openBountyBoardModal;

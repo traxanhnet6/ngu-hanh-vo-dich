@@ -5180,6 +5180,12 @@
       if (typeof window !== 'undefined' && window.GameUI && window.GameUI.updateFarmSkillBar) {
         window.GameUI.updateFarmSkillBar(targetMapId === 'ruong-linh-me', 'farm');
       }
+      // Đợt DANSKILL-MAP: Bật/tắt thanh kỹ năng luyện đan theo map hiện tại
+      // (chỉ hiện ở map Đan Phòng; hai thanh không bao giờ hiện cùng lúc
+      // nên dùng chung vị trí neo với thanh pháp quyết ruộng là hợp lý).
+      if (typeof window !== 'undefined' && window.GameUI && window.GameUI.updateDanskillBar) {
+        window.GameUI.updateDanskillBar(targetMapId === 'phong-luyen-dan');
+      }
       var mapHolder = (typeof window !== 'undefined' && window.GameMapData) ? window.GameMapData : (mapData && mapData.maps ? mapData : null);
       if (mapHolder && mapHolder.getMap) {
         mapData = mapHolder.getMap(targetMapId);

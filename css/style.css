@@ -3352,6 +3352,270 @@ body.photo-mode #toast-container { visibility: hidden; }
   line-height: 1.35;
 }
 
+/* Đợt DANSKILL-MAP (Bui lệnh 06:10 2026-11-24: "Nhấn skill ngoài map chứ
+   không phải hiện trong bảng"): thanh kỹ năng luyện đan trên HUD ngoài map
+   Đan Phòng — thay hàng nút trong modal Đan Phòng của đợt DANSKILL-UI
+   (đã bỏ). Hình học neo Y HỆT #farm-skill-bar (cùng tâm nút Đánh, cùng 4
+   góc 75/110/145/180°, r=80, nút 44px); hai thanh không bao giờ hiện cùng
+   lúc nên dùng chung vị trí neo là hợp lý.
+   KHÁC farm bar ở đúng một điểm: position:absolute (không dùng fixed) —
+   thanh nằm ngoài #skill-bar (con trực tiếp của body, như farm bar) nên
+   không dính bẫy opacity của #skill-bar; absolute neo theo khung chứa ban
+   đầu (trang game không cuộn) nên hiển thị y hệt fixed. */
+.danskill-bar {
+  pointer-events: none;
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(18, 26, 20, 0.92);
+  border: 1.5px solid #8e7a46;
+  border-radius: 12px;
+  padding: 8px 14px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.65), 0 0 12px rgba(142, 122, 70, 0.35);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  z-index: 40;
+  backdrop-filter: blur(4px);
+}
+.danskill-bar-title {
+  font-size: 9px;
+  font-weight: 700;
+  color: #ffd700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.danskill-bar-slots {
+  display: flex;
+  gap: 4px;
+}
+/* Nút tròn 44px — cùng mẫu .farm-skill-btn trong #farm-skill-bar. Không
+   overflow:hidden để huy hiệu "Chờ" đè mép trên không bị cắt; phủ hồi
+   chiêu tự bo tròn 50% thay vì nhờ nút cắt. */
+.danskill-bar-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1.5px solid #6b8c6e;
+  background: linear-gradient(180deg, #2a3d2e, #142117);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
+  color: #e2f8e4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  padding: 0;
+}
+.danskill-bar-btn:hover {
+  border-color: #ffd700;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.45);
+}
+/* Viền theo hệ (mã màu .skill-elem-*). */
+.danskill-bar-btn.danskill-elem-hoa { border-color: #ffb35c; }
+.danskill-bar-btn.danskill-elem-thuy { border-color: #5cc8ff; }
+.danskill-bar-btn.danskill-elem-tho { border-color: #e8c56b; }
+.danskill-bar-btn.danskill-elem-moc { border-color: #8be26b; }
+.danskill-bar-icon {
+  width: 26px;
+  height: 26px;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  flex: none;
+}
+.danskill-bar-level {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 8px;
+  font-weight: bold;
+  color: #ffe9a8;
+  background: rgba(0, 0, 0, 0.65);
+  padding: 0 3px;
+  border-radius: 3px;
+  z-index: 5;
+  line-height: 1.4;
+  pointer-events: none;
+}
+/* Phủ quét hồi chiêu — y hệt .danskill-btn-cd-overlay cũ, gốc dưới, scaleY. */
+.danskill-bar-cd-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: rgba(10, 15, 10, 0.75);
+  transform-origin: bottom;
+  transform: scaleY(0);
+  pointer-events: none;
+  z-index: 3;
+}
+.danskill-bar-cd-text {
+  position: absolute;
+  font-size: 12px;
+  font-weight: bold;
+  color: #ffffff;
+  text-shadow: 0 2px 4px #000000;
+  z-index: 6;
+  pointer-events: none;
+}
+/* Huy hiệu Đang chờ: đè mép trên nút tròn. Mặc định ẩn, chỉ hiện khi có buff. */
+.danskill-bar-pending-badge {
+  display: none;
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 7px;
+  font-weight: 700;
+  color: #ffd978;
+  background: #163828;
+  border: 1px solid #a8842c;
+  border-radius: 3px;
+  padding: 0 3px;
+  white-space: nowrap;
+  z-index: 7;
+  pointer-events: none;
+  line-height: 1.5;
+}
+.danskill-bar-btn.is-pending .danskill-bar-pending-badge {
+  display: block;
+}
+.danskill-bar-cost {
+  font-size: 7px;
+  font-weight: 700;
+  color: #7fd2ff;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.danskill-bar-cost.is-low {
+  color: #ff8a65;
+}
+.danskill-bar-cost.is-note {
+  color: #fc8181;
+}
+.danskill-bar-btn.is-no-toxin .danskill-bar-cost.is-note {
+  color: #9a9a9a;
+}
+/* Trạng thái (thiết kế cũ §3, giữ nguyên) — nút chỉ trông mờ/khóa, không dùng disabled. */
+.danskill-bar-btn.is-locked {
+  opacity: 0.45;
+  border-style: dashed;
+  border-color: #4a3c26;
+}
+.danskill-bar-btn.is-locked .danskill-bar-icon {
+  filter: grayscale(1);
+}
+.danskill-bar-btn.is-cooldown {
+  border-color: #5a4325;
+}
+.danskill-bar-btn.is-low-mana,
+.danskill-bar-btn.is-no-toxin {
+  opacity: 0.65;
+  border-color: #555555;
+}
+.danskill-bar-btn.is-low-mana .danskill-bar-icon,
+.danskill-bar-btn.is-no-toxin .danskill-bar-icon {
+  filter: grayscale(0.85);
+}
+.danskill-bar-btn.is-pending {
+  border-color: #ffd978;
+  box-shadow: 0 0 12px rgba(255, 217, 120, 0.45), inset 0 0 8px rgba(255, 217, 120, 0.3);
+}
+
+/* PHONEFIX2: thanh luyện đan chỉ nhận bấm đúng nút, nền xuyên bấm */
+.danskill-bar .danskill-bar-title,
+.danskill-bar .danskill-bar-btn {
+  pointer-events: auto;
+}
+
+/* ROUNDBTN (theo mẫu #farm-skill-bar): hàng tròn 44px căn giữa dọc theo nút
+   Đánh: right 104px, bottom = 142 + (80-44)/2 = 160px (+ safe-area).
+   PC: hàng nổi trên dải skill, không chồng dải dù đủ 8 chiêu. Tay trái:
+   gương sang trái. */
+#danskill-bar {
+  left: auto;
+  right: 104px;
+  bottom: calc(160px + var(--safe-bottom, 0px));
+  transform: none;
+  flex-direction: row;
+  background: transparent;
+  border: none;
+  border-image: none;
+  box-shadow: none;
+  padding: 0;
+}
+body.uikit-pc #danskill-bar {
+  bottom: calc(122px + var(--safe-bottom, 0px));
+}
+body.lefty #danskill-bar {
+  right: auto;
+  left: 104px;
+}
+#danskill-bar .danskill-bar-title {
+  display: none;
+}
+#danskill-bar .danskill-bar-slots {
+  gap: 6px;
+}
+
+/* ARCBTN (theo mẫu #farm-skill-bar): trên điện thoại, 4 nút tròn xếp thành
+   vòng cung quanh nút Đánh, bán kính 80px tính từ tâm nút Đánh (góc
+   180/145/110/75 độ, nút đầu ở bên trái, nút cuối ở trên-phải). Thanh neo
+   0x0 đúng tâm nút Đánh: right 56px = 16 mép + 40 nửa nút Đánh, bottom
+   182px = 142 đáy nút Đánh + 40. PC giữ hàng ngang khối ROUNDBTN. Tay
+   trái: gương ngang toàn bộ.
+   LƯU Ý ĐỢT SKILL-ARC-270 (song song): đợt đó sẽ dời nút Đánh để xếp vòng
+   270° — khi gộp, chỉ cần đổi right/bottom neo theo tâm nút Đánh mới
+   (56px/182px) cho cả #farm-skill-bar lẫn #danskill-bar, không đổi logic. */
+body.uikit-phone #danskill-bar {
+  right: calc(56px + var(--safe-right, 0px));
+  bottom: calc(182px + var(--safe-bottom, 0px));
+  width: 0;
+  height: 0;
+  overflow: visible;
+}
+body.uikit-phone #danskill-bar .danskill-bar-btn {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+body.uikit-phone #danskill-bar .danskill-bar-btn:nth-child(1) {
+  transform: translate(-50%, -50%) translate(-80px, 0);
+}
+body.uikit-phone #danskill-bar .danskill-bar-btn:nth-child(2) {
+  transform: translate(-50%, -50%) translate(-66px, -46px);
+}
+body.uikit-phone #danskill-bar .danskill-bar-btn:nth-child(3) {
+  transform: translate(-50%, -50%) translate(-27px, -75px);
+}
+body.uikit-phone #danskill-bar .danskill-bar-btn:nth-child(4) {
+  transform: translate(-50%, -50%) translate(21px, -77px);
+}
+body.lefty.uikit-phone #danskill-bar {
+  right: auto;
+  left: 54px;
+}
+body.lefty.uikit-phone #danskill-bar .danskill-bar-btn:nth-child(1) {
+  transform: translate(-50%, -50%) translate(80px, 0);
+}
+body.lefty.uikit-phone #danskill-bar .danskill-bar-btn:nth-child(2) {
+  transform: translate(-50%, -50%) translate(66px, -46px);
+}
+body.lefty.uikit-phone #danskill-bar .danskill-bar-btn:nth-child(3) {
+  transform: translate(-50%, -50%) translate(27px, -75px);
+}
+body.lefty.uikit-phone #danskill-bar .danskill-bar-btn:nth-child(4) {
+  transform: translate(-50%, -50%) translate(-21px, -77px);
+}
+
 /* Đợt DANBOARD: ván luyện đan 4 bước trong modal Đan Phòng */
 .danboard-head {
   margin-bottom: 10px;

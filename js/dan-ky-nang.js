@@ -20,6 +20,7 @@
   var SKILLS = {
     'khong-hoa': {
       id: 'khong-hoa', name: 'Khống Hỏa Quyết', element: 'hoa',
+      icon: 'assets/ui/icon-danskill-khong-hoa.png',
       baseCost: 8, baseCooldownSec: 30, tuViElem: 'hoa', tuViAmount: 2,
       buffKind: 'heat', buffPerLevel: 0.04,
       learnSuccesses: 5, learnRank: 0, learnFeeLT: 50,
@@ -27,6 +28,7 @@
     },
     'tinh-duoc': {
       id: 'tinh-duoc', name: 'Tịnh Dược Quyết', element: 'thuy',
+      icon: 'assets/ui/icon-danskill-tinh-duoc.png',
       baseCost: 6, baseCooldownSec: 40, tuViElem: 'thuy', tuViAmount: 2,
       buffKind: 'order', buffPerLevel: 0.06,
       learnSuccesses: 10, learnRank: 0, learnFeeLT: 100,
@@ -34,6 +36,7 @@
     },
     'ngung-dan': {
       id: 'ngung-dan', name: 'Ngưng Đan Quyết', element: 'tho',
+      icon: 'assets/ui/icon-danskill-ngung-dan.png',
       baseCost: 10, baseCooldownSec: 45, tuViElem: 'tho', tuViAmount: 2,
       buffKind: 'seal', buffPerLevel: 0.05,
       learnSuccesses: 0, learnRank: 1, learnFeeLT: 200,
@@ -41,6 +44,7 @@
     },
     'thanh-doc': {
       id: 'thanh-doc', name: 'Thanh Độc Quyết', element: 'moc',
+      icon: 'assets/ui/icon-danskill-thanh-doc.png',
       baseCost: 6, baseCooldownSec: 25, tuViElem: 'moc', tuViAmount: 2,
       buffKind: null, detoxBase: 4, detoxPerLevel: 2,
       learnSuccesses: 20, learnRank: 0, learnFeeLT: 150,

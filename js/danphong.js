@@ -1115,6 +1115,82 @@
     body.appendChild(card);
   }
 
+  // =========================================================================
+  // Đợt DANSKILL-MAP (Bui lệnh 06:10 2026-11-24: "Nhấn skill ngoài map chứ
+  // không phải hiện trong bảng"): 4 kỹ năng luyện đan thi triển bằng thanh
+  // #danskill-bar trên HUD ngoài map Đan Phòng (js/ui.js) — KHÔNG còn nút
+  // thi triển nào trong modal Đan Phòng. Các hàm trạng thái dưới đây được
+  // thanh HUD dùng lại qua exports; mọi quyết định cho/không cho vẫn do
+  // GameDanKyNang.castSkill giữ; thanh HUD chỉ hiển thị trước trạng thái
+  // và chặn bấm nhầm bằng toast.
+  // Icon đọc từ def.icon (assets/ui/icon-danskill-<id>.png); icon chưa có
+  // thì nút chỉ hiện nền tối, không vỡ giao diện, không lỗi JS.
+  // =========================================================================
+
+  // Tên ngắn 2 chữ hiện dưới nút (tên đầy đủ chỉ ở thẻ Kỹ Năng + tooltip).
+  var DANSKILL_SHORT_NAMES = {
+    'khong-hoa': 'Khống Hỏa', 'tinh-duoc': 'Tịnh Dược',
+    'ngung-dan': 'Ngưng Đan', 'thanh-doc': 'Thanh Độc'
+  };
+
+  // Đếm ngược hạn buff dạng M:SS (hạn BUFF_TTL_MS kể từ castAt).
+  function danskillFmtBuffCountdown(leftMs) {
+    var totalSec = Math.max(0, Math.ceil(leftMs / 1000));
+    var m = Math.floor(totalSec / 60);
+    var s = totalSec % 60;
+    return m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  // Thời gian còn lại của buff skill này (ms), 0 nếu không có buff đang chờ.
+  function danskillBuffLeftMs(player, dk, skillId, nowMs) {
+    var buffs = dk.getActiveBuffs(player, nowMs);
+    var ttl = dk.BUFF_TTL_MS || 300000;
+    for (var i = 0; i < buffs.length; i++) {
+      if (buffs[i].skillId === skillId) {
+        return Math.max(0, ttl - ((nowMs || Date.now()) - (buffs[i].castAt || 0)));
+      }
+    }
+    return 0;
+  }
+
+  // Đan độc hiện tại (Thanh Độc hết độc là một trạng thái riêng của hàng nút).
+  function danskillToxin(player) {
+    var ld = getLuyenDanAPI();
+    if (ld && ld.getDanDoc) return ld.getDanDoc(player);
+    if (player.luyenDan) return player.luyenDan.toxin || 0;
+    return 0;
+  }
+
+  // Trạng thái nút theo thứ tự ưu tiên thiết kế §3:
+  // chưa học > hồi chiêu > buff đang chờ > thiếu linh lực > hết độc > sẵn sàng.
+  // Hồi chiêu + buff chờ có thể đồng thời đúng: status là 'cooldown' nhưng
+  // buffLeftMs > 0 để thanh HUD vẫn vẽ cả huy hiệu Đang chờ.
+  function danskillBtnState(player, dk, skillId, nowMs) {
+    var def = dk.getSkillDef(skillId);
+    var now = (nowMs !== undefined && nowMs !== null) ? nowMs : Date.now();
+    var learned = dk.isSkillLearned(player, skillId);
+    var level = dk.skillLevel(player, skillId);
+    var cost = dk.skillCost(skillId, level);
+    var cdLeftMs = dk.skillCooldownLeftMs(player, skillId, now);
+    var buffLeftMs = learned ? danskillBuffLeftMs(player, dk, skillId, now) : 0;
+    var toxin = danskillToxin(player);
+    var status = 'ready';
+    if (!learned) status = 'locked';
+    else if (cdLeftMs > 0) status = 'cooldown';
+    else if (buffLeftMs > 0) status = 'pending';
+    else if ((player.linhLuc || 0) < cost) status = 'low-mana';
+    else if (!def.buffKind && toxin <= 0) status = 'no-toxin';
+    return {
+      def: def, learned: learned, level: level, cost: cost,
+      cdLeftMs: cdLeftMs, cdTotalMs: def.baseCooldownSec * 1000,
+      buffLeftMs: buffLeftMs, toxin: toxin, status: status
+    };
+  }
+
+  // Đợt DANSKILL-MAP: vẽ nút + bấm nút + timer 500ms của hàng modal cũ đã
+  // chuyển sang thanh HUD #danskill-bar (js/ui.js); các hàm trạng thái phía
+  // trên được thanh HUD dùng lại qua exports bên dưới.
+
   function renderSkillsTab(body) {
     var player = livePlayer;
     if (!player) return;
@@ -1148,6 +1224,7 @@
       var cdLeftSec = Math.ceil(dk.skillCooldownLeftMs(player, def.id) / 1000);
 
       var card = el('div', 'danphong-card' + (learned ? '' : ' locked'));
+      card.id = 'danskill-card-' + def.id;
       var head = el('div', 'danphong-card-head');
       var titles = el('div', 'danphong-card-titles');
       titles.appendChild(el('div', 'danphong-card-name', def.name));
@@ -1179,15 +1256,10 @@
           actions.appendChild(el('span', 'danphong-miss-note', 'Đủ điều kiện học.'));
         }
       } else {
-        var btnCast = el('button', 'btn wood danphong-btn danphong-btn-refine',
-          cdLeftSec > 0 ? ('Hồi Chiêu (' + cdLeftSec + ' giây)') : ('Thi Triển (' + cost + ' linh lực)'));
-        btnCast.type = 'button';
-        btnCast.addEventListener('click', function () {
-          var res = dk.castSkill(livePlayer, def.id);
-          if (res && !res.ok && res.msg) showToast(res.msg);
-          renderPanel();
-        });
-        actions.appendChild(btnCast);
+        // Đợt DANSKILL-MAP (Bui lệnh 06:10 2026-11-24): thẻ Kỹ Năng chỉ còn
+        // học + xem chi tiết — thi triển bằng nút tròn ngoài map Đan Phòng
+        // (thanh #danskill-bar trên HUD), không còn nút thi triển trong bảng.
+        actions.appendChild(el('span', 'danphong-miss-note', 'Thi triển bằng nút tròn ngoài map Đan Phòng.'));
         if (def.buffKind) {
           var hasBuff = false;
           for (var i = 0; i < buffs.length; i++) if (buffs[i].skillId === def.id) hasBuff = true;
@@ -1862,6 +1934,10 @@
   exports.openBoard = openBoard;
   exports.closeBoard = closeBoard;
   exports.boardRecipeFor = boardRecipeFor;
+  // Đợt DANSKILL-MAP: hàm trạng thái nút cho thanh HUD #danskill-bar dùng lại
+  // (js/ui.js) — cùng một luật trạng thái, không nhân bản logic.
+  exports.danskillBtnState = danskillBtnState;
+  exports.danskillFmtBuffCountdown = danskillFmtBuffCountdown;
 
 })(typeof module !== 'undefined' && module.exports ? module.exports : (window.GameDanPhong = {}));
 
