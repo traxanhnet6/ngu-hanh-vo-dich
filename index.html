@@ -360,6 +360,52 @@
             <span class="skill-cd-text"></span>
             <span class="skill-name-tag">Dây Leo</span>
           </button>
+          <!-- Đợt LIVEFIX: ô 3–8 theo LOADOUT (js/skills.js, 8 chiêu) — trước đây
+               DOM chỉ có 2 ô nên bindSkillSlots() bỏ qua 6 chiêu còn lại; trên
+               điện thoại ô 4–8 chưa có vị trí vòng cung nên chồng đúng tâm nút Đánh.
+               Tên/icon/khóa ở đây là mồi tĩnh, bindSkillSlots() ghi đè khi chạy. -->
+          <button id="skill-slot-3" class="skill-slot" type="button" title="[3] Kim Mang (Kim)">
+            <span class="skill-hotkey">3</span>
+            <div class="skill-icon skill-elem-kim"></div>
+            <div class="skill-cd-overlay"></div>
+            <span class="skill-cd-text"></span>
+            <span class="skill-name-tag">Kim Mang</span>
+          </button>
+          <button id="skill-slot-4" class="skill-slot" type="button" title="[4] Băng Tiễn (Thủy)">
+            <span class="skill-hotkey">4</span>
+            <div class="skill-icon skill-elem-thuy"></div>
+            <div class="skill-cd-overlay"></div>
+            <span class="skill-cd-text"></span>
+            <span class="skill-name-tag">Băng Tiễn</span>
+          </button>
+          <button id="skill-slot-5" class="skill-slot" type="button" title="[5] Hỏa Cầu (Hỏa)">
+            <span class="skill-hotkey">5</span>
+            <div class="skill-icon skill-elem-hoa"></div>
+            <div class="skill-cd-overlay"></div>
+            <span class="skill-cd-text"></span>
+            <span class="skill-name-tag">Hỏa Cầu</span>
+          </button>
+          <button id="skill-slot-6" class="skill-slot" type="button" title="[6] Thạch Nhận (Thổ)">
+            <span class="skill-hotkey">6</span>
+            <div class="skill-icon skill-elem-tho"></div>
+            <div class="skill-cd-overlay"></div>
+            <span class="skill-cd-text"></span>
+            <span class="skill-name-tag">Thạch Nhận</span>
+          </button>
+          <button id="skill-slot-7" class="skill-slot" type="button" title="[7] Thái Cực Chưởng">
+            <span class="skill-hotkey">7</span>
+            <div class="skill-icon skill-elem-amduong"></div>
+            <div class="skill-cd-overlay"></div>
+            <span class="skill-cd-text"></span>
+            <span class="skill-name-tag">Thái Cực</span>
+          </button>
+          <button id="skill-slot-8" class="skill-slot" type="button" title="[8] Ngũ Hành Hợp Kích">
+            <span class="skill-hotkey">8</span>
+            <div class="skill-icon skill-elem-nguhanh"></div>
+            <div class="skill-cd-overlay"></div>
+            <span class="skill-cd-text"></span>
+            <span class="skill-name-tag">Hợp Kích</span>
+          </button>
         </div>
       </div>
 

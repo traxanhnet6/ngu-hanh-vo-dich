@@ -10381,6 +10381,7 @@
   var modauMeditateLastHp = 0;
   var modauCycleElems = ['kim', 'thuy', 'moc', 'hoa', 'tho'];
   var tayLuongSpeckles = null;
+  var tayLuongBgCanvas = null; // Đợt LIVEFIX: nền Tây Lương vẽ một lần vào canvas đệm, render chỉ drawImage.
 
   function modauToast(msg) {
     if (typeof window !== 'undefined' && window.GameUI) window.GameUI.showToast(msg);
@@ -11004,38 +11005,182 @@
   }
 
   // ---- Vẽ thủ tục: nền Tây Lương, vòng trận, bàn tay, bẫy, thiền, đêm ----
+  // Đợt LIVEFIX: nền Tây Lương vẽ lại cho đọc như tranh nền thành phố đúng
+  // chuẩn game (đường phố lát đá, tường thành mái ngói, đèn lồng, cổng Tây).
+  // Quy tắc nền: mọi thứ trông như vật rắn chỉ nằm đúng trên rect va chạm
+  // biên của map (tường Bắc/Nam/Đông/Tây, khe cửa Tây y 450–550); giữa map
+  // chỉ có mặt đất phẳng (đường, sân, vũng, cỏ) để nhân vật đi xuyên không
+  // bị "đi xuyên tường". Vẽ tĩnh một lần vào canvas đệm, render chỉ drawImage.
   function renderTayLuongBg() {
-    ctx.fillStyle = '#7a6a4d';
-    ctx.fillRect(0, 0, mapData.width, mapData.height);
-    ctx.fillStyle = '#8d8a80';
-    ctx.fillRect(0, 470, 1600, 90);
-    ctx.fillStyle = '#9a8a68';
-    ctx.fillRect(560, 330, 480, 180);
-    ctx.fillStyle = '#8d8a80';
-    ctx.fillRect(770, 40, 60, 930);
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
-    for (var x = 0; x < 1600; x += 80) ctx.fillRect(x, 470, 2, 90);
+    var w = mapData.width, h = mapData.height;
+    if (!tayLuongBgCanvas || tayLuongBgCanvas.width !== w || tayLuongBgCanvas.height !== h) {
+      tayLuongBgCanvas = buildTayLuongBgLayer(w, h);
+    }
+    ctx.drawImage(tayLuongBgCanvas, 0, 0);
+  }
+
+  function buildTayLuongBgLayer(w, h) {
+    var layer = document.createElement('canvas');
+    layer.width = w; layer.height = h;
+    var g = layer.getContext('2d');
+    var seed = 12345;
+    function rnd() { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; }
+
+    // 1. Mặt đất: đất nện ấm + loang tông lớn.
+    g.fillStyle = '#8d7c5c';
+    g.fillRect(0, 0, w, h);
+    for (var p = 0; p < 16; p++) {
+      var px = rnd() * w, py = rnd() * h, pr = 90 + rnd() * 190;
+      g.fillStyle = rnd() < 0.5 ? 'rgba(160, 138, 104, 0.07)' : 'rgba(119, 104, 74, 0.08)';
+      g.beginPath(); g.ellipse(px, py, pr, pr * 0.62, 0, 0, Math.PI * 2); g.fill();
+    }
+
+    // 2. Đường chính lát đá ngang y 460–560 + vệt bánh xe + sân tròn phẳng.
+    g.fillStyle = '#9a8d72';
+    g.fillRect(0, 460, w, 100);
+    g.fillStyle = 'rgba(60, 50, 36, 0.35)';
+    g.fillRect(0, 460, w, 2); g.fillRect(0, 558, w, 2);
+    g.strokeStyle = 'rgba(90, 78, 58, 0.35)'; g.lineWidth = 1.5;
+    for (var jx = 23; jx < w; jx += 46) { g.beginPath(); g.moveTo(jx, 462); g.lineTo(jx, 558); g.stroke(); }
+    g.beginPath(); g.moveTo(0, 510); g.lineTo(w, 510); g.stroke();
+    // Vệt bánh xe lượn nhẹ.
+    g.strokeStyle = 'rgba(70, 58, 40, 0.22)'; g.lineWidth = 5;
+    for (var r = 0; r < 2; r++) {
+      var ry = 488 + r * 44;
+      g.beginPath(); g.moveTo(0, ry);
+      for (var wx = 0; wx <= w; wx += 200) g.quadraticCurveTo(wx + 100, ry + (r ? -4 : 4), wx + 200, ry);
+      g.stroke();
+    }
+    // Huy hiệu sân tròn DẸT trên mặt đường (tâm ngã tư 800,510).
+    g.strokeStyle = '#7d7260'; g.lineWidth = 3;
+    g.beginPath(); g.arc(800, 510, 96, 0, Math.PI * 2); g.stroke();
+    g.lineWidth = 2;
+    g.beginPath(); g.arc(800, 510, 72, 0, Math.PI * 2); g.stroke();
+    g.fillStyle = 'rgba(125, 114, 96, 0.55)';
+    g.beginPath(); g.arc(800, 510, 10, 0, Math.PI * 2); g.fill();
+    for (var t = 0; t < 8; t++) {
+      var ta = (t / 8) * Math.PI * 2;
+      g.beginPath();
+      g.moveTo(800 + Math.cos(ta) * 76, 510 + Math.sin(ta) * 76);
+      g.lineTo(800 + Math.cos(ta) * 92, 510 + Math.sin(ta) * 92);
+      g.stroke();
+    }
+    // Vũng nước phẳng.
+    g.fillStyle = 'rgba(90, 110, 120, 0.35)';
+    g.beginPath(); g.ellipse(300, 700, 46, 15, 0, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = 'rgba(220, 230, 235, 0.25)'; g.lineWidth = 2;
+    g.beginPath(); g.ellipse(300, 698, 34, 9, 0, Math.PI * 1.15, Math.PI * 1.85); g.stroke();
+
+    // 3. Hạt sỏi + đá vụn rải (giữ seed cũ cho vân nền ổn định).
     if (!tayLuongSpeckles) {
       tayLuongSpeckles = [];
-      var seed = 12345;
+      var sd = 12345;
       for (var i = 0; i < 220; i++) {
-        seed = (seed * 1103515245 + 12345) % 2147483648;
-        var sx = seed % 1600;
-        seed = (seed * 1103515245 + 12345) % 2147483648;
-        var sy = seed % 1000;
-        tayLuongSpeckles.push({ x: sx, y: sy, r: 1 + (seed % 3) });
+        sd = (sd * 1103515245 + 12345) % 2147483648;
+        var sx = sd % 1600;
+        sd = (sd * 1103515245 + 12345) % 2147483648;
+        var sy = sd % 1000;
+        tayLuongSpeckles.push({ x: sx, y: sy, r: 1 + (sd % 3) });
       }
     }
-    ctx.fillStyle = 'rgba(240, 244, 250, 0.5)';
+    g.fillStyle = 'rgba(240, 244, 250, 0.5)';
     for (var j = 0; j < tayLuongSpeckles.length; j++) {
       var sp = tayLuongSpeckles[j];
-      ctx.beginPath();
-      ctx.arc(sp.x, sp.y, sp.r, 0, Math.PI * 2);
-      ctx.fill();
+      g.beginPath(); g.arc(sp.x, sp.y, sp.r, 0, Math.PI * 2); g.fill();
     }
-    ctx.strokeStyle = 'rgba(40, 32, 20, 0.6)';
-    ctx.lineWidth = 6;
-    ctx.strokeRect(20, 20, 1560, 960);
+    g.fillStyle = 'rgba(120, 110, 92, 0.5)';
+    for (var pb = 0; pb < 60; pb++) {
+      g.beginPath(); g.ellipse(rnd() * w, 45 + rnd() * (h - 90), 1.5 + rnd() * 1.8, 1 + rnd() * 1.2, 0, 0, Math.PI * 2); g.fill();
+    }
+    // Bụi cỏ dại sát chân tường (phẳng trên đất).
+    g.strokeStyle = 'rgba(111, 125, 78, 0.85)'; g.lineWidth = 1.5;
+    for (var tu = 0; tu < 42; tu++) {
+      var tx, ty;
+      var side = Math.floor(rnd() * 4);
+      if (side === 0) { tx = rnd() * w; ty = 56 + rnd() * 22; }
+      else if (side === 1) { tx = rnd() * w; ty = 922 + rnd() * 24; }
+      else if (side === 2) { tx = 56 + rnd() * 22; ty = rnd() * h; }
+      else { tx = 1522 + rnd() * 22; ty = rnd() * h; }
+      for (var b = -1; b <= 1; b++) {
+        g.beginPath(); g.moveTo(tx, ty); g.lineTo(tx + b * 4, ty - 7 - rnd() * 3); g.stroke();
+      }
+    }
+
+    // 4. Tường thành trên đúng rect va chạm biên (Bắc y 0–40, Nam y 970–1000,
+    //    Tây x 0–40, Đông x 1560–1600). Mái ngói + đèn lồng nằm gọn trong dải tường.
+    function stoneCourses(x, y, cw, ch, horizontal) {
+      g.fillStyle = '#6e675c'; g.fillRect(x, y, cw, ch);
+      g.strokeStyle = 'rgba(40, 36, 30, 0.55)'; g.lineWidth = 1.5;
+      var step = 13;
+      if (horizontal) {
+        for (var cy = y + step; cy < y + ch; cy += step) { g.beginPath(); g.moveTo(x, cy); g.lineTo(x + cw, cy); g.stroke(); }
+        g.strokeStyle = 'rgba(40, 36, 30, 0.4)';
+        for (var cy2 = y; cy2 < y + ch; cy2 += step) {
+          var off = ((cy2 / step) % 2) ? 22 : 0;
+          for (var vx = x + 24 + off; vx < x + cw; vx += 48) { g.beginPath(); g.moveTo(vx, cy2); g.lineTo(vx, Math.min(cy2 + step, y + ch)); g.stroke(); }
+        }
+      } else {
+        for (var cx = x + step; cx < x + cw; cx += step) { g.beginPath(); g.moveTo(cx, y); g.lineTo(cx, y + ch); g.stroke(); }
+      }
+    }
+    function tileEaveHorizontal(x, y, len) {
+      g.fillStyle = '#46564f';
+      for (var ex = x; ex < x + len; ex += 18) {
+        g.beginPath(); g.arc(ex + 9, y, 9, Math.PI, 0); g.fill();
+      }
+      g.strokeStyle = 'rgba(95, 114, 104, 0.8)'; g.lineWidth = 1;
+      for (var ex2 = x; ex2 < x + len; ex2 += 18) {
+        g.beginPath(); g.arc(ex2 + 9, y, 9, Math.PI, 0); g.stroke();
+      }
+      g.strokeStyle = 'rgba(198, 156, 76, 0.7)'; g.lineWidth = 2;
+      g.beginPath(); g.moveTo(x, y - 11); g.lineTo(x + len, y - 11); g.stroke();
+    }
+    function lantern(lx, ly) {
+      g.fillStyle = '#8a6a1e'; g.fillRect(lx - 4, ly - 12, 8, 3);
+      g.fillStyle = '#b03a2a';
+      g.beginPath(); g.ellipse(lx, ly - 2, 7, 9, 0, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = '#d4a24c'; g.lineWidth = 1;
+      g.beginPath(); g.moveTo(lx - 6, ly - 4); g.lineTo(lx + 6, ly - 4); g.stroke();
+      g.beginPath(); g.moveTo(lx - 6, ly + 1); g.lineTo(lx + 6, ly + 1); g.stroke();
+      g.strokeStyle = '#d4a24c'; g.beginPath(); g.moveTo(lx, ly + 7); g.lineTo(lx, ly + 12); g.stroke();
+    }
+    // Tường Bắc + răng thành + mái hiên + đèn lồng.
+    stoneCourses(0, 0, w, 40, true);
+    g.fillStyle = '#7a7268';
+    for (var mx = 0; mx < w; mx += 44) g.fillRect(mx, 0, 26, 10);
+    tileEaveHorizontal(0, 39, w);
+    [200, 520, 840, 1160, 1440].forEach(function (lx) { lantern(lx, 22); });
+    // Tường Nam + mái hiên mép trên.
+    stoneCourses(0, 970, w, 30, true);
+    tileEaveHorizontal(0, 980, w);
+    // Tường Tây hai đoạn (chừa khe cửa y 450–550) + tường Đông.
+    stoneCourses(0, 0, 40, 450, false);
+    stoneCourses(0, 550, 40, 450, false);
+    stoneCourses(1560, 0, 40, 1000, false);
+    g.strokeStyle = 'rgba(198, 156, 76, 0.7)'; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(33, 0); g.lineTo(33, 450); g.moveTo(33, 550); g.lineTo(33, 1000); g.stroke();
+    g.beginPath(); g.moveTo(1567, 0); g.lineTo(1567, 1000); g.stroke();
+    // Cổng Tây: lối đi đất sẫm + trụ đá + đèn lồng trên trụ.
+    g.fillStyle = '#6b5d45'; g.fillRect(0, 450, 40, 100);
+    g.fillStyle = '#7a7268';
+    g.fillRect(6, 436, 28, 26); g.fillRect(6, 538, 28, 26);
+    g.strokeStyle = 'rgba(40, 36, 30, 0.6)'; g.lineWidth = 2;
+    g.strokeRect(6, 436, 28, 26); g.strokeRect(6, 538, 28, 26);
+    lantern(20, 448); lantern(20, 550);
+    // Bóng chân tường (mờ dần vào trong, không che đường).
+    var shN = g.createLinearGradient(0, 40, 0, 56);
+    shN.addColorStop(0, 'rgba(0,0,0,0.20)'); shN.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = shN; g.fillRect(0, 40, w, 16);
+    var shS = g.createLinearGradient(0, 970, 0, 954);
+    shS.addColorStop(0, 'rgba(0,0,0,0.20)'); shS.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = shS; g.fillRect(0, 954, w, 16);
+    var shW = g.createLinearGradient(40, 0, 56, 0);
+    shW.addColorStop(0, 'rgba(0,0,0,0.20)'); shW.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = shW; g.fillRect(40, 0, 16, h);
+    var shE = g.createLinearGradient(1560, 0, 1544, 0);
+    shE.addColorStop(0, 'rgba(0,0,0,0.20)'); shE.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = shE; g.fillRect(1544, 0, 16, h);
+    return layer;
   }
 
   function renderModauGround() {

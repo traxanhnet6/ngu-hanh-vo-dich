@@ -5235,8 +5235,18 @@ body.lefty.uikit-phone #farm-skill-bar .farm-skill-btn:nth-child(4) {
    lệch đúng 16px (đã vấp 3 probe mới ra). #skill-bar giữ kích thước đo thật
    214x114 để cụm nút Đánh không đổi vị trí. PC giữ nguyên dải ngang. Tay
    trái: gương ngang (tâm nút Đánh ở (40, -52)).
-   Chú ý: hiện DOM chỉ có 2 ô (skill-slot-1/2); ô 3 có sẵn vị trí, ô 4 trở
-   lên cần thêm vị trí khi DOM có thêm ô. */
+   Đợt LIVEFIX — vòng ngoài cho ô 4–8 (SỐ TẠM PROVISIONAL, chờ Bui chốt):
+   8 ô 44px KHÔNG xếp vừa một vòng r=80 mà không chồng vòng pháp quyết phía
+   trên (cung trống chỉ ~191 độ sau khi chừa khe, cần ~214 độ), và vòng ngoài
+   phía dưới cũng không vừa vì nút Đánh sát mép phải màn hình (tâm nút cách
+   mép phải chỉ 56px — ô ở góc 300/335 độ rơi ra ngoài màn hình, đã đo thật).
+   Nên ô 4–8 ra vòng ngoài r=120 ôm phía TRÁI nút Đánh (lưỡi liềm trái):
+   ô 4–5 nối tiếp vòng trong phía dưới-trái (195/230 độ), ô 6–8 vòng lên phía
+   trên-trái (174/150/126 độ), né cột nút Thuần Phục/Hợp Kích phía trên nút
+   Đánh (hiện đang ẩn; đo thật thì ô 7–8 vẫn không chạm cột nút này nếu nó
+   hiện lại) và né cần joystick trái. Ô 1–3 giữ nguyên vòng trong r=80 để
+   không đổi bố cục SMALLBTN đã duyệt. Khe hẹp nhất giữa hai vòng đo ~47px
+   tâm–tâm (ô 44px, khe ~3px) — kiểm thật bằng driver. */
 body.uikit-phone #skill-bar {
   width: 214px;
   height: 114px;
@@ -5273,6 +5283,25 @@ body.uikit-phone #skill-strip .skill-slot:nth-child(2) {
 body.uikit-phone #skill-strip .skill-slot:nth-child(3) {
   transform: translate(-50%, -50%) translate(21px, 77px);
 }
+/* Đợt LIVEFIX: vòng ngoài r=120 cho ô 4–8 ôm phía TRÁI nút Đánh (lưỡi liềm
+   trái, góc 195/230/174/150/126 độ, số tạm PROVISIONAL). Ô 4–8 trước đây
+   không có vị trí nên chồng đúng tâm nút Đánh; bản vòng ngoài phía dưới
+   (265/300/335 độ) đã đo thật là rơi ra ngoài mép phải màn hình. */
+body.uikit-phone #skill-strip .skill-slot:nth-child(4) {
+  transform: translate(-50%, -50%) translate(-116px, 31px);
+}
+body.uikit-phone #skill-strip .skill-slot:nth-child(5) {
+  transform: translate(-50%, -50%) translate(-77px, 92px);
+}
+body.uikit-phone #skill-strip .skill-slot:nth-child(6) {
+  transform: translate(-50%, -50%) translate(-129px, -14px);
+}
+body.uikit-phone #skill-strip .skill-slot:nth-child(7) {
+  transform: translate(-50%, -50%) translate(-113px, -65px);
+}
+body.uikit-phone #skill-strip .skill-slot:nth-child(8) {
+  transform: translate(-50%, -50%) translate(-76px, -105px);
+}
 body.uikit-phone #skill-strip .skill-icon {
   width: 30px;
   height: 30px;
@@ -5300,6 +5329,22 @@ body.lefty.uikit-phone #skill-strip .skill-slot:nth-child(2) {
 }
 body.lefty.uikit-phone #skill-strip .skill-slot:nth-child(3) {
   transform: translate(-50%, -50%) translate(-21px, 77px);
+}
+/* Đợt LIVEFIX: vòng ngoài r=120 cho ô 4–8, gương ngang (số tạm PROVISIONAL). */
+body.lefty.uikit-phone #skill-strip .skill-slot:nth-child(4) {
+  transform: translate(-50%, -50%) translate(116px, 31px);
+}
+body.lefty.uikit-phone #skill-strip .skill-slot:nth-child(5) {
+  transform: translate(-50%, -50%) translate(77px, 92px);
+}
+body.lefty.uikit-phone #skill-strip .skill-slot:nth-child(6) {
+  transform: translate(-50%, -50%) translate(129px, -14px);
+}
+body.lefty.uikit-phone #skill-strip .skill-slot:nth-child(7) {
+  transform: translate(-50%, -50%) translate(113px, -65px);
+}
+body.lefty.uikit-phone #skill-strip .skill-slot:nth-child(8) {
+  transform: translate(-50%, -50%) translate(76px, -105px);
 }
 /* ============ Đợt M2: Phần mở đầu (tiền tệ, Hộ Muội, modal dùng chung) ============ */
 .hud-currency-row { display: flex; gap: 8px; margin-top: 2px; font-size: 11px; color: #cbd5e1; white-space: nowrap; }
