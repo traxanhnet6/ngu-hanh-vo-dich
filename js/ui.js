@@ -4085,6 +4085,16 @@
 
     if (nameEl) nameEl.textContent = npc.name;
     if (portraitEl) {
+      // Chân dung riêng (2026-11-20, sửa hình Linh Nhi): NPC có npc.portrait thì
+      // dùng ảnh chân dung cắt sẵn vừa đúng khung 68x80 (miệng + tóc đầy đủ),
+      // không qua khung nền 311px (khung đó cắt mất miệng Linh Nhi). Probe chốt
+      // tỉ lệ chỉ áp dụng cho ảnh asset thường.
+      if (npc.portrait) {
+        portraitEl.style.backgroundImage = 'url(' + npc.portrait + ')';
+        portraitEl.style.backgroundSize = '68px 80px';
+        portraitEl.style.backgroundPosition = '0px 0px';
+        portraitEl.setAttribute('data-portrait-asset', npc.portrait);
+      } else {
       portraitEl.style.backgroundImage = 'url(' + npc.asset + ')';
       // Giữ đúng tỉ lệ gốc của từng NPC (hotfix 2026-11-09): trước đây mọi NPC bị
       // ép vào khung nền 140x311 chỉnh tay cho Linh Nhi (252x560) — NPC khác bị
@@ -4113,6 +4123,7 @@
         };
         probe.src = asset;
       })(portraitEl, npc.asset, portraitH);
+      } // else: NPC không có chân dung riêng -> khung nền 311px như cũ
     }
 
     if (dialogueBox) dialogueBox.classList.remove('hidden');
