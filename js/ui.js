@@ -3181,7 +3181,8 @@
   // FIXSMALL-3: biến hatFaceProbe đã gỡ cùng khối thăm dò hanhan-face-hat.png.
 
   // Đợt P2J: URL chân dung đã chọn lúc tạo nhân vật, hoặc null khi save cũ
-  // (không có trường portrait) hay mã lạ — mọi chỗ hiển thị giữ mặc định.
+  // (không có trường portrait) hay mã lạ. Đợt AVATAR: HUD và Bảng Nhân Vật
+  // không dùng hàm này nữa (luôn hiện mặt Hà Nhân); giữ lại cho online sau này.
   function portraitUrlForPlayer(p) {
     if (!p || !p.portrait) return null;
     if (typeof window !== 'undefined' && window.GamePortraits &&
@@ -3194,16 +3195,11 @@
   function refreshPortraitHat() {
     var el = document.getElementById('hud-portrait');
     if (!el || !player) return;
-    // Đợt P2J: chân dung chọn lúc tạo thắng mọi mặc định (kể cả mặt đội
-    // nón — mặt nón là hình Hà Nhân, không hợp chân dung khác). Chân dung
-    // là hình toàn thân nên neo đầu trên, phủ kín ô avatar.
-    var pUrl = portraitUrlForPlayer(player);
-    if (pUrl) {
-      el.style.backgroundImage = "url('" + pUrl + "')";
-      el.style.backgroundPosition = 'center top';
-      el.style.backgroundSize = 'cover';
-      return;
-    }
+    // Đợt AVATAR: avatar HUD luôn là mặt Hà Nhân — chân dung tạo nhân vật
+    // (player.portrait, ví dụ F04) KHÔNG được ghi đè lên đây, vì sprite
+    // trong game là Hà Nhân đầu gấu trúc. player.portrait vẫn giữ trong
+    // save cho online sau này. Xóa ghi đè inline để nền CSS mặc định
+    // (hanhan-face.png) hiện ra.
     el.style.backgroundPosition = '';
     el.style.backgroundSize = '';
     // FIXSMALL-3: đã gỡ lần thăm dò hanhan-face-hat.png — tệp chưa từng
@@ -3422,19 +3418,16 @@
     if (nameEl) nameEl.textContent = player.name;
     if (realmEl) realmEl.textContent = player.realm || 'Phàm Nhân';
 
-    // Đợt P2J: chân dung đã chọn lúc tạo nhân vật (save cũ không có thì ẩn).
+    // Đợt AVATAR: chân dung Bảng Nhân Vật luôn là mặt Hà Nhân
+    // (hanhan-face.png), khớp sprite trong game; ẩn nhãn mã chân dung
+    // (không hiện "F04" nữa). player.portrait vẫn giữ trong save.
     var portraitWrap = document.getElementById('char-panel-portrait-wrap');
     var portraitEl = document.getElementById('char-panel-portrait');
     var portraitCodeEl = document.getElementById('char-panel-portrait-code');
-    var pUrlPanel = portraitUrlForPlayer(player);
     if (portraitWrap) {
-      if (pUrlPanel) {
-        portraitWrap.classList.remove('hidden');
-        if (portraitEl) portraitEl.style.backgroundImage = "url('" + pUrlPanel + "')";
-        if (portraitCodeEl) portraitCodeEl.textContent = player.portrait;
-      } else {
-        portraitWrap.classList.add('hidden');
-      }
+      portraitWrap.classList.remove('hidden');
+      if (portraitEl) portraitEl.style.backgroundImage = "url('assets/chars/hanhan-face.png')";
+      if (portraitCodeEl) portraitCodeEl.style.display = 'none';
     }
 
     // Đợt T3: hàng PHẨM KIM ĐAN trong Bảng Nhân Vật (cùng khối ở refreshHUD).
