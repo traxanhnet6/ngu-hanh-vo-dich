@@ -10963,7 +10963,9 @@
     if (typeof window !== 'undefined' && window.GameUI && window.GameUI.openDialogue) {
       window.GameUI.openDialogue({
         id: 'modau_inner',
-        name: 'Hà Nhân',
+        // Đợt CHARNAME 2026-11-21: đây là lời nội tâm của chính người chơi
+        // nên tên người nói phải theo tên đã đặt, không hardcode "Hà Nhân".
+        name: (player && player.name) || 'Hà Nhân',
         asset: 'assets/chars/hanhan-face.png',
         originalW: 176,
         originalH: 176,

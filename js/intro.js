@@ -201,7 +201,15 @@
       bgEl.style.backgroundImage = 'url("' + scene.bg + '")';
     }
 
-    if (speakerEl) speakerEl.textContent = scene.speaker;
+    // Đợt CHARNAME 2026-11-21: tên người nói cũng phải theo tên người chơi
+    // đã đặt (trước đây chỉ thay tên trong nội dung thoại, cảnh 3 vẫn ghi
+    // "Hà Nhân" dù đã tạo nhân vật tên khác).
+    var displaySpeaker = scene.speaker;
+    if (displaySpeaker === 'Hà Nhân' && activePlayerRef && activePlayerRef.name && activePlayerRef.name !== 'Hà Nhân') {
+      displaySpeaker = activePlayerRef.name;
+    }
+
+    if (speakerEl) speakerEl.textContent = displaySpeaker;
     if (titleEl) titleEl.textContent = scene.title;
     if (textEl) {
       // Thay thế tên nhân vật thực tế nếu người chơi đổi tên
@@ -215,7 +223,7 @@
     if (portraitEl && portraitWrap) {
       if (scene.portrait) {
         portraitEl.src = scene.portrait;
-        portraitEl.alt = scene.speaker;
+        portraitEl.alt = displaySpeaker;
         portraitWrap.style.display = 'flex';
       } else {
         portraitWrap.style.display = 'none';
