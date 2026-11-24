@@ -2578,6 +2578,15 @@
       // Đợt DANMAP-WIDE: Đan Lô môn phái vòng 1 đã duyệt (532x706, 2 trạng thái nguội & cháy)
       'assets/art/danlo-cold.png',
       'assets/art/danlo-burning.png',
+      // Đợt BICANH-V2: vật trang trí + rương Bí Cảnh Vô Hạn (standee vẽ
+      // theo chiều sâu — phải có trong danh sách nạp trước vì standee của
+      // map bí cảnh gắn động trong applyLayout, sau lúc preload).
+      // CHƯA NGHIỆM THU (hình mới đợt V2, chờ Bui phán).
+      'assets/art/dungeon/vh-decor-pillar.png',
+      'assets/art/dungeon/vh-decor-crystal.png',
+      'assets/art/dungeon/vh-decor-bones.png',
+      'assets/art/dungeon/vh-decor-broken.png',
+      'assets/art/dungeon/vh-chest.png',
       // Đợt LINHNHI-MOVE: 12 khung rig xương Godot hướng nam cho Linh Nhi
       // (walk 8 khung 10fps + idle 4 khung) — CHƯA NGHIỆM THU.
       'assets/art/linhnhi/linhnhi-walk-s-0.png',
@@ -3035,6 +3044,36 @@
     for (var i = fieldMonsters.length - 1; i >= 0; i--) {
       var m = fieldMonsters[i];
       if (!m || !m.towerTag) continue;
+      if (targetMonster === m) targetMonster = null;
+      fieldMonsters.splice(i, 1);
+    }
+  }
+
+  // Đợt BI-CANH-VO-HAN: quái bí cảnh vô hạn — cùng mẫu móc tháp, nhãn riêng
+  // 'bi_canh_vo_han' (quái bí cảnh không lẫn quái tháp / quái map thường).
+  function spawnDungeonMonster(speciesId, x, y) {
+    if (!monstersAPI || !monstersAPI.createMonster) return null;
+    var m = monstersAPI.createMonster(speciesId, x, y, x, y, {
+      state: 'aggro',
+      spawnGraceTimer: 1.0
+    });
+    m.mapId = currentMapId;
+    m.dungeonTag = 'bi_canh_vo_han';
+    fieldMonsters.push(m);
+    return m;
+  }
+
+  function removeDungeonMonster(m) {
+    if (!m) return;
+    var idx = fieldMonsters.indexOf(m);
+    if (idx >= 0) fieldMonsters.splice(idx, 1);
+    if (targetMonster === m) targetMonster = null;
+  }
+
+  function clearDungeonMonsters() {
+    for (var i = fieldMonsters.length - 1; i >= 0; i--) {
+      var m = fieldMonsters[i];
+      if (!m || !m.dungeonTag) continue;
       if (targetMonster === m) targetMonster = null;
       fieldMonsters.splice(i, 1);
     }
@@ -3906,9 +3945,26 @@
         spawnFloatingText(dmg + '', it.x, it.y - 35, '#ffffff');
         break;
       case 'locked_portal':
+        // Đợt BI-CANH-VO-HAN (Bui lệnh 19:36 2026-11-24): Phong Ấn Bí Cảnh
+        // mở modal vào Bí Cảnh Vô Hạn (map sinh ngẫu nhiên mỗi tầng) thay
+        // cho toast cũ "mở theo sự kiện — đợt sau".
         if (audioAPI) audioAPI.playDoorKnock();
-        if (typeof window !== 'undefined' && window.GameUI) {
+        if (typeof window !== 'undefined' && window.GameVoHan && window.GameVoHan.openEntry) {
+          window.GameVoHan.openEntry();
+        } else if (typeof window !== 'undefined' && window.GameUI) {
           window.GameUI.showToast('Bí cảnh mở theo sự kiện — đợt sau');
+        }
+        break;
+      case 'vohan_exit':
+        // Đợt BI-CANH-VO-HAN: Cổng Tầng Sau — chỉ mở khi dọn sạch quái tầng.
+        if (typeof window !== 'undefined' && window.GameVoHan && window.GameVoHan.onExitPortal) {
+          window.GameVoHan.onExitPortal();
+        }
+        break;
+      case 'vohan_chest':
+        // Đợt BI-CANH-VO-HAN: Rương Bí Cảnh — mở 1 lần/tầng.
+        if (typeof window !== 'undefined' && window.GameVoHan && window.GameVoHan.onChest) {
+          window.GameVoHan.onChest(it);
         }
         break;
       case 'locked_arena':
@@ -9629,7 +9685,17 @@
     var bgImg = assets[mapData.bgImage] || (mapData.id === 'rung-doc' ? assets.map_rung_doc_bg : assets.map_bg);
     // Đợt M2: Tây Lương chưa có tranh nền — vẽ nền thủ tục theo map id,
     // không dùng nền của map khác (tránh nền sai + cổng minimap).
-    if (currentMapId === 'tay-luong') {
+    if (currentMapId === 'bi-canh-vo-han') {
+      // Đợt BI-CANH-VO-HAN: nền thủ tục theo layout tầng hiện tại
+      // (GameVoHan tự vẽ canvas 2560x1920 mỗi tầng — tile PNG + tường +
+      // đuốc + rương; vật trang trí vẽ bằng standee; engine chỉ drawImage).
+      if (typeof window !== 'undefined' && window.GameVoHan && window.GameVoHan.drawBackground) {
+        window.GameVoHan.drawBackground(ctx);
+      } else {
+        ctx.fillStyle = '#20242a';
+        ctx.fillRect(0, 0, mapData.width, mapData.height);
+      }
+    } else if (currentMapId === 'tay-luong') {
       renderTayLuongBg();
     } else if (mapData.id === 'ruong-linh-me' || currentMapId === 'ruong-linh-me') {
       drawRuongLinhMeProceduralBg(ctx, mapData.width, mapData.height, nowSecH);
@@ -14196,6 +14262,21 @@
         var out = [];
         for (var i = 0; i < fieldMonsters.length; i++) {
           if (fieldMonsters[i] && fieldMonsters[i].towerTag) out.push(fieldMonsters[i]);
+        }
+        return out;
+      }
+    },
+    // Đợt BI-CANH-VO-HAN: móc hẹp cho Bí Cảnh Vô Hạn (js/vo-han.js). Chỉ
+    // sinh/thu quái mang nhãn bí cảnh trong fieldMonsters hiện có — không
+    // đổi cách quái được cập nhật, vẽ, rơi đồ hay hồi sinh của map thường.
+    dungeon: {
+      spawn: spawnDungeonMonster,
+      remove: removeDungeonMonster,
+      clear: clearDungeonMonsters,
+      getMonsters: function () {
+        var out = [];
+        for (var i = 0; i < fieldMonsters.length; i++) {
+          if (fieldMonsters[i] && fieldMonsters[i].dungeonTag) out.push(fieldMonsters[i]);
         }
         return out;
       }

@@ -3628,7 +3628,28 @@
   // HỆ THỐNG QUẢN LÝ BẢN ĐỒ TOÀN CỤC
   // ============================================================
 
+  // Bản đồ Bí Cảnh Vô Hạn — Đợt BI-CANH-VO-HAN (Bui lệnh 19:36 2026-11-24).
+  // Map sinh ngẫu nhiên mỗi tầng: GameVoHan đột biến object này mỗi tầng
+  // (layout phòng + hành lang, collisionGrid, interactables cổng/rương, vật
+  // trang trí) — bản khai này chỉ là khung đăng ký để getMap tìm thấy.
+  var MAP_BI_CANH_VO_HAN = {
+    id: 'bi-canh-vo-han',
+    name: 'Bí Cảnh Vô Hạn', // tên tạm, chờ Bui chốt
+    width: 2560, height: 1920, gridSize: 24,
+    cols: 107, rows: 80, // ô va chạm 24px như mọi map khác (lưới sinh 40px chỉ nội bộ module)
+    bgImage: null,
+    spawn: { x: 100, y: 100 },
+    trees: [], standees: [], npcs: [],
+    interactables: [], harvestNodes: [], monsterPacks: [],
+    zones: [{ id: 'bi_canh_vo_han', name: 'Bí Cảnh Vô Hạn', desc: 'Bí cảnh vô hạn — map sinh ngẫu nhiên mỗi tầng.', rect: { x: 0, y: 0, w: 2560, h: 1920 } }],
+    obstacles: [],
+    exits: [],
+    isWalkable: function () { return true; },
+    collisionGrid: null
+  };
+
   var ALL_MAPS = {
+    'bi-canh-vo-han': MAP_BI_CANH_VO_HAN,
     'mieu_hoang': MAP_MIEU_HOANG,
     'rung-doc': MAP_RUNG_DOC,
     'tong-mon': MAP_TONG_MON,
