@@ -2887,6 +2887,44 @@
 
   var userZoom = 1.0;
 
+  // ZOOM-PHONE (Bui lệnh 19:33 ngày 2026-11-24): pinch-to-zoom bằng 2 ngón
+  // tay trên canvas thế giới. Đặt ở phạm vi module (không đặt trong
+  // setupInputs) để export isPinching nhìn thấy được. Chỉ ngón chạm TRÊN
+  // canvas mới tính (nút HUD và cần gậy là phần tử riêng nên pointerdown
+  // của chúng không tới đây). Ngón thứ 2 chạm vào thì bắt đầu pinch và hủy
+  // ngay bước đi / đường tự chạy mà ngón đầu đã kích hoạt; 1 ngón thì vẫn
+  // bấm-để-đi như cũ.
+  var pinch = { active: false, pointers: {}, startDist: 0, startZoom: 1, moved: false };
+  function pinchDist() {
+    var ids = Object.keys(pinch.pointers);
+    if (ids.length < 2) return 0;
+    var a = pinch.pointers[ids[0]], b = pinch.pointers[ids[1]];
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  }
+  function pinchCancelWorldAction() {
+    currentPath = [];
+    if (player) player.path = currentPath;
+    pendingInteraction = null;
+    if (autoPath.active) cancelAutoPath(true);
+    if (travelState.active) cancelTravel();
+    if (typeof window !== 'undefined' && window.GameUI &&
+        typeof window.GameUI.cancelJoystick === 'function') window.GameUI.cancelJoystick();
+  }
+  function pinchUpdateZoomLabel() {
+    try {
+      var valEl = document.getElementById('setting-zoom-val');
+      if (valEl) valEl.textContent = Math.round(userZoom * 100) + '%';
+    } catch (e) {}
+  }
+  function pinchSaveZoom() {
+    try {
+      if (stateAPI && stateAPI.saveSettings) {
+        stateAPI.saveSettings({ zoom: userZoom, display: { zoom: userZoom } });
+      }
+    } catch (e) {}
+  }
+  function isPinching() { return pinch.active; }
+
   // Đợt RETINA: tỉ lệ backing store so với điểm ảnh CSS (DPR, trần 2) và
   // kích thước viewport theo điểm ảnh CSS. Mọi tọa độ vẽ/chạm của game vẫn
   // theo điểm ảnh CSS; chỉ mật độ điểm ảnh thật của canvas tăng lên.
@@ -3072,6 +3110,16 @@
 
     canvas.addEventListener('pointerdown', function (e) {
       if (audioAPI) audioAPI.init();
+      if (pinch.active) return;
+      pinch.pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+      if (Object.keys(pinch.pointers).length === 2) {
+        pinch.active = true;
+        pinch.startDist = pinchDist();
+        pinch.startZoom = userZoom;
+        pinch.moved = false;
+        pinchCancelWorldAction();
+        return;
+      }
       var rect = canvas.getBoundingClientRect();
       var screenX = e.clientX - rect.left;
       var screenY = e.clientY - rect.top;
@@ -3081,6 +3129,27 @@
 
       handleWorldClick(worldX, worldY);
     });
+    canvas.addEventListener('pointermove', function (e) {
+      if (!pinch.pointers[e.pointerId]) return;
+      pinch.pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+      if (!pinch.active) return;
+      var d = pinchDist();
+      if (pinch.startDist > 0 && d > 0) {
+        setUserZoom(pinch.startZoom * (d / pinch.startDist));
+        pinch.moved = true;
+        pinchUpdateZoomLabel();
+      }
+    });
+    var pinchEndPointer = function (e) {
+      if (!pinch.pointers[e.pointerId]) return;
+      delete pinch.pointers[e.pointerId];
+      if (pinch.active && Object.keys(pinch.pointers).length < 2) {
+        pinch.active = false;
+        if (pinch.moved) pinchSaveZoom();
+      }
+    };
+    canvas.addEventListener('pointerup', pinchEndPointer);
+    canvas.addEventListener('pointercancel', pinchEndPointer);
   }
 
   function isNpcActive(npc) {
@@ -14250,6 +14319,8 @@
     getUserZoom: getUserZoom,
     setUserZoom: setUserZoom,
     getCameraScale: getCameraScale,
+    // ZOOM-PHONE: cần gậy kiểm tra để không khởi động giữa lúc đang pinch.
+    isPinching: isPinching,
     setJoystickVector: setJoystickVector,
     triggerScreenShake: triggerScreenShake,
     triggerPathTo: triggerPathTo,

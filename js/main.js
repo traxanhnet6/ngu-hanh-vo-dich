@@ -356,6 +356,22 @@
           window.GameTutorial.init();
         }
         engineAPI.start();
+        // ZOOM-PHONE (Bui lệnh 19:33 ngày 2026-11-24): điện thoại mặc định
+        // góc nhìn XA NHẤT (zoom nhỏ nhất = 0.5) mỗi khi vào game; PC giữ
+        // nguyên. Người chơi pinch/nút +/− để đổi trong phiên; giá trị đó
+        // vẫn lưu lại như cũ nhưng lần vào sau điện thoại lại về 0.5.
+        // Đặt SAU engineAPI.start() vì start() nạp zoom đã lưu và ghi đè.
+        if (typeof document !== 'undefined' && document.body &&
+            document.body.classList.contains('uikit-phone')) {
+          if (engineAPI.setUserZoom) engineAPI.setUserZoom(0.5);
+          try {
+            if (stateAPI && stateAPI.saveSettings) {
+              stateAPI.saveSettings({ zoom: 0.5, display: { zoom: 0.5 } });
+            }
+          } catch (e) {}
+          var zvEl = document.getElementById('setting-zoom-val');
+          if (zvEl) zvEl.textContent = '50%';
+        }
       });
     }
   }

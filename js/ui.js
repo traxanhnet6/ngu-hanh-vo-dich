@@ -1249,6 +1249,8 @@
 
     zone.addEventListener('pointerdown', function (e) {
       if (joyRuntime.active) return;
+      // ZOOM-PHONE: không khởi động cần gậy giữa lúc đang pinch 2 ngón.
+      if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.isPinching && window.GameEngine.isPinching()) return;
       e.preventDefault();
       e.stopPropagation();
       var rect = (base || zone).getBoundingClientRect();
@@ -1271,6 +1273,8 @@
     if (gc && canvas) {
       gc.addEventListener('pointerdown', function (e) {
         if (joystickMode() !== 'linh_hoat') return;
+        // ZOOM-PHONE: không khởi động cần gậy nổi giữa lúc đang pinch 2 ngón.
+        if (typeof window !== 'undefined' && window.GameEngine && window.GameEngine.isPinching && window.GameEngine.isPinching()) return;
         if (e.target !== canvas) return;
         if (joyRuntime.active) return;
         var w = window.innerWidth || 1;
@@ -6537,7 +6541,9 @@
     showSessionSummary: showSessionSummary,
     openSettingsModal: openSettingsModal,
     applyDisplaySettings: applyDisplaySettings,
-    setActionMode: setActionMode
+    setActionMode: setActionMode,
+    // ZOOM-PHONE: engine hủy cần gậy khi ngón thứ 2 chạm vào bắt đầu pinch.
+    cancelJoystick: joyEnd
   };
   UIAPI.openLinhThu = openLinhThu;
   UIAPI.closeLinhThu = closeLinhThu;
