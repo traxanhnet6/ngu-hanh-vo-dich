@@ -3572,11 +3572,12 @@ body.lefty #danskill-bar {
    0x0 đúng tâm nút Đánh: right 56px = 16 mép + 40 nửa nút Đánh, bottom
    182px = 142 đáy nút Đánh + 40. PC giữ hàng ngang khối ROUNDBTN. Tay
    trái: gương ngang toàn bộ.
-   LƯU Ý ĐỢT SKILL-ARC-270 (song song): đợt đó sẽ dời nút Đánh để xếp vòng
-   270° — khi gộp, chỉ cần đổi right/bottom neo theo tâm nút Đánh mới
-   (56px/182px) cho cả #farm-skill-bar lẫn #danskill-bar, không đổi logic. */
+   Đợt SKILL-ARC-270-TIGHT (gộp 2026-11-24): nút Đánh đã dời vào Δ=80px nên
+   neo thanh đan đổi theo tâm nút Đánh mới: right 56px -> 136px (56+80),
+   gương tay trái left 54px -> 134px; bottom giữ 182px. Thiết kế vòng
+   (r=80, góc 180/145/110/75) và các nút giữ nguyên, không đổi logic. */
 body.uikit-phone #danskill-bar {
-  right: calc(56px + var(--safe-right, 0px));
+  right: calc(136px + var(--safe-right, 0px));
   bottom: calc(182px + var(--safe-bottom, 0px));
   width: 0;
   height: 0;
@@ -3601,7 +3602,7 @@ body.uikit-phone #danskill-bar .danskill-bar-btn:nth-child(4) {
 }
 body.lefty.uikit-phone #danskill-bar {
   right: auto;
-  left: 54px;
+  left: 134px;
 }
 body.lefty.uikit-phone #danskill-bar .danskill-bar-btn:nth-child(1) {
   transform: translate(-50%, -50%) translate(80px, 0);
@@ -5482,8 +5483,13 @@ body.lefty #farm-skill-bar {
    0x0 đúng tâm nút Đánh: right 56px = 16 mép + 40 nửa nút Đánh, bottom
    182px = 142 đáy nút Đánh + 40. PC giữ hàng ngang khối ROUNDBTN. Tay trái:
    gương ngang toàn bộ. */
+/* Đợt SKILL-ARC-270 (Bui lệnh 06:10 ngày 2026-11-24 "Dời nút Đánh để vòng
+   quanh đủ 270°"): vòng pháp quyết NEO THEO TÂM NÚT ĐÁNH nên phải dời theo
+   nút Đánh — right 56px -> 136px (56+80, Δ=80). Thiết kế vòng (r=80, góc
+   75/110/145/180) và các nút giữ nguyên, chỉ đổi neo. Gương tay trái:
+   left 54px -> 134px. */
 body.uikit-phone #farm-skill-bar {
-  right: calc(56px + var(--safe-right, 0px));
+  right: calc(136px + var(--safe-right, 0px));
   bottom: calc(182px + var(--safe-bottom, 0px));
   width: 0;
   height: 0;
@@ -5506,9 +5512,10 @@ body.uikit-phone #farm-skill-bar .farm-skill-btn:nth-child(3) {
 body.uikit-phone #farm-skill-bar .farm-skill-btn:nth-child(4) {
   transform: translate(-50%, -50%) translate(21px, -77px);
 }
+/* SKILL-ARC-270: neo vòng pháp quyết theo tâm nút Đánh mới (left 54+80). */
 body.lefty.uikit-phone #farm-skill-bar {
   right: auto;
-  left: 54px;
+  left: 134px;
 }
 body.lefty.uikit-phone #farm-skill-bar .farm-skill-btn:nth-child(1) {
   transform: translate(-50%, -50%) translate(80px, 0);
@@ -5523,31 +5530,46 @@ body.lefty.uikit-phone #farm-skill-bar .farm-skill-btn:nth-child(4) {
   transform: translate(-50%, -50%) translate(-21px, -77px);
 }
 
-/* COMBATARC (Bui lệnh "nút phi diệp với dây leo ... nữa"): trên điện thoại,
-   các ô kỹ năng chiến đấu thành nút tròn xếp vòng cung PHÍA DƯỚI nút Đánh,
-   nối tiếp vòng cung pháp quyết phía trên (góc 215/250/285 độ, bán kính 80px
-   từ tâm nút Đánh). Các ô neo TUYỆT ĐỐI theo #skill-bar: tâm nút Đánh nằm ở
-   (214-40, -(12+40)) = (174, -52) so với góc #skill-bar (cụm nút right:0,
-   bottom:100%+12, nút Đánh 80px). KHÔNG dùng position:fixed cho dải skill:
-   #skill-bar có opacity < 1 nên thành khối chứa của fixed, neo fixed bị
-   lệch đúng 16px (đã vấp 3 probe mới ra). #skill-bar giữ kích thước đo thật
-   214x114 để cụm nút Đánh không đổi vị trí. PC giữ nguyên dải ngang. Tay
-   trái: gương ngang (tâm nút Đánh ở (40, -52)).
-   Đợt LIVEFIX — vòng ngoài cho ô 4–8 (SỐ TẠM PROVISIONAL, chờ Bui chốt):
-   8 ô 44px KHÔNG xếp vừa một vòng r=80 mà không chồng vòng pháp quyết phía
-   trên (cung trống chỉ ~191 độ sau khi chừa khe, cần ~214 độ), và vòng ngoài
-   phía dưới cũng không vừa vì nút Đánh sát mép phải màn hình (tâm nút cách
-   mép phải chỉ 56px — ô ở góc 300/335 độ rơi ra ngoài màn hình, đã đo thật).
-   Nên ô 4–8 ra vòng ngoài r=120 ôm phía TRÁI nút Đánh (lưỡi liềm trái):
-   ô 4–5 nối tiếp vòng trong phía dưới-trái (195/230 độ), ô 6–8 vòng lên phía
-   trên-trái (174/150/126 độ), né cột nút Thuần Phục/Hợp Kích phía trên nút
-   Đánh (hiện đang ẩn; đo thật thì ô 7–8 vẫn không chạm cột nút này nếu nó
-   hiện lại) và né cần joystick trái. Ô 1–3 giữ nguyên vòng trong r=80 để
-   không đổi bố cục SMALLBTN đã duyệt. Khe hẹp nhất giữa hai vòng đo ~47px
-   tâm–tâm (ô 44px, khe ~3px) — kiểm thật bằng driver. */
+/* SKILL-ARC-270 (Bui lệnh 06:10 ngày 2026-11-24 "Dời nút Đánh để vòng
+   quanh đủ 270°"; thay bản SKILL-ARC 168° chưa gộp): dời nút Đánh vào trong
+   Δ=80px để vòng skill phủ 297,8° (khe hở lớn nhất 62,2°, khe nhỏ nhất 10,0px
+   tay phải / 8,5px tay trái — tính bằng script geom270.py, kiểm ở cả 3 cỡ
+   360×800 / 390×844 / 428×926). 8 ô 44px, 2 vòng đồng tâm r=135 (S4,S6,S7,S8)
+   + r=120 (S1,S2,S3,S5), góc (độ, 0°=đông, ngược kim đồng hồ):
+   S1 285 / S2 328,6 / S3 30,4 / S4 182,3 / S5 244,5 / S6 150 / S7 123,1 /
+   S8 64,7. Ba khoảng trống còn lại: lỗ joystick tây-nam (~62°), lỗ mép đông
+   (~62°, ô đông nhất S3 chỉ còn 5px lề mép ở 360), lỗ cột pet phía bắc (~58°).
+   Tâm nút Đánh mới: tay phải (W-136, H-182) — 360×800: (224,618);
+   390×844: (254,662); 428×926: (292,744). Tay trái gương ngang (134, H-182).
+   Các ô neo TUYỆT ĐỐI theo #skill-bar: tâm nút Đánh ở (174, -52) so với góc
+   #skill-bar (cụm nút right:0, bottom:100%+12, nút Đánh 80px). KHÔNG dùng
+   position:fixed cho dải skill: #skill-bar có opacity < 1 nên thành khối
+   chứa của fixed, neo fixed bị lệch đúng 16px (đã vấp 3 probe mới ra).
+   #skill-bar giữ kích thước đo thật 214x114 để cụm nút Đánh không đổi vị trí.
+   Vòng pháp quyết neo theo tâm nút Đánh nên right 56px -> 136px (xem trên).
+   Cột nút Thuần Phục/Hợp Kích nằm trong cụm của #skill-bar nên dời theo.
+   PC giữ nguyên dải ngang. Tay trái: gương ngang (tâm nút Đánh ở (40, -52)),
+   joystick cũng sang phải (body.lefty #joystick-zone right:14px) nên gương
+   vẫn vừa: khe nhỏ nhất tay trái 8,5px (S3 lề tây ở 360). */
 body.uikit-phone #skill-bar {
   width: 214px;
   height: 114px;
+  right: calc(96px + var(--safe-right, 0px));
+  /* SKILL-ARC-270 FIX (hồi quy joystick, phát hiện khi kiểm 06:52): hộp
+     #skill-bar 214x114 trong suốt nhưng vẫn nhận sự kiện — sau khi dời trái
+     80px nó đè lên #joystick-zone (z-index 25 < 40; chồng 96x110px ở 360,
+     66x110px ở 390) khiến tâm joystick bấm/kéo không ăn. Chỉ các nút con
+     trong hộp cần sự kiện; vùng trống của hộp phải cho sự kiện xuyên qua
+     tới joystick bên dưới. (Mẫu đã có sẵn trong code: .hud-tools-row cũng
+     pointer-events:none + button auto.) PC giữ nguyên pointer-events:auto. */
+  pointer-events: none;
+}
+body.uikit-phone #skill-bar button {
+  pointer-events: auto;
+}
+body.lefty.uikit-phone #skill-bar {
+  right: auto;
+  left: calc(94px + var(--safe-left, 0px));
 }
 body.uikit-phone #skill-strip {
   width: 0;
@@ -5572,33 +5594,34 @@ body.uikit-phone #skill-strip .skill-slot {
   background: linear-gradient(180deg, #1d2f22, #101b13);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
 }
+/* SKILL-ARC-TIGHT: vong thu hep (Bui phan 07:07 "vong skill roi xa nhau qua").
+   Tam Danh giu Delta=80. S1 266,7°/r78 - S2 319,1°/r78,2 - S3 11,4°/r78 -
+   S4 184,9°/r129,4 - S5 217,2°/r82,9 - S6 152°/r130,5 - S7 116,5°/r127,8 -
+   S8 49,4°/r106,9. Khoang cach tam-tam trung binh 78,6px (ban 270: 96,7px);
+   phu 292,9°; khe min mo hinh 5,0px (S4-joystick, S7-Pet2, S8-farm75). */
 body.uikit-phone #skill-strip .skill-slot:nth-child(1) {
-  transform: translate(-50%, -50%) translate(-66px, 46px);
+  transform: translate(-50%, -50%) translate(-4.4px, 77.9px);
 }
 body.uikit-phone #skill-strip .skill-slot:nth-child(2) {
-  transform: translate(-50%, -50%) translate(-27px, 75px);
+  transform: translate(-50%, -50%) translate(59.1px, 51.2px);
 }
 body.uikit-phone #skill-strip .skill-slot:nth-child(3) {
-  transform: translate(-50%, -50%) translate(21px, 77px);
+  transform: translate(-50%, -50%) translate(76.5px, -15.4px);
 }
-/* Đợt LIVEFIX: vòng ngoài r=120 cho ô 4–8 ôm phía TRÁI nút Đánh (lưỡi liềm
-   trái, góc 195/230/174/150/126 độ, số tạm PROVISIONAL). Ô 4–8 trước đây
-   không có vị trí nên chồng đúng tâm nút Đánh; bản vòng ngoài phía dưới
-   (265/300/335 độ) đã đo thật là rơi ra ngoài mép phải màn hình. */
 body.uikit-phone #skill-strip .skill-slot:nth-child(4) {
-  transform: translate(-50%, -50%) translate(-116px, 31px);
+  transform: translate(-50%, -50%) translate(-128.9px, 11.1px);
 }
 body.uikit-phone #skill-strip .skill-slot:nth-child(5) {
-  transform: translate(-50%, -50%) translate(-77px, 92px);
+  transform: translate(-50%, -50%) translate(-66.0px, 50.1px);
 }
 body.uikit-phone #skill-strip .skill-slot:nth-child(6) {
-  transform: translate(-50%, -50%) translate(-129px, -14px);
+  transform: translate(-50%, -50%) translate(-115.2px, -61.3px);
 }
 body.uikit-phone #skill-strip .skill-slot:nth-child(7) {
-  transform: translate(-50%, -50%) translate(-113px, -65px);
+  transform: translate(-50%, -50%) translate(-56.9px, -114.4px);
 }
 body.uikit-phone #skill-strip .skill-slot:nth-child(8) {
-  transform: translate(-50%, -50%) translate(-76px, -105px);
+  transform: translate(-50%, -50%) translate(69.5px, -81.1px);
 }
 body.uikit-phone #skill-strip .skill-icon {
   width: 30px;
@@ -5619,30 +5642,32 @@ body.lefty.uikit-phone #skill-strip .skill-slot {
   left: 40px;
   top: -52px;
 }
+/* SKILL-ARC-TIGHT: gương ngang (dx đổi dấu, dy giữ nguyên) — S1 273,3° /
+   S2 220,9° / S3 168,6° / S4 355,1° / S5 322,8° / S6 28° / S7 63,5° /
+   S8 130,6°. Tay trái S7 vẫn chạm nhẹ HCN Cài đặt (~7px, như bản 270). */
 body.lefty.uikit-phone #skill-strip .skill-slot:nth-child(1) {
-  transform: translate(-50%, -50%) translate(66px, 46px);
+  transform: translate(-50%, -50%) translate(4.4px, 77.9px);
 }
 body.lefty.uikit-phone #skill-strip .skill-slot:nth-child(2) {
-  transform: translate(-50%, -50%) translate(27px, 75px);
+  transform: translate(-50%, -50%) translate(-59.1px, 51.2px);
 }
 body.lefty.uikit-phone #skill-strip .skill-slot:nth-child(3) {
-  transform: translate(-50%, -50%) translate(-21px, 77px);
+  transform: translate(-50%, -50%) translate(-76.5px, -15.4px);
 }
-/* Đợt LIVEFIX: vòng ngoài r=120 cho ô 4–8, gương ngang (số tạm PROVISIONAL). */
 body.lefty.uikit-phone #skill-strip .skill-slot:nth-child(4) {
-  transform: translate(-50%, -50%) translate(116px, 31px);
+  transform: translate(-50%, -50%) translate(128.9px, 11.1px);
 }
 body.lefty.uikit-phone #skill-strip .skill-slot:nth-child(5) {
-  transform: translate(-50%, -50%) translate(77px, 92px);
+  transform: translate(-50%, -50%) translate(66.0px, 50.1px);
 }
 body.lefty.uikit-phone #skill-strip .skill-slot:nth-child(6) {
-  transform: translate(-50%, -50%) translate(129px, -14px);
+  transform: translate(-50%, -50%) translate(115.2px, -61.3px);
 }
 body.lefty.uikit-phone #skill-strip .skill-slot:nth-child(7) {
-  transform: translate(-50%, -50%) translate(113px, -65px);
+  transform: translate(-50%, -50%) translate(56.9px, -114.4px);
 }
 body.lefty.uikit-phone #skill-strip .skill-slot:nth-child(8) {
-  transform: translate(-50%, -50%) translate(76px, -105px);
+  transform: translate(-50%, -50%) translate(-69.5px, -81.1px);
 }
 /* ============ Đợt M2: Phần mở đầu (tiền tệ, Hộ Muội, modal dùng chung) ============ */
 .hud-currency-row { display: flex; gap: 8px; margin-top: 2px; font-size: 11px; color: #cbd5e1; white-space: nowrap; }
@@ -5823,7 +5848,12 @@ body.lefty.uikit-phone #skill-strip .skill-slot:nth-child(8) {
   color: #e9d9a8;
 }
 
-@media (max-height: 700px) {
+/* SKILL-ARC-270 (kèm sửa nút Bắt Đầu 360×800): ở màn cao ≤850px, form tạo
+   nhân vật dài hơn hộp (max-height 100vh-32px) nên nút "Lưu" (#btn-start-game)
+   rơi 2px dưới mép viewport 800px. Thu gọn hộp + lưới chân dung (nhóm chân
+   dung đã tự cuộn, overflow-y:auto) để nút nằm gọn trong viewport mà không
+   cần cuộn hộp. Trước đây ngưỡng chỉ 700px nên 360×800 không được thu gọn. */
+@media (max-height: 850px) {
   #screen-start .auth-box {
     padding-top: 16px;
     padding-bottom: 16px;
@@ -5832,7 +5862,7 @@ body.lefty.uikit-phone #skill-strip .skill-slot:nth-child(8) {
     margin-bottom: 12px;
   }
   .portrait-groups {
-    max-height: 30vh;
+    max-height: 25vh;
   }
 }
 
