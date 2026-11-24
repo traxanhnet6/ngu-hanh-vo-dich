@@ -3577,8 +3577,9 @@ body.lefty #danskill-bar {
    gương tay trái left 54px -> 134px; bottom giữ 182px. Thiết kế vòng
    (r=80, góc 180/145/110/75) và các nút giữ nguyên, không đổi logic. */
 body.uikit-phone #danskill-bar {
-  right: calc(136px + var(--safe-right, 0px));
-  bottom: calc(182px + var(--safe-bottom, 0px));
+  /* SKILL-CORNER-TIGHT: neo theo tam nut Danh moi (W-42, H-42). */
+  right: calc(42px + var(--safe-right, 0px));
+  bottom: calc(42px + var(--safe-bottom, 0px));
   width: 0;
   height: 0;
   overflow: visible;
@@ -3589,32 +3590,32 @@ body.uikit-phone #danskill-bar .danskill-bar-btn {
   top: 0;
 }
 body.uikit-phone #danskill-bar .danskill-bar-btn:nth-child(1) {
-  transform: translate(-50%, -50%) translate(-80px, 0);
+  transform: translate(-50%, -50%) translate(-70px, 0px);
 }
 body.uikit-phone #danskill-bar .danskill-bar-btn:nth-child(2) {
-  transform: translate(-50%, -50%) translate(-66px, -46px);
+  transform: translate(-50%, -50%) translate(-57px, -40px);
 }
 body.uikit-phone #danskill-bar .danskill-bar-btn:nth-child(3) {
-  transform: translate(-50%, -50%) translate(-27px, -75px);
+  transform: translate(-50%, -50%) translate(-24px, -66px);
 }
 body.uikit-phone #danskill-bar .danskill-bar-btn:nth-child(4) {
-  transform: translate(-50%, -50%) translate(21px, -77px);
+  transform: translate(-50%, -50%) translate(18px, -68px);
 }
 body.lefty.uikit-phone #danskill-bar {
   right: auto;
-  left: 134px;
+  left: 42px; /* SKILL-CORNER-TIGHT: neo theo tam nut Danh moi (42, H-42). */
 }
 body.lefty.uikit-phone #danskill-bar .danskill-bar-btn:nth-child(1) {
-  transform: translate(-50%, -50%) translate(80px, 0);
+  transform: translate(-50%, -50%) translate(70px, 0px);
 }
 body.lefty.uikit-phone #danskill-bar .danskill-bar-btn:nth-child(2) {
-  transform: translate(-50%, -50%) translate(66px, -46px);
+  transform: translate(-50%, -50%) translate(57px, -40px);
 }
 body.lefty.uikit-phone #danskill-bar .danskill-bar-btn:nth-child(3) {
-  transform: translate(-50%, -50%) translate(27px, -75px);
+  transform: translate(-50%, -50%) translate(24px, -66px);
 }
 body.lefty.uikit-phone #danskill-bar .danskill-bar-btn:nth-child(4) {
-  transform: translate(-50%, -50%) translate(-21px, -77px);
+  transform: translate(-50%, -50%) translate(-18px, -68px);
 }
 
 /* Đợt DANBOARD: ván luyện đan 4 bước trong modal Đan Phòng */
@@ -5489,8 +5490,9 @@ body.lefty #farm-skill-bar {
    75/110/145/180) và các nút giữ nguyên, chỉ đổi neo. Gương tay trái:
    left 54px -> 134px. */
 body.uikit-phone #farm-skill-bar {
-  right: calc(136px + var(--safe-right, 0px));
-  bottom: calc(182px + var(--safe-bottom, 0px));
+  /* SKILL-CORNER-TIGHT: neo theo tam nut Danh moi (W-42, H-42). */
+  right: calc(42px + var(--safe-right, 0px));
+  bottom: calc(42px + var(--safe-bottom, 0px));
   width: 0;
   height: 0;
   overflow: visible;
@@ -5501,33 +5503,33 @@ body.uikit-phone #farm-skill-bar .farm-skill-btn {
   top: 0;
 }
 body.uikit-phone #farm-skill-bar .farm-skill-btn:nth-child(1) {
-  transform: translate(-50%, -50%) translate(-80px, 0);
+  transform: translate(-50%, -50%) translate(-70px, 0px);
 }
 body.uikit-phone #farm-skill-bar .farm-skill-btn:nth-child(2) {
-  transform: translate(-50%, -50%) translate(-66px, -46px);
+  transform: translate(-50%, -50%) translate(-57px, -40px);
 }
 body.uikit-phone #farm-skill-bar .farm-skill-btn:nth-child(3) {
-  transform: translate(-50%, -50%) translate(-27px, -75px);
+  transform: translate(-50%, -50%) translate(-24px, -66px);
 }
 body.uikit-phone #farm-skill-bar .farm-skill-btn:nth-child(4) {
-  transform: translate(-50%, -50%) translate(21px, -77px);
+  transform: translate(-50%, -50%) translate(18px, -68px);
 }
 /* SKILL-ARC-270: neo vòng pháp quyết theo tâm nút Đánh mới (left 54+80). */
 body.lefty.uikit-phone #farm-skill-bar {
   right: auto;
-  left: 134px;
+  left: 42px; /* SKILL-CORNER-TIGHT: neo theo tam nut Danh moi (42, H-42). */
 }
 body.lefty.uikit-phone #farm-skill-bar .farm-skill-btn:nth-child(1) {
-  transform: translate(-50%, -50%) translate(80px, 0);
+  transform: translate(-50%, -50%) translate(70px, 0px);
 }
 body.lefty.uikit-phone #farm-skill-bar .farm-skill-btn:nth-child(2) {
-  transform: translate(-50%, -50%) translate(66px, -46px);
+  transform: translate(-50%, -50%) translate(57px, -40px);
 }
 body.lefty.uikit-phone #farm-skill-bar .farm-skill-btn:nth-child(3) {
-  transform: translate(-50%, -50%) translate(27px, -75px);
+  transform: translate(-50%, -50%) translate(24px, -66px);
 }
 body.lefty.uikit-phone #farm-skill-bar .farm-skill-btn:nth-child(4) {
-  transform: translate(-50%, -50%) translate(-21px, -77px);
+  transform: translate(-50%, -50%) translate(-18px, -68px);
 }
 
 /* SKILL-ARC-270 (Bui lệnh 06:10 ngày 2026-11-24 "Dời nút Đánh để vòng
@@ -5554,7 +5556,17 @@ body.lefty.uikit-phone #farm-skill-bar .farm-skill-btn:nth-child(4) {
 body.uikit-phone #skill-bar {
   width: 214px;
   height: 114px;
-  right: calc(96px + var(--safe-right, 0px));
+  /* SKILL-CORNER-TIGHT (Bui lệnh 13:48 ngày 2026-11-24 "Cho sát góc phải"):
+     đưa tâm nút Đánh về (W-42, H-42) — mép nút Đánh cách mép phải + mép
+     dưới màn hình 2px. Công thức: tâm Đánh = (W - right_bar - 40,
+     H - bottom_bar - 166) với right_bar = right của #skill-bar, bottom_bar
+     = bottom của nó (166 = 114 cao bar + 12 gap cụm + 40 nửa nút Đánh).
+     Muốn tâm (W-42, H-42) thì right_bar = 2px, bottom_bar = -124px (bar
+     chìm 124px dưới viewport — bar trong suốt + pointer-events:none nên
+     không sao; đã kiểm bằng đo thật ở 3 cỡ).
+     Vòng farm + thanh đan skill neo theo tâm Đánh nên dời theo (xem dưới). */
+  right: calc(2px + var(--safe-right, 0px));
+  bottom: calc(-124px + var(--safe-bottom, 0px));
   /* SKILL-ARC-270 FIX (hồi quy joystick, phát hiện khi kiểm 06:52): hộp
      #skill-bar 214x114 trong suốt nhưng vẫn nhận sự kiện — sau khi dời trái
      80px nó đè lên #joystick-zone (z-index 25 < 40; chồng 96x110px ở 360,
@@ -5569,7 +5581,7 @@ body.uikit-phone #skill-bar button {
 }
 body.lefty.uikit-phone #skill-bar {
   right: auto;
-  left: calc(94px + var(--safe-left, 0px));
+  left: calc(2px + var(--safe-left, 0px)); /* SKILL-CORNER-TIGHT: tâm Đánh (42, H-42) */
 }
 body.uikit-phone #skill-strip {
   width: 0;
@@ -5585,8 +5597,8 @@ body.uikit-phone #skill-strip .skill-slot {
   position: absolute;
   left: 174px;
   top: -52px;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   margin: 0;
   border-radius: 50%;
   border: 1.5px solid #2e7d48;
@@ -5594,34 +5606,46 @@ body.uikit-phone #skill-strip .skill-slot {
   background: linear-gradient(180deg, #1d2f22, #101b13);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
 }
-/* SKILL-ARC-TIGHT: vong thu hep (Bui phan 07:07 "vong skill roi xa nhau qua").
-   Tam Danh giu Delta=80. S1 266,7°/r78 - S2 319,1°/r78,2 - S3 11,4°/r78 -
-   S4 184,9°/r129,4 - S5 217,2°/r82,9 - S6 152°/r130,5 - S7 116,5°/r127,8 -
-   S8 49,4°/r106,9. Khoang cach tam-tam trung binh 78,6px (ban 270: 96,7px);
-   phu 292,9°; khe min mo hinh 5,0px (S4-joystick, S7-Pet2, S8-farm75). */
+/* SKILL-CLUSTER-SQUEEZE PHUONG AN 2 (Bui lenh 14:42 ngay 2026-11-24 "App cac
+   o skill gan vao o noi chuyen"): ep 8 o OM SAT nut hanh dong. DOI VONG FARM
+   + THANH DAN ve r=70 (giu goc 180/145/110/75°, giu khe farm-Danh >=5px).
+   O skill GIU 40px (icon 30px), nut Danh GIU 80px, tam Danh GIU (W-42, H-42),
+   le goc 2px. Ly do: phuong an 1 (farm r=80) chi giam duoc mean 148,8 ->
+   139,6px va gan nhat 58,5px — vong farm la rao chinh (o giua 2 nut farm can
+   r>=114,3 voi farm r=80; chi con r>=108,8 voi farm r=70).
+   S1 180,2°/r160,4 - S2 184,4°/r116,5 - S3 112,8°/r142,7 - S4 158,9°/r160,4 -
+   S5 160,4°/r112,7 - S6 143,2°/r142,3 - S7 128,8°/r110,0 - S8 127,6°/r164,2.
+   Ban kinh trung binh 148,8 -> 138,6px (-10,2px, DAT muc tieu <=138,8); mep
+   trong o gan nhat (S7) cach mep nut Danh 50,0px (tu 62,9px, DAT muc tieu
+   <=50 — dung nguong); phu 71,6°; khe min mo hinh 5,0px (S4-S6, S1-S2).
+   DOI LAI CAN BIET: 2 nut farm ke nhau gio cach tam 42,1px < 44px duong kinh
+   nut -> nut farm CHONG NHAU ~1,9px (truoc day khe 4,1px); khe farm-Danh
+   con 8,0px (>=5, dat). Bu lai: nut farm 75 do het tran mep phai 1px o 360
+   (truoc tran 1px). */
+
 body.uikit-phone #skill-strip .skill-slot:nth-child(1) {
-  transform: translate(-50%, -50%) translate(-4.4px, 77.9px);
+  transform: translate(-50%, -50%) translate(-160.4px, 0.7px);
 }
 body.uikit-phone #skill-strip .skill-slot:nth-child(2) {
-  transform: translate(-50%, -50%) translate(59.1px, 51.2px);
+  transform: translate(-50%, -50%) translate(-116.1px, 8.9px);
 }
 body.uikit-phone #skill-strip .skill-slot:nth-child(3) {
-  transform: translate(-50%, -50%) translate(76.5px, -15.4px);
+  transform: translate(-50%, -50%) translate(-55.2px, -131.6px);
 }
 body.uikit-phone #skill-strip .skill-slot:nth-child(4) {
-  transform: translate(-50%, -50%) translate(-128.9px, 11.1px);
+  transform: translate(-50%, -50%) translate(-149.7px, -57.8px);
 }
 body.uikit-phone #skill-strip .skill-slot:nth-child(5) {
-  transform: translate(-50%, -50%) translate(-66.0px, 50.1px);
+  transform: translate(-50%, -50%) translate(-106.2px, -37.7px);
 }
 body.uikit-phone #skill-strip .skill-slot:nth-child(6) {
-  transform: translate(-50%, -50%) translate(-115.2px, -61.3px);
+  transform: translate(-50%, -50%) translate(-114.0px, -85.2px);
 }
 body.uikit-phone #skill-strip .skill-slot:nth-child(7) {
-  transform: translate(-50%, -50%) translate(-56.9px, -114.4px);
+  transform: translate(-50%, -50%) translate(-69.0px, -85.7px);
 }
 body.uikit-phone #skill-strip .skill-slot:nth-child(8) {
-  transform: translate(-50%, -50%) translate(69.5px, -81.1px);
+  transform: translate(-50%, -50%) translate(-100.2px, -130.1px);
 }
 body.uikit-phone #skill-strip .skill-icon {
   width: 30px;
@@ -5642,32 +5666,30 @@ body.lefty.uikit-phone #skill-strip .skill-slot {
   left: 40px;
   top: -52px;
 }
-/* SKILL-ARC-TIGHT: gương ngang (dx đổi dấu, dy giữ nguyên) — S1 273,3° /
-   S2 220,9° / S3 168,6° / S4 355,1° / S5 322,8° / S6 28° / S7 63,5° /
-   S8 130,6°. Tay trái S7 vẫn chạm nhẹ HCN Cài đặt (~7px, như bản 270). */
+/* SKILL-CLUSTER-TIGHTER: gương ngang (dx đổi dấu, dy giữ nguyên). */
 body.lefty.uikit-phone #skill-strip .skill-slot:nth-child(1) {
-  transform: translate(-50%, -50%) translate(4.4px, 77.9px);
+  transform: translate(-50%, -50%) translate(160.4px, 0.7px);
 }
 body.lefty.uikit-phone #skill-strip .skill-slot:nth-child(2) {
-  transform: translate(-50%, -50%) translate(-59.1px, 51.2px);
+  transform: translate(-50%, -50%) translate(116.1px, 8.9px);
 }
 body.lefty.uikit-phone #skill-strip .skill-slot:nth-child(3) {
-  transform: translate(-50%, -50%) translate(-76.5px, -15.4px);
+  transform: translate(-50%, -50%) translate(55.2px, -131.6px);
 }
 body.lefty.uikit-phone #skill-strip .skill-slot:nth-child(4) {
-  transform: translate(-50%, -50%) translate(128.9px, 11.1px);
+  transform: translate(-50%, -50%) translate(149.7px, -57.8px);
 }
 body.lefty.uikit-phone #skill-strip .skill-slot:nth-child(5) {
-  transform: translate(-50%, -50%) translate(66.0px, 50.1px);
+  transform: translate(-50%, -50%) translate(106.2px, -37.7px);
 }
 body.lefty.uikit-phone #skill-strip .skill-slot:nth-child(6) {
-  transform: translate(-50%, -50%) translate(115.2px, -61.3px);
+  transform: translate(-50%, -50%) translate(114.0px, -85.2px);
 }
 body.lefty.uikit-phone #skill-strip .skill-slot:nth-child(7) {
-  transform: translate(-50%, -50%) translate(56.9px, -114.4px);
+  transform: translate(-50%, -50%) translate(69.0px, -85.7px);
 }
 body.lefty.uikit-phone #skill-strip .skill-slot:nth-child(8) {
-  transform: translate(-50%, -50%) translate(-69.5px, -81.1px);
+  transform: translate(-50%, -50%) translate(100.2px, -130.1px);
 }
 /* ============ Đợt M2: Phần mở đầu (tiền tệ, Hộ Muội, modal dùng chung) ============ */
 .hud-currency-row { display: flex; gap: 8px; margin-top: 2px; font-size: 11px; color: #cbd5e1; white-space: nowrap; }
